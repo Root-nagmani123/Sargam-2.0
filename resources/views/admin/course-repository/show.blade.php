@@ -127,6 +127,93 @@
     color: #0d6efd;
     margin-bottom: 0.5rem;
 }
+
+/* Create/Edit Modal - Blue Gradient Header */
+.upload-modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    padding: 1.5rem !important;
+}
+
+.upload-modal-header .header-icon-circle {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 50%;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5rem;
+}
+
+.upload-modal-header .header-icon-circle .material-icons,
+.upload-modal-header .header-icon-circle .material-symbols-rounded {
+    color: #0d6efd;
+    font-size: 1.3rem !important;
+}
+
+.upload-modal-header .modal-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.upload-modal-header .btn-close-white {
+    opacity: 0.9;
+}
+
+/* Upload Zone (Create Modal) */
+.upload-zone-ref {
+    display: block;
+    border: 2px dashed #b6d4fe;
+    border-radius: 12px;
+    background-color: #f8fbff;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    min-height: 180px;
+    padding: 0;
+}
+
+.upload-zone-ref:hover,
+.upload-zone-ref:focus-within {
+    border-color: #0d6efd;
+    background-color: #eef5ff;
+}
+
+.upload-zone-ref.upload-dragover {
+    border-color: #0d6efd;
+    background-color: #eef5ff;
+}
+
+.upload-zone-inner {
+    cursor: pointer;
+    height: 100%;
+}
+
+.upload-icon-ref {
+    font-size: 48px;
+    display: block;
+    color: #0d6efd;
+}
+
+.upload-zone-ref .upload-cta {
+    color: #0d6efd;
+}
+
+.btn-cancel-ref {
+    background-color: #fff;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.btn-cancel-ref:hover {
+    background-color: #fff5f5;
+    border-color: #dc3545;
+    color: #b02a37;
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -472,17 +559,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Create Category Modal -->
 <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
 
-            <!-- Header -->
-            <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4">
-                <h5 class="modal-title fw-semibold d-flex align-items-center" id="createModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2 fs-5">
-                        add_circle
+            <!-- Modal Header - Blue Gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="createModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">add_circle</span>
                     </span>
                     Create New Category
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>
 
@@ -495,78 +582,73 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="modal-body p-4">
 
                     <!-- Category Name -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <input type="text" class="form-control form-control-lg" id="course_repository_name"
-                                name="course_repository_name" placeholder="Category Name" required>
-                            <label for="course_repository_name">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    folder
-                                </span>
-                                Category Name <span class="text-danger">*</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Details -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <textarea class="form-control" id="course_repository_details"
-                                name="course_repository_details" placeholder="Details" style="height: 110px"></textarea>
-                            <label for="course_repository_details">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    subject
-                                </span>
-                                Details (Optional)
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Upload Section -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
+                        <label for="course_repository_name" class="form-label fw-medium text-dark mb-2">
+                            Category Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg"
+                            id="course_repository_name" name="course_repository_name"
+                            placeholder="Enter category name" required>
+                    </div>
+
+                    <!-- Details (Optional) -->
+                    <div class="mb-3">
+                        <label for="course_repository_details" class="form-label fw-medium text-dark mb-2">
+                            Details <span class="text-muted small">(Optional)</span>
+                        </label>
+                        <textarea class="form-control form-control-lg"
+                            id="course_repository_details" name="course_repository_details" rows="3"
+                            placeholder="Enter category details"></textarea>
+                    </div>
+
+                    <!-- Category Image Section -->
+                    <div class="mb-0">
+                        <label class="form-label fw-medium text-dark mb-3 d-block">
                             Category Image
                         </label>
 
-                        <label for="category_image_create" class="upload-zone">
-
-                            <div class="text-center">
-                                <span class="material-icons material-symbols-rounded upload-icon">
-                                    cloud_upload
-                                </span>
-                                <p class="mb-1 fw-medium">
-                                    <span class="text-primary">Click to upload</span>
-                                    or drag and drop
-                                </p>
-                                <small class="text-muted">
-                                    JPEG, PNG, JPG, GIF (Max 2MB)
-                                </small>
+                        <label for="category_image_create" class="upload-zone-ref d-block mb-0">
+                            <div class="upload-zone-inner d-flex align-items-center justify-content-center">
+                                <div class="text-center">
+                                    <span class="material-icons material-symbols-rounded upload-icon-ref mb-2 d-block">
+                                        cloud_upload
+                                    </span>
+                                    <p class="mb-1 fw-medium upload-cta">
+                                        Click to upload or drag and drop
+                                    </p>
+                                    <small class="text-muted">
+                                        JPEG, PNG, JPG, GIF (Max 2MB)
+                                    </small>
+                                </div>
                             </div>
 
                             <input type="file" id="category_image_create" name="category_image"
-                                accept="image/jpeg,image/png,image/jpg,image/gif" hidden>
+                                accept="image/jpeg,image/png,image/jpg,image/gif" class="visually-hidden">
                         </label>
 
                         <!-- Preview -->
                         <div class="mt-3">
-                            <img id="preview_create_show" class="img-thumbnail shadow-sm d-none"
-                                alt="Category image preview" style="max-width: 150px;">
+                            <img id="preview_create_show" alt="Image preview" class="img-fluid rounded-2 d-none"
+                                style="max-width: 120px; object-fit: cover;">
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Footer -->
-                <div class="modal-footer bg-light border-0 px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                <!-- Modal Footer -->
+                <div class="modal-footer border-0 px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
+                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
+                            check_circle
+                        </span>
                         Save Category
                     </button>
                 </div>
-            </form>
 
+            </form>
         </div>
     </div>
 </div>
@@ -668,13 +750,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     Other
                                 </label>
                             </div>
-                            <div class="form-check">
+                            <!-- <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_institutional" value="Institutional">
                                 <label class="form-check-label fw-medium" for="category_institutional">
                                     Institutional
                                 </label>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
 
@@ -846,8 +928,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <!-- Attachments Table -->
                                     <div class="table-responsive" id="course_attachments_container"
                                         style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg">
+                                        <table class="table table-bordered mb-0">
+                                            <thead>
                                                 <tr>
                                                     <th style="width: 5%;">S.No.</th>
                                                     <th>Attachment Title</th>
@@ -1045,13 +1127,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <!-- Attachments Table -->
                                     <div class="table-responsive" id="other_attachments_container"
                                         style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg-light">
+                                        <table class="table table-hover mb-0">
+                                            <thead>
                                                 <tr>
-                                                    <th style="width: 5%;">S.No.</th>
+                                                    <th>S.No.</th>
                                                     <th>Attachment Title</th>
                                                     <th>Upload File</th>
-                                                    <th style="width: 8%;">Action</th>
+                                                    <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="other_attachments_tbody">
