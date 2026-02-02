@@ -335,6 +335,7 @@ Route::middleware(['auth'])->group(function () {
     // Vehicle Pass Application Routes
     Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/show/{id}', 'show')->name('show');
@@ -608,6 +609,7 @@ Route::middleware(['auth'])->group(function () {
     // Employee ID Card Request Routes
     Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/show/{employeeIDCardRequest}', 'show')->name('show');
@@ -623,10 +625,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
+        Route::get('/export', 'export')->name('export');
         Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
         Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
         Route::put('/update/{familyIDCardRequest}', 'update')->name('update');
         Route::delete('/delete/{familyIDCardRequest}', 'destroy')->name('destroy');
+        Route::post('/restore/{id}', 'restore')->name('restore');
+        Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
     });
 
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {
