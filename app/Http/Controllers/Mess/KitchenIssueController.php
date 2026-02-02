@@ -8,6 +8,8 @@ use App\Models\KitchenIssueItem;
 use App\Models\KitchenIssuePaymentDetail;
 use App\Models\Mess\Store;
 use App\Models\Mess\Inventory;
+use App\Models\Mess\ItemSubcategory;
+use App\Models\Mess\ClientType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -16,197 +18,318 @@ use Carbon\Carbon;
 class KitchenIssueController extends Controller
 {
     /**
-     * Display a listing of kitchen issues
+     * Display a listing of selling vouchers (kitchen issues)
      */
     public function index(Request $request)
     {
-        $query = KitchenIssueMaster::with(['storeMaster', 'itemMaster', 'employee', 'student']);
+        $query = KitchenIssueMaster::with(['storeMaster', 'items.itemSubcategory', 'clientTypeCategory', 'employee', 'student']);
 
-        // Filters
-        if ($request->filled('store_id')) {
-            $query->where('inve_store_master_pk', $request->store_id);
+        if ($request->filled('store')) {
+            $query->where('inve_store_master_pk', $request->store);
         }
-
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-
         if ($request->filled('approve_status')) {
             $query->where('approve_status', $request->approve_status);
         }
-
         if ($request->filled('payment_type')) {
             $query->where('payment_type', $request->payment_type);
         }
-
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('request_date', [
-                $request->start_date,
-                $request->end_date
-            ]);
+            $query->whereBetween('request_date', [$request->start_date, $request->end_date]);
         }
 
         $kitchenIssues = $query->orderBy('request_date', 'desc')
-                               ->orderBy('pk', 'desc')
-                               ->paginate(20);
+            ->orderBy('pk', 'desc')
+            ->paginate(20);
 
-        $stores = Store::all();
+        $stores = Store::active()->get();
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'item_name' => $s->item_name ?? $s->name ?? '—',
+                'item_code' => $s->item_code ?? '—',
+                'unit_measurement' => $s->unit_measurement ?? '—',
+            ];
+        });
+        $clientTypes = ClientType::clientTypes();
+        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
+            ->groupBy('client_type');
 
-        return view('mess.kitchen-issues.index', compact('kitchenIssues', 'stores'));
+        return view('mess.kitchen-issues.index', compact('kitchenIssues', 'stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType'));
     }
 
     /**
-     * Show the form for creating a new kitchen issue
+     * Show the form for creating a new selling voucher
      */
     public function create()
     {
-        $stores = Store::all();
-        $items = Inventory::all();
+        $stores = Store::active()->get();
+        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'item_name' => $s->item_name ?? $s->name ?? '—',
+                'item_code' => $s->item_code ?? '—',
+                'unit_measurement' => $s->unit_measurement ?? '—',
+            ];
+        });
+        $clientTypes = ClientType::clientTypes();
+        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
+            ->groupBy('client_type');
 
-        return view('mess.kitchen-issues.create', compact('stores', 'items'));
+        return view('mess.kitchen-issues.create', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType'));
     }
 
     /**
-     * Store a newly created kitchen issue
+     * Store a newly created selling voucher
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'inve_store_master_pk' => 'required|exists:canteen_store_master,pk',
-            'inve_item_master_pk' => 'required',
-            'quantity' => 'required|numeric|min:0.01',
-            'unit_price' => 'required|numeric|min:0',
+        $request->validate([
+            'inve_store_master_pk' => 'required|exists:mess_stores,id',
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type' => 'nullable|integer',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
+            'client_type_pk' => 'nullable|exists:mess_client_types,id',
             'client_name' => 'nullable|string|max:255',
-            'employee_student_pk' => 'nullable|integer',
-            'issue_date' => 'nullable|date',
+            'issue_date' => 'required|date',
+            'transfer_to' => 'nullable|string|max:255',
             'remarks' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.rate' => 'required|numeric|min:0',
+            'items.*.available_quantity' => 'nullable|numeric|min:0',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $kitchenIssue = KitchenIssueMaster::create([
-                'inve_item_master_pk' => $request->inve_item_master_pk,
+            $master = KitchenIssueMaster::create([
+                'inve_item_master_pk' => 0, // 0 = multi-item voucher (items in kitchen_issue_items). Run migration 2026_02_02_120000_make_kitchen_issue_master_inve_item_nullable to allow NULL.
                 'inve_store_master_pk' => $request->inve_store_master_pk,
-                'quantity' => $request->quantity,
-                'unit_price' => $request->unit_price,
+                'quantity' => 0,
+                'unit_price' => 0,
                 'payment_type' => $request->payment_type,
-                'client_type' => $request->client_type ?? 0,
+                'client_type' => 0,
+                'client_type_pk' => $request->client_type_pk,
                 'client_name' => $request->client_name,
-                'employee_student_pk' => $request->employee_student_pk ?? 0,
-                'issue_date' => $request->issue_date ?? now(),
+                'employee_student_pk' => 0,
+                'issue_date' => $request->issue_date,
                 'request_date' => now(),
                 'user_id' => Auth::id(),
                 'created_by' => Auth::id(),
-                'status' => KitchenIssueMaster::STATUS_PENDING,
-                'approve_status' => KitchenIssueMaster::APPROVE_PENDING,
+                'status' => KitchenIssueMaster::STATUS_APPROVED,
+                'approve_status' => KitchenIssueMaster::APPROVE_APPROVED,
                 'send_for_approval' => 0,
                 'notify_status' => 0,
                 'paid_unpaid' => KitchenIssueMaster::UNPAID,
+                'transfer_to' => $request->transfer_to ?? 0,
                 'remarks' => $request->remarks,
             ]);
+
+            $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+
+            foreach ($request->items as $row) {
+                $sub = $subcategories->get($row['item_subcategory_id']);
+                $qty = (float) ($row['quantity'] ?? 0);
+                $rate = (float) ($row['rate'] ?? 0);
+                $avail = (float) ($row['available_quantity'] ?? 0);
+                KitchenIssueItem::create([
+                    'kitchen_issue_master_pk' => $master->pk,
+                    'item_subcategory_id' => $row['item_subcategory_id'],
+                    'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : '',
+                    'quantity' => $qty,
+                    'available_quantity' => $avail,
+                    'return_quantity' => 0,
+                    'rate' => $rate,
+                    'amount' => $qty * $rate,
+                    'unit' => $sub->unit_measurement ?? '',
+                ]);
+            }
 
             DB::commit();
 
             return redirect()->route('admin.mess.material-management.index')
-                           ->with('success', 'Material Management created successfully');
+                ->with('success', 'Selling Voucher created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()
-                        ->with('error', 'Failed to create Material Management: ' . $e->getMessage());
+            return redirect()->route('admin.mess.material-management.index')
+                ->withInput()
+                ->with('error', 'Failed to create Selling Voucher: ' . $e->getMessage())
+                ->with('open_selling_voucher_modal', true);
         }
     }
 
     /**
-     * Display the specified kitchen issue
+     * Display the specified kitchen issue (JSON for view modal, view for direct URL)
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $kitchenIssue = KitchenIssueMaster::with([
             'storeMaster',
             'itemMaster',
-            'items',
+            'items.itemSubcategory',
+            'clientTypeCategory',
             'paymentDetails',
             'approvals.approver',
             'employee',
             'student'
         ])->findOrFail($id);
 
+        if ($request->wantsJson()) {
+            $voucher = [
+                'pk' => $kitchenIssue->pk,
+                'request_date' => $kitchenIssue->request_date ? $kitchenIssue->request_date->format('d/m/Y') : '-',
+                'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('d/m/Y') : '-',
+                'store_name' => $kitchenIssue->storeMaster->store_name ?? 'N/A',
+                'client_type' => $kitchenIssue->clientTypeCategory ? ucfirst($kitchenIssue->clientTypeCategory->client_type ?? '') : '-',
+                'client_name' => $kitchenIssue->client_name ?? '-',
+                'payment_type' => $kitchenIssue->payment_type == 1 ? 'Credit' : ($kitchenIssue->payment_type == 0 ? 'Cash' : ($kitchenIssue->payment_type == 2 ? 'Online' : '-')),
+                'status' => $kitchenIssue->status,
+                'status_label' => $kitchenIssue->status == 0 ? 'Pending' : ($kitchenIssue->status == 2 ? 'Approved' : ($kitchenIssue->status == 4 ? 'Completed' : (string)$kitchenIssue->status)),
+                'remarks' => $kitchenIssue->remarks ?? '',
+                'created_at' => $kitchenIssue->created_at ? $kitchenIssue->created_at->format('d/m/Y H:i') : '-',
+                'updated_at' => $kitchenIssue->updated_at ? $kitchenIssue->updated_at->format('d/m/Y H:i') : null,
+            ];
+            $items = $kitchenIssue->items->map(function ($item) {
+                return [
+                    'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? '—'),
+                    'unit' => $item->unit ?? '—',
+                    'quantity' => (float) $item->quantity,
+                    'return_quantity' => (float) ($item->return_quantity ?? 0),
+                    'rate' => number_format($item->rate, 2),
+                    'amount' => number_format($item->amount, 2),
+                ];
+            })->values()->toArray();
+            $grand_total = $kitchenIssue->items->sum('amount');
+            $has_items = $kitchenIssue->items->isNotEmpty();
+            return response()->json([
+                'voucher' => $voucher,
+                'items' => $items,
+                'grand_total' => number_format($grand_total, 2),
+                'has_items' => $has_items,
+            ]);
+        }
+
         return view('mess.kitchen-issues.show', compact('kitchenIssue'));
     }
 
     /**
-     * Show the form for editing the specified kitchen issue
+     * Show the form for editing the specified kitchen issue (JSON for modal, view for direct URL)
      */
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::with(['items.itemSubcategory', 'clientTypeCategory'])->findOrFail($id);
 
-        // Only allow editing if not approved
         if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Cannot edit approved voucher'], 403);
+            }
             return redirect()->route('admin.mess.material-management.index')
                            ->with('error', 'Cannot edit approved kitchen issue');
         }
 
-        $stores = Store::all();
-        $items = Inventory::all();
+        if ($request->wantsJson()) {
+            $clientTypeSlug = $kitchenIssue->clientTypeCategory ? $kitchenIssue->clientTypeCategory->client_type : 'employee';
+            $voucher = [
+                'pk' => $kitchenIssue->pk,
+                'payment_type' => (int) $kitchenIssue->payment_type,
+                'client_type_pk' => $kitchenIssue->client_type_pk,
+                'client_type_slug' => $clientTypeSlug,
+                'client_name' => $kitchenIssue->client_name,
+                'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '',
+                'inve_store_master_pk' => $kitchenIssue->inve_store_master_pk,
+                'remarks' => $kitchenIssue->remarks,
+            ];
+            $items = $kitchenIssue->items->map(function ($item) {
+                return [
+                    'item_subcategory_id' => $item->item_subcategory_id,
+                    'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? '—'),
+                    'unit' => $item->unit ?? '',
+                    'quantity' => (float) $item->quantity,
+                    'available_quantity' => (float) ($item->available_quantity ?? 0),
+                    'return_quantity' => (float) ($item->return_quantity ?? 0),
+                    'rate' => (float) $item->rate,
+                    'amount' => (float) $item->amount,
+                ];
+            })->values()->toArray();
+            return response()->json(['voucher' => $voucher, 'items' => $items]);
+        }
 
+        $stores = Store::active()->get();
+        $items = Inventory::all();
         return view('mess.kitchen-issues.edit', compact('kitchenIssue', 'stores', 'items'));
     }
 
     /**
-     * Update the specified kitchen issue
+     * Update the specified kitchen issue (supports Selling Voucher multi-item)
      */
     public function update(Request $request, $id)
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
-        // Only allow editing if not approved
         if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
             return redirect()->route('admin.mess.material-management.index')
                            ->with('error', 'Cannot edit approved kitchen issue');
         }
 
-        $validated = $request->validate([
-            'inve_store_master_pk' => 'required|exists:canteen_store_master,pk',
-            'inve_item_master_pk' => 'required',
-            'quantity' => 'required|numeric|min:0.01',
-            'unit_price' => 'required|numeric|min:0',
+        $request->validate([
+            'inve_store_master_pk' => 'required|exists:mess_stores,id',
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type' => 'nullable|integer',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
+            'client_type_pk' => 'nullable|exists:mess_client_types,id',
             'client_name' => 'nullable|string|max:255',
-            'employee_student_pk' => 'nullable|integer',
-            'issue_date' => 'nullable|date',
+            'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.rate' => 'required|numeric|min:0',
+            'items.*.available_quantity' => 'nullable|numeric|min:0',
         ]);
 
         try {
             DB::beginTransaction();
 
             $kitchenIssue->update([
-                'inve_item_master_pk' => $request->inve_item_master_pk,
                 'inve_store_master_pk' => $request->inve_store_master_pk,
-                'quantity' => $request->quantity,
-                'unit_price' => $request->unit_price,
                 'payment_type' => $request->payment_type,
-                'client_type' => $request->client_type ?? 0,
+                'client_type_pk' => $request->client_type_pk,
                 'client_name' => $request->client_name,
-                'employee_student_pk' => $request->employee_student_pk ?? 0,
                 'issue_date' => $request->issue_date,
                 'modified_by' => Auth::id(),
                 'remarks' => $request->remarks,
             ]);
 
+            $kitchenIssue->items()->delete();
+            $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+            foreach ($request->items as $row) {
+                $sub = $subcategories->get($row['item_subcategory_id']);
+                $qty = (float) ($row['quantity'] ?? 0);
+                $rate = (float) ($row['rate'] ?? 0);
+                $avail = (float) ($row['available_quantity'] ?? 0);
+                KitchenIssueItem::create([
+                    'kitchen_issue_master_pk' => $kitchenIssue->pk,
+                    'item_subcategory_id' => $row['item_subcategory_id'],
+                    'item_name' => $sub ? ($sub->item_name ?? $sub->name ?? '') : '',
+                    'quantity' => $qty,
+                    'available_quantity' => $avail,
+                    'return_quantity' => 0,
+                    'rate' => $rate,
+                    'amount' => $qty * $rate,
+                    'unit' => $sub->unit_measurement ?? '',
+                ]);
+            }
+
             DB::commit();
 
             return redirect()->route('admin.mess.material-management.index')
-                           ->with('success', 'Material Management updated successfully');
+                           ->with('success', 'Selling Voucher updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()
-                        ->with('error', 'Failed to update Material Management: ' . $e->getMessage());
+                        ->with('error', 'Failed to update Selling Voucher: ' . $e->getMessage());
         }
     }
 
