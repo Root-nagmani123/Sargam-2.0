@@ -1,0 +1,70 @@
+<?php
+
+namespace App\Models\Mess;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Selling Voucher with Date Range - standalone module (not related to Selling Voucher / Kitchen Issue).
+ */
+class SellingVoucherDateRangeReport extends Model
+{
+    protected $table = 'sv_date_range_reports';
+
+    protected $fillable = [
+        'date_from',
+        'date_to',
+        'store_id',
+        'report_title',
+        'status',
+        'total_amount',
+        'remarks',
+        'client_type_slug',
+        'client_type_pk',
+        'client_name',
+        'payment_type',
+        'issue_date',
+        'created_by',
+        'updated_by',
+    ];
+
+    protected $casts = [
+        'date_from' => 'date',
+        'date_to' => 'date',
+        'issue_date' => 'date',
+        'total_amount' => 'decimal:2',
+    ];
+
+    const STATUS_DRAFT = 0;
+    const STATUS_FINAL = 1;
+    const STATUS_APPROVED = 2;
+
+    public function store()
+    {
+        return $this->belongsTo(Store::class, 'store_id', 'id');
+    }
+
+    public function clientTypeCategory()
+    {
+        return $this->belongsTo(ClientType::class, 'client_type_pk', 'id');
+    }
+
+    public function items()
+    {
+        return $this->hasMany(SellingVoucherDateRangeReportItem::class, 'sv_date_range_report_id', 'id');
+    }
+
+    public function getGrandTotalAttribute()
+    {
+        return $this->items->sum('amount');
+    }
+
+    public static function statusLabels(): array
+    {
+        return [
+            self::STATUS_DRAFT => 'Draft',
+            self::STATUS_FINAL => 'Final',
+            self::STATUS_APPROVED => 'Approved',
+        ];
+    }
+}
