@@ -14,8 +14,11 @@ class KitchenIssueItem extends Model
 
     protected $fillable = [
         'kitchen_issue_master_pk',
+        'item_subcategory_id',
         'item_name',
         'quantity',
+        'available_quantity',
+        'return_quantity',
         'rate',
         'amount',
         'unit',
@@ -23,6 +26,8 @@ class KitchenIssueItem extends Model
 
     protected $casts = [
         'quantity' => 'decimal:2',
+        'available_quantity' => 'decimal:2',
+        'return_quantity' => 'decimal:2',
         'rate' => 'decimal:2',
         'amount' => 'decimal:2',
     ];
@@ -33,6 +38,24 @@ class KitchenIssueItem extends Model
     public function kitchenIssueMaster()
     {
         return $this->belongsTo(KitchenIssueMaster::class, 'kitchen_issue_master_pk', 'pk');
+    }
+
+    /**
+     * Get the item subcategory
+     */
+    public function itemSubcategory()
+    {
+        return $this->belongsTo(\App\Models\Mess\ItemSubcategory::class, 'item_subcategory_id', 'id');
+    }
+
+    /**
+     * Left quantity (available - issue quantity)
+     */
+    public function getLeftQuantityAttribute()
+    {
+        $avail = (float) ($this->available_quantity ?? 0);
+        $issue = (float) ($this->quantity ?? 0);
+        return max(0, $avail - $issue);
     }
 
     /**

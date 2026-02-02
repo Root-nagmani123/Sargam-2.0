@@ -25,7 +25,7 @@
                 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Store <span class="text-danger">*</span></label>
+                        <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
                         <select name="inve_store_master_pk" class="form-select" required>
                             <option value="">Select Store</option>
                             @foreach($stores as $store)
@@ -89,11 +89,6 @@
                 </div>
                 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Transfer To</label>
-                        <input type="text" name="transfer_to" class="form-control" value="{{ old('transfer_to', $kitchenIssue->transfer_to) }}">
-                    </div>
-                    
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Client Type</label>
                         <select name="client_type" class="form-select">
