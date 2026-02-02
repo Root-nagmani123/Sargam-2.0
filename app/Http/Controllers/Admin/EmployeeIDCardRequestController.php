@@ -378,5 +378,70 @@ class EmployeeIDCardRequestController extends Controller
             \Maatwebsite\Excel\Excel::XLSX
         );
     }
+
+    /**
+     * Parse date string (Y-m-d from HTML date input, or d/m/Y from text) to Y-m-d.
+     */
+    private static function parseDateToYmd(?string $value): ?string
+    {
+        $value = trim($value ?? '');
+        if ($value === '') {
+            return null;
+        }
+        // HTML5 date input sends Y-m-d (e.g. 2025-12-31)
+        try {
+            $date = \Carbon\Carbon::createFromFormat('Y-m-d', $value);
+            if ($date !== false) {
+                return $date->format('Y-m-d');
+            }
+        } catch (\Exception $e) {
+        }
+        // Text field placeholder DD/MM/YYYY (e.g. 31/12/2025)
+        try {
+            $date = \Carbon\Carbon::createFromFormat('d/m/Y', $value);
+            if ($date !== false) {
+                return $date->format('Y-m-d');
+            }
+        } catch (\Exception $e) {
+        }
+        // Fallback: Carbon::parse (handles many formats)
+        try {
+            return \Carbon\Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Export ID card requests to Excel or CSV.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function export(Request $request)
+    {
+        $tab = $request->get('tab', 'active');
+        $format = $request->get('format', 'xlsx');
+
+        if (! in_array($tab, ['active', 'archive', 'all'])) {
+            $tab = 'active';
+        }
+
+        $filename = 'employee_idcard_requests_' . $tab . '_' . now()->format('Y-m-d_His');
+
+        if ($format === 'csv') {
+            return Excel::download(
+                new EmployeeIDCardExport($tab),
+                $filename . '.csv',
+                \Maatwebsite\Excel\Excel::CSV
+            );
+        }
+
+        return Excel::download(
+            new EmployeeIDCardExport($tab),
+            $filename . '.xlsx',
+            \Maatwebsite\Excel\Excel::XLSX
+        );
+    }
 }
 
