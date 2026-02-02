@@ -67,7 +67,7 @@ class LoginController extends Controller
 
         return redirect()->back()->with('error', 'Invalid username or password');
     }
-   public function authenticate_bkp_again(Request $request)
+   public function authenticate(Request $request)
 {
     $this->validateLogin($request);
 
@@ -247,7 +247,7 @@ class LoginController extends Controller
     }
     return redirect()->back()->with('error', 'Invalid username or password.');
 }
-    public function authenticate(Request $request)
+    public function authenticate_bkp_0202(Request $request)
 {
    
     $this->validateLogin($request);
