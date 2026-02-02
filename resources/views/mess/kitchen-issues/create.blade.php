@@ -1,9 +1,9 @@
 @extends('admin.layouts.master')
-@section('title', 'Create Material Management')
+@section('title', 'ADD Selling Voucher')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Create Material Management</h4>
+        <h4>ADD Selling Voucher</h4>
         <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
     </div>
 
@@ -16,22 +16,40 @@
             </ul>
         </div>
     @endif
-    
-    <div class="card">
-        <div class="card-body">
-            <form action="{{ route('admin.mess.material-management.store') }}" method="POST">
-                @csrf
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Store <span class="text-danger">*</span></label>
-                        <select name="inve_store_master_pk" class="form-select" required>
-                            <option value="">Select Store</option>
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ old('inve_store_master_pk') == $store->id ? 'selected' : '' }}>
-                                    {{ $store->store_name }}
-                                </option>
-                            @endforeach
+
+    <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherForm">
+        @csrf
+
+        {{-- Client Type --}}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0 fw-semibold">Client Type <span class="text-danger">*</span></h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach($clientTypes as $slug => $label)
+                        <div class="form-check">
+                            <input class="form-check-input client-type-radio" type="radio" name="client_type_slug" id="ct_{{ $slug }}" value="{{ $slug }}" {{ old('client_type_slug') === $slug ? 'checked' : '' }} required>
+                            <label class="form-check-label" for="ct_{{ $slug }}">{{ $label }}</label>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+        {{-- Conditional fields by Client Type --}}
+        <div class="card mb-4" id="clientDetailsCard">
+            <div class="card-header bg-light">
+                <h6 class="mb-0 fw-semibold">Client Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Payment Type <span class="text-danger">*</span></label>
+                        <select name="payment_type" class="form-select" required>
+                            <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
+                            <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
+                            <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
                         </select>
                         <small class="text-muted" id="paymentTypeHint">Employee / OT / Course: Credit only</small>
                     </div>
@@ -113,12 +131,11 @@
                         </tbody>
                     </table>
                 </div>
-                
-                <div class="text-end">
-                    <button type="submit" class="btn btn-primary">Create Material Management</button>
-                    <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Cancel</a>
-                </div>
-            </form>
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-end align-items-center">
+                <span class="fw-semibold">Grand Total:</span>
+                <span class="fs-5 text-primary fw-bold ms-2" id="grandTotal">₹0.00</span>
+            </div>
         </div>
 
         <div class="d-flex gap-2">
@@ -217,7 +234,7 @@
     });
 
     // Client type: restrict payment for Employee/OT/Course to Credit only
-    const creditOnly = ['employee', 'ot', 'course'];
+    const creditOnly = ['employee', 'ot', 'course', 'section'];
     document.querySelectorAll('.client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
             const paymentSelect = document.querySelector('select[name="payment_type"]');

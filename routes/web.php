@@ -549,6 +549,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('material-management/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('material-management.send-for-approval');
         Route::get('material-management/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
         Route::get('material-management/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('material-management.bill-report');
+
+        // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
+        Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
         
         // Material Management Approval
         Route::prefix('material-management-approvals')->name('material-management-approvals.')->group(function () {

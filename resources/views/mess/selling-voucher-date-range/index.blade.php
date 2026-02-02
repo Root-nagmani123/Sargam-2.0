@@ -101,9 +101,8 @@
                             <td>
                                 @if(($item->return_quantity ?? 0) > 0)
                                     <span class="badge bg-info">Returned</span>
-                                @endif
-                                @if($loop->first)
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-report" data-report-id="{{ $report->id }}" title="Return">Return</button>
+                                @else
+                                    —
                                 @endif
                             </td>
                             <td>
@@ -136,9 +135,7 @@
                                 @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
                                 @else<span class="badge bg-success">Final</span>@endif
                             </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report" data-report-id="{{ $report->id }}" title="Return">Return</button>
-                            </td>
+                            <td>—</td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-info btn-view-report" data-report-id="{{ $report->id }}" title="View">View</button>
                                 <button type="button" class="btn btn-sm btn-warning btn-edit-report" data-report-id="{{ $report->id }}" title="Edit">Edit</button>
@@ -218,59 +215,20 @@
                                     </select>
                                     <small class="text-muted" id="drPaymentTypeHint">Employee / OT / Course: Credit only</small>
                                 </div>
-                                <div class="col-md-4" id="drClientNameWrap">
+                                <div class="col-md-4">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select" id="drClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}">{{ $c->client_name }}</option>
                                             @endforeach
                                         @endforeach
                                     </select>
-                                    <select id="drOtCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
                                 </div>
-                                <div class="col-md-4" id="drNameFieldWrap">
+                                <div class="col-md-4">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" id="drClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
-                                    <select id="drFacultySelect" class="form-select" style="display:none;">
-                                        <option value="">Select Faculty</option>
-                                        @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drAcademyStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Academy Staff</option>
-                                        @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drMessStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Mess Staff</option>
-                                        @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drOtStudentSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Student</option>
-                                    </select>
-                                    <select id="drCourseNameSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
+                                    <input type="text" name="client_name" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Issue Date <span class="text-danger">*</span></label>
@@ -451,53 +409,6 @@
     </div>
 </div>
 
-{{-- Return Item Modal (Transfer To) --}}
-<div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <form id="returnItemForm" method="POST" action="">
-                @csrf
-                @method('PUT')
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="returnItemModalLabel">Transfer To</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Transfer From Store</label>
-                        <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
-                    </div>
-                    <div class="card">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
-                                        <tr>
-                                            <th style="color: #fff;">Item Name</th>
-                                            <th style="color: #fff;">Issued Quantity</th>
-                                            <th style="color: #fff;">Item Unit</th>
-                                            <th style="color: #fff;">Return Quantity</th>
-                                            <th style="color: #fff;">Return Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="returnItemModalBody"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 {{-- Edit Report Modal --}}
 <style>
 #editReportModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
@@ -541,59 +452,20 @@
                                         <option value="2">Online</option>
                                     </select>
                                 </div>
-                                <div class="col-md-4" id="editDrClientNameWrap">
+                                <div class="col-md-4">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select edit-client-type-pk" id="editDrClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}">{{ $c->client_name }}</option>
                                             @endforeach
                                         @endforeach
                                     </select>
-                                    <select id="editDrOtCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editDrCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
                                 </div>
-                                <div class="col-md-4" id="editDrNameFieldWrap">
+                                <div class="col-md-4">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" class="form-control edit-client-name" id="editDrClientNameInput" placeholder="Client / section / role name" required>
-                                    <select id="editDrFacultySelect" class="form-select" style="display:none;">
-                                        <option value="">Select Faculty</option>
-                                        @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editDrAcademyStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Academy Staff</option>
-                                        @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editDrMessStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Mess Staff</option>
-                                        @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="editDrOtStudentSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Student</option>
-                                    </select>
-                                    <select id="editDrCourseNameSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
+                                    <input type="text" name="client_name" class="form-control edit-client-name" placeholder="Client / section / role name" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Issue Date <span class="text-danger">*</span></label>
@@ -749,306 +621,6 @@
         }
     });
 
-    // Add modal: Client Type + Client Name -> Name field (Faculty / Academy Staff / Mess Staff dropdown when Employee)
-    function updateDrNameField() {
-        const clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
-        const clientNameSelect = document.getElementById('drClientNameSelect');
-        const nameInput = document.getElementById('drClientNameInput');
-        const facultySelect = document.getElementById('drFacultySelect');
-        const academyStaffSelect = document.getElementById('drAcademyStaffSelect');
-        const messStaffSelect = document.getElementById('drMessStaffSelect');
-        const otStudentSelect = document.getElementById('drOtStudentSelect');
-        const drCourseSelect = document.getElementById('drCourseSelect');
-        const drCourseNameSelect = document.getElementById('drCourseNameSelect');
-        if (!clientTypeRadio || !clientNameSelect || !nameInput) return;
-        const isEmployee = (clientTypeRadio.value || '').toLowerCase() === 'employee';
-        const isOt = (clientTypeRadio.value || '').toLowerCase() === 'ot';
-        const isCourse = (clientTypeRadio.value || '').toLowerCase() === 'course';
-        const opt = clientNameSelect.options[clientNameSelect.selectedIndex];
-        const clientNameVal = (opt && opt.dataset.clientName) ? opt.dataset.clientName : '';
-        const isFaculty = clientNameVal === 'faculty';
-        const isAcademyStaff = clientNameVal === 'academy staff';
-        const isMessStaff = clientNameVal === 'mess staff';
-        const showFaculty = isEmployee && isFaculty;
-        const showAcademyStaff = isEmployee && isAcademyStaff;
-        const showMessStaff = isEmployee && isMessStaff;
-        const showAny = showFaculty || showAcademyStaff || showMessStaff;
-        if (isOt) {
-            nameInput.style.display = 'none';
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'block'; }
-            if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.value = ''; drCourseSelect.removeAttribute('required'); }
-            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.value = ''; drCourseNameSelect.removeAttribute('required'); }
-        } else if (isCourse) {
-            nameInput.style.display = 'none';
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (drCourseSelect) { drCourseSelect.style.display = 'block'; }
-            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; }
-        } else {
-            nameInput.style.display = showAny ? 'none' : 'block';
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
-                if (!sel) return;
-                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
-                sel.removeAttribute('required');
-                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
-            });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.value = ''; drCourseSelect.removeAttribute('required'); }
-            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.value = ''; drCourseNameSelect.removeAttribute('required'); }
-            if (!showAny) nameInput.setAttribute('required', 'required');
-        }
-    }
-    document.querySelectorAll('#addReportModal .dr-client-type-radio').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const isOt = (this.value || '').toLowerCase() === 'ot';
-            const isCourse = (this.value || '').toLowerCase() === 'course';
-            const clientSelect = document.getElementById('drClientNameSelect');
-            const otCourseSelect = document.getElementById('drOtCourseSelect');
-            const otStudentSelect = document.getElementById('drOtStudentSelect');
-            const drCourseSelect = document.getElementById('drCourseSelect');
-            const drCourseNameSelect = document.getElementById('drCourseNameSelect');
-            const nameInput = document.getElementById('drClientNameInput');
-            if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
-                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
-            } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'block'; drCourseSelect.setAttribute('required', 'required'); drCourseSelect.value = ''; }
-                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; drCourseNameSelect.setAttribute('required', 'required'); drCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
-            } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
-                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = (opt.dataset.type || '') !== (this.value || '');
-                    }.bind(this));
-                }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
-            }
-            updateDrNameField();
-        });
-    });
-    document.getElementById('drOtCourseSelect').addEventListener('change', function() {
-        const coursePk = this.value;
-        const otStudentSelect = document.getElementById('drOtStudentSelect');
-        const nameInput = document.getElementById('drClientNameInput');
-        if (!otStudentSelect || !nameInput) return;
-        otStudentSelect.innerHTML = '<option value="">Loading...</option>';
-        otStudentSelect.value = '';
-        nameInput.value = '';
-        if (!coursePk) {
-            otStudentSelect.innerHTML = '<option value="">Select course first</option>';
-            return;
-        }
-        fetch(baseUrl + '/students-by-course/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.json())
-            .then(function(data) {
-                otStudentSelect.innerHTML = '<option value="">Select Student</option>';
-                (data.students || []).forEach(function(s) {
-                    const opt = document.createElement('option');
-                    opt.value = s.display_name || '';
-                    opt.textContent = s.display_name || '—';
-                    otStudentSelect.appendChild(opt);
-                });
-            })
-            .catch(function() { otStudentSelect.innerHTML = '<option value="">Error loading students</option>'; });
-    });
-    document.getElementById('drOtStudentSelect').addEventListener('change', function() {
-        const inp = document.getElementById('drClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-    document.getElementById('drCourseSelect').addEventListener('change', function() {
-        const val = this.value || '';
-        const drCourseNameSelect = document.getElementById('drCourseNameSelect');
-        const inp = document.getElementById('drClientNameInput');
-        if (drCourseNameSelect) drCourseNameSelect.value = val;
-        if (inp) inp.value = val;
-    });
-    document.getElementById('drCourseNameSelect').addEventListener('change', function() {
-        const val = this.value || '';
-        const drCourseSelect = document.getElementById('drCourseSelect');
-        const inp = document.getElementById('drClientNameInput');
-        if (drCourseSelect) drCourseSelect.value = val;
-        if (inp) inp.value = val;
-    });
-    document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
-    document.getElementById('drFacultySelect').addEventListener('change', function() {
-        const inp = document.getElementById('drClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-    const drAcademyStaffEl = document.getElementById('drAcademyStaffSelect');
-    if (drAcademyStaffEl) drAcademyStaffEl.addEventListener('change', function() {
-        const inp = document.getElementById('drClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-    const drMessStaffEl = document.getElementById('drMessStaffSelect');
-    if (drMessStaffEl) drMessStaffEl.addEventListener('change', function() {
-        const inp = document.getElementById('drClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-    const addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
-    if (addChecked) addChecked.dispatchEvent(new Event('change'));
-
-    // Edit modal: same Faculty / Academy Staff / Mess Staff dropdown logic
-    function updateEditDrNameField() {
-        const clientTypeRadio = document.querySelector('#editReportModal .edit-dr-client-type-radio:checked');
-        const clientNameSelect = document.getElementById('editDrClientNameSelect');
-        const nameInput = document.getElementById('editDrClientNameInput');
-        const facultySelect = document.getElementById('editDrFacultySelect');
-        const academyStaffSelect = document.getElementById('editDrAcademyStaffSelect');
-        const messStaffSelect = document.getElementById('editDrMessStaffSelect');
-        const editDrCourseSelect = document.getElementById('editDrCourseSelect');
-        const editDrCourseNameSelect = document.getElementById('editDrCourseNameSelect');
-        if (!clientTypeRadio || !clientNameSelect || !nameInput) return;
-        const isEmployee = (clientTypeRadio.value || '').toLowerCase() === 'employee';
-        const isOt = (clientTypeRadio.value || '').toLowerCase() === 'ot';
-        const isCourse = (clientTypeRadio.value || '').toLowerCase() === 'course';
-        const opt = clientNameSelect.options[clientNameSelect.selectedIndex];
-        const clientNameVal = (opt && opt.dataset.clientName) ? opt.dataset.clientName : '';
-        const isFaculty = clientNameVal === 'faculty';
-        const isAcademyStaff = clientNameVal === 'academy staff';
-        const isMessStaff = clientNameVal === 'mess staff';
-        const showFaculty = isEmployee && isFaculty;
-        const showAcademyStaff = isEmployee && isAcademyStaff;
-        const showMessStaff = isEmployee && isMessStaff;
-        const showAny = showFaculty || showAcademyStaff || showMessStaff;
-        if (isOt || isCourse) {
-            nameInput.style.display = 'none';
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (isCourse && editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; }
-            if (isCourse && editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; }
-        } else {
-            nameInput.style.display = showAny ? 'none' : 'block';
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
-                if (!sel) return;
-                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
-                sel.removeAttribute('required');
-                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
-            });
-            if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.value = ''; editDrCourseSelect.removeAttribute('required'); }
-            if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.value = ''; editDrCourseNameSelect.removeAttribute('required'); }
-            if (!showAny) nameInput.setAttribute('required', 'required');
-        }
-    }
-    document.querySelectorAll('#editReportModal .edit-dr-client-type-radio').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const isOt = (this.value || '').toLowerCase() === 'ot';
-            const isCourse = (this.value || '').toLowerCase() === 'course';
-            const clientSelect = document.getElementById('editDrClientNameSelect');
-            const otCourseSelect = document.getElementById('editDrOtCourseSelect');
-            const otStudentSelect = document.getElementById('editDrOtStudentSelect');
-            const editDrCourseSelect = document.getElementById('editDrCourseSelect');
-            const editDrCourseNameSelect = document.getElementById('editDrCourseNameSelect');
-            const nameInput = document.getElementById('editDrClientNameInput');
-            if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.value = ''; }
-                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
-            } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; editDrCourseSelect.setAttribute('required', 'required'); editDrCourseSelect.value = nameInput.value || ''; }
-                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; editDrCourseNameSelect.setAttribute('required', 'required'); editDrCourseNameSelect.value = nameInput.value || ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
-            } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.value = ''; }
-                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = (opt.dataset.type || '') !== (this.value || '');
-                    }.bind(this));
-                }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
-            }
-            updateEditDrNameField();
-        });
-    });
-    document.getElementById('editDrOtCourseSelect').addEventListener('change', function() {
-        const coursePk = this.value;
-        const otStudentSelect = document.getElementById('editDrOtStudentSelect');
-        const nameInput = document.getElementById('editDrClientNameInput');
-        if (!otStudentSelect || !nameInput) return;
-        otStudentSelect.innerHTML = '<option value="">Loading...</option>';
-        otStudentSelect.value = '';
-        nameInput.value = '';
-        if (!coursePk) {
-            otStudentSelect.innerHTML = '<option value="">Select course first</option>';
-            return;
-        }
-        fetch(baseUrl + '/students-by-course/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.json())
-            .then(function(data) {
-                otStudentSelect.innerHTML = '<option value="">Select Student</option>';
-                (data.students || []).forEach(function(s) {
-                    const opt = document.createElement('option');
-                    opt.value = s.display_name || '';
-                    opt.textContent = s.display_name || '—';
-                    otStudentSelect.appendChild(opt);
-                });
-            })
-            .catch(function() { otStudentSelect.innerHTML = '<option value="">Error loading students</option>'; });
-    });
-    document.getElementById('editDrOtStudentSelect').addEventListener('change', function() {
-        const inp = document.getElementById('editDrClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-    document.getElementById('editDrCourseSelect').addEventListener('change', function() {
-        const val = this.value || '';
-        const editDrCourseNameSelect = document.getElementById('editDrCourseNameSelect');
-        const inp = document.getElementById('editDrClientNameInput');
-        if (editDrCourseNameSelect) editDrCourseNameSelect.value = val;
-        if (inp) inp.value = val;
-    });
-    document.getElementById('editDrCourseNameSelect').addEventListener('change', function() {
-        const val = this.value || '';
-        const editDrCourseSelect = document.getElementById('editDrCourseSelect');
-        const inp = document.getElementById('editDrClientNameInput');
-        if (editDrCourseSelect) editDrCourseSelect.value = val;
-        if (inp) inp.value = val;
-    });
-    document.getElementById('editDrClientNameSelect').addEventListener('change', updateEditDrNameField);
-    document.getElementById('editDrFacultySelect').addEventListener('change', function() {
-        const inp = document.getElementById('editDrClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-    const editDrAcademyStaffEl = document.getElementById('editDrAcademyStaffSelect');
-    if (editDrAcademyStaffEl) editDrAcademyStaffEl.addEventListener('change', function() {
-        const inp = document.getElementById('editDrClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-    const editDrMessStaffEl = document.getElementById('editDrMessStaffSelect');
-    if (editDrMessStaffEl) editDrMessStaffEl.addEventListener('change', function() {
-        const inp = document.getElementById('editDrClientNameInput');
-        if (inp) inp.value = this.value || '';
-    });
-
     // Edit modal row helpers
     function getEditRowHtml(index, item) {
         item = item || {};
@@ -1177,35 +749,6 @@
         });
     });
 
-    // Return item modal
-    document.querySelectorAll('.btn-return-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
-            fetch(baseUrl + '/' + reportId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
-                .then(function(data) {
-                    document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
-                    const tbody = document.getElementById('returnItemModalBody');
-                    tbody.innerHTML = '';
-                    (data.items || []).forEach(function(item, i) {
-                        const id = (item.id != null) ? item.id : '';
-                        const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-                        const qty = item.quantity != null ? item.quantity : '';
-                        const unit = (item.unit || '—').replace(/</g, '&lt;');
-                        const retQty = item.return_quantity != null ? item.return_quantity : 0;
-                        const retDate = item.return_date || '';
-                        tbody.insertAdjacentHTML('beforeend',
-                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
-                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm" step="0.01" min="0" value="' + retQty + '"></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm" value="' + retDate + '"></td></tr>');
-                    });
-                    document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
-                    new bootstrap.Modal(document.getElementById('returnItemModal')).show();
-                })
-                .catch(err => { console.error(err); alert('Failed to load return data.'); });
-        });
-    });
-
     // Edit report
     document.querySelectorAll('.btn-edit-report').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -1218,18 +761,7 @@
                     document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' + (v.id || reportId);
                     document.querySelector('.edit-store-id').value = v.store_id || '';
                     document.querySelector('.edit-remarks').value = v.remarks || '';
-                    document.getElementById('editDrClientNameInput').value = v.client_name || '';
-                    document.getElementById('editDrFacultySelect').value = v.client_name || '';
-                    const editAcademyEl = document.getElementById('editDrAcademyStaffSelect');
-                    if (editAcademyEl) editAcademyEl.value = v.client_name || '';
-                    const editMessEl = document.getElementById('editDrMessStaffSelect');
-                    if (editMessEl) editMessEl.value = v.client_name || '';
-                    const editOtCourseEl = document.getElementById('editDrOtCourseSelect');
-                    if (editOtCourseEl) editOtCourseEl.value = v.client_name || '';
-                    const editDrCourseEl = document.getElementById('editDrCourseSelect');
-                    if (editDrCourseEl) editDrCourseEl.value = v.client_name || '';
-                    const editDrCourseNameEl = document.getElementById('editDrCourseNameSelect');
-                    if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_name || '';
+                    document.querySelector('.edit-client-name').value = v.client_name || '';
                     document.querySelector('.edit-payment-type').value = String(v.payment_type ?? 1);
                     document.querySelector('.edit-issue-date').value = v.issue_date || '';
                     document.querySelector('.edit-client-type-pk').value = v.client_type_pk || '';
@@ -1237,33 +769,6 @@
                     document.querySelectorAll('.edit-dr-client-type-radio').forEach(function(radio) {
                         radio.checked = (radio.value === slug);
                     });
-                    const isOt = slug === 'ot';
-                    const isCourse = slug === 'course';
-                    const editClientSelect = document.getElementById('editDrClientNameSelect');
-                    const editOtSelect = document.getElementById('editDrOtCourseSelect');
-                    const editCourseSelect = document.getElementById('editDrCourseSelect');
-                    const editCourseNameSelect = document.getElementById('editDrCourseNameSelect');
-                    const editNameInp = document.getElementById('editDrClientNameInput');
-                    if (isOt) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
-                    } else if (isCourse) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.value = v.client_name || ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_name || ''; }
-                        if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
-                    } else {
-                        if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== slug; }); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
-                    }
-                    updateEditDrNameField();
                     const tbody = document.getElementById('editModalItemsBody');
                     tbody.innerHTML = '';
                     editRowIndex = 0;
