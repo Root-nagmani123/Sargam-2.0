@@ -128,7 +128,7 @@ class KitchenIssueMaster extends Model
      */
     public function employee()
     {
-        return $this->belongsTo(User::class, 'employee_student_pk', 'id');
+        return $this->belongsTo(User::class, 'employee_student_pk', 'pk');
     }
 
     /**
@@ -136,7 +136,7 @@ class KitchenIssueMaster extends Model
      */
     public function student()
     {
-        return $this->belongsTo(User::class, 'employee_student_pk', 'id');
+        return $this->belongsTo(User::class, 'employee_student_pk', 'pk');
     }
 
     /**
@@ -153,6 +153,22 @@ class KitchenIssueMaster extends Model
     public function modifier()
     {
         return $this->belongsTo(User::class, 'modified_by');
+    }
+
+    /**
+     * Get client type category (Client Name row from mess_client_types)
+     */
+    public function clientTypeCategory()
+    {
+        return $this->belongsTo(\App\Models\Mess\ClientType::class, 'client_type_pk', 'id');
+    }
+
+    /**
+     * Grand total from items
+     */
+    public function getGrandTotalAttribute()
+    {
+        return $this->items->sum('amount');
     }
 
     /**
