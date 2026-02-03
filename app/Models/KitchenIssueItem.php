@@ -19,6 +19,7 @@ class KitchenIssueItem extends Model
         'quantity',
         'available_quantity',
         'return_quantity',
+        'return_date',
         'rate',
         'amount',
         'unit',
@@ -28,6 +29,7 @@ class KitchenIssueItem extends Model
         'quantity' => 'decimal:2',
         'available_quantity' => 'decimal:2',
         'return_quantity' => 'decimal:2',
+        'return_date' => 'date',
         'rate' => 'decimal:2',
         'amount' => 'decimal:2',
     ];
