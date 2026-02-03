@@ -104,6 +104,9 @@
                                 @else
                                     —
                                 @endif
+                                @if($loop->first)
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-report" data-report-id="{{ $report->id }}" title="Return">Return</button>
+                                @endif
                             </td>
                             <td>
                                 @if($loop->first)
@@ -135,7 +138,9 @@
                                 @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
                                 @else<span class="badge bg-success">Final</span>@endif
                             </td>
-                            <td>—</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report" data-report-id="{{ $report->id }}" title="Return">Return</button>
+                            </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-info btn-view-report" data-report-id="{{ $report->id }}" title="View">View</button>
                                 <button type="button" class="btn btn-sm btn-warning btn-edit-report" data-report-id="{{ $report->id }}" title="Edit">Edit</button>
@@ -405,6 +410,53 @@
             <div class="modal-footer border-top">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Return Item Modal (Transfer To) --}}
+<div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="returnItemForm" method="POST" action="">
+                @csrf
+                @method('PUT')
+                <div class="modal-header border-bottom bg-light">
+                    <h5 class="modal-title fw-semibold" id="returnItemModalLabel">Transfer To</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Transfer From Store</label>
+                        <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header bg-white py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered mb-0">
+                                    <thead style="background-color: #af2910;">
+                                        <tr>
+                                            <th style="color: #fff;">Item Name</th>
+                                            <th style="color: #fff;">Issued Quantity</th>
+                                            <th style="color: #fff;">Item Unit</th>
+                                            <th style="color: #fff;">Return Quantity</th>
+                                            <th style="color: #fff;">Return Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="returnItemModalBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -746,6 +798,35 @@
                     new bootstrap.Modal(document.getElementById('viewReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report.'); });
+        });
+    });
+
+    // Return item modal
+    document.querySelectorAll('.btn-return-report').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const reportId = this.getAttribute('data-report-id');
+            fetch(baseUrl + '/' + reportId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(function(data) {
+                    document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                    const tbody = document.getElementById('returnItemModalBody');
+                    tbody.innerHTML = '';
+                    (data.items || []).forEach(function(item, i) {
+                        const id = (item.id != null) ? item.id : '';
+                        const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        const qty = item.quantity != null ? item.quantity : '';
+                        const unit = (item.unit || '—').replace(/</g, '&lt;');
+                        const retQty = item.return_quantity != null ? item.return_quantity : 0;
+                        const retDate = item.return_date || '';
+                        tbody.insertAdjacentHTML('beforeend',
+                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm" step="0.01" min="0" value="' + retQty + '"></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm" value="' + retDate + '"></td></tr>');
+                    });
+                    document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
+                    new bootstrap.Modal(document.getElementById('returnItemModal')).show();
+                })
+                .catch(err => { console.error(err); alert('Failed to load return data.'); });
         });
     });
 

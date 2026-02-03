@@ -102,6 +102,9 @@
                                 @else
                                     —
                                 @endif
+                                @if($loop->first)
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                @endif
                             </td>
                             <td>
                                 @if($loop->first)
@@ -130,7 +133,9 @@
                             <td>—</td>
                             <td>{{ $voucher->request_date ? \Carbon\Carbon::parse($voucher->request_date)->format('d/m/Y') : '—' }}</td>
                             <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
-                            <td>—</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                            </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
                                 @if($voucher->approve_status != 1)
@@ -521,11 +526,59 @@
     </div>
 </div>
 
+{{-- Return Item Modal (Transfer To) --}}
+<div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="returnItemForm" method="POST" action="">
+                @csrf
+                @method('PUT')
+                <div class="modal-header border-bottom bg-light">
+                    <h5 class="modal-title fw-semibold" id="returnItemModalLabel">Transfer To</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Transfer From Store</label>
+                        <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header bg-white py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered mb-0">
+                                    <thead style="background-color: #af2910;">
+                                        <tr>
+                                            <th style="color: #fff;">Item Name</th>
+                                            <th style="color: #fff;">Issued Quantity</th>
+                                            <th style="color: #fff;">Item Unit</th>
+                                            <th style="color: #fff;">Return Quantity</th>
+                                            <th style="color: #fff;">Return Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="returnItemModalBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
     const itemSubcategories = @json($itemSubcategories);
     const editSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     const viewSvBaseUrl = "{{ url('admin/mess/material-management') }}";
+    const returnSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     let rowIndex = 1;
     let editRowIndex = 0;
 
@@ -723,6 +776,34 @@
                     new bootstrap.Modal(document.getElementById('viewSellingVoucherModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load selling voucher.'); });
+        });
+    });
+
+    document.querySelectorAll('.btn-return-sv').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const voucherId = this.getAttribute('data-voucher-id');
+            fetch(returnSvBaseUrl + '/' + voucherId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                    const tbody = document.getElementById('returnItemModalBody');
+                    tbody.innerHTML = '';
+                    (data.items || []).forEach(function(item, i) {
+                        const id = (item.id != null) ? item.id : '';
+                        const name = (item.item_name || '—').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        const qty = item.quantity != null ? item.quantity : '';
+                        const unit = (item.unit || '—').replace(/</g, '&lt;');
+                        const retQty = item.return_quantity != null ? item.return_quantity : 0;
+                        const retDate = item.return_date || '';
+                        tbody.insertAdjacentHTML('beforeend',
+                            '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm" step="0.01" min="0" value="' + retQty + '"></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm" value="' + retDate + '"></td></tr>');
+                    });
+                    document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
+                    new bootstrap.Modal(document.getElementById('returnItemModal')).show();
+                })
+                .catch(err => { console.error(err); alert('Failed to load return data.'); });
         });
     });
 
