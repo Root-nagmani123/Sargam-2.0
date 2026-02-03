@@ -16,7 +16,7 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('vehicle_pass_tw_apply', function (Blueprint $table) {
+        Schema::createIfNotExists('vehicle_pass_tw_apply', function (Blueprint $table) {
             $table->id('vehicle_tw_pk');
             $table->string('employee_id_card', 100)->nullable();
             $table->unsignedBigInteger('emp_master_pk')->nullable();

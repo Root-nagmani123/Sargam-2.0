@@ -16,7 +16,7 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('sec_vehicle_type', function (Blueprint $table) {
+        Schema::createIfNotExists('sec_vehicle_type', function (Blueprint $table) {
             $table->id('pk');
             $table->string('vehicle_type', 100);
             $table->text('description')->nullable();
