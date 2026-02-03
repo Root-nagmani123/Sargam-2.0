@@ -243,6 +243,34 @@
     font-size: 0.9rem;
   }
 
+  /* Exemption category index - table scroll */
+  .exemption-category-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .exemption-category-index .table-responsive .table {
+    min-width: 750px;
+  }
+  .exemption-category-index .table-responsive .table th,
+  .exemption-category-index .table-responsive .table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Exemption datalist - table scroll */
+  .exemption-datalist-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .exemption-datalist-page .table-responsive .table {
+    min-width: 900px;
+  }
+  .exemption-datalist-page .table-responsive .table th,
+  .exemption-datalist-page .table-responsive .table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
   /* Course repository index - table scroll */
   .course-repository-index-page .table-responsive {
     overflow-x: auto !important;
@@ -255,6 +283,40 @@
   .course-repository-index-page .table-responsive td {
     padding: 8px 10px;
     font-size: 0.9rem;
+  }
+
+  /* Student course list (Course Wise OTs List) - table scroll */
+  .student-courselist-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    /* Subtle scroll shadow - visual cue that table scrolls */
+    box-shadow: inset -8px 0 8px -8px rgba(0, 0, 0, 0.08);
+  }
+  .student-courselist-page #studentsTable {
+    min-width: 750px;
+  }
+  .student-courselist-page #studentsTable th,
+  .student-courselist-page #studentsTable td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .student-courselist-page .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .student-courselist-page .dataTables_length,
+  .student-courselist-page .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .student-courselist-page .dataTables_wrapper .dataTables_info {
+    white-space: normal;
+    word-break: break-word;
+  }
+  .student-courselist-page .dataTables_processing {
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 160px;
   }
 
   /* Prevent horizontal overflow from long text */
@@ -335,6 +397,44 @@
     font-size: 0.85rem;
   }
 
+  /* Exemption category index - stack header on tablet */
+  .exemption-category-index .card-body .row:first-child {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .exemption-category-index .card-body .row:first-child .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .exemption-category-index .card-body .row:first-child .d-flex.justify-content-end {
+    justify-content: stretch !important;
+  }
+  .exemption-category-index .card-body .row:first-child .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .exemption-category-index .table-responsive .table th,
+  .exemption-category-index .table-responsive .table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Exemption datalist - stack filter form on tablet */
+  .exemption-datalist-page .row.align-items-end.mb-4 > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .exemption-datalist-page .row.align-items-end.mb-4 .form-select,
+  .exemption-datalist-page .row.align-items-end.mb-4 .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+  .exemption-datalist-page .table-responsive .table th,
+  .exemption-datalist-page .table-responsive .table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
   /* District index - stack header on tablet */
   .district-index .district-header-row {
     flex-direction: column;
@@ -358,6 +458,82 @@
   }
   .district-index .datatables .card-body {
     padding: 1rem !important;
+  }
+
+  /* Student course list - filter card stack on tablet */
+  .student-courselist-page .card.mb-3 .row.align-items-end > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+  .student-courselist-page .card.mb-3 .row.align-items-end > [class*="col-"]:first-child {
+    padding-top: 0;
+    border-top: none;
+  }
+  .student-courselist-page .card.mb-3 .row.g-3 .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .student-courselist-page .card.mb-3 .row.g-3.align-items-end .col-md-8,
+  .student-courselist-page .card.mb-3 .row.g-3.align-items-end .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .student-courselist-page .card.mb-3 .btn-group {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .student-courselist-page .card.mb-3 .btn-group .btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+    min-height: 44px; /* Touch-friendly target */
+  }
+  .student-courselist-page .card.mb-3 .col-md-6 .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+  .student-courselist-page .card.mb-3 .fw-bold.fs-5.text-primary {
+    padding: 0.75rem;
+    background: rgba(0, 74, 147, 0.06);
+    border-radius: 0.375rem;
+  }
+  .student-courselist-page #studentsTable th,
+  .student-courselist-page #studentsTable td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .student-courselist-page #studentsTable .btn-sm {
+    min-height: 36px;
+    padding: 0.35rem 0.6rem;
+  }
+  .student-courselist-page #studentsTable .badge {
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .student-courselist-page .card-body {
+    padding: 1rem !important;
+  }
+  .student-courselist-page #importModal .modal-dialog {
+    max-width: calc(100% - 1rem);
+    margin: 0.5rem auto;
+  }
+  .student-courselist-page #importModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .student-courselist-page #importModal .alert .table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .student-courselist-page #importModal .alert .table thead {
+    min-width: 400px;
+  }
+  .student-courselist-page .form-select {
+    min-height: 44px;
   }
 
   .class-session-master-index #class-session-master-table th,
@@ -666,6 +842,119 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Student course list - extra small screens */
+  .student-courselist-page.container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .student-courselist-page .breadcrumb {
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+  }
+  .student-courselist-page .breadcrumb-item {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  .student-courselist-page .card.mb-3,
+  .student-courselist-page .card {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .student-courselist-page .card-body {
+    padding: 0.75rem !important;
+  }
+  .student-courselist-page .btn-group .btn {
+    flex: 1 1 100%;
+    min-width: 100%;
+    min-height: 44px;
+  }
+  .student-courselist-page .form-select,
+  .student-courselist-page .btn {
+    width: 100%;
+    max-width: 100%;
+    min-height: 44px;
+  }
+  .student-courselist-page .card.mb-3 .fw-bold.fs-5.text-primary {
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+  }
+  .student-courselist-page .card.mb-3 small.text-muted {
+    font-size: 0.75rem;
+    display: block;
+    margin-top: 0.25rem;
+  }
+  .student-courselist-page #studentsTable th,
+  .student-courselist-page #studentsTable td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .student-courselist-page #studentsTable .btn-sm {
+    min-height: 38px;
+    min-width: 38px;
+    padding: 0.4rem 0.65rem;
+  }
+  .student-courselist-page .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .student-courselist-page .dataTables_wrapper .row:last-child {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .student-courselist-page .dataTables_wrapper .dataTables_info {
+    text-align: center;
+  }
+  .student-courselist-page .dataTables_wrapper .dataTables_paginate {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: center;
+  }
+  .student-courselist-page .dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.875rem;
+    min-height: 36px;
+  }
+  .student-courselist-page .alert {
+    font-size: 0.875rem;
+  }
+  .student-courselist-page #importModal .modal-dialog {
+    max-width: calc(100% - 0.5rem);
+    margin: 0.25rem auto;
+  }
+  .student-courselist-page #importModal .modal-header,
+  .student-courselist-page #importModal .modal-footer {
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+  }
+  .student-courselist-page #importModal .modal-title {
+    font-size: 1rem;
+    word-break: break-word;
+  }
+  .student-courselist-page #importModal .modal-body {
+    padding: 1rem !important;
+    max-height: 65vh;
+    overflow-y: auto;
+  }
+  .student-courselist-page #importModal .modal-footer .btn {
+    flex: 1 1 100%;
+    min-width: 100%;
+    min-height: 44px;
+  }
+  .student-courselist-page #importModal .table {
+    font-size: 0.8125rem;
+  }
+  .student-courselist-page #importModal .alert .table {
+    min-width: 320px;
+  }
+  .student-courselist-page #importModal .form-text-dark {
+    font-size: 0.8125rem;
+  }
+
   /* Stream index - extra small screens */
   .stream-index.container-fluid {
     padding-left: 0.5rem !important;
@@ -698,6 +987,107 @@
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Exemption category index - header and actions on phone */
+  .exemption-category-index.container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .exemption-category-index .card-body .row:first-child {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .exemption-category-index .card-body .row:first-child .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .exemption-category-index .card-body .row:first-child .d-flex.justify-content-end {
+    justify-content: stretch !important;
+  }
+  .exemption-category-index .card-body .row:first-child .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .exemption-category-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .exemption-category-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+  .exemption-category-index .table-responsive .table {
+    min-width: 700px;
+  }
+  .exemption-category-index .table-responsive .table th,
+  .exemption-category-index .table-responsive .table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .exemption-category-index .table-responsive .table tbody td {
+    word-break: break-word;
+    vertical-align: middle !important;
+  }
+  .exemption-category-index .table-responsive .btn-sm {
+    min-height: 34px;
+    padding: 0.35rem 0.5rem;
+    margin: 2px;
+  }
+  .exemption-category-index .d-flex.justify-content-between.align-items-center.mt-3.flex-wrap {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  .exemption-category-index .d-flex.justify-content-between.align-items-center.mt-3.flex-wrap nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Exemption Important Notice card - Summernote on mobile */
+  .exemption-category-index .card.mt-3 .card-body,
+  .exemption-category-index .card:last-of-type .card-body {
+    padding: 0.75rem !important;
+  }
+  .exemption-category-index .note-editor {
+    min-height: 180px !important;
+  }
+  .exemption-category-index .note-toolbar {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .exemption-category-index .note-toolbar .note-btn-group {
+    margin: 0;
+  }
+  .exemption-category-index .text-end.mt-3 .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Exemption datalist - extra small screens */
+  .exemption-datalist-page.container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .exemption-datalist-page .card-body {
+    padding: 0.75rem !important;
+  }
+  .exemption-datalist-page .table-responsive {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .exemption-datalist-page .table-responsive .table {
+    min-width: 850px;
+  }
+  .exemption-datalist-page .table-responsive .table th,
+  .exemption-datalist-page .table-responsive .table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
   }
 
   /* District index - extra small screens */
@@ -1687,6 +2077,17 @@
   .permissions-index .card.card-body.my-4 {
     padding: 0.5rem !important;
   }
+  /* Exemption category index - extra small screens */
+  .exemption-category-index.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .exemption-category-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .exemption-category-index h4 {
+    font-size: 1.1rem;
+  }
   .idcard-index-page.container-fluid {
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
@@ -1769,6 +2170,987 @@
   .venue-master-actions .btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* Front Page Form (Create Front Page) - tablet and below */
+@media (max-width: 991.98px) {
+  .front-page-form.container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .front-page-form .card-body {
+    padding: 1rem !important;
+  }
+  .front-page-form .card-title {
+    font-size: 1.1rem;
+  }
+  .front-page-form .form-control,
+  .front-page-form input[type="text"],
+  .front-page-form input[type="file"] {
+    font-size: 0.95rem;
+  }
+  .front-page-form .form-label {
+    font-size: 0.9rem;
+  }
+  .front-page-form .note-editor {
+    min-height: 220px !important;
+  }
+}
+
+/* Front Page Form - mobile */
+@media (max-width: 767.98px) {
+  .front-page-form.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .front-page-form .card {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+  }
+  .front-page-form .card-body {
+    padding: 0.75rem !important;
+  }
+  .front-page-form .card-title {
+    font-size: 1rem;
+  }
+  .front-page-form .row > [class*="col-"] {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .front-page-form .col-12.text-end {
+    padding-top: 0.5rem;
+  }
+  .front-page-form .col-12.text-end .btn {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+  .front-page-form .note-editor {
+    min-height: 180px !important;
+  }
+  .front-page-form .note-toolbar {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .front-page-form .note-toolbar .note-btn-group {
+    margin: 0;
+  }
+  .front-page-form img[alt="Signature"] {
+    max-width: 100%;
+    height: auto !important;
+  }
+}
+
+/* Front Page Form - small mobile */
+@media (max-width: 576px) {
+  .front-page-form.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .front-page-form .card-body {
+    padding: 0.5rem !important;
+  }
+  .front-page-form .form-label {
+    font-size: 0.85rem;
+  }
+  .front-page-form small.text-muted {
+    font-size: 0.75rem;
+    display: block;
+  }
+}
+
+/* Path Page Form (Create Path Page) - tablet and below */
+@media (max-width: 991.98px) {
+  .path-page-form.container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .path-page-form .card-body {
+    padding: 1rem !important;
+  }
+  .path-page-form .card-title {
+    font-size: 1.1rem;
+  }
+  .path-page-form .form-control,
+  .path-page-form input[type="date"],
+  .path-page-form input[type="text"],
+  .path-page-form textarea {
+    font-size: 0.95rem;
+  }
+  .path-page-form .form-label {
+    font-size: 0.9rem;
+  }
+  .path-page-form .note-editor {
+    min-height: 220px !important;
+  }
+}
+
+/* Path Page Form - mobile */
+@media (max-width: 767.98px) {
+  .path-page-form.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .path-page-form .card {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+  }
+  .path-page-form .card-body {
+    padding: 0.75rem !important;
+  }
+  .path-page-form .card-title {
+    font-size: 1rem;
+  }
+  .path-page-form .row > [class*="col-"] {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .path-page-form .row.mb-4 > .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .path-page-form .mb-3.gap-2.d-flex.justify-content-end,
+  .path-page-form .d-flex.justify-content-end {
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+  }
+  .path-page-form .mb-3.gap-2.d-flex.justify-content-end .btn,
+  .path-page-form .d-flex.justify-content-end .btn-primary {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+  .path-page-form .note-editor {
+    min-height: 180px !important;
+  }
+  .path-page-form .note-toolbar {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .path-page-form .note-toolbar .note-btn-group {
+    margin: 0;
+  }
+  .path-page-form #faq-wrapper .row {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+  }
+  .path-page-form #faq-wrapper .row .col-12,
+  .path-page-form #faq-wrapper .row .col-md-5 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .path-page-form #faq-wrapper .text-end.align-self-end {
+    width: 100%;
+    padding: 0 0.5rem;
+    margin-top: 0.25rem;
+  }
+  .path-page-form #faq-wrapper .delete-faq-btn,
+  .path-page-form #faq-wrapper .remove-faq {
+    width: 100%;
+  }
+  .path-page-form #add-faq {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+}
+
+/* Path Page Form - small mobile */
+@media (max-width: 576px) {
+  .path-page-form.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .path-page-form .card-body {
+    padding: 0.5rem !important;
+  }
+  .path-page-form .form-label {
+    font-size: 0.85rem;
+  }
+  .path-page-form h5.fw-bold {
+    font-size: 1rem;
+  }
+}
+
+/* Registration index - tablet and below */
+@media (max-width: 991.98px) {
+  .registration-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    border-radius: 0.375rem;
+    box-shadow: inset -8px 0 12px -8px rgba(0, 0, 0, 0.08);
+  }
+  .registration-index .table-responsive::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.06), transparent);
+    pointer-events: none;
+  }
+  .registration-index .table-responsive .table {
+    min-width: 900px;
+  }
+  .registration-index .table-responsive .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8f9fa;
+    box-shadow: 0 1px 0 0 #dee2e6;
+    white-space: nowrap;
+  }
+  .registration-index .table-responsive .table thead th:first-child {
+    left: 0;
+    z-index: 3;
+    background: #f8f9fa;
+    box-shadow: 1px 1px 0 0 #dee2e6;
+  }
+  .registration-index .table-responsive .table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #fff;
+    box-shadow: 1px 0 0 0 #dee2e6;
+  }
+  .registration-index .table-responsive .table tbody tr.child-row td:first-child {
+    background: #f8f9fa;
+  }
+  .registration-index .table-responsive .table th,
+  .registration-index .table-responsive .table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .registration-index .table-responsive .form-check-input {
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .registration-index .card-body .row:first-child {
+    flex-wrap: wrap;
+  }
+  .registration-index .card-body .row:first-child .col-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 0.5rem;
+  }
+  .registration-index .card-body .row:first-child .col-12.col-md-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+  .registration-index .card-body .row:first-child .d-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+  .registration-index .card-body .row:first-child .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+  .registration-index .card-body .row:first-child .dropdown .dropdown-menu {
+    min-width: 100%;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .registration-index .d-flex.justify-content-between.align-items-center.flex-wrap {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  .registration-index .card.mt-3 {
+    margin-top: 1rem !important;
+  }
+  .registration-index .breadcrumb {
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+  }
+}
+
+/* Registration index - medium screens (landscape phones / small tablets) */
+@media (max-width: 767.98px) {
+  .registration-index .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .registration-index .card-body .row:first-child .btn {
+    flex: 1 1 auto;
+    min-width: 140px;
+  }
+  .registration-index .table-responsive .table {
+    min-width: 880px;
+  }
+}
+
+/* Registration index - small mobile */
+@media (max-width: 576px) {
+  .registration-index .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .registration-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .registration-index .card-body h4 {
+    font-size: 1.1rem;
+  }
+  .registration-index .card-body .row:first-child .btn,
+  .registration-index .card-body .row:first-child .dropdown .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .registration-index .card-body .row:first-child .dropdown {
+    width: 100%;
+  }
+  .registration-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    border-radius: 0;
+  }
+  .registration-index .table-responsive .table {
+    min-width: 850px;
+  }
+  .registration-index .table-responsive .table th,
+  .registration-index .table-responsive .table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .registration-index .table-responsive .btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+    min-height: 36px;
+  }
+  .registration-index .table-responsive .form-check-input {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .registration-index .d-flex.justify-content-between.align-items-center.flex-wrap .text-muted {
+    font-size: 0.8rem;
+  }
+  .registration-index .pagination {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .registration-index .pagination .page-link {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Registration index - extra small (very narrow phones) */
+@media (max-width: 380px) {
+  .registration-index .table-responsive .table {
+    min-width: 800px;
+  }
+  .registration-index .table-responsive .table th:nth-child(n+4),
+  .registration-index .table-responsive .table td:nth-child(n+4) {
+    font-size: 0.8rem;
+  }
+}
+
+/* ========== FC Registration Master List - tablet and below ========== */
+@media (max-width: 991.98px) {
+  .fc-registration-master-list .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: inset -8px 0 12px -8px rgba(0, 0, 0, 0.08);
+  }
+  .fc-registration-master-list .table-responsive #fcregistrationmasterlistdatable-table {
+    min-width: 900px;
+  }
+  .fc-registration-master-list .table-responsive .table th,
+  .fc-registration-master-list .table-responsive .table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  /* Stack filter columns */
+  .fc-registration-master-list #registrationFilterForm .row.g-3 > [class*="col-md-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  /* Stack Bulk Upload / Template buttons */
+  .fc-registration-master-list .col-md-2.d-flex.flex-column.gap-2 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .fc-registration-master-list .col-md-2.d-flex.flex-column.gap-2 .btn {
+    flex: 1 1 auto;
+    min-width: 140px;
+  }
+  /* Export & Preview row - stack */
+  .fc-registration-master-list .row.g-3.mb-3 > .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .fc-registration-master-list #exportForm,
+  .fc-registration-master-list .fc-preview-form {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+  .fc-registration-master-list #exportForm .form-select,
+  .fc-registration-master-list #exportForm button,
+  .fc-registration-master-list .fc-preview-form .btn,
+  .fc-registration-master-list .fc-preview-form input[type="file"] {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+  /* Bulk Deactivate & Show Duplicates - stack on tablet */
+  .fc-registration-master-list .col-12.d-flex.gap-2.mt-2 {
+    flex-direction: column;
+  }
+  .fc-registration-master-list .col-12.d-flex.gap-2.mt-2 form,
+  .fc-registration-master-list .col-12.d-flex.gap-2.mt-2 #showDuplicatesBtn {
+    flex-grow: 0;
+    width: 100%;
+  }
+}
+
+/* FC Registration Master List - medium screens */
+@media (max-width: 767.98px) {
+  .fc-registration-master-list .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .fc-registration-master-list .card-body {
+    padding: 1rem !important;
+  }
+  .fc-registration-master-list #exportForm,
+  .fc-registration-master-list .fc-preview-form {
+    flex-direction: column;
+  }
+  .fc-registration-master-list #exportForm .form-select,
+  .fc-registration-master-list #exportForm button,
+  .fc-registration-master-list .fc-preview-form .btn,
+  .fc-registration-master-list .fc-preview-form input[type="file"] {
+    width: 100%;
+    min-width: 0;
+  }
+  .fc-registration-master-list .table-responsive #fcregistrationmasterlistdatable-table {
+    min-width: 850px;
+  }
+}
+
+/* FC Registration Master List - small mobile */
+@media (max-width: 575.98px) {
+  .fc-registration-master-list .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .fc-registration-master-list .card-body {
+    padding: 0.75rem !important;
+  }
+  .fc-registration-master-list .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    border-radius: 0;
+  }
+  .fc-registration-master-list .table-responsive #fcregistrationmasterlistdatable-table {
+    min-width: 800px;
+  }
+  .fc-registration-master-list .table-responsive .table th,
+  .fc-registration-master-list .table-responsive .table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .fc-registration-master-list .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .fc-registration-master-list .dataTables_length,
+  .fc-registration-master-list .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .fc-registration-master-list .dataTables_filter input {
+    min-width: 120px;
+    max-width: 100%;
+  }
+  .fc-registration-master-list .dataTables_paginate .paginate_button {
+    padding: 0.4rem 0.6rem;
+    margin: 2px;
+    min-width: 36px;
+  }
+}
+
+/* FC Registration Master List - extra small */
+@media (max-width: 380px) {
+  .fc-registration-master-list .table-responsive #fcregistrationmasterlistdatable-table {
+    min-width: 750px;
+  }
+}
+
+/* ========== Add Column Form - tablet and below ========== */
+@media (max-width: 991.98px) {
+  .add-column-form-page .card-body {
+    padding: 1.25rem !important;
+  }
+  .add-column-form-page .row > [class*="col-sm-6"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .add-column-form-page .btn.float-end {
+    float: none !important;
+    width: 100%;
+  }
+}
+
+/* Add Column Form - mobile */
+@media (max-width: 575.98px) {
+  .add-column-form-page .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .add-column-form-page .card-body {
+    padding: 1rem !important;
+  }
+  .add-column-form-page .form-control,
+  .add-column-form-page .form-select {
+    min-height: 44px;
+  }
+  .add-column-form-page .form-check-input {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .add-column-form-page .btn.float-end {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+  }
+}
+
+/* Add Column Form - extra small */
+@media (max-width: 380px) {
+  .add-column-form-page .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .add-column-form-page .card-body {
+    padding: 0.75rem !important;
+  }
+  .add-column-form-page .form-label {
+    font-size: 0.9rem;
+  }
+}
+
+/* ========== Logo Page (Registration Page) - tablet and below ========== */
+@media (max-width: 991.98px) {
+  .logo-page-form .card-body {
+    padding: 1.25rem !important;
+  }
+  .logo-page-form .row > .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .logo-page-form .btn.float-end {
+    float: none !important;
+    width: 100%;
+  }
+}
+
+/* Logo Page - mobile */
+@media (max-width: 575.98px) {
+  .logo-page-form .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .logo-page-form .card-body {
+    padding: 1rem !important;
+  }
+  .logo-page-form .form-control,
+  .logo-page-form input[type="file"] {
+    min-height: 44px;
+  }
+  .logo-page-form .form-check-input {
+    min-width: 20px;
+    min-height: 20px;
+  }
+  .logo-page-form .btn.float-end {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+  }
+  .logo-page-form img[alt^="Logo"] {
+    max-width: 100%;
+    height: auto;
+  }
+  .logo-page-form .form-text {
+    font-size: 0.85rem;
+  }
+}
+
+/* Logo Page - extra small */
+@media (max-width: 380px) {
+  .logo-page-form .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .logo-page-form .card-body {
+    padding: 0.75rem !important;
+  }
+  .logo-page-form .card-title {
+    font-size: 1.1rem;
+  }
+  .logo-page-form .form-label {
+    font-size: 0.9rem;
+  }
+}
+
+/* ========== Enrollment Page - tablet and below ========== */
+@media (max-width: 991.98px) {
+  .enrollment-page .card-header .row > .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .enrollment-page .card-header .col-6.text-end {
+    text-align: left !important;
+    margin-top: 0.5rem;
+  }
+  .enrollment-page .card-header .col-6.text-end .btn {
+    width: 100%;
+  }
+  .enrollment-page .row .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .enrollment-page .select2-container {
+    width: 100% !important;
+  }
+  .enrollment-page .card .card .card-header.d-flex {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .enrollment-page .card .card .card-header .d-flex {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .enrollment-page .card .card .card-header #studentSearch {
+    width: 100% !important;
+    min-width: 0;
+  }
+  .enrollment-page .card .card .card-header .text-end {
+    width: 100%;
+  }
+  .enrollment-page .card .card .card-header .text-end .btn {
+    width: 100%;
+  }
+  .enrollment-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .enrollment-page #studentTable {
+    min-width: 500px;
+  }
+  .enrollment-page #studentTable th,
+  .enrollment-page #studentTable td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  /* Enrolled modal - tablet */
+  .enrollment-page #enrolledModal .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  .enrollment-page #enrolledModal .row.mb-3 .col-md-4,
+  .enrollment-page #enrolledModal .row.mb-3 .col-md-5,
+  .enrollment-page #enrolledModal .row.mb-3 .col-md-3 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 0.75rem;
+  }
+  .enrollment-page #enrolledModal .row.mb-3 .col-md-3.d-flex.align-items-end {
+    margin-bottom: 0;
+  }
+  .enrollment-page #enrolledModal .alert-info .row .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 0.25rem;
+  }
+  .enrollment-page #enrolledModal .alert-info .row .col-md-4:last-child {
+    margin-bottom: 0;
+  }
+  .enrollment-page #enrolledModal .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .enrollment-page #enrolledTable {
+    min-width: 600px;
+  }
+  .enrollment-page #enrolledTable th,
+  .enrollment-page #enrolledTable td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .enrollment-page #enrolledModal .d-flex.justify-content-between.align-items-center.mt-3 {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .enrollment-page #enrolledModal .modal-footer {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .enrollment-page #enrolledModal .modal-footer #exportButtons {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .enrollment-page #enrolledModal .modal-footer #exportButtons .btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+}
+
+/* Enrollment Page - mobile */
+@media (max-width: 575.98px) {
+  .enrollment-page .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .enrollment-page .card-header {
+    padding: 1rem !important;
+  }
+  .enrollment-page .card-header h4 {
+    font-size: 1.1rem;
+  }
+  .enrollment-page .form-select.select2,
+  .enrollment-page .form-control {
+    min-height: 44px;
+  }
+  .enrollment-page .card-body {
+    padding: 1rem !important;
+  }
+  .enrollment-page #studentTable {
+    min-width: 450px;
+  }
+  .enrollment-page #studentTable th,
+  .enrollment-page #studentTable td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .enrollment-page .pagination {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .enrollment-page .pagination .page-item .page-link {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  .enrollment-page #enrolledModal .modal-dialog {
+    margin: 0.25rem;
+    max-width: calc(100% - 0.5rem);
+  }
+  .enrollment-page #enrolledModal .modal-body {
+    padding: 1rem !important;
+  }
+  .enrollment-page #enrolledModal .modal-header {
+    flex-wrap: wrap;
+    padding: 1rem !important;
+  }
+  .enrollment-page #enrolledModal .modal-footer {
+    padding: 0.75rem 1rem !important;
+  }
+  .enrollment-page #enrolledModal .modal-footer .btn,
+  .enrollment-page #enrolledModal .modal-footer #exportButtons .btn {
+    width: 100%;
+  }
+  .enrollment-page #enrolledTable {
+    min-width: 500px;
+  }
+  .enrollment-page #enrolledTable th,
+  .enrollment-page #enrolledTable td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Enrollment Page - extra small */
+@media (max-width: 380px) {
+  .enrollment-page .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .enrollment-page .card-header,
+  .enrollment-page .card-body {
+    padding: 0.75rem !important;
+  }
+  .enrollment-page .card-header h4 {
+    font-size: 1rem;
+  }
+  .enrollment-page .form-label {
+    font-size: 0.9rem;
+  }
+  .enrollment-page #studentTable {
+    min-width: 400px;
+  }
+}
+
+/* ========== Peer Evaluation Admin Page ========== */
+/* Tablet and below - desktop view unchanged */
+@media (max-width: 991.98px) {
+  .peer-evaluation-admin-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .peer-evaluation-admin-page #datatable-courses,
+  .peer-evaluation-admin-page #datatable-groups,
+  .peer-evaluation-admin-page #datatable-reflection-fields {
+    min-width: 750px;
+  }
+  .peer-evaluation-admin-page #datatable-courses th,
+  .peer-evaluation-admin-page #datatable-courses td,
+  .peer-evaluation-admin-page #datatable-groups th,
+  .peer-evaluation-admin-page #datatable-groups td,
+  .peer-evaluation-admin-page #datatable-reflection-fields th,
+  .peer-evaluation-admin-page #datatable-reflection-fields td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .peer-evaluation-admin-page .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .peer-evaluation-admin-page .dataTables_length,
+  .peer-evaluation-admin-page .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .peer-evaluation-admin-page .dataTables_filter input {
+    min-width: 140px;
+    max-width: 100%;
+  }
+  .peer-evaluation-admin-page .accordion-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .peer-evaluation-admin-page .accordion-header .accordion-button {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .peer-evaluation-admin-page .accordion-header .d-flex.align-items-center.gap-2 {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .peer-evaluation-admin-page .input-group.mb-3 {
+    flex-wrap: wrap;
+  }
+  .peer-evaluation-admin-page .input-group.mb-3 .form-control {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .peer-evaluation-admin-page .input-group.mb-3 .btn {
+    flex: 1 1 auto;
+  }
+  .peer-evaluation-admin-page .row.mb-3 .col-md-3,
+  .peer-evaluation-admin-page .row.mb-3 .col-md-4,
+  .peer-evaluation-admin-page .row.mb-3 .col-md-2 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 0.75rem;
+  }
+  .peer-evaluation-admin-page .row.mb-3 .d-flex.align-items-end {
+    margin-bottom: 0;
+  }
+  .peer-evaluation-admin-page .row.g-3 .col-lg-3,
+  .peer-evaluation-admin-page .row.g-3 .col-lg-4,
+  .peer-evaluation-admin-page .row.g-3 .col-lg-2 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .peer-evaluation-admin-page .btn-group.btn-group-sm {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .peer-evaluation-admin-page td .d-flex.align-items-center {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .peer-evaluation-admin-page .max-marks-input {
+    min-width: 70px;
+  }
+  .peer-evaluation-admin-page #editCourseModal .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+}
+
+/* Peer Evaluation Admin - mobile */
+@media (max-width: 575.98px) {
+  .peer-evaluation-admin-page .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .peer-evaluation-admin-page .card.p-3 {
+    padding: 1rem !important;
+  }
+  .peer-evaluation-admin-page h4,
+  .peer-evaluation-admin-page h5 {
+    font-size: 1.1rem;
+  }
+  .peer-evaluation-admin-page #datatable-courses,
+  .peer-evaluation-admin-page #datatable-groups,
+  .peer-evaluation-admin-page #datatable-reflection-fields {
+    min-width: 650px;
+  }
+  .peer-evaluation-admin-page #datatable-courses th,
+  .peer-evaluation-admin-page #datatable-courses td,
+  .peer-evaluation-admin-page #datatable-groups th,
+  .peer-evaluation-admin-page #datatable-groups td,
+  .peer-evaluation-admin-page #datatable-reflection-fields th,
+  .peer-evaluation-admin-page #datatable-reflection-fields td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .peer-evaluation-admin-page .accordion-header {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .peer-evaluation-admin-page .accordion-body {
+    padding: 0.75rem 1rem !important;
+  }
+  .peer-evaluation-admin-page .input-group.input-group-sm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .peer-evaluation-admin-page .input-group.input-group-sm .form-control {
+    width: 100%;
+  }
+  .peer-evaluation-admin-page .input-group.input-group-sm .btn {
+    width: 100%;
+  }
+  .peer-evaluation-admin-page .form-control,
+  .peer-evaluation-admin-page .form-select {
+    min-height: 44px;
+  }
+  .peer-evaluation-admin-page .mb-2.p-2.border.rounded {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .peer-evaluation-admin-page .d-flex.justify-content-between.align-items-center {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .peer-evaluation-admin-page .pagination {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .peer-evaluation-admin-page .pagination .page-link {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  .peer-evaluation-admin-page #editCourseModal .modal-dialog {
+    margin: 0.25rem;
+    max-width: calc(100% - 0.5rem);
+  }
+  .peer-evaluation-admin-page #editCourseModal .modal-body,
+  .peer-evaluation-admin-page #editCourseModal .modal-footer {
+    padding: 1rem !important;
+  }
+  .peer-evaluation-admin-page .modal-footer .btn {
+    width: 100%;
   }
 }
 

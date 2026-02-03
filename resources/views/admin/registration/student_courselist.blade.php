@@ -3,7 +3,7 @@
 @section('title', 'Student - Course Mapping')
 
 @section('setup_content')
-    <div class="container-fluid">
+    <div class="container-fluid student-courselist-page">
         <x-breadcrum title="Course Wise OTs List" />
         <x-session_message />
 
