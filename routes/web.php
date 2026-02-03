@@ -505,6 +505,24 @@ Route::middleware(['auth'])->group(function () {
         Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
         Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
         
+        // Enhanced Invoice Management
+        Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class);
+        Route::get('invoices/date-range', [\App\Http\Controllers\Mess\InvoiceController::class, 'listInvoiceWithDateRange'])->name('invoices.dateRange');
+        Route::get('invoices/list/date-range', [\App\Http\Controllers\Mess\InvoiceController::class, 'listInvoiceWithDateRange'])->name('invoices.listInvoiceWithDateRange');
+        Route::get('invoices/get/list', [\App\Http\Controllers\Mess\InvoiceController::class, 'getInvoiceList'])->name('invoices.getInvoiceList');
+        Route::post('invoices/check/edit', [\App\Http\Controllers\Mess\InvoiceController::class, 'checkEditForInvoice'])->name('invoices.checkEditForInvoice');
+        Route::post('invoices/save/payment-type', [\App\Http\Controllers\Mess\InvoiceController::class, 'saveInvoicePaymentType'])->name('invoices.saveInvoicePaymentType');
+        
+        // Sales & Billing Management (from Java SaleMaster)
+        Route::resource('billing', \App\Http\Controllers\Mess\BillingController::class);
+        Route::get('billing/items/by-store', [\App\Http\Controllers\Mess\BillingController::class, 'getItemsByStore'])->name('billing.getItemsByStore');
+        Route::get('billing/buyers/find', [\App\Http\Controllers\Mess\BillingController::class, 'findBuyers'])->name('billing.findBuyers');
+        Route::get('billing/item/price', [\App\Http\Controllers\Mess\BillingController::class, 'getItemPrice'])->name('billing.getItemPrice');
+        Route::post('billing/credit-limit/check', [\App\Http\Controllers\Mess\BillingController::class, 'checkCreditLimit'])->name('billing.checkCreditLimit');
+        Route::post('billing/{id}/payment', [\App\Http\Controllers\Mess\BillingController::class, 'makePayment'])->name('billing.makePayment');
+        Route::get('billing/reports/due', [\App\Http\Controllers\Mess\BillingController::class, 'dueReport'])->name('billing.dueReport');
+
+        
         // NEW: Mess RBAC - Permission Management
         // IMPORTANT: Custom routes MUST come BEFORE resource route
         Route::get('permissions/users-by-role', [\App\Http\Controllers\Mess\MessPermissionController::class, 'getUsersByRole'])->name('permissions.getUsersByRole');

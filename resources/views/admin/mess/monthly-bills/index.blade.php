@@ -1,29 +1,25 @@
 @extends('admin.layouts.master')
-
+@section('title', 'Monthly Bills')
 @section('setup_content')
-<div class="card" style="border-left: 4px solid #004a93;">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <iconify-icon icon="solar:bill-list-bold" class="me-2"></iconify-icon>
-            Monthly Bills
-        </h5>
-        <div>
-            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#generateBillModal">
-                <iconify-icon icon="solar:add-circle-bold" class="me-1"></iconify-icon>
-                Generate Bills
-            </button>
-            <a href="{{ route('admin.mess.monthly-bills.create') }}" class="btn btn-primary btn-sm">
-                <iconify-icon icon="solar:add-circle-bold" class="me-1"></iconify-icon>
-                Add Bill
-            </a>
-        </div>
-    </div>
-    <div class="card-body">
-        <!-- Filters -->
-        <form method="GET" action="{{ route('admin.mess.monthly-bills.index') }}" class="mb-3">
-            <div class="row g-2">
-                <div class="col-md-2">
-                    <select name="month" class="form-select form-select-sm">
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Monthly Bills</h4>
+                <div>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#generateBillModal">
+                        Generate Bills
+                    </button>
+                    <a href="{{ route('admin.mess.monthly-bills.create') }}" class="btn btn-primary">
+                        Add Bill
+                    </a>
+                </div>
+            </div>
+            <!-- Filters -->
+            <form method="GET" action="{{ route('admin.mess.monthly-bills.index') }}" class="mb-3">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <select name="month" class="form-select">
                         <option value="">All Months</option>
                         @for($i = 1; $i <= 12; $i++)
                             <option value="{{ $i }}" {{ request('month') == $i ? 'selected' : '' }}>
@@ -32,16 +28,16 @@
                         @endfor
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <select name="year" class="form-select form-select-sm">
-                        <option value="">All Years</option>
-                        @for($y = date('Y'); $y >= 2020; $y--)
-                            <option value="{{ $y }}" {{ request('year') == $y ? 'selected' : '' }}>{{ $y }}</option>
-                        @endfor
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="status" class="form-select form-select-sm">
+                    <div class="col-md-2">
+                        <select name="year" class="form-select">
+                            <option value="">All Years</option>
+                            @for($y = date('Y'); $y >= 2020; $y--)
+                                <option value="{{ $y }}" {{ request('year') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="status" class="form-select">
                         <option value="">All Status</option>
                         <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="paid" {{ request('status') == 'paid' ? 'selected' : '' }}>Paid</option>
@@ -49,97 +45,81 @@
                         <option value="overdue" {{ request('status') == 'overdue' ? 'selected' : '' }}>Overdue</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control form-control-sm" 
-                           placeholder="Search by bill number or user name..." 
-                           value="{{ request('search') }}">
+                    <div class="col-md-4">
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Search by bill number or user name..." 
+                               value="{{ request('search') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-sm btn-primary w-100">
-                        <iconify-icon icon="solar:magnifer-bold"></iconify-icon> Filter
-                    </button>
+            </form>
+
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-            </div>
-        </form>
+            @endif
 
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
-        <div class="table-responsive">
-            <table class="table table-hover table-sm">
-                <thead class="table-light">
-                    <tr>
-                        <th>Bill Number</th>
-                        <th>User</th>
-                        <th>Period</th>
-                        <th>Total Amount</th>
-                        <th>Paid Amount</th>
-                        <th>Balance</th>
-                        <th>Status</th>
-                        <th>Due Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($bills as $bill)
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <td>{{ $bill->bill_number }}</td>
-                            <td>{{ $bill->user->name ?? 'N/A' }}</td>
-                            <td>{{ date('F Y', mktime(0, 0, 0, $bill->month, 1, $bill->year)) }}</td>
-                            <td>₹{{ number_format($bill->total_amount, 2) }}</td>
-                            <td>₹{{ number_format($bill->paid_amount, 2) }}</td>
-                            <td>₹{{ number_format($bill->balance, 2) }}</td>
-                            <td>
-                                @if($bill->status == 'paid')
-                                    <span class="badge bg-success">Paid</span>
-                                @elseif($bill->status == 'pending')
-                                    <span class="badge bg-warning">Pending</span>
-                                @elseif($bill->status == 'partial')
-                                    <span class="badge bg-info">Partial</span>
-                                @else
-                                    <span class="badge bg-danger">Overdue</span>
-                                @endif
-                            </td>
-                            <td>{{ $bill->due_date ? date('d-M-Y', strtotime($bill->due_date)) : '-' }}</td>
-                            <td>
-                                <a href="{{ route('admin.mess.monthly-bills.show', $bill->id) }}" 
-                                   class="btn btn-sm btn-info" title="View">
-                                    <iconify-icon icon="solar:eye-bold"></iconify-icon>
-                                </a>
-                                <a href="{{ route('admin.mess.monthly-bills.edit', $bill->id) }}" 
-                                   class="btn btn-sm btn-warning" title="Edit">
-                                    <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                                </a>
-                                <form action="{{ route('admin.mess.monthly-bills.destroy', $bill->id) }}" 
-                                      method="POST" class="d-inline" 
-                                      onsubmit="return confirm('Are you sure you want to delete this bill?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">
-                                        <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-                                    </button>
-                                </form>
-                            </td>
+                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
+                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Bill Number</th>
+                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">User</th>
+                            <th style="width: 140px; background-color: #af2910; color: #fff; border-color: #af2910;">Period</th>
+                            <th style="width: 130px; background-color: #af2910; color: #fff; border-color: #af2910;">Total Amount</th>
+                            <th style="width: 130px; background-color: #af2910; color: #fff; border-color: #af2910;">Balance</th>
+                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
+                            <th style="width: 200px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
-                                <iconify-icon icon="solar:bill-list-bold" style="font-size: 48px;"></iconify-icon>
-                                <p class="mt-2">No monthly bills found</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="d-flex justify-content-center mt-3">
-            {{ $bills->links() }}
+                    </thead>
+                    <tbody>
+                        @forelse($bills as $bill)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>
+                                    <div class="fw-semibold">{{ $bill->bill_number }}</div>
+                                    @if($bill->due_date && strtotime($bill->due_date) < time() && $bill->status != 'paid')
+                                        <span class="badge bg-danger small">Overdue</span>
+                                    @endif
+                                </td>
+                                <td>{{ $bill->user->name ?? '-' }}</td>
+                                <td>{{ date('F Y', mktime(0, 0, 0, $bill->month, 1, $bill->year)) }}</td>
+                                <td>₹{{ number_format($bill->total_amount, 2) }}</td>
+                                <td>₹{{ number_format($bill->balance, 2) }}</td>
+                                <td>
+                                    <span class="badge bg-{{ $bill->status == 'paid' ? 'success' : ($bill->status == 'partial' ? 'info' : ($bill->status == 'overdue' ? 'danger' : 'warning')) }}">
+                                        {{ ucfirst($bill->status ?? 'pending') }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ route('admin.mess.monthly-bills.show', $bill->id) }}" 
+                                           class="btn btn-sm btn-info" title="View">View</a>
+                                        <a href="{{ route('admin.mess.monthly-bills.edit', $bill->id) }}" 
+                                           class="btn btn-sm btn-warning" title="Edit">Edit</a>
+                                        <form action="{{ route('admin.mess.monthly-bills.destroy', $bill->id) }}" 
+                                              method="POST" class="d-inline" 
+                                              onsubmit="return confirm('Are you sure you want to delete this bill?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">No monthly bills found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

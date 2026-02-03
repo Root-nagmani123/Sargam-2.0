@@ -31,8 +31,13 @@ class FinanceBookingController extends Controller
      */
     public function create()
     {
-        $invoices = Invoice::where('payment_status', '!=', 'paid')->get();
-        $users = User::select('pk', 'name', 'email')->get();
+        // Get all invoices (show all, let user decide which to use)
+        // Optionally filter out fully paid ones, but include partial payments
+        $invoices = Invoice::with('vendor')
+            ->orderBy('invoice_date', 'desc')
+            ->get();
+        
+        $users = User::select('pk', 'user_name', 'first_name', 'last_name', 'email_id')->get();
         
         return view('admin.mess.finance-bookings.create', compact('invoices', 'users'));
     }
@@ -53,10 +58,14 @@ class FinanceBookingController extends Controller
             'remarks' => 'nullable|string'
         ]);
         
+        // Generate booking number
+        $bookingNumber = 'FB-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        
         FinanceBooking::create([
+            'booking_number' => $bookingNumber,
             'invoice_id' => $validated['invoice_id'],
             'user_id' => $validated['user_id'],
-            'booking_amount' => $validated['booking_amount'],
+            'amount' => $validated['booking_amount'],
             'booking_date' => $validated['booking_date'],
             'remarks' => $validated['remarks'] ?? null,
             'status' => 'pending',
@@ -88,7 +97,7 @@ class FinanceBookingController extends Controller
     {
         $booking = FinanceBooking::findOrFail($id);
         $invoices = Invoice::all();
-        $users = User::select('pk', 'name', 'email')->get();
+        $users = User::select('pk', 'user_name', 'first_name', 'last_name', 'email_id')->get();
         
         return view('admin.mess.finance-bookings.edit', compact('booking', 'invoices', 'users'));
     }
@@ -110,7 +119,11 @@ class FinanceBookingController extends Controller
             'remarks' => 'nullable|string'
         ]);
         
-        $booking->update($validated);
+        $booking->update([
+            'amount' => $validated['booking_amount'],
+            'booking_date' => $validated['booking_date'],
+            'remarks' => $validated['remarks'] ?? null
+        ]);
         
         return redirect()->route('admin.mess.finance-bookings.index')
             ->with('success', 'Finance booking updated successfully.');

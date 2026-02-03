@@ -20,13 +20,18 @@ class PurchaseOrderController extends Controller
         $purchaseOrders = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items'])->latest()->get();
         $vendors = Vendor::orderBy('name')->get();
         $stores = Store::where('status', 1)->orderBy('store_name')->get();
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()
+        
+        // Get item subcategories - use item_name column if exists, otherwise subcategory_name or name
+        $itemSubcategories = ItemSubcategory::active()
+            ->orderBy(DB::raw('COALESCE(item_name, subcategory_name, name)'))
+            ->get()
             ->map(fn ($s) => [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
                 'item_code' => $s->item_code ?? '—',
                 'unit_measurement' => $s->unit_measurement ?? '—',
             ]);
+            
         $po_number = 'PO' . date('Ymd') . str_pad(PurchaseOrder::count() + 1, 4, '0', STR_PAD_LEFT);
         $paymentModes = ['Cash' => 'Cash', 'Card' => 'Card', 'UPI' => 'UPI', 'Bank Transfer' => 'Bank Transfer', 'Credit' => 'Credit', 'Other' => 'Other'];
         return view('mess.purchaseorders.index', compact('purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes'));

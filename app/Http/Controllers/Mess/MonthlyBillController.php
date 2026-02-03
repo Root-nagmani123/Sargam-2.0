@@ -38,7 +38,9 @@ class MonthlyBillController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('bill_number', 'like', "%{$search}%")
                   ->orWhereHas('user', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
+                      $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('user_name', 'like', "%{$search}%");
                   });
             });
         }
@@ -57,7 +59,7 @@ class MonthlyBillController extends Controller
      */
     public function create()
     {
-        $users = User::select('pk', 'name', 'email')->get();
+        $users = User::select('pk', 'user_name', 'first_name', 'last_name', 'email_id')->get();
         return view('admin.mess.monthly-bills.create', compact('users'));
     }
 
@@ -71,25 +73,53 @@ class MonthlyBillController extends Controller
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:user_credentials,pk',
-            'month' => 'required|integer|min:1|max:12',
-            'year' => 'required|integer|min:2020',
+            'month_year' => 'required|date_format:Y-m',
             'total_amount' => 'required|numeric|min:0',
-            'due_date' => 'nullable|date',
+            'status' => 'required|in:unpaid,paid,partial',
+            'paid_amount' => 'nullable|numeric|min:0',
+            'paid_date' => 'nullable|date',
+            'remarks' => 'nullable|string',
         ]);
         
-        // Generate bill number
-        $billNumber = 'MB-' . $validated['year'] . str_pad($validated['month'], 2, '0', STR_PAD_LEFT) . '-' . str_pad(rand(1000, 9999), 4, '0', STR_PAD_LEFT);
+        // Parse month and year from month_year
+        $monthYear = explode('-', $validated['month_year']);
+        $year = (int)$monthYear[0];
+        $month = (int)$monthYear[1];
+        
+        // Check if bill already exists for this user/month/year
+        $existing = MonthlyBill::where('user_id', $validated['user_id'])
+            ->where('month', $month)
+            ->where('year', $year)
+            ->first();
+        
+        if ($existing) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'A monthly bill for this user and month already exists.');
+        }
+        
+        // Generate unique bill number with counter
+        $count = MonthlyBill::where('month', $month)
+            ->where('year', $year)
+            ->count();
+        $billNumber = 'MB-' . $year . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($count + 1, 6, '0', STR_PAD_LEFT);
+        
+        // Calculate balance
+        $paidAmount = $validated['paid_amount'] ?? 0;
+        $balance = $validated['total_amount'] - $paidAmount;
         
         MonthlyBill::create([
             'user_id' => $validated['user_id'],
             'bill_number' => $billNumber,
-            'month' => $validated['month'],
-            'year' => $validated['year'],
+            'month' => $month,
+            'year' => $year,
+            'month_year' => $validated['month_year'] . '-01',
             'total_amount' => $validated['total_amount'],
-            'paid_amount' => 0,
-            'balance' => $validated['total_amount'],
-            'status' => 'pending',
-            'due_date' => $validated['due_date'] ?? null,
+            'paid_amount' => $paidAmount,
+            'balance' => $balance,
+            'status' => $validated['status'],
+            'paid_date' => $validated['paid_date'] ?? null,
+            'remarks' => $validated['remarks'] ?? null,
         ]);
         
         return redirect()->route('admin.mess.monthly-bills.index')
@@ -116,8 +146,8 @@ class MonthlyBillController extends Controller
      */
     public function edit($id)
     {
-        $bill = MonthlyBill::findOrFail($id);
-        $users = User::select('pk', 'name', 'email')->get();
+        $bill = MonthlyBill::with('user')->findOrFail($id);
+        $users = User::select('pk', 'user_name', 'first_name', 'last_name', 'email_id')->get();
         return view('admin.mess.monthly-bills.edit', compact('bill', 'users'));
     }
 

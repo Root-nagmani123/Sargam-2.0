@@ -14,7 +14,8 @@ class FinanceBooking extends Model
     
     protected $fillable = [
         'booking_number',
-        'inbound_transaction_id',
+        'invoice_id',
+        'user_id',
         'amount',
         'booking_date',
         'account_head',
@@ -35,8 +36,18 @@ class FinanceBooking extends Model
         return $this->belongsTo(InboundTransaction::class);
     }
     
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
+    }
+    
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'pk');
+    }
+    
     public function approver()
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approved_by', 'pk');
     }
 }

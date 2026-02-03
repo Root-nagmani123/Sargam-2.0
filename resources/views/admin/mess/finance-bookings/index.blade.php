@@ -1,101 +1,83 @@
 @extends('admin.layouts.master')
-
+@section('title', 'Finance Bookings')
 @section('setup_content')
-<div class="card" style="border-left: 4px solid #004a93;">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <iconify-icon icon="solar:wallet-money-bold" class="me-2"></iconify-icon>
-            Finance Bookings
-        </h5>
-        <a href="{{ route('admin.mess.finance-bookings.create') }}" class="btn btn-primary btn-sm">
-            <iconify-icon icon="solar:add-circle-bold" class="me-1"></iconify-icon>
-            Add Booking
-        </a>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Finance Bookings</h4>
+                <a href="{{ route('admin.mess.finance-bookings.create') }}" class="btn btn-primary">
+                    Add Booking
+                </a>
             </div>
-        @endif
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
 
-        <div class="table-responsive">
-            <table class="table table-hover table-sm">
-                <thead class="table-light">
-                    <tr>
-                        <th>Booking Number</th>
-                        <th>Booking Date</th>
-                        <th>Transaction</th>
-                        <th>Account Head</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Approved By</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($bookings as $booking)
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <td>{{ $booking->booking_number ?? 'N/A' }}</td>
-                            <td>{{ $booking->booking_date ? date('d-M-Y', strtotime($booking->booking_date)) : 'N/A' }}</td>
-                            <td>{{ $booking->inboundTransaction->grn_number ?? 'N/A' }}</td>
-                            <td>{{ $booking->account_head ?? 'N/A' }}</td>
-                            <td>₹{{ number_format($booking->amount ?? 0, 2) }}</td>
-                            <td>
-                                @if($booking->status == 'approved')
-                                    <span class="badge bg-success">Approved</span>
-                                @elseif($booking->status == 'rejected')
-                                    <span class="badge bg-danger">Rejected</span>
-                                @else
-                                    <span class="badge bg-warning">Pending</span>
-                                @endif
-                            </td>
-                            <td>{{ $booking->approver->name ?? '-' }}</td>
-                            <td>
-                                <a href="{{ route('admin.mess.finance-bookings.show', $booking->id) }}" 
-                                   class="btn btn-sm btn-info" title="View">
-                                    <iconify-icon icon="solar:eye-bold"></iconify-icon>
-                                </a>
-                                @if($booking->status == 'pending')
-                                    <a href="{{ route('admin.mess.finance-bookings.edit', $booking->id) }}" 
-                                       class="btn btn-sm btn-warning" title="Edit">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                                    </a>
-                                    <form action="{{ route('admin.mess.finance-bookings.approve', $booking->id) }}" 
-                                          method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-success" title="Approve"
-                                                onclick="return confirm('Approve this booking?');">
-                                            <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('admin.mess.finance-bookings.reject', $booking->id) }}" 
-                                          method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Reject"
-                                                onclick="return confirm('Reject this booking?');">
-                                            <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
-                                        </button>
-                                    </form>
-                                @endif
-                            </td>
+                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
+                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Booking Number</th>
+                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Date</th>
+                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Invoice</th>
+                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">User</th>
+                            <th style="width: 130px; background-color: #af2910; color: #fff; border-color: #af2910;">Amount</th>
+                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
+                            <th style="width: 220px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
-                                <iconify-icon icon="solar:wallet-money-bold" style="font-size: 48px;"></iconify-icon>
-                                <p class="mt-2">No finance bookings found</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="d-flex justify-content-center mt-3">
-            {{ $bookings->links() }}
+                    </thead>
+                    <tbody>
+                        @forelse($bookings as $booking)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>
+                                    <div class="fw-semibold">{{ $booking->booking_number ?? '-' }}</div>
+                                </td>
+                                <td>{{ $booking->booking_date ? date('d-M-Y', strtotime($booking->booking_date)) : '-' }}</td>
+                                <td>{{ $booking->invoice ? ($booking->invoice->invoice_no ?? 'INV-' . $booking->invoice->id) : '-' }}</td>
+                                <td>{{ $booking->user ? (trim(($booking->user->first_name ?? '') . ' ' . ($booking->user->last_name ?? '')) ?: $booking->user->user_name) : '-' }}</td>
+                                <td>₹{{ number_format($booking->amount ?? 0, 2) }}</td>
+                                <td>
+                                    <span class="badge bg-{{ $booking->status == 'approved' ? 'success' : ($booking->status == 'rejected' ? 'danger' : 'warning') }}">
+                                        {{ ucfirst($booking->status ?? 'pending') }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ route('admin.mess.finance-bookings.show', $booking->id) }}" 
+                                           class="btn btn-sm btn-info" title="View">View</a>
+                                        @if($booking->status == 'pending')
+                                            <a href="{{ route('admin.mess.finance-bookings.edit', $booking->id) }}" 
+                                               class="btn btn-sm btn-warning" title="Edit">Edit</a>
+                                            <form action="{{ route('admin.mess.finance-bookings.approve', $booking->id) }}" 
+                                                  method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-success" title="Approve"
+                                                        onclick="return confirm('Approve this booking?');">Approve</button>
+                                            </form>
+                                            <form action="{{ route('admin.mess.finance-bookings.reject', $booking->id) }}" 
+                                                  method="POST" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Reject"
+                                                        onclick="return confirm('Reject this booking?');">Reject</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">No finance bookings found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

@@ -55,6 +55,26 @@ class User extends Authenticatable
         return 'pk';
     }
 
+    /**
+     * Get the user's full name.
+     *
+     * @return string
+     */
+    public function getNameAttribute()
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+    
+    /**
+     * Get the user's full name (alternative accessor).
+     *
+     * @return string
+     */
+    public function getFullNameAttribute()
+    {
+        return $this->name;
+    }
+
     public static function getpermissionGroups()
     {
         return DB::table('permissions')
