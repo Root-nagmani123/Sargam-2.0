@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('employee_i_d_card_requests', function (Blueprint $table) {
+        Schema::createIfNotExists('employee_i_d_card_requests', function (Blueprint $table) {
             $table->id();
             $table->enum('employee_type', ['Permanent Employee', 'Contractual Employee'])->default('Permanent Employee');
             $table->string('card_type')->nullable();
