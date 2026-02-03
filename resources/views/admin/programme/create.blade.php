@@ -3,8 +3,44 @@
 @section('title', 'Programme - Sargam | Lal Bahadur')
 
 @section('setup_content')
+<style>
+/* Programme Create - Responsive */
+@media (max-width: 991.98px) {
+    .programme-create .card-body { padding: 1.25rem; }
+    .programme-create .row.g-3.g-md-4 .col-md-6 { margin-bottom: 0; }
+}
 
-<div class="container-fluid">
+@media (max-width: 767.98px) {
+    .programme-create .container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    .programme-create .card-body { padding: 1rem; }
+    .programme-create .card-title { font-size: 1.125rem; }
+    .programme-create .assistant-coordinator-row .col-12:last-child {
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 0.25rem;
+    }
+    .programme-create .assistant-coordinator-row .col-md-5,
+    .programme-create .assistant-coordinator-row .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .programme-create .assistant-coordinator-row .col-md-1 {
+        flex: 0 0 auto;
+        max-width: 100%;
+    }
+    .programme-create .mb-3.mt-4.d-flex { flex-direction: column; }
+    .programme-create .mb-3.mt-4 .btn { width: 100%; }
+}
+
+@media (max-width: 575.98px) {
+    .programme-create .container-fluid { padding-left: 0.375rem !important; padding-right: 0.375rem !important; }
+    .programme-create .card-body { padding: 0.75rem; }
+    .programme-create .select2-container { width: 100% !important; }
+    .programme-create #add-coordinator { width: 100%; justify-content: center; }
+    .programme-create .remove-coordinator { min-width: 2.5rem; }
+}
+</style>
+<div class="container-fluid px-2 px-sm-3 px-md-4 py-3 programme-create">
     <x-breadcrum title="Create Course"></x-breadcrum>
     <!-- start Vertical Steps Example -->
     <div class="card" style="border-left: 4px solid #004a93;">
@@ -21,9 +57,8 @@
                 @endif
 
 
-                <div class="row">
-                    <div class="row" id="course_fields">
-                        <div class="col-md-6">
+                <div class="row g-3 g-md-4" id="course_fields">
+                        <div class="col-12 col-md-6">
                             <x-input 
                                 name="coursename" 
                                 label="Course Name" 
@@ -33,7 +68,7 @@
                                 required="true"
                                 />
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <x-input 
                                 name="courseshortname" 
                                 label="Course Short Name" 
@@ -41,7 +76,7 @@
                                 value="{{ $courseMasterObj->couse_short_name ?? '' }}"
                                 formLabelClass="form-label" />
                         </div>
-                        <div class="col-md-6 mt-4">
+                        <div class="col-12 col-md-6">
                             <x-input 
                                 type="text" 
                                 name="courseyear" 
@@ -54,7 +89,7 @@
                                 required="true"/>
                         </div>
 
-                        <div class="col-md-6 mt-4">
+                        <div class="col-12 col-md-6">
                             <x-input 
                                 type="date" 
                                 name="startdate" 
@@ -64,7 +99,7 @@
                                 formLabelClass="form-label" />
                         </div>
                         
-                        <div class="col-md-6 mt-4">
+                        <div class="col-12 col-md-6">
                             <x-input 
                                 type="date" 
                                 name="enddate" 
@@ -74,7 +109,7 @@
                                 formLabelClass="form-label" />
                         </div>
 
-                        <div class="col-md-6 mt-4">
+                        <div class="col-12 col-md-6">
 
                             <x-select 
                                 name="coursecoordinator" 
@@ -86,7 +121,7 @@
                                 :options="$facultyList" />
                         
                         </div>
-                        <div class="col-md-6 mt-4">
+                        <div class="col-12 col-md-6">
                             <x-select 
                                 name="supportingsection" 
                                 label="Supporting Section" 
@@ -96,13 +131,13 @@
                                 value="{{ $selectedSupportingSection ?? '' }}"
                                 :options="$supportingSectionList" />
                         </div>
-                        <div class="col-md-12 mt-4">
+                        <div class="col-12">
                             <label class="form-label">Assistant Course Coordinators</label>
                             <div id="assistant-coordinators-container">
                                 @if(!empty($assistant_coordinator_name) && is_array($assistant_coordinator_name))
                                     @foreach($assistant_coordinator_name as $index => $coordinator)
-                                        <div class="assistant-coordinator-row row mb-3" data-index="{{ $index }}">
-                                            <div class="col-md-6">
+                                        <div class="assistant-coordinator-row row g-2 g-md-3 mb-3" data-index="{{ $index }}">
+                                            <div class="col-12 col-md-6">
                                                 <x-select 
                                                     name="assistantcoursecoordinator[]" 
                                                     id="assistant_coordinator_{{ $index }}"
@@ -114,7 +149,7 @@
                                                     value="{{ $coordinator }}"
                                                     required="true" />
                                             </div>
-                                            <div class="col-md-5">
+                                            <div class="col-12 col-md-5">
                                                 <x-select 
                                                     name="assistant_coordinator_role[]" 
                                                     label="Role" 
@@ -124,7 +159,7 @@
                                                     :options="$roleOptions" 
                                                     value="{{ $assistant_coordinator_roles[$index] ?? '' }}" />
                                             </div>
-                                            <div class="col-md-1 d-flex align-items-end">
+                                            <div class="col-12 col-md-1 d-flex align-items-end">
                                                 <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
                                                     <i class="material-icons menu-icon">delete</i>
                                                 </button>
@@ -132,8 +167,8 @@
                                         </div>
                                     @endforeach
                                 @else
-                                    <div class="assistant-coordinator-row row mb-3" data-index="0">
-                                        <div class="col-md-6">
+                                    <div class="assistant-coordinator-row row g-2 g-md-3 mb-3" data-index="0">
+                                        <div class="col-12 col-md-6">
                                             <x-select 
                                                 name="assistantcoursecoordinator[]" 
                                                 label="Assistant Coordinator" 
@@ -143,7 +178,7 @@
                                                 :options="$facultyList" 
                                                 required="true" />
                                         </div>
-                                        <div class="col-md-5">
+                                        <div class="col-12 col-md-5">
                                             <x-select 
                                                 name="assistant_coordinator_role[]" 
                                                 label="Role" 
@@ -152,7 +187,7 @@
                                                 formSelectClass="select2"
                                                 :options="$roleOptions" />
                                         </div>
-                                        <div class="col-md-1 d-flex align-items-end">
+                                        <div class="col-12 col-md-1 d-flex align-items-end">
                                             <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
                                                 <i class="material-icons menu-icon">delete</i>
                                             </button>
@@ -168,15 +203,13 @@
 </div>
 
                         </div>
-
-                    </div>
                 </div>
                 <hr>
-                <div class="mb-3 mt-4 text-end gap-2">
+                <div class="mb-3 mt-4 d-flex flex-column flex-sm-row justify-content-end gap-2">
                     <button class="btn btn-primary btn-sm" type="submit">
                         Submit
                     </button>
-                    <a href="{{ route('programme.index') }}" class="btn btn-secondary btn-sm">
+                    <a href="{{ route('programme.index') }}" class="btn btn-secondary btn-sm" role="button">
                         Back
                     </a>
                 </div>

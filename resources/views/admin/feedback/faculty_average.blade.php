@@ -86,6 +86,134 @@
             text-align: center;
             padding: 20px;
         }
+
+        /* Responsive styles - only apply below desktop breakpoint */
+        @media (max-width: 991.98px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            .filter-card .card-body {
+                padding: 1rem;
+            }
+            .content-card .card-header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .content-card .card-header small {
+                font-size: 0.75rem;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+            .row.g-3 {
+                --bs-gutter-x: 0.75rem;
+                --bs-gutter-y: 0.75rem;
+            }
+            .filter-card .card-header {
+                font-size: 0.95rem;
+                padding: 0.6rem 1rem;
+            }
+            .filter-card .card-body {
+                padding: 0.75rem 1rem;
+            }
+            .filter-card fieldset {
+                margin-bottom: 0.75rem !important;
+            }
+            .filter-card .form-label {
+                font-size: 0.875rem;
+            }
+            .filter-card .form-select,
+            .filter-card .form-control {
+                font-size: 0.875rem;
+            }
+            .filter-card .d-flex.gap-2 {
+                flex-direction: column;
+            }
+            .filter-card .d-flex.gap-2 .btn {
+                width: 100% !important;
+            }
+            .content-card .card-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                padding: 0.75rem 1rem;
+                font-size: 0.95rem;
+            }
+            .content-card .card-header small {
+                font-size: 0.7rem;
+            }
+            .content-card .card-body {
+                padding: 0.75rem;
+            }
+            .table-responsive {
+                margin-left: -0.75rem;
+                margin-right: -0.75rem;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .table-responsive .table {
+                font-size: 0.8rem;
+                margin-bottom: 0;
+            }
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+            .table-responsive .table th:nth-child(2),
+            .table-responsive .table td:nth-child(2) {
+                max-width: 120px;
+                white-space: normal;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .table-responsive .faculty-name {
+                font-size: 0.8rem;
+            }
+            .text-center.mb-3 h6 {
+                font-size: 0.9rem;
+            }
+            .d-flex.justify-content-between.align-items-center.mt-3 {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: flex-start !important;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            .filter-card .card-body {
+                padding: 0.6rem 0.75rem;
+            }
+            .content-card .card-body {
+                padding: 0.5rem;
+            }
+            .table-responsive {
+                margin-left: -0.5rem;
+                margin-right: -0.5rem;
+            }
+            .table-responsive .table {
+                font-size: 0.75rem;
+            }
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.4rem 0.35rem;
+            }
+            .table-responsive .table th:nth-child(6),
+            .table-responsive .table td:nth-child(6) {
+                min-width: 90px;
+            }
+        }
     </style>
     <div class="container-fluid py-3">
         <x-breadcrum title="Faculty Feedback Average"></x-breadcrum>

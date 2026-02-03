@@ -3,20 +3,123 @@
 @section('title', 'Exemption categories')
 
 @section('setup_content')
+<style>
+/* Exemption categories - responsive (mobile/tablet only, desktop unchanged) */
 
-<div class="container-fluid">
+/* Responsive - Tablet (768px - 991px) */
+@media (max-width: 991.98px) {
+    .exemption-categories-index .datatables .table-scroll-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .exemption-categories-index .datatables #exceptiongetcategory {
+        min-width: 500px;
+    }
+
+    .exemption-categories-index .datatables #exceptiongetcategory th,
+    .exemption-categories-index .datatables #exceptiongetcategory td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Responsive - Small tablet / large phone (576px - 767px) */
+@media (max-width: 767.98px) {
+    .exemption-categories-index .datatables .card-body {
+        padding: 1rem !important;
+    }
+
+    .exemption-categories-index .datatables #exceptiongetcategory th,
+    .exemption-categories-index .datatables #exceptiongetcategory td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .exemption-categories-index.container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .exemption-categories-index .exemption-header-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .exemption-categories-index .exemption-header-row .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .exemption-categories-index .exemption-header-row .float-end {
+        float: none !important;
+    }
+
+    .exemption-categories-index .exemption-header-row .btn {
+        width: 100%;
+    }
+
+    .exemption-categories-index .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .exemption-categories-index .datatables .table-scroll-wrapper {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .exemption-categories-index .datatables #exceptiongetcategory th,
+    .exemption-categories-index .datatables #exceptiongetcategory td {
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+
+    .exemption-categories-index .datatables #exceptiongetcategory_wrapper .dataTables_length,
+    .exemption-categories-index .datatables #exceptiongetcategory_wrapper .dataTables_filter {
+        text-align: left !important;
+    }
+
+    .exemption-categories-index .datatables #exceptiongetcategory_wrapper .dataTables_length select {
+        margin: 0 0.5rem 0 0;
+    }
+}
+
+/* Swal popup forms - responsive */
+@media (max-width: 575.98px) {
+    .swal2-popup #exemptionCategoryForm .row,
+    .swal2-popup #exemptionCategoryeditForm .row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .swal2-popup #exemptionCategoryForm .row .col-auto,
+    .swal2-popup #exemptionCategoryeditForm .row .col-auto {
+        margin-bottom: 0.25rem;
+    }
+
+    .swal2-popup #exemptionCategoryForm .row .col,
+    .swal2-popup #exemptionCategoryeditForm .row .col {
+        max-width: 100%;
+    }
+}
+</style>
+<div class="container-fluid exemption-categories-index">
     <x-breadcrum title="Exemption categories" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row exemption-header-row">
                         <div class="col-6">
                             <h4>Exemption categories</h4>
                         </div>
                         <div class="col-6">
-                             <!-- <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button> -->
                             <div class="float-end gap-2">
                                  <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button>
                                 <!-- <a href="{{route('master.exemption.category.master.create')}}" class="btn btn-primary">+
@@ -25,7 +128,7 @@
                         </div>
                     </div>
                     <hr>
-                    <div class="table-responsive">
+                    <div class="table-responsive table-scroll-wrapper">
                         <table class="table" id="exceptiongetcategory">
                             <thead>
                                 <!-- start row -->

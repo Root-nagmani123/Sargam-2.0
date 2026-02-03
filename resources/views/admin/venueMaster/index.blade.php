@@ -3,20 +3,20 @@
 @section('title', 'Venue Master - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid venue-master-index">
     <x-breadcrum title="Venue Master" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
+                    <div class="row align-items-center">
+                        <div class="col-12 col-md-6">
                             <h4>Venue Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-end mb-3">
-                                <div class="d-flex align-items-center gap-2">
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex justify-content-md-end align-items-md-end mb-3">
+                                <div class="d-flex align-items-center gap-2 venue-master-actions">
 
                                     <!-- Add New Button -->
                                     <a href="{{ route('Venue-Master.create') }}"
@@ -32,7 +32,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table w-100 text-nowrap">
+                        <table class="table w-100 text-nowrap venue-master-table">
                             <thead>
                                 <!-- start row -->
                                 <tr>
@@ -49,17 +49,17 @@
                             <tbody>
                                 @foreach($venues as $key =>$venue)
                                 <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                    <td>{{ $venues->firstItem() + $key }}</td>
-                                    <td>
+                                    <td data-label="S.No.">{{ $venues->firstItem() + $key }}</td>
+                                    <td data-label="Venue Name">
                                         {{ $venue->venue_name  }}
                                     </td>
-                                    <td>
+                                    <td data-label="Short Name">
                                         {{ $venue->venue_short_name   }}
                                     </td>
-                                    <td>
+                                    <td data-label="Description">
                                         {{ $venue->description   }}
                                     </td>
-                                    <td>
+                                    <td data-label="Status">
                                         <div class="form-check form-switch">
                                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                 data-table="venue_master" data-column="active_inactive"
@@ -67,7 +67,7 @@
                                                 {{ $venue->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Action">
                                         <div class="d-inline-flex align-items-center gap-2" role="group"
                                             aria-label="Venue actions">
 
@@ -111,7 +111,7 @@
 
                                     </td>
 
-                                    </ </tr>
+                                    </tr>
                                     @endforeach
                             </tbody>
                         </table>

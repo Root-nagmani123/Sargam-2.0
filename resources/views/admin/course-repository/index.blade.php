@@ -132,7 +132,7 @@
         color: #b02a37;
     }
 </style>
-<div class="container-fluid">
+<div class="container-fluid course-repository-index-page">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <div class="card border-0 shadow-sm">
@@ -165,7 +165,6 @@
             </div>
         </div>
     </nav>
-
 
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-4 p-md-5">

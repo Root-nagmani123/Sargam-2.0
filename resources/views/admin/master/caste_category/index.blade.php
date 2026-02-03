@@ -3,14 +3,14 @@
 @section('title', 'Caste Master')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid caste-category-index">
 <x-breadcrum title="Caste Master"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 
-                <div class="row">
+                <div class="row caste-category-header-row">
                     <div class="col-6">
                         <h4>Caste Master</h4>
                     </div>

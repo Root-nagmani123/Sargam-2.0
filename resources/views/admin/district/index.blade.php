@@ -3,13 +3,13 @@
 @section('title', 'District - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid district-index">
 
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">
             <div class="card-body">
-                <div class="row">
+                <div class="row district-header-row">
                     <div class="col-6">
                         <h4>District</h4>
                     </div>
@@ -31,7 +31,7 @@
                 </div>
                 <hr>
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table" id="district-table">
                         <thead>
                             <!-- start row -->
                             <tr>

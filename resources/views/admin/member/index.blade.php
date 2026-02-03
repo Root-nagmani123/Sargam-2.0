@@ -3,18 +3,18 @@
 @section('title', 'Member')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid member-index">
 <x-breadcrum title="Member"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
-                <div class="row">
-                        <div class="col-6">
+                <div class="row align-items-center">
+                        <div class="col-12 col-md-6">
                             <h4>Member</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
+                        <div class="col-12 col-md-6 mt-3 mt-md-0">
+                            <div class="d-flex member-header-actions justify-content-md-end justify-content-start flex-wrap gap-2">
                                 <a href="{{ route('member.create') }}" class="btn btn-primary">+ Add Member</a>
                                 {{-- <a href="#" class="btn btn-success" data-bs-toggle="modal"
                                     data-bs-target="#vertical-center-scroll-modal">Bulk Upload</a> --}}
