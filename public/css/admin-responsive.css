@@ -1,0 +1,1774 @@
+/*
+  Admin Responsive Helpers
+  - Mobile/tablet only: keep desktop view unchanged
+  - No backend changes; safe CSS overrides for common admin screens
+*/
+
+/* Tablet and below */
+@media (max-width: 991.98px) {
+  /* Employee type index - table scroll */
+  .employee-type-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .employee-type-index #employeetypemaster-table {
+    min-width: 400px;
+  }
+  .employee-type-index #employeetypemaster-table th,
+  .employee-type-index #employeetypemaster-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Subject module index - table scroll */
+  .subject-module-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .subject-module-index #zero_config {
+    min-width: 450px;
+  }
+
+  /* Subject index - table scroll */
+  .subject-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .subject-index #zero_config {
+    min-width: 450px;
+  }
+
+  /* Designation index - table scroll */
+  .designation-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Caste category index - table scroll */
+  .caste-category-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Faculty index - table scroll */
+  .faculty-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .faculty-index #faculty-table {
+    min-width: 600px;
+  }
+  .faculty-index #faculty-table th,
+  .faculty-index #faculty-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  /* Faculty: DataTables controls - stack filter and length on tablet */
+  .faculty-index .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .faculty-index .dataTables_length,
+  .faculty-index .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .faculty-index .dataTables_filter input {
+    min-width: 140px;
+    max-width: 100%;
+  }
+
+    /* Permissions index - table scroll */
+  .permissions-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .permissions-index #permissions-table {
+    min-width: 450px;
+  }
+  .permissions-index #permissions-table th,
+  .permissions-index #permissions-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Users index - table scroll */
+  .users-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .users-index #zero_config_table {
+    min-width: 600px;
+  }
+  .users-index #zero_config_table th,
+  .users-index #zero_config_table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Roles index - table scroll */
+  .roles-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .roles-index #role-table {
+    min-width: 450px;
+  }
+  .roles-index #role-table th,
+  .roles-index #role-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .roles-index .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .roles-index .dataTables_length,
+  .roles-index .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .roles-index .dataTables_filter input {
+    min-width: 140px;
+    max-width: 100%;
+  }
+
+  /* Faculty expertise index - table scroll */
+  .faculty-expertise-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .faculty-expertise-index #faculty-expertise-table {
+    min-width: 450px;
+  }
+  .faculty-expertise-index #faculty-expertise-table th,
+  .faculty-expertise-index #faculty-expertise-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Employee ID card index - table scroll */
+  .idcard-index-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .idcard-index-page .idcard-index-table {
+    min-width: 900px;
+  }
+  .idcard-index-page .idcard-index-table th,
+  .idcard-index-page .idcard-index-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Family ID card create - table scroll */
+  .family-idcard-create-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .family-idcard-create-page #familyMembersTable {
+    min-width: 800px;
+  }
+  .family-idcard-create-page .family-idcard-members-table th,
+  .family-idcard-create-page .family-idcard-members-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Family ID card index - table scroll */
+  .family-idcard-index-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .family-idcard-index-page .family-idcard-table {
+    min-width: 900px;
+  }
+  .family-idcard-index-page .family-idcard-table th,
+  .family-idcard-index-page .family-idcard-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Stream index - table scroll */
+  .stream-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .stream-index #stream-table {
+    min-width: 400px;
+  }
+  .stream-index #stream-table th,
+  .stream-index #stream-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* District index - table scroll */
+  .district-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .district-index #district-table {
+    min-width: 400px;
+  }
+  .district-index #district-table th,
+  .district-index #district-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Class session master index - table scroll */
+  .class-session-master-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .class-session-master-index #class-session-master-table {
+    min-width: 500px;
+  }
+  .class-session-master-index #class-session-master-table th,
+  .class-session-master-index #class-session-master-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Vehicle pass index - table scroll */
+  .vehicle-pass-index-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .vehicle-pass-index-page .vehicle-pass-table {
+    min-width: 900px;
+  }
+  .vehicle-pass-index-page .vehicle-pass-table th,
+  .vehicle-pass-index-page .vehicle-pass-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Course repository index - table scroll */
+  .course-repository-index-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .course-repository-index-page .table-responsive .table {
+    min-width: 650px;
+  }
+  .course-repository-index-page .table-responsive th,
+  .course-repository-index-page .table-responsive td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Prevent horizontal overflow from long text */
+  .body-wrapper,
+  .page-wrapper,
+  .container-fluid {
+    max-width: 100%;
+  }
+
+  /* Make wide tables scroll instead of breaking layout */
+  .body-wrapper .table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important; /* keep dropdowns/tooltips usable */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ensure tables don't shrink columns too much */
+  .body-wrapper .table-responsive > table,
+  .body-wrapper .table-responsive .table {
+    width: 100%;
+  }
+
+  /* DataTables wrapper sometimes overflows */
+  .body-wrapper div.dataTables_wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet portrait */
+@media (max-width: 767.98px) {
+  .employee-type-index .datatables .card-body {
+    padding: 1rem !important;
+  }
+  .employee-type-index #employeetypemaster-table th,
+  .employee-type-index #employeetypemaster-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Class session master - stack header on tablet */
+  .class-session-master-index .class-session-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .class-session-master-index .class-session-header-row .col-12.col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .class-session-master-index .class-session-header-row .d-flex.justify-content-md-end {
+    justify-content: stretch !important;
+  }
+  .class-session-master-index .class-session-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Stream index - stack header on tablet */
+  .stream-index .stream-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .stream-index .stream-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .stream-index .stream-header-row .d-flex.justify-content-end {
+    justify-content: stretch !important;
+  }
+  .stream-index .stream-header-row .d-flex .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .stream-index #stream-table th,
+  .stream-index #stream-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* District index - stack header on tablet */
+  .district-index .district-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .district-index .district-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .district-index .district-header-row .d-flex.justify-content-end {
+    justify-content: stretch !important;
+  }
+  .district-index .district-header-row .d-flex .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .district-index #district-table th,
+  .district-index #district-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .district-index .datatables .card-body {
+    padding: 1rem !important;
+  }
+
+  .class-session-master-index #class-session-master-table th,
+  .class-session-master-index #class-session-master-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Faculty index - stack header on tablet */
+  .faculty-index .faculty-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .faculty-index .faculty-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .faculty-index .faculty-header-row .d-flex.justify-content-end {
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+  }
+  .faculty-index .faculty-header-row .d-flex .btn {
+    flex: 1 1 140px;
+    min-width: 140px;
+    justify-content: center;
+  }
+
+  /* Permissions index - stack header on tablet */
+  .permissions-index .permissions-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .permissions-index .permissions-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .permissions-index .permissions-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .permissions-index .permissions-header-row .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .permissions-index .datatables .card-body {
+    padding: 1rem !important;
+  }
+  .permissions-index #permissions-table th,
+  .permissions-index #permissions-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Users index - stack header on tablet */
+  .users-index .users-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .users-index .users-header-row .col-6,
+  .users-index .users-header-row .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .users-index .users-header-row form.d-flex {
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+  }
+  .users-index .users-header-row form .form-control,
+  .users-index .users-header-row form .form-select {
+    flex: 1 1 140px;
+    min-width: 140px;
+  }
+  .users-index .users-header-row form .btn {
+    flex: 0 0 auto;
+  }
+  .users-index #zero_config_table th,
+  .users-index #zero_config_table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  .faculty-index .datatables .card-body {
+    padding: 1rem !important;
+  }
+  .faculty-index #faculty-table th,
+  .faculty-index #faculty-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Employee ID card index - tabs + buttons stack on tablet */
+  .idcard-index-page .d-flex.flex-wrap.justify-content-between.align-items-center.gap-3.mb-4 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+  .idcard-index-page .idcard-index-tabs {
+    justify-content: flex-start;
+  }
+  .idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  .idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .dropdown,
+  .idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .idcard-create-btn {
+    width: 100%;
+  }
+  .idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .dropdown .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .idcard-create-btn {
+    text-align: center;
+    justify-content: center;
+  }
+  .idcard-index-page .idcard-index-table th,
+  .idcard-index-page .idcard-index-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Family ID card create - stack header, reduce padding */
+  .family-idcard-create-page .card-body {
+    padding: 1rem !important;
+  }
+  .family-idcard-create-page .d-flex.justify-content-between.align-items-center.mb-3 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  .family-idcard-create-page .d-flex.justify-content-between.align-items-center.mb-3 .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .family-idcard-create-page .family-idcard-members-table th,
+  .family-idcard-create-page .family-idcard-members-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .family-idcard-create-page .family-idcard-upload-zone {
+    padding: 1.25rem 0.75rem;
+    min-height: 140px;
+  }
+
+  /* Family ID card index - tabs + buttons stack on tablet */
+  .family-idcard-index-page .d-flex.flex-wrap.justify-content-between.align-items-center.gap-3.mb-4 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+  .family-idcard-index-page .family-idcard-tabs {
+    justify-content: flex-start;
+  }
+  .family-idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  .family-idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .dropdown,
+  .family-idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .btn-primary {
+    width: 100%;
+  }
+  .family-idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .dropdown .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .family-idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap .btn-primary {
+    text-align: center;
+    justify-content: center;
+  }
+  .family-idcard-index-page .family-idcard-table th,
+  .family-idcard-index-page .family-idcard-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Vehicle pass index - tabs + buttons stack on tablet */
+  .vehicle-pass-index-page .d-flex.flex-wrap.justify-content-between.align-items-center.gap-3.mb-4 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+  .vehicle-pass-index-page .vehicle-pass-tabs {
+    justify-content: flex-start;
+  }
+  .vehicle-pass-index-page .d-flex.align-items-center.gap-2.flex-wrap {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  .vehicle-pass-index-page .d-flex.align-items-center.gap-2.flex-wrap .dropdown,
+  .vehicle-pass-index-page .d-flex.align-items-center.gap-2.flex-wrap .btn-primary {
+    width: 100%;
+  }
+  .vehicle-pass-index-page .d-flex.align-items-center.gap-2.flex-wrap .dropdown .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .vehicle-pass-index-page .d-flex.align-items-center.gap-2.flex-wrap .btn-primary {
+    text-align: center;
+    justify-content: center;
+  }
+  .vehicle-pass-index-page .vehicle-pass-table th,
+  .vehicle-pass-index-page .vehicle-pass-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .vehicle-pass-index-page .d-flex.justify-content-between.align-items-center.px-3.py-3.border-top {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  .vehicle-pass-index-page .d-flex.justify-content-between.align-items-center.px-3.py-3.border-top nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Course repository index - tablet portrait */
+  .course-repository-index-page .card-body {
+    padding: 1rem !important;
+  }
+  .course-repository-index-page .d-flex.flex-column.flex-md-row.justify-content-between.align-items-start.align-items-md-center.gap-3.mb-4 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+  .course-repository-index-page .d-flex.flex-wrap.align-items-center.gap-2 {
+    flex-wrap: wrap;
+    justify-content: stretch !important;
+  }
+  .course-repository-index-page .d-flex.flex-wrap.align-items-center.gap-2 .btn {
+    flex: 1 1 100%;
+    min-width: 100%;
+    justify-content: center;
+  }
+  .course-repository-index-page .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-3.mt-4.pt-3.border-top {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.75rem;
+  }
+  .course-repository-index-page .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-3.mt-4.pt-3.border-top nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .course-repository-index-page .table-responsive th,
+  .course-repository-index-page .table-responsive td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  /* Course repository modals (page-specific IDs) */
+  #createModal .modal-dialog,
+  #editModal .modal-dialog,
+  #uploadModal .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  #createModal .modal-body,
+  #editModal .modal-body,
+  #uploadModal .modal-body {
+    padding: 1rem !important;
+  }
+  #createModal .upload-zone-ref,
+  #editModal .upload-zone-ref,
+  #uploadModal .upload-zone-ref {
+    min-height: 140px;
+  }
+}
+
+/* Phone */
+@media (max-width: 575.98px) {
+  /* Class session master - extra small screens */
+  .class-session-master-index.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .class-session-master-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .class-session-master-index h4 {
+    font-size: 1.1rem;
+  }
+  .class-session-master-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .class-session-master-index #class-session-master-table th,
+  .class-session-master-index #class-session-master-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .class-session-master-index .d-flex.justify-content-between.align-items-center.mt-3 {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  .class-session-master-index .d-flex.justify-content-between.align-items-center.mt-3 nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Stream index - extra small screens */
+  .stream-index.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .stream-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .stream-index h4 {
+    font-size: 1.1rem;
+  }
+  .stream-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .stream-index #stream-table th,
+  .stream-index #stream-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .stream-index .d-flex.justify-content-between.align-items-center.mt-3.flex-wrap {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  .stream-index .d-flex.justify-content-between.align-items-center.mt-3.flex-wrap nav,
+  .stream-index .d-flex.justify-content-between.align-items-center.mt-3 nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* District index - extra small screens */
+  .district-index.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .district-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .district-index h4 {
+    font-size: 1.1rem;
+  }
+  .district-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .district-index #district-table th,
+  .district-index #district-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .district-index .d-flex.justify-content-between.align-items-center.mt-3.flex-wrap {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  .district-index .d-flex.justify-content-between.align-items-center.mt-3.flex-wrap nav,
+  .district-index .d-flex.justify-content-between.align-items-center.mt-3 nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Container padding (mobile comfort) */
+  .body-wrapper .container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Make common header/action rows wrap nicely */
+  .body-wrapper .d-flex.justify-content-end.align-items-center,
+  .body-wrapper .d-flex.justify-content-end.align-items-center.gap-2,
+  .body-wrapper .d-flex.flex-wrap.justify-content-md-end.align-items-center {
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+  }
+
+  /* Full-width primary actions where appropriate */
+  .body-wrapper .btn-group[role="group"] {
+    flex-wrap: wrap;
+  }
+
+  /* Member index - header actions */
+  .member-index .member-header-actions {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  .member-index .member-header-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Course repository index - mobile */
+  .course-repository-index-page .card-body {
+    padding: 0.75rem !important;
+  }
+  .course-repository-index-page nav .card-body {
+    padding: 0.5rem 0.75rem !important;
+  }
+  .course-repository-index-page .table-responsive th,
+  .course-repository-index-page .table-responsive td {
+    padding: 5px 6px;
+    font-size: 0.8rem;
+  }
+  .course-repository-index-page .table-responsive th {
+    white-space: nowrap;
+  }
+  .course-repository-index-page h3 {
+    font-size: 1.25rem;
+  }
+  .course-repository-index-page .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-3.mt-4.pt-3.border-top {
+    padding-left: 0 !important;
+  }
+  .course-repository-index-page .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-3.mt-4.pt-3.border-top .small {
+    font-size: 0.8rem;
+  }
+  #createModal .upload-zone-ref,
+  #editModal .upload-zone-ref,
+  #uploadModal .upload-zone-ref {
+    min-height: 120px;
+  }
+
+  /* Vehicle pass index - mobile */
+  .vehicle-pass-index-page .vehicle-pass-tabs .nav-link {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  .vehicle-pass-index-page .vehicle-pass-table th,
+  .vehicle-pass-index-page .vehicle-pass-table td {
+    padding: 5px 6px;
+    font-size: 0.8rem;
+  }
+  .vehicle-pass-index-page .vehicle-pass-table th {
+    white-space: nowrap;
+  }
+  .vehicle-pass-index-page .card-body {
+    padding: 0 !important;
+  }
+  .vehicle-pass-index-page .d-flex.justify-content-between.align-items-center.px-3.py-3.border-top {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .vehicle-pass-index-page .d-flex.justify-content-between.align-items-center.px-3.py-3.border-top .small {
+    font-size: 0.8rem;
+  }
+
+  /* Family ID card create - mobile */
+  .family-idcard-create-page .card-body {
+    padding: 0.75rem !important;
+  }
+  .family-idcard-create-page .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+  .family-idcard-create-page .family-idcard-upload-zone {
+    padding: 1rem 0.5rem;
+    min-height: 120px;
+  }
+  .family-idcard-create-page .family-idcard-upload-placeholder p {
+    font-size: 0.9rem;
+  }
+  .family-idcard-create-page .family-idcard-upload-placeholder .small {
+    font-size: 0.75rem !important;
+  }
+  .family-idcard-create-page .family-idcard-upload-zone-sm {
+    min-width: 70px;
+    min-height: 70px;
+    padding: 0.4rem;
+  }
+  .family-idcard-create-page .family-idcard-members-table th,
+  .family-idcard-create-page .family-idcard-members-table td {
+    padding: 5px 6px;
+    font-size: 0.8rem;
+  }
+  .family-idcard-create-page .family-idcard-members-table th {
+    white-space: nowrap;
+  }
+  .family-idcard-create-page .d-flex.gap-2.justify-content-end.mt-4.pt-3.border-top {
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+  .family-idcard-create-page .d-flex.gap-2.justify-content-end.mt-4.pt-3.border-top .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Reduce touch pain on small screens */
+  .body-wrapper .btn,
+  .body-wrapper .form-control,
+  .body-wrapper .form-select {
+    min-height: 44px;
+  }
+
+  /* Select2: force full width on mobile */
+  .body-wrapper .select2-container,
+  .body-wrapper .select2-container--default,
+  .body-wrapper .select2-container--bootstrap5 {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Prevent long labels/values from forcing overflow */
+  .body-wrapper label,
+  .body-wrapper .form-label,
+  .body-wrapper .table td,
+  .body-wrapper .table th {
+    word-break: break-word;
+  }
+
+  /* Modals: near full-width */
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+
+  /* Offcanvas: full width */
+  .offcanvas {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  /* Subject index - header and actions */
+  .subject-index .d-flex.justify-content-between.align-items-center.mb-3 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+  .subject-index .d-flex.justify-content-between .d-flex.align-items-center.gap-2 {
+    justify-content: stretch;
+  }
+  .subject-index .d-flex.justify-content-between .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .subject-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .subject-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .subject-index #zero_config th,
+  .subject-index #zero_config td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .subject-index .d-inline-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.35rem !important;
+  }
+
+  /* Subject module index - header and actions */
+  .subject-module-index .subject-module-header {
+    align-items: flex-start;
+  }
+  .subject-module-index .subject-module-actions {
+    width: 100%;
+  }
+  .subject-module-index .subject-module-actions .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .subject-module-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .subject-module-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .subject-module-index #zero_config th,
+  .subject-module-index #zero_config td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .subject-module-index .d-inline-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.35rem !important;
+  }
+
+  /* Employee type index - header and actions */
+  .employee-type-index.container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .employee-type-index .employee-type-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .employee-type-index .employee-type-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .employee-type-index .employee-type-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .employee-type-index .employee-type-header-row .add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .employee-type-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .employee-type-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .employee-type-index #employeetypemaster-table th,
+  .employee-type-index #employeetypemaster-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+
+  /* Employee group index - header and actions */
+  .employee-group-index .employee-group-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .employee-group-index .employee-group-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .employee-group-index .employee-group-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .employee-group-index .employee-group-header-row .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .employee-group-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .employee-group-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Department index - header and actions */
+  .department-index .department-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .department-index .department-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .department-index .department-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .department-index .department-header-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .department-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .department-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Designation index - header and actions */
+  .designation-index .designation-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .designation-index .designation-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .designation-index .designation-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .designation-index .designation-header-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .designation-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .designation-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Caste category index - header and actions */
+  .caste-category-index .caste-category-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .caste-category-index .caste-category-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .caste-category-index .caste-category-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .caste-category-index .caste-category-header-row .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .caste-category-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .caste-category-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Roles index - header and actions */
+  .roles-index .roles-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .roles-index .roles-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .roles-index .roles-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .roles-index .roles-header-row .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .roles-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .roles-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .roles-index #role-table th,
+  .roles-index #role-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .roles-index .d-inline-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.35rem !important;
+  }
+  /* Roles: DataTables controls on phone */
+  .roles-index .dataTables_length select {
+    min-width: 70px;
+  }
+  .roles-index .dataTables_filter {
+    width: 100%;
+  }
+  .roles-index .dataTables_filter label {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+  .roles-index .dataTables_filter input {
+    width: 100% !important;
+    min-width: 0;
+  }
+  .roles-index .dataTables_paginate {
+    margin-top: 0.75rem;
+  }
+  .roles-index .dataTables_paginate .paginate_button {
+    padding: 0.4rem 0.6rem;
+    margin: 2px;
+    min-width: 36px;
+  }
+  .roles-index #role-table tbody td {
+    word-break: break-word;
+    vertical-align: middle !important;
+  }
+  .roles-index #role-table .action a,
+  .roles-index #role-table td:last-child a {
+    min-height: 34px;
+    min-width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+  }
+  .roles-index .table-responsive {
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+
+  /* Permissions index - header and actions */
+  .permissions-index .permissions-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .permissions-index .permissions-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .permissions-index .permissions-header-row .float-end {
+    float: none !important;
+    width: 100%;
+  }
+  .permissions-index .permissions-header-row .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .permissions-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .permissions-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .permissions-index #permissions-table th,
+  .permissions-index #permissions-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .permissions-index .d-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.35rem !important;
+  }
+  .permissions-index .d-flex.justify-content-between.align-items-center.mt-3 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+  .permissions-index .d-flex.justify-content-between .text-muted {
+    text-align: center;
+  }
+  .permissions-index .pagination {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .permissions-index #permissions-table tbody td {
+    word-break: break-word;
+    vertical-align: middle !important;
+  }
+  .permissions-index #permissions-table .btn-sm {
+    min-height: 34px;
+    padding: 0.35rem 0.5rem;
+    margin: 2px;
+  }
+  .permissions-index .table-responsive {
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+  /* Permissions bottom card - accordion and checkboxes */
+  .permissions-index .card.card-body.my-4 {
+    padding: 0.75rem !important;
+  }
+  .permissions-index .accordion-body .row .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .permissions-index .accordion-body .row .col-md-6.d-flex.gap-3 {
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+
+  /* Employee ID card index - container padding on phone */
+  .idcard-index-page.container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Faculty expertise index - header and actions */
+  .faculty-expertise-index .faculty-expertise-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .faculty-expertise-index .faculty-expertise-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .faculty-expertise-index .faculty-expertise-actions {
+    justify-content: stretch !important;
+  }
+  .faculty-expertise-index .faculty-expertise-actions .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .faculty-expertise-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .faculty-expertise-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .faculty-expertise-index #faculty-expertise-table th,
+  .faculty-expertise-index #faculty-expertise-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .faculty-expertise-index .d-inline-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.35rem !important;
+  }
+  .faculty-expertise-index .d-flex.flex-wrap.justify-content-between {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Users index - header and form on phone */
+  .users-index .users-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .users-index .users-header-row .col-6,
+  .users-index .users-header-row .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .users-index .users-header-row form.d-flex {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  .users-index .users-header-row form .form-control,
+  .users-index .users-header-row form .form-select,
+  .users-index .users-header-row form .btn {
+    width: 100%;
+    flex: none;
+  }
+  .users-index .datatables .card-body {
+    padding: 0.75rem !important;
+  }
+  .users-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .users-index #zero_config_table th,
+  .users-index #zero_config_table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .users-index #zero_config_table tbody td {
+    word-break: break-word;
+    vertical-align: middle !important;
+  }
+  .users-index #zero_config_table .btn-sm {
+    min-height: 34px;
+    padding: 0.35rem 0.5rem;
+    margin: 2px;
+  }
+  .users-index .table-responsive {
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+  .users-index .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  /* Faculty index - header and actions */
+  .faculty-index .faculty-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .faculty-index .faculty-header-row .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .faculty-index .faculty-header-row .d-flex.justify-content-end {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  .faculty-index .faculty-header-row .d-flex .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .faculty-index .card-body {
+    padding: 0.75rem !important;
+  }
+  .faculty-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .faculty-index #faculty-table th,
+  .faculty-index #faculty-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  /* Faculty: DataTables controls on phone */
+  .faculty-index .dataTables_length select {
+    min-width: 70px;
+  }
+  .faculty-index .dataTables_filter {
+    width: 100%;
+  }
+  .faculty-index .dataTables_filter label {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+  .faculty-index .dataTables_filter input {
+    width: 100% !important;
+    min-width: 0;
+  }
+  /* Faculty: pagination - compact, touch-friendly */
+  .faculty-index .dataTables_paginate {
+    margin-top: 0.75rem;
+  }
+  .faculty-index .dataTables_paginate .paginate_button {
+    padding: 0.4rem 0.6rem;
+    margin: 2px;
+    min-width: 36px;
+  }
+  /* Faculty: action column - allow wrap, keep touch targets */
+  .faculty-index #faculty-table tbody td {
+    white-space: normal;
+    vertical-align: middle !important;
+  }
+  .faculty-index #faculty-table .btn-sm {
+    min-height: 34px;
+    padding: 0.35rem 0.5rem;
+    margin: 2px;
+  }
+  /* Faculty: subtle scroll hint - inset shadow on right edge */
+  .faculty-index .table-responsive {
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+
+  /* Employee ID card index - phone */
+  .idcard-index-page .d-flex.flex-wrap.justify-content-between.align-items-center.gap-3.mb-4 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  .idcard-index-page .idcard-index-tabs .nav-link {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  .idcard-index-page .idcard-index-tabs .nav-link .badge {
+    font-size: 0.7rem;
+  }
+  .idcard-index-page .card-body.p-0 .d-flex.justify-content-between.align-items-center.px-3.py-3.border-top {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .idcard-index-page .card-body.p-0 .d-flex.justify-content-between .small.text-muted {
+    text-align: center;
+  }
+  .idcard-index-page .card-body.p-0 .d-flex.justify-content-between nav {
+    display: flex;
+    justify-content: center;
+  }
+  .idcard-index-page .idcard-index-table {
+    min-width: 800px;
+  }
+  .idcard-index-page .idcard-index-table th,
+  .idcard-index-page .idcard-index-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .idcard-index-page .idcard-index-table tbody td {
+    word-break: break-word;
+    vertical-align: middle !important;
+  }
+  .idcard-index-page .idcard-index-table .d-flex.align-items-center.gap-2 a,
+  .idcard-index-page .idcard-index-table .idcard-action-btns a {
+    min-height: 34px;
+    min-width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+  }
+  .idcard-index-page .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+  .idcard-index-page .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+  .idcard-index-page .pagination .page-link {
+    padding: 0.4rem 0.6rem;
+    min-width: 36px;
+  }
+
+  /* Family ID card index - phone */
+  .family-idcard-index-page.container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .family-idcard-index-page .d-flex.flex-wrap.justify-content-between.align-items-center.gap-3.mb-4 {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.5rem;
+  }
+  .family-idcard-index-page .family-idcard-tabs .nav-link {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  .family-idcard-index-page .family-idcard-tabs .nav-link .badge {
+    font-size: 0.7rem;
+  }
+  .family-idcard-index-page .card-body.p-0 .d-flex.justify-content-between.align-items-center.px-3.py-3.border-top {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .family-idcard-index-page .card-body.p-0 .d-flex.justify-content-between .small.text-muted {
+    text-align: center;
+  }
+  .family-idcard-index-page .card-body.p-0 .d-flex.justify-content-between nav {
+    display: flex;
+    justify-content: center;
+  }
+  .family-idcard-index-page .family-idcard-table {
+    min-width: 800px;
+  }
+  .family-idcard-index-page .family-idcard-table th,
+  .family-idcard-index-page .family-idcard-table td {
+    padding: 6px 8px;
+    font-size: 0.8125rem;
+  }
+  .family-idcard-index-page .family-idcard-table tbody td {
+    word-break: break-word;
+    vertical-align: middle !important;
+  }
+  .family-idcard-index-page .family-idcard-table .d-flex.align-items-center.gap-2 a,
+  .family-idcard-index-page .family-idcard-table .d-flex.align-items-center.gap-2 .btn-link {
+    min-height: 34px;
+    min-width: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+  }
+  .family-idcard-index-page .family-idcard-table .btn-group .btn {
+    min-height: 34px;
+    min-width: 34px;
+    padding: 0.35rem;
+  }
+  .family-idcard-index-page .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+  .family-idcard-index-page .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+  .family-idcard-index-page .pagination .page-link {
+    padding: 0.4rem 0.6rem;
+    min-width: 36px;
+  }
+}
+
+/* Subject index - extra small screens */
+@media (max-width: 375px) {
+  .subject-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .subject-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .subject-index h4.fw-semibold {
+    font-size: 1.1rem;
+  }
+  .subject-module-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .subject-module-index h4 {
+    font-size: 1.1rem;
+  }
+  .employee-type-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .employee-type-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .employee-type-index h4 {
+    font-size: 1.1rem;
+  }
+  .designation-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .designation-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .designation-index h4 {
+    font-size: 1.1rem;
+  }
+  .caste-category-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .caste-category-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .caste-category-index h4 {
+    font-size: 1.1rem;
+  }
+  .faculty-expertise-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .faculty-expertise-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .faculty-expertise-index h4 {
+    font-size: 1.1rem;
+  }
+  .faculty-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .faculty-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .faculty-index h4.fw-semibold {
+    font-size: 1.1rem;
+  }
+  .faculty-index .dataTables_info {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .faculty-index .dataTables_paginate {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+  .roles-index .dataTables_info {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .roles-index .dataTables_paginate {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  /* Roles index - extra small screens */
+  .roles-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .roles-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .roles-index h4 {
+    font-size: 1.1rem;
+  }
+
+  /* Users index - extra small screens */
+  .users-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .users-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .users-index h4 {
+    font-size: 1.1rem;
+  }
+
+  /* Permissions index - extra small screens */
+  .permissions-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .permissions-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .permissions-index h4 {
+    font-size: 1.1rem;
+  }
+  .permissions-index .card.card-body.my-4 {
+    padding: 0.5rem !important;
+  }
+  .idcard-index-page.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .family-idcard-index-page.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+}
+
+/* Venue master - small screens */
+@media (max-width: 768px) {
+  .venue-master-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .venue-master-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .venue-master-index h4 {
+    font-size: 1.1rem;
+  }
+  .venue-master-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+  .venue-master-table {
+    white-space: normal;
+  }
+  .venue-master-table thead {
+    display: none;
+  }
+  .venue-master-table,
+  .venue-master-table tbody,
+  .venue-master-table tr,
+  .venue-master-table td {
+    display: block;
+    width: 100%;
+  }
+  .venue-master-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #fff;
+  }
+  .venue-master-table td {
+    border: 0;
+    padding: 0.35rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .venue-master-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #4a5568;
+    flex: 0 0 45%;
+  }
+  .venue-master-table td.text-center {
+    text-align: left !important;
+  }
+  .venue-master-table .d-inline-flex {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .venue-master-table .form-check {
+    margin: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .venue-master-actions {
+    width: 100%;
+  }
+  .venue-master-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

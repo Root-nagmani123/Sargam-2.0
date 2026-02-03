@@ -3,19 +3,19 @@
 @section('title', 'Subject module - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid subject-module-index">
     <x-breadcrum title="Subject module" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
+                    <div class="row subject-module-header">
+                        <div class="col-12 col-md-6">
                             <h4>Subject module</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
+                        <div class="col-12 col-md-6">
+                            <div class="float-md-end gap-2 subject-module-actions">
                                 <a href="{{route('subject-module.create')}}" class="btn btn-primary">+ Add Subject
                                     module</a>
                             </div>

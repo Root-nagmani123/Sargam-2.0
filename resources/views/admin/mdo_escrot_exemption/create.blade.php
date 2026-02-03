@@ -7,6 +7,8 @@
     gap: 20px;
     align-items: stretch;
     margin-top: 15px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .student-panel {
@@ -144,7 +146,8 @@
     font-style: italic;
 }
 
-@media (max-width: 768px) {
+/* Responsive - Tablet (768px - 991px) */
+@media (max-width: 991.98px) {
     .dual-list-container {
         flex-direction: column;
     }
@@ -154,10 +157,212 @@
         justify-content: center;
         padding: 15px 0;
     }
+
+    .student-list {
+        max-height: 350px;
+        min-height: 250px;
+    }
+
+    .table-header,
+    .student-row {
+        grid-template-columns: 36px 1fr 100px 44px;
+    }
+
+    .modern-student-list .student-row {
+        grid-template-columns: 36px 1fr 1fr 36px;
+    }
+}
+
+/* Responsive - Small tablet / large phone (576px - 767px) */
+@media (max-width: 767.98px) {
+    .mdo-create-page.container-fluid {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    .mdo-create-page .card-body {
+        padding: 1rem !important;
+    }
+
+    .mdo-create-page .card-title {
+        font-size: 1.125rem;
+    }
+
+    .dual-list-container {
+        gap: 12px;
+    }
+
+    .student-panel {
+        min-width: 0;
+    }
+
+    .table-header,
+    .student-row {
+        grid-template-columns: 32px 1fr 80px 40px;
+        padding: 8px 10px;
+        font-size: 0.875rem;
+    }
+
+    .table-header.enhanced-header {
+        flex-wrap: wrap;
+    }
+
+    .modern-student-list .student-row {
+        grid-template-columns: 32px 1fr 1fr 32px;
+        padding: 8px 10px;
+    }
+
+    .student-list {
+        max-height: 300px;
+        min-height: 200px;
+    }
+
+    .transfer-btns button {
+        padding: 6px 10px;
+        font-size: 16px;
+    }
+
+    .mdo-create-page .form-label {
+        font-size: 0.9rem;
+    }
+
+    .mdo-create-page .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mdo-create-page .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .mdo-create-page.container-fluid {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    .mdo-create-page .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .mdo-create-page .card-title {
+        font-size: 1rem;
+    }
+
+    .mdo-create-page .row .col-md-6,
+    .mdo-create-page .row .col-md-3,
+    .mdo-create-page .row .col-md-12 {
+        margin-bottom: 0.5rem;
+    }
+
+    .table-section {
+        padding: 0.75rem !important;
+    }
+
+    .table-header,
+    .student-row {
+        grid-template-columns: 28px 1fr 70px 36px;
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+
+    .table-header.enhanced-header {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .table-header.enhanced-header span {
+        font-size: 0.75rem;
+    }
+
+    .modern-student-list .student-row {
+        grid-template-columns: 28px 1fr 1fr 28px;
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+
+    .student-row span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+
+    .student-list {
+        max-height: 250px;
+        min-height: 180px;
+    }
+
+    .search-box input {
+        font-size: 13px;
+        padding: 5px 10px;
+    }
+
+    .panel-header {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .select-all-box {
+        padding: 6px 12px;
+    }
+
+    .transfer-btns {
+        padding: 10px 0;
+    }
+
+    .transfer-btns button {
+        padding: 6px 8px;
+        font-size: 14px;
+    }
+
+    .mdo-create-page .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mdo-create-page .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Responsive - Very small phone (max 375px) */
+@media (max-width: 375px) {
+    .mdo-create-page.container-fluid {
+        padding-left: 0.375rem !important;
+        padding-right: 0.375rem !important;
+    }
+
+    .mdo-create-page .card-body {
+        padding: 0.5rem !important;
+    }
+
+    .table-header,
+    .student-row {
+        grid-template-columns: 24px 1fr 60px 32px;
+        padding: 5px 6px;
+        font-size: 0.75rem;
+    }
+
+    .modern-student-list .student-row {
+        grid-template-columns: 24px 1fr 1fr 24px;
+        padding: 5px 6px;
+    }
+
+    .student-list {
+        max-height: 200px;
+        min-height: 150px;
+    }
 }
 /* Main card section */
 .table-section {
     border-left: 4px solid #004a93 !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Header */
@@ -217,7 +422,7 @@
 
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid mdo-create-page">
     <!-- start Vertical Steps Example -->
      <x-breadcrum title="Create MDO/Escort Exemption"></x-breadcrum>
     <div class="card">
@@ -251,7 +456,7 @@
                         </div>
 
                     </div>
-                    <div class="col-md-6" id="faculty_field_container" style="display: none;">
+                    <div class="col-12 col-md-6" id="faculty_field_container" style="display: none;">
                         <div class="mb-3">
                             <x-select name="faculty_master_pk" id="faculty_master_pk" label="Faculty :" formLabelClass="form-label"
                                 formSelectClass="select2"
@@ -267,14 +472,14 @@
                         </div>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
 
                         <x-input type="time" name="Time_from" label="From Time :" placeholder="From Time : "
                             formLabelClass="form-label" labelRequired="true"
                             value="{{ old('Time_from', $mdoDutyType->Time_from ?? '') }}" />
 
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
 
                         <x-input type="time" name="Time_to" label="To Time :" placeholder="To Time : "
                             formLabelClass="form-label" labelRequired="true"
@@ -378,15 +583,15 @@
                 </a>
         </div> --}}
 
-        <div class="mb-3">
-            <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                <i class="material-icons menu-icon">save</i>
-                Save
-            </button>
-            <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+        <div class="mb-3 form-actions d-flex flex-wrap justify-content-end gap-2">
+            <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary hstack gap-2">
                 <i class="material-icons menu-icon">arrow_back</i>
                 Back
             </a>
+            <button class="btn btn-primary hstack gap-2" type="submit">
+                <i class="material-icons menu-icon">save</i>
+                Save
+            </button>
         </div>
 
         </form>

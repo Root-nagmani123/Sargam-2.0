@@ -3,14 +3,14 @@
 @section('title', 'Member - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid permissions-index">
 <x-breadcrum title="Permissions"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row permissions-header-row">
                         <div class="col-6">
                             <h4>Permissions</h4>
                         </div>
@@ -25,8 +25,7 @@
 
                     <hr>
                     <div class="table-responsive">
-                        <table
-                            class="table">
+                        <table id="permissions-table" class="table">
                             <thead>
                                 <!-- start row -->
                                 <tr>
