@@ -83,15 +83,60 @@
 @media (prefers-reduced-motion: reduce) {
     .btn-group .btn:hover { transform: none; }
 }
+
+/* Responsive - tablet and below */
+@media (max-width: 991.98px) {
+    .programme-index.container-fluid { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+    .programme-index .card-body.p-4.p-lg-5 { padding: 1rem 1.25rem !important; }
+    .programme-index .datatables .row.g-3 > [class*="col-"] { margin-bottom: 0.5rem; }
+}
+
+@media (max-width: 767.98px) {
+    .programme-index.container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    .programme-index .card-body.p-4.p-lg-5 { padding: 1rem !important; }
+    .programme-index #coursemaster-table_wrapper .dataTables_length,
+    .programme-index #coursemaster-table_wrapper .dataTables_filter {
+        text-align: left !important;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_length select {
+        margin: 0 0.5rem 0 0;
+    }
+    .programme-index .btn-group[role="group"] .btn span { display: inline; }
+    /* Stack header: title above actions */
+    .programme-index section[role="region"] .col-12.col-md-4 { margin-bottom: 0.75rem; }
+    .programme-index section[role="region"] .d-flex.flex-wrap { justify-content: flex-start !important; }
+    /* Filter row: full width, stacked */
+    .programme-index .row.g-3.mb-4.align-items-end .col-12 { margin-bottom: 0.5rem; }
+    .programme-index .row.g-3.mb-4 .btn-outline-secondary { width: 100%; justify-content: center; }
+    /* Table horizontal scroll */
+    .programme-index .table-responsive { overflow-x: auto !important; overflow-y: visible; -webkit-overflow-scrolling: touch; margin: 0 -0.5rem; }
+    .programme-index .table-responsive .table { min-width: 600px; margin-bottom: 0; }
+    .programme-index #coursemaster-table thead th { padding: 0.625rem 0.75rem; font-size: 0.8125rem; }
+    .programme-index #coursemaster-table tbody td { padding: 0.625rem 0.75rem; font-size: 0.875rem; }
+}
+
+@media (max-width: 575.98px) {
+    .programme-index.container-fluid { padding-left: 0.375rem !important; padding-right: 0.375rem !important; }
+    .programme-index .card-body.p-4.p-lg-5 { padding: 0.75rem !important; }
+    .programme-index .btn-group[role="group"] { flex-direction: column; width: 100%; }
+    .programme-index .btn-group[role="group"] .btn { width: 100%; border-radius: 0.375rem !important; padding: 0.5rem 1rem; }
+    .programme-index .btn-group[role="group"] .btn:first-child,
+    .programme-index .btn-group[role="group"] .btn:last-child { border-radius: 0.375rem !important; }
+    .programme-index a.btn.btn-primary[href*="programme.create"] { width: 100%; justify-content: center; }
+    .programme-index .d-flex.flex-wrap.gap-3 { gap: 0.5rem !important; }
+    #viewCourseModal .modal-dialog { margin: 0.5rem; max-width: calc(100% - 1rem); }
+    #viewCourseModal .modal-body .row.g-3 .col-md-6 { flex: 0 0 100%; max-width: 100%; }
+    #viewCourseModal .modal-body .d-flex.align-items-center { flex-wrap: wrap; }
+}
 </style>
-<div class="container-fluid px-3 px-md-4 py-3">
+<div class="container-fluid px-3 px-md-4 py-3 programme-index">
     <x-breadcrum title="Course Master" />
     <div class="datatables">
         <div class="card border-0 shadow-sm rounded-3 overflow-hidden border-start border-4 border-primary">
             <div class="card-body p-4 p-lg-5">
 
-                <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">
-                    <div class="col-md-4 col-lg-3">
+                <section class="row align-items-center mb-4 g-3" role="region" aria-labelledby="courseMasterHeading">
+                    <div class="col-12 col-md-4 col-lg-3">
                         <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0 d-flex align-items-center gap-2">
                             <span class="rounded-2 p-2 bg-primary bg-opacity-10">
                                 <i class="bi bi-journal-bookmark-fill text-primary"></i>
@@ -99,7 +144,7 @@
                             Course Master
                         </h1>
                     </div>
-                    <div class="col-md-8 col-lg-9">
+                    <div class="col-12 col-md-8 col-lg-9">
                         <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
                             <div class="btn-group shadow-sm rounded-pill" role="group" aria-label="Filter courses by status">
                                 <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"

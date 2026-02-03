@@ -3,14 +3,14 @@
 @section('title', 'Stream - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid stream-index">
     <x-breadcrum title="Stream" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row stream-header-row">
                         <div class="col-6">
                             <h4>Stream</h4>
                         </div>
@@ -31,7 +31,7 @@
                     <hr>
                     <div class="table-responsive">
 
-                        <table class="table text-nowrap w-100">
+                        <table class="table text-nowrap w-100" id="stream-table">
                             <thead>
                                 <!-- start row -->
                                 <tr>

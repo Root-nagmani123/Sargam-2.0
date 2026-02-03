@@ -3,14 +3,14 @@
 @section('title', 'Designation Master')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid designation-index">
 <x-breadcrum title="Designation Master"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row designation-header-row">
                         <div class="col-6">
                             <h4>Designation Master</h4>
                         </div>

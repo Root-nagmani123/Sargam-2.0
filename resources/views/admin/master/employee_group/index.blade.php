@@ -3,14 +3,14 @@
 @section('title', 'Employee Group Master')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid employee-group-index">
 <x-breadcrum title="Employee Group Master"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 
-                <div class="row">
+                <div class="row employee-group-header-row">
                     <div class="col-6">
                         <h4>Employee Group Master</h4>
                     </div>

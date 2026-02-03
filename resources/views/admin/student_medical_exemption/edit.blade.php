@@ -3,9 +3,80 @@
 @section('title', 'Edit Student Medical Exemption - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<style>
+/* Responsive - Student Medical Exemption Edit Form */
+@media (max-width: 991.98px) {
+    .student-medical-edit .card-body {
+        padding: 1rem !important;
+    }
+    .student-medical-edit .card-title {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .student-medical-edit .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .student-medical-edit .card-body {
+        padding: 0.75rem !important;
+    }
+    .student-medical-edit .d-sm-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    .student-medical-edit .d-sm-flex .breadcrumb {
+        margin-top: 0.5rem;
+        margin-left: 0 !important;
+    }
+    .student-medical-edit .form-actions {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    .student-medical-edit .form-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .student-medical-edit .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .student-medical-edit .card-body {
+        padding: 0.5rem !important;
+    }
+    .student-medical-edit .card-title {
+        font-size: 1rem;
+    }
+    .student-medical-edit .badge.fs-2 {
+        font-size: 0.875rem !important;
+    }
+    .student-medical-edit .form-label {
+        font-size: 0.9rem;
+    }
+    .student-medical-edit .form-control,
+    .student-medical-edit select.form-control {
+        font-size: 0.9rem;
+    }
+}
+
+/* Select2 responsive - ensure full width on mobile */
+@media (max-width: 575.98px) {
+    .student-medical-edit .select2-container {
+        width: 100% !important;
+    }
+}
+
+/* Prevent datetime inputs from overflowing on mobile */
+.student-medical-edit input[type="datetime-local"] {
+    max-width: 100%;
+}
+</style>
+<div class="container-fluid student-medical-edit">
     <x-session_message />
-    <div class="card card-body py-3">
+    <div class="card card-body py-3 student-medical-edit" style="border-left:4px solid #004a93;">
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
@@ -29,15 +100,15 @@
         </div>
     </div>
 
-    <div class="card mt-3">
+    <div class="card mt-3 student-medical-edit" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">Update Medical Exemption</h4>
             <hr>
             <form method="POST" action="{{ route('student.medical.exemption.update', encrypt($record->pk)) }}" enctype="multipart/form-data">
                 @csrf
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row g-2 g-md-3 mb-3">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Doctor Name *</label>
                         <select name="employee_master_pk" class="form-control col-form-label" readonly required>
                             @if(Auth::user())
@@ -49,7 +120,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Course *</label>
                         <select name="course_master_pk" class="form-control" required>
                             <option value="">Select Course</option>
@@ -64,7 +135,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Student Name *</label>
                         <select name="student_master_pk" class="form-control select2" id="studentDropdown" required>
                             <option value="">Search Student</option>
@@ -79,12 +150,12 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">OT Code</label>
                         <input type="text" class="form-control" name="ot_code" id="otCodeField" value="{{ $record->student->generated_OT_code ?? '' }}" disabled>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Exemption Category *</label>
                         <select name="exemption_category_master_pk" class="form-control" required>
                             <option value="">Select Category</option>
@@ -99,7 +170,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">OPD Category</label>
                         <select name="opd_category" class="form-control">
                             <option value="">Select Type</option>
@@ -112,7 +183,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Medical Speciality *</label>
                         <select name="exemption_medical_speciality_pk" class="form-control" required>
                             <option value="">Select Speciality</option>
@@ -127,7 +198,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">From Date & Time *</label>
                         <input type="datetime-local" name="from_date" class="form-control" value="{{ $record->from_date ? \Carbon\Carbon::parse($record->from_date)->format('Y-m-d\TH:i') : '' }}" required>
                         @error('from_date')
@@ -135,7 +206,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">To Date & Time</label>
                         <input type="datetime-local" name="to_date" class="form-control" value="{{ $record->to_date ? \Carbon\Carbon::parse($record->to_date)->format('Y-m-d\TH:i') : '' }}">
                         @error('to_date')
@@ -143,7 +214,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Description</label>
                         <textarea name="Description" class="form-control" rows="2">{{ $record->Description }}</textarea>
                         @error('Description')
@@ -152,8 +223,8 @@
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row g-2 g-md-3 mb-3">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Upload Document</label>
                         <input type="file" name="Doc_upload" class="form-control">
                         @if($record->Doc_upload)
@@ -164,7 +235,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Status *</label>
                         <select name="active_inactive" class="form-control" required>
                             <option value="1" {{ $record->active_inactive == 1 ? 'selected' : '' }}>Active</option>
@@ -176,8 +247,10 @@
                     </div>
                 </div>
 
-                <button class="btn btn-success" type="submit">Update</button>
-                <a href="{{ route('student.medical.exemption.index') }}" class="btn btn-secondary">Back</a>
+                <div class="d-flex flex-wrap justify-content-end gap-2 gap-sm-3 form-actions">
+                    <button class="btn btn-success" type="submit">Update</button>
+                    <a href="{{ route('student.medical.exemption.index') }}" class="btn btn-secondary">Back</a>
+                </div>
             </form>
         </div>
     </div>

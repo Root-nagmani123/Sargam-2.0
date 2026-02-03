@@ -41,6 +41,125 @@
     background-color: #f8f9fa;
     border-color: #666;
 }
+
+/* Horizontal Scroll for Table */
+.datatables .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.datatables #mdoescot-table {
+    min-width: 100%;
+    width: max-content;
+}
+
+.datatables #mdoescot-table th,
+.datatables #mdoescot-table td {
+    white-space: nowrap;
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+/* Responsive - Tablet (768px - 991px) */
+@media (max-width: 991.98px) {
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Responsive - Small tablet / large phone (576px - 767px) */
+@media (max-width: 767.98px) {
+    .datatables .card-body {
+        padding: 1rem !important;
+    }
+
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+
+    .datatables .btn-group[role="group"] .btn {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        font-size: 0.875rem;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .datatables .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .datatables .mdo-header-row h4 {
+        font-size: 1.1rem !important;
+    }
+
+    .datatables .btn-group[role="group"] {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .datatables .btn-group[role="group"] .btn {
+        flex: 1;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.8125rem;
+    }
+
+    .datatables .mdo-action-buttons .btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: center;
+        font-size: 0.8125rem;
+    }
+
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
+
+    .datatables .row.mb-3.align-items-end [class*="col-"] {
+        margin-bottom: 0.5rem;
+    }
+
+    .datatables #resetFilters {
+        width: 100% !important;
+    }
+}
+
+/* Reset button: auto width on desktop */
+@media (min-width: 768px) {
+    .datatables #resetFilters {
+        width: auto !important;
+    }
+}
+
+/* Responsive - Very small phone (max 375px) */
+@media (max-width: 375px) {
+    .datatables .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .datatables .card-body {
+        padding: 0.5rem !important;
+    }
+
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 4px 6px;
+        font-size: 0.75rem;
+    }
+}
 </style>
 <div class="container-fluid">
     <x-breadcrum title="MDO/Escort Exemption" />
@@ -48,11 +167,11 @@
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-4">
-                            <h4>MDO/Escort Exemption</h4>
+                    <div class="row align-items-center g-3 mb-3 mdo-header-row">
+                        <div class="col-12 col-lg-4">
+                            <h4 class="mb-0 fw-bold text-dark">MDO/Escort Exemption</h4>
                         </div>
-                        <div class="col-4 text-end">
+                        <div class="col-12 col-lg-4 text-lg-center text-start">
                              <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                 aria-label="Course Status Filter">
                                 @php
@@ -100,21 +219,23 @@
                                 </a>
                             </div>
                         </div>
-                        <div class="col-4">
-                            <div class="d-flex justify-content-end align-items-end mb-3 gap-2">
+                        <div class="col-12 col-lg-4">
+                            <div class="d-flex justify-content-lg-end justify-content-start align-items-end gap-2 mdo-action-buttons flex-wrap">
                                 <!-- Print / Download Button -->
                                 <button type="button" id="printDownloadBtn"
                                     class="btn btn-outline-info px-3 py-2 rounded shadow-sm">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 20px; vertical-align: middle;">print</i>
-                                    Print / Download
+                                    <span class="d-none d-sm-inline">Print / Download</span>
+                                    <span class="d-sm-none">Print</span>
                                 </button>
                                 <!-- Add New Button -->
                                 <a href="{{ route('mdo-escrot-exemption.create') }}"
                                     class="btn btn-primary px-3 py-2 rounded shadow-sm">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add New MDO/Escort Exemption
+                                    <span class="d-none d-md-inline">Add New MDO/Escort Exemption</span>
+                                    <span class="d-md-none">Add New</span>
                                 </a>
                             </div>
                         </div>
@@ -123,9 +244,9 @@
                     <hr>
 
                     <!-- Filters Section -->
-                    <div class="row mb-3 align-items-end">
+                    <div class="row mb-3 align-items-end g-2">
                         <!-- Course Filter -->
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="course_filter" class="form-label fw-semibold">Course:</label>
                             <select id="course_filter" class="form-select">
                                 <option value="">-- All Courses --</option>
@@ -136,7 +257,7 @@
                         </div>
                         
                         <!-- Year Filter -->
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="year_filter" class="form-label fw-semibold">Year:</label>
                             <select id="year_filter" class="form-select">
                                 <option value="">-- All Years --</option>
@@ -147,7 +268,7 @@
                         </div>
                         
                         <!-- Duty Type Filter -->
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="duty_type_filter" class="form-label fw-semibold">Duty type:</label>
                             <select id="duty_type_filter" class="form-select">
                                 <option value="">-- All Duty Types --</option>
@@ -158,38 +279,38 @@
                         </div>
                         
                         <!-- From Date Filter -->
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="from_date_filter" class="form-label fw-semibold">From Date:</label>
                             <input type="date" id="from_date_filter" class="form-control" value="{{ request('from_date_filter') }}">
                         </div>
                         
                         <!-- To Date Filter -->
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="to_date_filter" class="form-label fw-semibold">To Date:</label>
                             <input type="date" id="to_date_filter" class="form-control" value="{{ request('to_date_filter') }}">
                         </div>
                         
                         <!-- Time From Filter -->
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="time_from_filter" class="form-label fw-semibold">Time From:</label>
                             <input type="time" id="time_from_filter" class="form-control">
                         </div>
                         
                         <!-- Time To Filter -->
-                        <div class="col-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="time_to_filter" class="form-label fw-semibold">Time To:</label>
                             <input type="time" id="time_to_filter" class="form-control">
                         </div>
-                         <div class="col-md-3 mb-3 d-flex align-items-end">
+                         <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3 d-flex align-items-end">
                             <button type="button" class="btn btn-outline-secondary" id="resetFilters">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Active/Archive Buttons Row -->
+                    <!-- Total Records Row -->
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <label class="form-label fw-semibold d-block">&nbsp;</label>
                             <div class="d-flex align-items-center">
                                 <span class="badge bg-primary fs-6 px-3 py-2 d-inline-flex align-items-center">
@@ -197,7 +318,7 @@
                                 </span>
                             </div>
                         </div>
-                        <div class="col-md-6 text-end">
+                        <div class="col-12 col-md-6 text-md-end">
                             <label class="form-label fw-semibold d-block">&nbsp;</label>
                            
                         </div>
