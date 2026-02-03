@@ -301,4 +301,75 @@ class SellingVoucherDateRangeController extends Controller
         return redirect()->route('admin.mess.selling-voucher-date-range.index')
             ->with('success', 'Date Range Report deleted successfully.');
     }
+
+    /**
+     * Return modal data (JSON): store name and items with return fields.
+     */
+    public function returnData(Request $request, $id)
+    {
+        $report = SellingVoucherDateRangeReport::with(['store', 'items.itemSubcategory'])->findOrFail($id);
+
+        if (!$request->wantsJson()) {
+            return redirect()->route('admin.mess.selling-voucher-date-range.index');
+        }
+
+        $items = $report->items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
+                'quantity' => (float) $item->quantity,
+                'unit' => $item->unit ?? '—',
+                'return_quantity' => (float) ($item->return_quantity ?? 0),
+                'return_date' => $item->return_date ? $item->return_date->format('Y-m-d') : '',
+            ];
+        })->values()->toArray();
+
+        return response()->json([
+            'store_name' => $report->store->store_name ?? '—',
+            'items' => $items,
+        ]);
+    }
+
+    /**
+     * Update return quantities and dates for a selling voucher with date range.
+     */
+    public function updateReturn(Request $request, $id)
+    {
+        $report = SellingVoucherDateRangeReport::with('items')->findOrFail($id);
+
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:sv_date_range_report_items,id',
+            'items.*.return_quantity' => 'required|numeric|min:0',
+            'items.*.return_date' => 'nullable|date',
+        ]);
+
+        $itemIds = $report->items->pluck('id')->toArray();
+
+        try {
+            DB::beginTransaction();
+            foreach ($request->items as $row) {
+                $itemId = (int) $row['id'];
+                if (!in_array($itemId, $itemIds, true)) {
+                    continue;
+                }
+                $item = SellingVoucherDateRangeReportItem::find($itemId);
+                if (!$item || $item->sv_date_range_report_id != $report->id) {
+                    continue;
+                }
+                $returnQty = (float) ($row['return_quantity'] ?? 0);
+                $returnDate = !empty($row['return_date']) ? $row['return_date'] : null;
+                $item->update([
+                    'return_quantity' => $returnQty,
+                    'return_date' => $returnDate,
+                ]);
+            }
+            DB::commit();
+            return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                ->with('success', 'Return updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to update return: ' . $e->getMessage());
+        }
+    }
 }

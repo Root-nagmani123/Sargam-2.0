@@ -567,12 +567,16 @@ Route::middleware(['auth'])->group(function () {
         
         // Material Management (formerly Kitchen Issue)
         Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
+        Route::get('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'returnData'])->name('material-management.return');
+        Route::put('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');
         Route::post('material-management/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('material-management.send-for-approval');
         Route::get('material-management/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
         Route::get('material-management/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('material-management.bill-report');
 
         // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
         Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
+        Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
+        Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
         
         // Material Management Approval
         Route::prefix('material-management-approvals')->name('material-management-approvals.')->group(function () {

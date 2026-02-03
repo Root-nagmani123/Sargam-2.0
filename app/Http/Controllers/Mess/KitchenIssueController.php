@@ -358,6 +358,77 @@ class KitchenIssueController extends Controller
     }
 
     /**
+     * Return modal data (JSON): store name and items with return fields.
+     */
+    public function returnData(Request $request, $id)
+    {
+        $kitchenIssue = KitchenIssueMaster::with(['storeMaster', 'items.itemSubcategory'])->findOrFail($id);
+
+        if (!$request->wantsJson()) {
+            return redirect()->route('admin.mess.material-management.index');
+        }
+
+        $items = $kitchenIssue->items->map(function ($item) {
+            return [
+                'id' => $item->pk,
+                'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? '—'),
+                'quantity' => (float) $item->quantity,
+                'unit' => $item->unit ?? '—',
+                'return_quantity' => (float) ($item->return_quantity ?? 0),
+                'return_date' => $item->return_date ? $item->return_date->format('Y-m-d') : '',
+            ];
+        })->values()->toArray();
+
+        return response()->json([
+            'store_name' => $kitchenIssue->storeMaster->store_name ?? '—',
+            'items' => $items,
+        ]);
+    }
+
+    /**
+     * Update return quantities and dates for a selling voucher.
+     */
+    public function updateReturn(Request $request, $id)
+    {
+        $kitchenIssue = KitchenIssueMaster::with('items')->findOrFail($id);
+
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:kitchen_issue_items,pk',
+            'items.*.return_quantity' => 'required|numeric|min:0',
+            'items.*.return_date' => 'nullable|date',
+        ]);
+
+        $itemIds = $kitchenIssue->items->pluck('pk')->toArray();
+
+        try {
+            DB::beginTransaction();
+            foreach ($request->items as $row) {
+                $itemPk = (int) $row['id'];
+                if (!in_array($itemPk, $itemIds, true)) {
+                    continue;
+                }
+                $item = KitchenIssueItem::find($itemPk);
+                if (!$item || $item->kitchen_issue_master_pk != $kitchenIssue->pk) {
+                    continue;
+                }
+                $returnQty = (float) ($row['return_quantity'] ?? 0);
+                $returnDate = !empty($row['return_date']) ? $row['return_date'] : null;
+                $item->update([
+                    'return_quantity' => $returnQty,
+                    'return_date' => $returnDate,
+                ]);
+            }
+            DB::commit();
+            return redirect()->route('admin.mess.material-management.index')
+                ->with('success', 'Return updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to update return: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Get kitchen issues by store and date range (AJAX)
      */
     public function getKitchenIssueRecords(Request $request)
