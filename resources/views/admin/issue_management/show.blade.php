@@ -5,7 +5,7 @@
 @section('css')
 <style>
 .table {
-    background-color: #fff !important;
+    background-color: #cc8989 !important;
 }
 .table thead th {
     background-color: #f8f9fa;
@@ -14,7 +14,18 @@
 </style>
 @endsection
 
+
 @section('setup_content')
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        </div>
+@endif
 <div class="container-fluid">
     <x-breadcrum title="Issue Details" />
     <div class="datatables">
@@ -28,8 +39,11 @@
                         <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back to List
                         </a>
-                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-primary">
-                            <i class="bi bi-pencil"></i> Update Status
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
+                            <i class="bi bi-arrow-up-circle"></i> Update Status
+                        </button>
+                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
+                            <i class="bi bi-pencil"></i> Edit Issue
                         </a>
                     </div>
                 </div>
@@ -55,14 +69,7 @@
                                         @endforelse
                                     </td>
                                 </tr>
-                                <tr>
-                                    <th>Priority</th>
-                                    <td>
-                                        <span class="badge bg-{{ $issue->priority->priority == 'High' ? 'danger' : ($issue->priority->priority == 'Medium' ? 'warning' : 'info') }}">
-                                            {{ $issue->priority->priority ?? 'N/A' }}
-                                        </span>
-                                    </td>
-                                </tr>
+                               
                                 <tr>
                                     <th>Reproducibility</th>
                                     <td>{{ $issue->reproducibility->reproducibility_name ?? 'N/A' }}</td>
@@ -102,7 +109,16 @@
                                 </tr>
                                 <tr>
                                     <th>Assigned To</th>
-                                    <td>{{ $issue->assigned_to ?? 'Not Assigned' }}</td>
+                                    <td>
+                                        @if($issue->assigned_to)
+                                            @php
+                                                $assignedEmployee = \DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+                                            @endphp
+                                            {{ $assignedEmployee ? trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) : 'N/A' }}
+                                        @else
+                                            Not Assigned
+                                        @endif
+                                    </td>
                                 </tr>
                                 <tr>
                                     <th>Contact</th>
@@ -140,7 +156,13 @@
                                         <strong>Floor:</strong> {{ $issue->buildingMapping->floor_name ?? 'N/A' }}<br>
                                         <strong>Room:</strong> {{ $issue->buildingMapping->room_name ?? 'N/A' }}
                                     @elseif($issue->hostelMapping)
-                                        <strong>Hostel:</strong> {{ $issue->hostelMapping->hostelBuilding->hostel_name ?? 'N/A' }}<br>
+                                        @php
+                                            $hostelName = $issue->hostelMapping->hostelBuilding ? 
+                                                ($issue->hostelMapping->hostelBuilding->hostel_name ?? 
+                                                 $issue->hostelMapping->hostelBuilding->building_name ?? 'N/A') : 
+                                                (\DB::table('hostel_building_master')->where('pk', $issue->hostelMapping->hostel_building_master_pk)->first()->hostel_name ?? 'N/A');
+                                        @endphp
+                                        <strong>Hostel:</strong> {{ $hostelName }}<br>
                                         <strong>Floor:</strong> {{ $issue->hostelMapping->floor_name ?? 'N/A' }}<br>
                                         <strong>Room:</strong> {{ $issue->hostelMapping->room_name ?? 'N/A' }}
                                     @endif
@@ -232,4 +254,156 @@
         </div>
     </div>
 </div>
+
+<!-- Update Status Modal -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('admin.issue-management.update', $issue->pk) }}">
+                @csrf
+                @method('PUT')
+                <div class="modal-header">
+                    <h5 class="modal-title" id="updateStatusModalLabel">Update Issue Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @php
+                        // Get all statuses that have been used in history
+                        $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
+                    @endphp
+                    <div class="mb-3">
+                        <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>
+                        <select name="issue_status" id="issue_status" class="form-select" required>
+                            <option value="">-- Select Status --</option>
+                            <option value="0" {{ $issue->issue_status == 0 ? 'selected' : '' }} {{ in_array(0, $usedStatuses) && $issue->issue_status != 0 ? 'disabled' : '' }}>Reported</option>
+                            <option value="1" {{ $issue->issue_status == 1 ? 'selected' : '' }} {{ in_array(1, $usedStatuses) && $issue->issue_status != 1 ? 'disabled' : '' }}>In Progress</option>
+                            <option value="2" {{ $issue->issue_status == 2 ? 'selected' : '' }} {{ in_array(2, $usedStatuses) && $issue->issue_status != 2 ? 'disabled' : '' }}>Completed</option>
+                            <option value="3" {{ $issue->issue_status == 3 ? 'selected' : '' }} {{ in_array(3, $usedStatuses) && $issue->issue_status != 3 ? 'disabled' : '' }}>Pending</option>
+                            <option value="6" {{ $issue->issue_status == 6 ? 'selected' : '' }} {{ in_array(6, $usedStatuses) && $issue->issue_status != 6 ? 'disabled' : '' }}>Reopened</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="assign_to_type" class="form-label">Assign To <span class="text-danger">*</span></label>
+                        <select name="assign_to_type" id="assign_to_type" class="form-select" required>
+                            <option value="">-- Select --</option>
+                            <option value="other">Other Employee</option>
+                            @if(isset($employees) && count($employees) > 0)
+                                @foreach($employees as $employee)
+                                    <option value="{{ $employee->employee_pk }}" 
+                                        data-name="{{ $employee->employee_name }}"
+                                        data-mobile="{{ $employee->mobile ?? '' }}">
+                                        {{ $employee->first_name }} {{ $employee->last_name }}
+                                    </option>
+                                @endforeach
+                            @else
+                                <option value="" disabled>No employees found</option>
+                            @endif
+                            
+                        </select>
+                    </div>
+
+                    <!-- Phone Number Display Field (Visible when employee selected) -->
+                    <div class="mb-3" id="phoneNumberSection" style="display: none;">
+                        <label for="display_phone" class="form-label">Phone Number</label>
+                        <input type="text" class="form-control" id="display_phone" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <!-- Hidden fields for actual submission -->
+                    <input type="hidden" name="assigned_to" id="assigned_to_hidden">
+                    <input type="hidden" name="assigned_to_contact" id="assigned_to_contact_hidden">
+
+                    <!-- Other Option Fields (Hidden by default) -->
+                    <div id="otherFieldsSection" style="display: none;">
+                        <div class="mb-3">
+                            <label for="other_name" class="form-label">Member Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="other_name" placeholder="Enter member name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="other_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="other_phone" placeholder="Enter phone number" maxlength="10">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="remark" class="form-label">Remarks</label>
+                        <textarea name="remark" id="remark" class="form-control" rows="3" placeholder="Add remarks (optional)">{{ $issue->remark }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    // Handle assign_to_type change
+    $('#assign_to_type').change(function() {
+        var selectedValue = $(this).val();
+        
+        if (selectedValue === 'other') {
+            // Show other fields section, hide phone display
+            $('#otherFieldsSection').show();
+            $('#phoneNumberSection').hide();
+            $('#display_phone').val('');
+            // Clear hidden fields
+            $('#assigned_to_hidden').val('');
+            $('#assigned_to_contact_hidden').val('');
+        } else if (selectedValue !== '') {
+            // Hide other fields section, show phone display
+            $('#otherFieldsSection').hide();
+            $('#phoneNumberSection').show();
+            
+            // Get data from selected option
+            var selectedOption = $(this).find('option:selected');
+            var name = selectedOption.data('name');
+            var mobile = selectedOption.data('mobile');
+            
+            // Extract employee pk from value (format: "employee_{pk}")
+            var employeePk = selectedValue.replace('employee_', '');
+            
+            // Display phone number
+            $('#display_phone').val(mobile || 'N/A');
+            
+            // Set hidden fields - assigned_to should contain pk, not name
+            $('#assigned_to_hidden').val(employeePk || '');
+            $('#assigned_to_contact_hidden').val(mobile || '');
+        } else {
+            // Hide both sections
+            $('#otherFieldsSection').hide();
+            $('#phoneNumberSection').hide();
+            $('#display_phone').val('');
+            // Clear hidden fields
+            $('#assigned_to_hidden').val('');
+            $('#assigned_to_contact_hidden').val('');
+        }
+    });
+
+    // Before form submission, if "other" is selected, populate hidden fields from other inputs
+    $('#updateStatusModal form').submit(function(e) {
+        var assignToType = $('#assign_to_type').val();
+        
+        if (assignToType === 'other') {
+            var otherName = $('#other_name').val().trim();
+            var otherPhone = $('#other_phone').val().trim();
+            
+            if (otherName === '' || otherPhone === '') {
+                e.preventDefault();
+                alert('Please enter both member name and phone number.');
+                return false;
+            }
+            
+            // Set hidden fields with other values
+            $('#assigned_to_hidden').val(otherName);
+            $('#assigned_to_contact_hidden').val(otherPhone);
+        }
+    });
+});
+</script>
 @endsection
