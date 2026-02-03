@@ -3,7 +3,7 @@
 @section('title', isset($conclusion) ? 'Edit Memo Conclusion' : 'Add Memo Conclusion')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid memo-conclusion-form">
     <x-breadcrum title="Memo Conclusion Master" />
     <x-session_message />
 
@@ -69,4 +69,64 @@
         </div>
     </div>
 </div>
+
+{{-- Responsive styles: only apply below desktop (992px), desktop view unchanged --}}
+<style>
+@media (max-width: 991.98px) {
+    .memo-conclusion-form .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .memo-conclusion-form .card-body {
+        padding: 1rem;
+    }
+    .memo-conclusion-form .card-title {
+        font-size: 1.1rem;
+    }
+    .memo-conclusion-form .text-end {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    .memo-conclusion-form .text-end .btn {
+        min-width: 0;
+    }
+}
+@media (max-width: 767.98px) {
+    .memo-conclusion-form .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .memo-conclusion-form .card-body {
+        padding: 0.875rem;
+    }
+    .memo-conclusion-form .form-control,
+    .memo-conclusion-form .form-select {
+        font-size: 16px; /* prevents zoom on iOS */
+    }
+    .memo-conclusion-form .text-end {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .memo-conclusion-form .text-end .btn {
+        width: 100%;
+    }
+}
+@media (max-width: 575.98px) {
+    .memo-conclusion-form .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .memo-conclusion-form .card-body {
+        padding: 0.75rem;
+    }
+    .memo-conclusion-form .card-title {
+        font-size: 1rem;
+    }
+    .memo-conclusion-form .form-label {
+        font-size: 0.9375rem;
+    }
+}
+</style>
 @endsection

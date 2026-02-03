@@ -249,6 +249,149 @@
         }
 
         .btn-group .btn { border-radius: 0.5rem; }
+
+        /* Responsive - tablet and below (desktop unchanged) */
+        @media (max-width: 991px) {
+            .filter-card .card-body,
+            .content-card .card-body {
+                padding: 1rem !important;
+            }
+            .session-header {
+                padding: 1rem !important;
+            }
+            .session-header .col-md-4 {
+                margin-bottom: 0.75rem;
+            }
+            .session-header .col-md-4:last-child {
+                margin-bottom: 0;
+            }
+            .pagination .page-item .page-link {
+                min-width: 2.25rem;
+                height: 2.25rem;
+                padding: 0 0.5rem;
+                font-size: 0.8125rem;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .container-fluid {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            .filter-card .card-body,
+            .content-card .card-body {
+                padding: 0.75rem !important;
+            }
+            .filter-card .card-header,
+            .content-card .card-header {
+                padding: 0.75rem 1rem !important;
+                font-size: 0.9375rem;
+            }
+            .content-card .card-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 0.5rem;
+            }
+            .content-card .card-header small {
+                font-size: 0.75rem;
+            }
+            .session-header {
+                padding: 0.75rem !important;
+            }
+            .session-header h6 {
+                font-size: 0.9375rem;
+            }
+            .feedback-actions {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            .feedback-actions .btn-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            .feedback-actions .btn-group .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .feedback-actions .btn-outline-secondary,
+            .feedback-actions .btn-warning {
+                width: 100%;
+            }
+            .table-feedback {
+                font-size: 0.8125rem;
+            }
+            .table-feedback th,
+            .table-feedback td {
+                padding: 0.5rem 0.4rem;
+            }
+            .rating-badge {
+                min-width: 24px;
+                height: 24px;
+                font-size: 0.75rem;
+            }
+            .pagination-wrapper {
+                padding: 0.75rem 1rem;
+                margin-top: 1rem;
+            }
+            .pagination-info {
+                flex-direction: column;
+                gap: 0.5rem !important;
+                font-size: 0.75rem;
+            }
+            .pagination .page-item .page-link {
+                min-width: 2rem;
+                height: 2rem;
+                padding: 0 0.4rem;
+                font-size: 0.75rem;
+            }
+            .empty-state {
+                padding: 2rem 1rem;
+            }
+            .empty-state i {
+                font-size: 2.5rem;
+            }
+            .empty-state h5 {
+                font-size: 1rem;
+            }
+            .suggestions-list {
+                max-height: 180px;
+                max-width: 100%;
+                left: 0;
+                right: 0;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .page-title {
+                font-size: 1rem;
+            }
+            .filter-card .card-body {
+                padding: 0.5rem !important;
+            }
+            fieldset legend,
+            .form-label {
+                font-size: 0.8125rem;
+            }
+            .form-control,
+            .form-select {
+                font-size: 0.875rem;
+            }
+            .session-header .d-flex.align-items-center.gap-2 {
+                flex-wrap: wrap;
+            }
+            .table-feedback th:nth-child(n+4),
+            .table-feedback td:nth-child(n+4) {
+                font-size: 0.75rem;
+            }
+            .pagination .page-item:not(:first-child):not(:last-child) .page-link {
+                min-width: 1.75rem;
+                height: 1.75rem;
+                padding: 0 0.35rem;
+            }
+            .pagination .page-item .page-link i {
+                font-size: 0.7rem;
+            }
+        }
     </style>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -365,7 +508,7 @@
                     @endif
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center gap-2 mt-4 pt-3 border-top">
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-4 pt-3 border-top feedback-actions">
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-success" onclick="exportToExcel()">
                             <i class="fas fa-file-excel me-1"></i> Export Excel

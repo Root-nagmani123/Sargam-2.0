@@ -210,6 +210,35 @@
     }
 }
 
+/* Page responsive helpers (mobile-only; preserve desktop) */
+@media (max-width: 575.98px) {
+    .card-title {
+        font-size: 1.05rem;
+    }
+
+    /* Prevent sticky status cell overlapping during horizontal scroll */
+    .table .sticky-status {
+        position: static;
+        right: auto;
+        box-shadow: none;
+    }
+
+    /* Let action buttons wrap naturally */
+    .d-flex.justify-content-end.align-items-center.gap-2 {
+        flex-wrap: wrap;
+        justify-content: flex-start !important;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+    /* On small tablets, also avoid sticky overlap */
+    .table .sticky-status {
+        position: static;
+        right: auto;
+        box-shadow: none;
+    }
+}
+
 /* Sticky Table Status */
 .table .sticky-status {
     position: sticky;
@@ -352,10 +381,10 @@
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row">
-                <div class="col-6">
+                <div class="col-12 col-md-6">
                     <h4 class="card-title">Notice /Memo Management</h4>
                 </div>
-                <div class="col-6">
+                <div class="col-12 col-md-6">
                     <div class="d-flex justify-content-end align-items-center gap-2">
 
                         <!-- Export PDF Button -->
@@ -379,7 +408,7 @@
             </div>
             <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
             <div class="row">
-                <div class="col-3">
+                <div class="col-12 col-md-3">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
@@ -390,7 +419,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-3">
                     <div class="mb-3">
                         <label for="type" class="form-label">Type (Notice / Memo)</label>
                         <select class="form-select" id="type" name="type">
@@ -400,7 +429,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-3">
                     <div class="mb-3">
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
@@ -410,7 +439,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-3">
                     <div class="mb-3">
                         <label for="search" class="form-label">Search</label>
                        <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
@@ -418,19 +447,19 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-3">
+                <div class="col-12 col-md-3">
                     <div class="mb-3">
                         <label for="from_date" class="form-label">From Date</label>
                         <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-12 col-md-3">
                     <div class="mb-3">
                         <label for="to_date" class="form-label">To Date</label>
                         <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-3 d-flex align-items-center gap-2">
                         <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">
                             <i class="bi bi-x-circle me-1"></i> Clear Filters
@@ -706,7 +735,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                     <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
                         @csrf
                         <div class="row">
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="course_master_name" class="form-label">Course</label>
 
                                 <input type="text" id="course_master_name" class="form-control"
@@ -720,7 +749,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="date_memo_notice" class="form-label">Date</label>
                                 <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice"
                                     required readonly>
@@ -729,7 +758,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="subject_master_id" class="form-label">Subject <span
                                         class="text-danger">*</span></label>
 
@@ -741,7 +770,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="topic_id" class="form-label">Topic</label>
 
                                 <input type="text" id="topic_id" class="form-control" name="topic_id" readonly>
@@ -753,7 +782,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 
 
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="session_name" class="form-label">Session</label>
                                 <input type="text" id="class_session_master_pk" class="form-control" readonly>
                                 @error('session_name')
@@ -761,23 +790,23 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="faculty_name" class="form-label">Faculty Name</label>
                                 <input type="text" id="faculty_name" class="form-control" readonly>
                                 @error('faculty_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="student_name" class="form-label">Student Name</label>
                                 <input type="text" id="student_name" class="form-control" readonly>
                                 @error('student_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
                                 <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-control">
                                     <option value="">Select Memo Type</option>
@@ -789,7 +818,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_number" class="form-label">Memo Number</label>
                                 <input type="text" id="memo_number" name="memo_number" class="form-control" readonly>
                                 @error('memo_number')
@@ -798,7 +827,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             </div>
 
 
-                            <div class="col-6 mb-3">
+                            <div class="col-12 col-md-6 mb-3">
                                 <label for="venue" class="form-label">Venue</label>
                                 <select name="venue" id="venue" class="form-control">
                                     <option value="">Select Venue</option>
@@ -810,14 +839,14 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-3 mb-3">
+                            <div class="col-12 col-md-3 mb-3">
                                 <label for="memo_date" class="form-label">Date</label>
                                 <input type="date" id="memo_date" class="form-control">
                                 @error('memo_date')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-3 mb-3">
+                            <div class="col-12 col-md-3 mb-3">
                                 <label for="meeting_time" class="form-label">Meeting Time</label>
                                 <input type="time" id="meeting_time" name="meeting_time" class="form-control">
                                 @error('meeting_time')

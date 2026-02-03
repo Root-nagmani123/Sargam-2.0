@@ -293,16 +293,110 @@
         box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
     }
     
-    /* Responsive Adjustments */
-    @media (max-width: 768px) {
-        .summary-stat-value {
-            font-size: 24px;
+    /* Responsive Adjustments - Tablet and below (desktop unchanged) */
+    @media (max-width: 991px) {
+        .container-fluid {
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        
+        .card-body.p-4 {
+            padding: 1rem !important;
+        }
+        
+        .row.mb-4.align-items-center .col-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        
+        .row.mb-4.align-items-center .col-6:first-child {
+            margin-bottom: 12px;
+        }
+        
+        .row.mb-4 .d-flex.justify-content-end {
+            justify-content: flex-start !important;
+        }
+        
+        .exception-summary-card {
+            padding: 20px 16px;
+            margin-bottom: 24px;
+        }
+        
+        .exception-summary-card .row.g-4 .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+            margin-bottom: 16px;
+        }
+        
+        .exception-summary-card .row.g-4 .col-md-6:last-child {
+            margin-bottom: 0;
+        }
+        
+        .filter-section {
+            padding: 16px;
+        }
+        
+        .filter-section .col-md-4 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        
+        .section-container {
+            margin-bottom: 20px;
+        }
+        
+        .course-section {
+            padding: 16px;
+        }
+        
+        .student-records-section {
+            padding: 16px;
+        }
+        
+        .student-records-section .table-header {
+            margin-left: -16px;
+            margin-right: -16px;
+            margin-top: -16px;
+            width: calc(100% + 32px);
+            padding: 12px 16px;
+        }
+        
+        .table-responsive {
+            margin-left: -16px;
+            margin-right: -16px;
+            padding-left: 16px;
+            padding-right: 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .exception-table {
+            min-width: 800px;
         }
         
         .exception-table thead th,
         .exception-table tbody td {
             font-size: 12px;
             padding: 10px 12px;
+            white-space: normal;
+        }
+        
+        .exception-table thead th {
+            white-space: nowrap;
+        }
+        
+        .exception-table td[style*="max-width"] {
+            max-width: 180px !important;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .summary-stat-value {
+            font-size: 24px;
+        }
+        
+        .summary-stat-label {
+            font-size: 12px;
         }
         
         .course-header {
@@ -322,6 +416,108 @@
         
         .faculty-header h5 {
             font-size: 14px;
+        }
+        
+        .faculty-header .material-icons {
+            font-size: 20px;
+        }
+        
+        h4 {
+            font-size: 1.1rem !important;
+        }
+        
+        h4 .material-icons {
+            font-size: 22px !important;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .container-fluid {
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+        
+        .card-body.p-4 {
+            padding: 0.75rem !important;
+        }
+        
+        .exception-summary-card {
+            padding: 16px 12px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-stat-value {
+            font-size: 20px;
+        }
+        
+        .summary-stat-label {
+            font-size: 11px;
+        }
+        
+        .filter-section {
+            padding: 12px;
+        }
+        
+        .section-container {
+            margin-bottom: 16px;
+        }
+        
+        .table-header {
+            padding: 12px 16px;
+        }
+        
+        .table-header h6 {
+            font-size: 12px;
+        }
+        
+        .course-section {
+            padding: 12px;
+        }
+        
+        .student-records-section {
+            padding: 12px;
+        }
+        
+        .student-records-section .table-header {
+            margin-left: -12px;
+            margin-right: -12px;
+            margin-top: -12px;
+            width: calc(100% + 24px);
+        }
+        
+        .table-responsive {
+            margin-left: -12px;
+            margin-right: -12px;
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+        
+        .exception-table thead th,
+        .exception-table tbody td {
+            font-size: 11px;
+            padding: 8px 10px;
+        }
+        
+        .exception-table {
+            min-width: 700px;
+        }
+        
+        .exception-badge {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .btn {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+        
+        .empty-state {
+            padding: 32px 16px;
+        }
+        
+        .empty-state .material-icons {
+            font-size: 48px;
         }
     }
     
