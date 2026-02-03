@@ -432,9 +432,12 @@
                 </div>
                 <div class="col-6">
                     <div class="mb-3 d-flex align-items-center gap-2">
-                        <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">
+                       {{-- <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">
                             <i class="bi bi-x-circle me-1"></i> Clear Filters
-                        </a>
+                        </a>--}}
+                        <button type="button" id="clearFilters" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Clear Filters
+                        </button>
                     </div>
                 </div>
             </div>
@@ -918,6 +921,39 @@ $(document).ready(function() {
     });
 });
 
+
+
+//clear filters
+$('#clearFilters').on('click', function () {
+
+    // 1. Clear form fields
+    $('#filterForm')[0].reset();
+
+    // 2. Clear manually-set fields (important)
+    $('#from_date').val('');
+    $('#to_date').val('');
+    $('#search').val('');
+
+    // 3. Trigger AJAX reload
+    $.ajax({
+        url: "{{ route('memo.notice.management.index') }}",
+        type: "GET",
+        beforeSend: function () {
+            $('.table-responsive').css('opacity', '0.5');
+        },
+        success: function (response) {
+            let html = $(response).find('.table-responsive').html();
+            $('.table-responsive').html(html).css('opacity', '1');
+
+            // 4. Clear URL params
+            window.history.replaceState({}, '', "{{ route('memo.notice.management.index') }}");
+        },
+        error: function () {
+            alert('Failed to clear filters');
+            $('.table-responsive').css('opacity', '1');
+        }
+    });
+});
 
 
 
