@@ -505,23 +505,41 @@ Route::middleware(['auth'])->group(function () {
         Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
         Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
         
-        // Enhanced Invoice Management
-        Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class);
-        Route::get('invoices/date-range', [\App\Http\Controllers\Mess\InvoiceController::class, 'listInvoiceWithDateRange'])->name('invoices.dateRange');
-        Route::get('invoices/list/date-range', [\App\Http\Controllers\Mess\InvoiceController::class, 'listInvoiceWithDateRange'])->name('invoices.listInvoiceWithDateRange');
-        Route::get('invoices/get/list', [\App\Http\Controllers\Mess\InvoiceController::class, 'getInvoiceList'])->name('invoices.getInvoiceList');
-        Route::post('invoices/check/edit', [\App\Http\Controllers\Mess\InvoiceController::class, 'checkEditForInvoice'])->name('invoices.checkEditForInvoice');
-        Route::post('invoices/save/payment-type', [\App\Http\Controllers\Mess\InvoiceController::class, 'saveInvoicePaymentType'])->name('invoices.saveInvoicePaymentType');
-        
-        // Sales & Billing Management (from Java SaleMaster)
-        Route::resource('billing', \App\Http\Controllers\Mess\BillingController::class);
-        Route::get('billing/items/by-store', [\App\Http\Controllers\Mess\BillingController::class, 'getItemsByStore'])->name('billing.getItemsByStore');
-        Route::get('billing/buyers/find', [\App\Http\Controllers\Mess\BillingController::class, 'findBuyers'])->name('billing.findBuyers');
-        Route::get('billing/item/price', [\App\Http\Controllers\Mess\BillingController::class, 'getItemPrice'])->name('billing.getItemPrice');
-        Route::post('billing/credit-limit/check', [\App\Http\Controllers\Mess\BillingController::class, 'checkCreditLimit'])->name('billing.checkCreditLimit');
-        Route::post('billing/{id}/payment', [\App\Http\Controllers\Mess\BillingController::class, 'makePayment'])->name('billing.makePayment');
-        Route::get('billing/reports/due', [\App\Http\Controllers\Mess\BillingController::class, 'dueReport'])->name('billing.dueReport');
-
+        // NEW: Process Mess Bills - Billing & Invoice Management
+        Route::prefix('process-bills')->name('process-bills.')->group(function () {
+            // Process Bills - Employee
+            Route::get('/', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'index'])->name('index');
+            Route::get('/employee-bills', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'allEmployeeBills'])->name('employee-bills');
+            Route::get('/employee-details', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'employeeBillDetails'])->name('employee-details');
+            
+            // Bulk Invoice Generation
+            Route::post('/generate-bulk', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'generateBulkInvoices'])->name('generate-bulk');
+            
+            // Single Invoice Generation
+            Route::post('/generate-single', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'generateSingleInvoice'])->name('generate-single');
+            
+            // Guest/Others Invoice Generation
+            Route::get('/create-guest', function() {
+                return view('admin.mess.process-bills.generate-guest');
+            })->name('create-guest');
+            Route::post('/generate-guest', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'generateGuestInvoice'])->name('generate-guest');
+            Route::get('/guest-list', function() {
+                return view('admin.mess.process-bills.guest-list');
+            })->name('guest-list');
+            
+            // Invoice Approval
+            Route::post('/approve', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'approveInvoices'])->name('approve');
+            
+            // AJAX Routes
+            Route::get('/invoices-by-date', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'getInvoicesByDate'])->name('invoices-by-date');
+            Route::get('/bills-by-employee', [\App\Http\Controllers\Mess\ProcessMessBillController::class, 'getBillsByEmployee'])->name('bills-by-employee');
+            
+            // View Invoice
+            Route::get('/view-invoice/{invoice_no}', function($invoiceNo) {
+                // This would be implemented to show invoice PDF or details
+                return "Invoice view for: $invoiceNo";
+            })->name('view-invoice');
+        });
         
         // NEW: Mess RBAC - Permission Management
         // IMPORTANT: Custom routes MUST come BEFORE resource route

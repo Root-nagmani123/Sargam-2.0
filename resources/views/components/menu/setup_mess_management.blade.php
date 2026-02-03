@@ -118,16 +118,42 @@
             </a>
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseBillingFinance">
+            <!-- Process Mess Bills Employee -->
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.process-bills.employee-bills') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Process Mess Bills Employee</span>
+                </a>
+            </li>
+            
+            <!-- Generate Invoice Guest/Others -->
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.process-bills.create-guest') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Generate Invoice Guest/Others</span>
+                </a>
+            </li>
+            
+            <!-- Guest/Others Invoice List -->
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.process-bills.guest-list') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Guest/Others Invoice List</span>
+                </a>
+            </li>
+            
+            <!-- Monthly Bills -->
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.monthly-bills.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Monthly Bills</span>
                 </a>
             </li>
+            
+            <!-- Finance Bookings -->
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.finance-bookings.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Finance Bookings</span>
                 </a>
             </li>
+            
+            <!-- Invoices -->
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.invoices.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Invoices</span>

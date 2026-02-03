@@ -4,6 +4,7 @@ namespace App\Models\Mess;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use App\Models\Mess\Vendor;
 
 class Invoice extends Model
 {
@@ -15,73 +16,78 @@ class Invoice extends Model
         'invoice_no',
         'vendor_id',
         'buyer_id',
+        'bill_no',
         'invoice_date',
         'amount',
-        'paid_amount',
-        'balance',
+        'total_amount',
         'payment_type',
-        'payment_status',
-        'due_date',
-        'paid_date',
+        'status',
+        'is_deleted',
+        'created_by',
+        'approved_by',
+        'approved_at',
         'remarks'
     ];
-    
+
     protected $casts = [
-        'amount' => 'decimal:2',
-        'paid_amount' => 'decimal:2',
-        'balance' => 'decimal:2',
         'invoice_date' => 'date',
-        'due_date' => 'date',
-        'paid_date' => 'date'
+        'approved_at' => 'datetime',
+        'is_deleted' => 'boolean',
     ];
-    
+
     /**
-     * Get the vendor associated with the invoice
+     * Relationship with vendor
      */
     public function vendor()
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
-    
+
     /**
-     * Get the buyer (user) associated with the invoice
+     * Relationship with buyer (user)
      */
     public function buyer()
     {
-        return $this->belongsTo(User::class, 'buyer_id', 'pk');
+        return $this->belongsTo(User::class, 'buyer_id');
     }
-    
+
     /**
-     * Get finance bookings related to this invoice
+     * Relationship with creator
      */
-    public function financeBookings()
+    public function creator()
     {
-        return $this->hasMany(FinanceBooking::class);
+        return $this->belongsTo(User::class, 'created_by');
     }
-    
+
     /**
-     * Check if invoice is overdue
+     * Relationship with approver
      */
-    public function isOverdue()
+    public function approver()
     {
-        if (!$this->due_date) {
-            return false;
-        }
-        
-        return $this->payment_status !== 'paid' && 
-               $this->due_date < now();
+        return $this->belongsTo(User::class, 'approved_by');
     }
-    
+
     /**
-     * Get the status badge color
+     * Scope for active invoices
      */
-    public function getStatusColorAttribute()
+    public function scopeActive($query)
     {
-        return match($this->payment_status) {
-            'paid' => 'success',
-            'partial' => 'warning',
-            'overdue' => 'danger',
-            default => 'secondary'
-        };
+        return $query->where('is_deleted', 0);
+    }
+
+    /**
+     * Scope for pending invoices
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    /**
+     * Scope for approved invoices
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
     }
 }
