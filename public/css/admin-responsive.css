@@ -6,6 +6,32 @@
 
 /* Tablet and below */
 @media (max-width: 991.98px) {
+  /* Active course index - table scroll */
+  .active-course-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .active-course-index #active_course {
+    min-width: 550px;
+  }
+  .active-course-index #active_course th,
+  .active-course-index #active_course td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .active-course-index .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .active-course-index .dataTables_length,
+  .active-course-index .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .active-course-index .dataTables_filter input {
+    min-width: 140px;
+    max-width: 100%;
+  }
+
   /* Employee type index - table scroll */
   .employee-type-index .table-responsive {
     overflow-x: auto !important;
@@ -73,6 +99,32 @@
     margin-bottom: 0.5rem;
   }
   .faculty-index .dataTables_filter input {
+    min-width: 140px;
+    max-width: 100%;
+  }
+
+  /* Inhouse faculty index - table scroll */
+  .inhouse-faculty-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .inhouse-faculty-index #inhouse {
+    min-width: 550px;
+  }
+  .inhouse-faculty-index #inhouse th,
+  .inhouse-faculty-index #inhouse td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .inhouse-faculty-index .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .inhouse-faculty-index .dataTables_length,
+  .inhouse-faculty-index .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .inhouse-faculty-index .dataTables_filter input {
     min-width: 140px;
     max-width: 100%;
   }
@@ -354,6 +406,19 @@
   }
   .employee-type-index #employeetypemaster-table th,
   .employee-type-index #employeetypemaster-table td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  .active-course-index .datatables .card-body {
+    padding: 1rem !important;
+  }
+  .active-course-index.container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .active-course-index #active_course th,
+  .active-course-index #active_course td {
     padding: 6px 8px;
     font-size: 0.85rem;
   }
@@ -1980,6 +2045,21 @@
   .employee-type-index h4 {
     font-size: 1.1rem;
   }
+  .active-course-index.container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .active-course-index .card-body {
+    padding: 0.5rem !important;
+  }
+  .active-course-index h4 {
+    font-size: 1.1rem;
+  }
+  .active-course-index #active_course .btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+    min-height: 36px;
+  }
   .designation-index.container-fluid {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
@@ -2119,47 +2199,6 @@
   }
   .venue-master-table {
     white-space: normal;
-  }
-  .venue-master-table thead {
-    display: none;
-  }
-  .venue-master-table,
-  .venue-master-table tbody,
-  .venue-master-table tr,
-  .venue-master-table td {
-    display: block;
-    width: 100%;
-  }
-  .venue-master-table tr {
-    margin-bottom: 0.75rem;
-    border: 1px solid #e5e5e5;
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: #fff;
-  }
-  .venue-master-table td {
-    border: 0;
-    padding: 0.35rem 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
-  .venue-master-table td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: #4a5568;
-    flex: 0 0 45%;
-  }
-  .venue-master-table td.text-center {
-    text-align: left !important;
-  }
-  .venue-master-table .d-inline-flex {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .venue-master-table .form-check {
-    margin: 0;
   }
 }
 
@@ -3151,6 +3190,343 @@
   }
   .peer-evaluation-admin-page .modal-footer .btn {
     width: 100%;
+  }
+}
+
+/* ========================================
+   ADMIN DASHBOARD - Responsive (tablet/mobile only)
+   Desktop view unchanged; no backend changes
+   ======================================== */
+
+/* Tablet (max-width: 991.98px) */
+@media (max-width: 991.98px) {
+  .admin-dashboard-page .content-card-modern {
+    height: auto !important;
+    min-height: 400px;
+    max-height: 500px;
+  }
+  .admin-dashboard-page .card.shadow-sm.border-0.rounded-4 {
+    max-height: 450px !important;
+  }
+  .admin-dashboard-page .stat-card.clean-style {
+    padding: 16px 18px;
+    gap: 14px;
+  }
+  .admin-dashboard-page .stat-icon {
+    width: 44px;
+    height: 44px;
+  }
+  .admin-dashboard-page .stat-icon img {
+    width: 24px;
+    height: 24px;
+  }
+  .admin-dashboard-page .stat-label {
+    font-size: 14px;
+  }
+  .admin-dashboard-page .stat-value {
+    font-size: 22px;
+  }
+  .admin-dashboard-page .birthday-card {
+    min-height: 140px;
+    padding: 14px 16px !important;
+  }
+  .admin-dashboard-page .birthday-photo {
+    width: 56px;
+    height: 56px;
+  }
+  .admin-dashboard-page .emp-name {
+    font-size: 1rem !important;
+  }
+  .admin-dashboard-page .emp-desg,
+  .admin-dashboard-page .emp-email,
+  .admin-dashboard-page .emp-phone {
+    font-size: 12px;
+  }
+  .admin-dashboard-page .calendar-component {
+    padding: 14px;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0, 74, 147, 0.06);
+  }
+  .admin-dashboard-page .timetable-container {
+    max-height: 200px;
+  }
+  .admin-dashboard-page .timetable-card {
+    height: auto;
+    min-height: 100px;
+    padding: 8px 10px;
+  }
+  .admin-dashboard-page .timetable-topic {
+    font-size: 0.8rem;
+    -webkit-line-clamp: 2;
+  }
+  .admin-dashboard-page .timetable-details {
+    gap: 8px;
+    font-size: 0.65rem;
+  }
+  .admin-dashboard-page .row.g-4 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+  }
+}
+
+/* Mobile (max-width: 767.98px) */
+@media (max-width: 767.98px) {
+  .admin-dashboard-page .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .admin-dashboard-page .row.g-4.mb-4 {
+    margin-bottom: 1rem !important;
+  }
+  .admin-dashboard-page .stat-card.clean-style {
+    padding: 14px 16px;
+    gap: 12px;
+    flex-direction: row;
+    align-items: center;
+  }
+  .admin-dashboard-page .stat-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+  .admin-dashboard-page .stat-icon img {
+    width: 22px;
+    height: 22px;
+  }
+  .admin-dashboard-page .stat-label {
+    font-size: 13px;
+  }
+  .admin-dashboard-page .stat-value {
+    font-size: 20px;
+  }
+  .admin-dashboard-page .content-card-modern {
+    min-height: 350px;
+    max-height: 420px;
+  }
+  .admin-dashboard-page .content-card-header-modern h2,
+  .admin-dashboard-page h2#campus-summary-title {
+    font-size: 1.1rem !important;
+  }
+  .admin-dashboard-page .section-header-modern {
+    font-size: 1rem !important;
+    padding-left: 8px;
+  }
+  .admin-dashboard-page .card-body {
+    padding: 14px !important;
+  }
+  .admin-dashboard-page .card.shadow-sm.border-0.rounded-4 {
+    max-height: 380px !important;
+  }
+  .admin-dashboard-page .card-header.bg-danger {
+    padding: 10px 14px;
+  }
+  .admin-dashboard-page .card-header.bg-danger h5 {
+    font-size: 0.95rem;
+  }
+  .admin-dashboard-page h3.fw-bold {
+    font-size: 1.1rem;
+    margin-top: 1.25rem;
+  }
+  .admin-dashboard-page .card-body .row.g-4 .col-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .admin-dashboard-page .birthday-card {
+    min-height: auto;
+    padding: 12px 14px !important;
+  }
+  .admin-dashboard-page .birthday-photo {
+    width: 48px;
+    height: 48px;
+  }
+  .admin-dashboard-page .emp-name {
+    font-size: 0.95rem !important;
+  }
+  .admin-dashboard-page .emp-desg,
+  .admin-dashboard-page .emp-email,
+  .admin-dashboard-page .emp-phone {
+    font-size: 11px;
+  }
+  .admin-dashboard-page .calendar-component {
+    padding: 14px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 74, 147, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 74, 147, 0.1);
+  }
+  .admin-dashboard-page .calendar-component .d-flex.align-items-center.mb-3 {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px !important;
+  }
+  .admin-dashboard-page .calendar-component .form-select.form-select-sm {
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    min-width: 0;
+    flex: 1;
+    min-width: 70px;
+  }
+  .admin-dashboard-page .calendar-component .btn-group.btn-group-sm {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .admin-dashboard-page .calendar-component .btn-group .btn {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+  }
+  .admin-dashboard-page .calendar-component table {
+    font-size: 0.85rem;
+    min-width: 280px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .admin-dashboard-page .calendar-component .calendar-table thead th {
+    padding: 10px 4px !important;
+    font-size: 0.7rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569 !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell {
+    padding: 6px 3px;
+    font-size: 0.8rem;
+    height: 52px;
+    min-width: 36px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell .day-number {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell.is-selected {
+    background: linear-gradient(135deg, #004a93 0%, #0066c4 100%) !important;
+    border-color: #004a93 !important;
+    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.35);
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell.is-selected .day-number {
+    color: #fff !important;
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell.has-event {
+    background-color: #f1f5f9;
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell:active {
+    transform: scale(0.96);
+  }
+  .admin-dashboard-page .calendar-component .holiday-badge {
+    font-size: 0.55rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  .admin-dashboard-page .calendar-component .calendar-legend {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.7rem;
+  }
+  .admin-dashboard-page .calendar-component .legend-item {
+    gap: 6px;
+  }
+  .admin-dashboard-page .calendar-component .legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+  .admin-dashboard-page .timetable-container {
+    max-height: 180px;
+  }
+  .admin-dashboard-page .timetable-card {
+    min-height: 90px;
+    padding: 6px 8px;
+  }
+  .admin-dashboard-page .timetable-time-badge {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+  }
+  .admin-dashboard-page .timetable-sno {
+    font-size: 0.65rem;
+  }
+  .admin-dashboard-page .timetable-topic {
+    font-size: 0.75rem;
+    -webkit-line-clamp: 2;
+  }
+  .admin-dashboard-page .timetable-details {
+    font-size: 0.6rem;
+    gap: 6px;
+  }
+  .admin-dashboard-page .d-flex.justify-content-between.align-items-center.mb-2 {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .admin-dashboard-page .btn.btn-outline-primary.btn-sm {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+  .admin-dashboard-page .content-text p,
+  .admin-dashboard-page .content-text li {
+    font-size: 0.9rem;
+  }
+  .admin-dashboard-page .notice-item,
+  .admin-dashboard-page .mb-4.pb-2.border-bottom {
+    padding: 10px 0;
+  }
+  .admin-dashboard-page .btn.btn-sm.btn-outline-primary {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+}
+
+/* Small mobile (max-width: 575.98px) */
+@media (max-width: 575.98px) {
+  .admin-dashboard-page .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .admin-dashboard-page .stat-card.clean-style {
+    padding: 12px 14px;
+  }
+  .admin-dashboard-page .stat-value {
+    font-size: 18px;
+  }
+  .admin-dashboard-page .stat-label {
+    font-size: 12px;
+  }
+  .admin-dashboard-page .row.g-4 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+  /* Calendar - extra polish on small screens */
+  .admin-dashboard-page .calendar-component {
+    padding: 12px 10px;
+    border-radius: 14px;
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell {
+    height: 46px;
+    min-width: 32px;
+    border-radius: 8px;
+  }
+  .admin-dashboard-page .calendar-component .calendar-cell .day-number {
+    font-size: 0.85rem;
+  }
+  .admin-dashboard-page .calendar-component .calendar-table thead th {
+    font-size: 0.65rem !important;
+    padding: 8px 2px !important;
+  }
+  .admin-dashboard-page .calendar-component .calendar-legend {
+    font-size: 0.65rem;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
   }
 }
 
