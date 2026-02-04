@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('family_id_card_requests', function (Blueprint $table) {
+        Schema::createIfNotExists('family_id_card_requests', function (Blueprint $table) {
             $table->id();
             $table->string('employee_id')->nullable()->comment('Employee ID e.g. ITS005');
             $table->string('employee_name')->nullable()->comment('Employee name for display');
