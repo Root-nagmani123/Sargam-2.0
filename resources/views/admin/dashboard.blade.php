@@ -675,7 +675,7 @@ table>thead {
 </style>
 
 
-<div class="container-fluid">
+<div class="container-fluid admin-dashboard-page">
 
     <div class="row g-4 mb-4">
 
