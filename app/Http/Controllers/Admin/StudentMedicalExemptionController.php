@@ -36,13 +36,25 @@ class StudentMedicalExemptionController extends Controller
             /* ===============================
              | 1. Build Cache Key
              =============================== */
-            $cacheKey = 'student_medical_exemption_ids_' . md5(json_encode([
+            /* $cacheKey = 'student_medical_exemption_ids_' . md5(json_encode([
                 'custom_search' => $request->custom_search,
                 'course_id'     => $request->course_id,
                 'from_date'     => $request->from_date,
                 'to_date'       => $request->to_date,
                 'status'        => $request->get('status', 'active'),
-            ]));
+            ])); */
+
+
+            $cacheKey = 'student_medical_exemption_ids_' . md5(json_encode([
+                        'custom_search' => $request->custom_search,
+                        'course_id'     => $request->course_id,
+                        'from_date'     => $request->from_date,
+                        'to_date'       => $request->to_date,
+                        'status'        => $request->get('status', 'active'),
+                        'start'         => $request->start,
+                        'length'        => $request->length,
+                    ]));
+
 
             /* ===============================
              | 2. Cache ONLY IDs (SAFE)
@@ -123,7 +135,7 @@ class StudentMedicalExemptionController extends Controller
             /* ===============================
              | 3. Rebuild Query for DataTable
              =============================== */
-            $query = StudentMedicalExemption::with([
+           /* $query = StudentMedicalExemption::with([
                 'student',
                 'category',
                 'speciality',
@@ -131,7 +143,26 @@ class StudentMedicalExemptionController extends Controller
                 'employee'
            ])
            ->whereIn('pk', $ids)
-                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");
+                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");*/
+
+                $query = StudentMedicalExemption::with([
+                            'student',
+                            'category',
+                            'speciality',
+                            'course',
+                            'employee'
+                        ]);
+
+                        if (!empty($ids)) {
+                            $query->whereIn('pk', $ids)
+                                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");
+                        } else {
+                            // IMPORTANT: return empty result without SQL error
+                            $query->whereRaw('1 = 0');
+                        }
+
+
+
             // // ->whereIn('pk', $ids);
 
             /* ===============================
@@ -239,6 +270,7 @@ class StudentMedicalExemptionController extends Controller
 
     	public function create()
 {
+
     $courses = CourseMaster::where('active_inactive', '1');
 
     $data_course_id = get_Role_by_course();
@@ -334,7 +366,14 @@ class StudentMedicalExemptionController extends Controller
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'nullable|boolean',
-        ]);
+            'Doc_upload' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:3072',
+        ], [
+		// Custom messages
+			'Doc_upload.required' => 'Please upload a document.',
+			'Doc_upload.mimes' => 'Only image files (jpg, png, webp) or PDF are allowed.',
+			'Doc_upload.max' => 'Document size must not exceed 3 MB.',
+			]
+        );
 
         // Check for overlapping time ranges for the same student
         $overlapError = $this->checkOverlap(
