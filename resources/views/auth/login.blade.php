@@ -945,12 +945,12 @@
                                 alt="National Flag of India" loading="eager">
                             <span>भारत सरकार | Government of India</span>
                         </div>
-                        <a href="{{ url('/') }}" class="header-lbsnaa" aria-label="LBSNAA Home">
+                        <a href="{{ url('/') }}" class="header-lbsnaa d-none d-lg-block" aria-label="LBSNAA Home">
                             <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png"
                                 alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager">
                         </a>
                     </div>
-                    <div class="header-right">
+                    <div class="header-right d-none d-lg-block">
                         <a href="https://digitalindia.gov.in/" target="_blank" rel="noopener noreferrer" class="header-digital-india" aria-label="Digital India - Developed by NeGD">
                             <img src="{{ asset('images/digital.png') }}" alt="Digital India" loading="lazy"
                                 onerror="this.src='https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/400px-Digital_India_logo.svg.png'">
@@ -1024,9 +1024,6 @@
                                 <i class="bi bi-lock-fill" aria-hidden="true"></i>
                                 Password <span class="text-danger">*</span>
                             </label>
-                            <a href="{{ route('password.request') ?? '#' }}" class="forgot-link">
-                                Forgot Password?
-                            </a>
                         </div>
                         <div class="input-group">
                             <input type="password" 
@@ -1039,21 +1036,13 @@
                             <button type="button" class="input-addon" id="togglePassword" aria-label="Show password">
                                 <i class="bi bi-eye" aria-hidden="true"></i>
                             </button>
+                            
                         </div>
-                    </div>
-
-                    <!-- Remember Me -->
-                    <div class="form-group">
-                        <div class="form-check">
-                            <input type="checkbox" 
-                                class="form-check-input" 
-                                id="remember"
-                                name="remember"
-                                value="1"
-                                {{ old('remember') ? 'checked' : '' }}>
-                            <label class="form-check-label" for="remember">
-                                Keep me logged in
-                            </label>
+                        <div class="text-end">
+                        
+                        <a href="{{ route('password.request') ?? '#' }}" class="forgot-link">
+                                Forgot Password?
+                            </a>
                         </div>
                     </div>
 

@@ -44,16 +44,16 @@
             <div class="card-header programme-header-gradient text-white py-4 border-0">
                 <div class="row align-items-center g-3">
                     <div class="col-md-8">
-                        <h1 class="card-title h3 mb-2 fw-bold lh-sm">{{ $course->course_name }}</h1>
+                        <h1 class="card-title h3 mb-2 fw-bold lh-sm text-white">{{ $course->course_name }}</h1>
                         <div class="d-flex flex-wrap gap-2 align-items-center">
                             <span class="badge bg-white bg-opacity-25 text-white px-3 py-2">{{ $course->couse_short_name }}</span>
-                            <span class="badge bg-white bg-opacity-15 text-white px-3 py-2">
+                            <span class="badge bg-white bg-opacity-15 text-primary px-3 py-2">
                                 <i class="bi bi-calendar3 me-1"></i>{{ $course->course_year }}
                             </span>
                         </div>
                     </div>
                     <div class="col-md-4 text-md-end">
-                        <div class="text-white-50 small">
+                        <div class="text-white small">
                             <i class="bi bi-upc me-1"></i>Course Code: {{ $course->course_code ?? 'N/A' }}
                         </div>
                     </div>

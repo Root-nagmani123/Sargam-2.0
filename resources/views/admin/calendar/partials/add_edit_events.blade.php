@@ -253,33 +253,35 @@
         background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
         border: none !important;
         border-radius: 0.375rem !important;
-        padding: 0.25rem 0.625rem !important;
+        padding: 0.25rem 0.75rem 0.25rem 0.5rem !important;
         color: #ffffff !important;
         font-size: 0.875rem !important;
         font-weight: 500 !important;
         margin: 0.25rem 0.25rem 0.25rem 0 !important;
-        transition: all 0.2s ease !important;
+        transition: background-color 0.2s ease !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
     }
 
     #eventModal .select2-container--default .select2-selection--multiple .select2-selection__choice:hover,
     .modal-dialog .select2-container--default .select2-selection--multiple .select2-selection__choice:hover {
         background: linear-gradient(135deg, #0a58ca 0%, #084298 100%) !important;
-        transform: scale(1.02) !important;
     }
 
     #eventModal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove,
     .modal-dialog .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
         color: #ffffff !important;
-        font-size: 1.1em !important;
-        margin-right: 0.375rem !important;
-        font-weight: bold !important;
-        transition: all 0.2s ease !important;
+        font-size: 0.9em !important;
+        margin-right: 0.1rem !important;
+        font-weight: 600 !important;
+        transition: color 0.2s ease !important;
+        line-height: 1 !important;
     }
 
     #eventModal .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover,
     .modal-dialog .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
         color: #ffebee !important;
-        transform: scale(1.15) !important;
     }
 
     .select2-dropdown {
