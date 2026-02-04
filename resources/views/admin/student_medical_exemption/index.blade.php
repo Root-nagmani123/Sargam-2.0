@@ -127,7 +127,7 @@
         margin-top: 20px;
         font-size: 10px;
     }
-    
+
 }
 
 
@@ -252,7 +252,7 @@
                 </div>
 
                 <!-- Total Records Count Row -->
-             
+
 
                 <div class="table-responsive">
                     <table class="table" id="medicalExemptionTable">
@@ -272,7 +272,7 @@
                                 <th class="col">Status</th>
                             </tr>
                         </thead>
-                       
+
                     </table>
                 </div>
             </div>
@@ -382,9 +382,9 @@ $(document).ready(function () {
         table.ajax.reload(null, false);
     });
 
-    
+
 $(document).on('click', '.delete-btn', function () {
-    
+
 
     let deleteUrl = $(this).data('url');
 
@@ -573,7 +573,5 @@ function printTable() {
 </script>
 
 
-
-</script>
 
 @endpush

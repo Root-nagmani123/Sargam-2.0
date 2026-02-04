@@ -169,8 +169,10 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Upload Document</label>
-                            <input type="file" name="Doc_upload" class="form-control col-form-label">
+                        <label class="form-label">Upload Document</label>
+                        <input type="file" name="Doc_upload" class="form-control col-form-label"accept="image/*,.pdf" id="Doc_upload">
+                        <small id="fileInfo" class="text-muted"></small>
+						<small id="fileError" class="text-danger"></small>
                         </div>
                         @error('Doc_upload')
                         <small class="text-danger">{{ $message }}</small>
@@ -254,4 +256,55 @@ $(document).ready(function() {
     });
 });
 </script>
+
+
+
+<script>
+    // File upload validation by Dhananjay
+document.getElementById('Doc_upload').addEventListener('change', function () {
+
+    const file = this.files[0];
+    const fileInfo = document.getElementById('fileInfo');
+    const fileError = document.getElementById('fileError');
+
+    fileInfo.innerHTML = '';
+    fileError.innerHTML = '';
+
+    if (!file) return;
+
+    const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'application/pdf'
+    ];
+
+    const maxSize = 3 * 1024 * 1024; // 3MB
+
+    //  File type
+    if (!allowedTypes.includes(file.type)) {
+        fileError.innerHTML = 'Only image files or PDF are allowed.';
+        this.value = '';
+        return;
+    }
+
+    // Size check
+    if (file.size > maxSize) {
+        fileError.innerHTML = 'File size must not exceed 3 MB.';
+        this.value = '';
+        return;
+    }
+
+    // Show file info
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+    fileInfo.innerHTML = `
+        Selected: <strong>${file.name}</strong><br>
+        Type: ${file.type}<br>
+        Size: ${sizeMB} MB
+    `;
+});
+</script>
+
+
 @endpush
