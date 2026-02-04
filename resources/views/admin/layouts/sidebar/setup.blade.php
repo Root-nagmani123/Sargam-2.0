@@ -58,7 +58,7 @@
                                                     </div>
                                                 </a>
                                             </li>
-                                            @if(! hasRole('Training-MCTP'))
+                                            
                                             <li class="mini-nav-item" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -73,6 +73,7 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            @if(! hasRole('Training-MCTP'))
                                             <li class="mini-nav-item" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"

@@ -16,7 +16,7 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('sec_vehcl_pass_config', function (Blueprint $table) {
+        Schema::createIfNotExists('sec_vehcl_pass_config', function (Blueprint $table) {
             $table->id('pk');
             $table->unsignedBigInteger('sec_vehicle_type_pk');
             $table->decimal('charges', 10, 2)->default(0);

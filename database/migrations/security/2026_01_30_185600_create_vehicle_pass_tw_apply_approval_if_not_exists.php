@@ -16,7 +16,7 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('vehicle_pass_tw_apply_approval', function (Blueprint $table) {
+        Schema::createIfNotExists('vehicle_pass_tw_apply_approval', function (Blueprint $table) {
             $table->id('pk');
             $table->unsignedBigInteger('vehicle_TW_pk');
             $table->tinyInteger('veh_recommend_status')->nullable()->comment('1=Recommended, 2=Approved, 3=Rejected');
