@@ -2,25 +2,50 @@
 
 @section('title', 'Course Group Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
+@section('css')
+<style>
+/* Fix Select2 dropdown cropping on Group Mapping index page */
+.group-mapping-index .select2-container { width: 100% !important; }
+.group-mapping-index .select2-selection--single .select2-selection__rendered {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+/* When this page is active, fix dropdowns appended to body */
+body:has(.group-mapping-index) .select2-dropdown {
+    min-width: 280px !important;
+    z-index: 99999 !important;
+}
+body:has(.group-mapping-index) .select2-results__option {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+body:has(.group-mapping-index) .select2-results__options {
+    max-height: 300px;
+}
+</style>
+@endsection
+
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid group-mapping-index">
 
     <x-breadcrum title="Course Group Mapping" />
     <x-session_message />
 
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+                <div class="card shadow-sm rounded-4 overflow-visible" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row mb-3">
-                        <div class="row align-items-center mb-4">
+                            <div class="row mb-3 group-mapping-header-row">
+                                <div class="row align-items-center mb-4 g-3">
 
-                            <div class="col-12 col-md-4">
-                                <h4 class="fw-bold mb-3 mb-md-0">Course Group Mapping</h4>
-                            </div>
+                                    <div class="col-12 col-md-4">
+                                        <h4 class="fw-semibold mb-0">Course Group Mapping</h4>
+                                    </div>
 
-                            <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
+                                    <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
 
                                 <a href="{{ route('group.mapping.create') }}"
                                     class="btn btn-primary px-3 d-flex align-items-center shadow-sm">
@@ -53,8 +78,8 @@
                         </div>
 
                         {{-- Status Filter --}}
-                        <div class="row mb-4">
-                            <div class="col-md-4">
+                        <div class="row g-3 mb-4 align-items-end group-mapping-filters-row">
+                            <div class="col-12 col-md-4">
                                 <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
                                 <select id="courseFilter" class="form-select shadow-sm">
                                     <option value="">All Courses</option>
@@ -64,7 +89,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="col-12 col-md-3">
                                 <label for="groupTypeFilter" class="form-label fw-semibold">Group Type</label>
                                 <select id="groupTypeFilter" class="form-select shadow-sm">
                                     <option value="">All Group Types</option>
@@ -74,14 +99,16 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-2 d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary px-4 py-2 mt-lg-4 shadow-sm btn-sm"
+                            <div class="col-12 col-md-2 d-flex gap-2">
+                                <button type="button"
+                                    class="btn btn-outline-secondary px-4 py-2 mt-md-4 shadow-sm btn-sm w-100 w-md-auto"
                                     id="resetFilters">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                                 </button>
                             </div>
-                            <div class="col-3 text-end">
-                                <div class="btn-group shadow-sm rounded-pill" role="group"
+                            <div class="col-12 col-md-3 text-md-end">
+                                <div class="btn-group shadow-sm rounded-pill w-100 w-md-auto"
+                                    role="group"
                                     aria-label="Group Mapping Status Filter">
                                     <button type="button" class="btn btn-outline-success px-4 py-2 fw-semibold"
                                         id="filterGroupActive" aria-pressed="false">
@@ -96,11 +123,8 @@
                             </div>
                         </div>
 
-                        {{-- Filters --}}
-                        <div class="row g-3 mb-4 align-items-end">
-
-
-                        </div>
+                        {{-- Filters reserved row (kept for future advanced filters) --}}
+                        <div class="row g-3 mb-4 align-items-end"></div>
 
 
                         <!-- Add Student Modal -->
@@ -112,7 +136,9 @@
                                     <form id="addStudentForm">
                                         @csrf
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="addStudentModalLabel">Add Student to Group</h5>
+                                            <h5 class="modal-title fw-semibold" id="addStudentModalLabel">
+                                                Add Student to Group
+                                            </h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                 aria-label="Close"></button>
                                         </div>

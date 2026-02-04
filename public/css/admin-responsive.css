@@ -2212,6 +2212,174 @@
   }
 }
 
+/* Hostel Building Assign Student - tablet and below */
+@media (max-width: 991.98px) {
+  .hostel-assign-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hostel-assign-index .hostel-assign-table {
+    min-width: 650px;
+  }
+  .hostel-assign-index .hostel-assign-table th,
+  .hostel-assign-index .hostel-assign-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .hostel-assign-index.container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .hostel-assign-index .datatables .card-body {
+    padding: 1rem !important;
+  }
+  .hostel-assign-index .hostel-assign-header-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .hostel-assign-index .hostel-assign-header-row .col-12,
+  .hostel-assign-index .hostel-assign-header-row .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .hostel-assign-index .hostel-assign-actions {
+    justify-content: stretch !important;
+  }
+  .hostel-assign-index .hostel-assign-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hostel-assign-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    box-shadow: inset -10px 0 10px -10px rgba(0, 0, 0, 0.08);
+  }
+  .hostel-assign-index .hostel-assign-table th,
+  .hostel-assign-index .hostel-assign-table td {
+    padding: 6px 8px;
+    font-size: 0.82rem;
+  }
+}
+
+/* Course Group Mapping page - tablet and below */
+@media (max-width: 991.98px) {
+  .group-mapping-index .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .group-mapping-index #group-mapping-table {
+    min-width: 700px;
+  }
+  .group-mapping-index #group-mapping-table th,
+  .group-mapping-index #group-mapping-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .group-mapping-index .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .group-mapping-index .dataTables_length,
+  .group-mapping-index .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .group-mapping-index .dataTables_filter input {
+    min-width: 140px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .group-mapping-index.container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .group-mapping-index .datatables .card-body {
+    padding: 1rem !important;
+  }
+  .group-mapping-index .group-mapping-header-row .col-12,
+  .group-mapping-index .group-mapping-header-row .col-md-4,
+  .group-mapping-index .group-mapping-header-row .col-md-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .group-mapping-index .group-mapping-header-row .d-flex {
+    justify-content: stretch !important;
+  }
+  .group-mapping-index .group-mapping-header-row .btn {
+    flex: 1 1 140px;
+    min-width: 140px;
+    justify-content: center;
+  }
+  .group-mapping-index .group-mapping-filters-row > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .group-mapping-index .group-mapping-filters-row .btn-group {
+    width: 100%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .group-mapping-index .table-responsive {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+  }
+  .group-mapping-index #group-mapping-table {
+    min-width: 750px;
+  }
+  .group-mapping-index #group-mapping-table th,
+  .group-mapping-index #group-mapping-table td {
+    padding: 6px 8px;
+    font-size: 0.82rem;
+  }
+  .group-mapping-index .group-mapping-header-row .btn,
+  .group-mapping-index .group-mapping-filters-row .btn,
+  .group-mapping-index .group-mapping-filters-row .form-select {
+    width: 100%;
+  }
+}
+
+/* Group Mapping Create (Add/Edit) form */
+.group-mapping-create.container-fluid {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.group-mapping-create .card {
+  border-radius: 1rem;
+  overflow: visible;
+}
+.group-mapping-create .card-body {
+  padding: 1.25rem 1.5rem;
+}
+.group-mapping-create .select2-container .select2-dropdown {
+  z-index: 9999;
+}
+.group-mapping-create .select2-container {
+  width: 100% !important;
+}
+
+@media (max-width: 767.98px) {
+  .group-mapping-create.container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  .group-mapping-create .card-body {
+    padding: 1rem 1rem 1.25rem;
+  }
+}
+
 /* Front Page Form (Create Front Page) - tablet and below */
 @media (max-width: 991.98px) {
   .front-page-form.container-fluid {
