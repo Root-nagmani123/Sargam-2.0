@@ -119,6 +119,11 @@
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseBillingFinance">
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.process-mess-bills-employee.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Process Mess Bills (Employee)</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.monthly-bills.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Monthly Bills</span>
                 </a>
