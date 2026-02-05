@@ -2,13 +2,18 @@
 @section('title', 'Edit ID Card Request - Sargam | Lal Bahadur Shastri')
 @section('setup_content')
 <div class="container-fluid idcard-create-page">
-    <!-- Breadcrumb + Page Title -->
-<x-breadcrum title="Edit ID Card Request"></x-breadcrum>
-<div class="card idcard-create-type-card mb-4">
-    <div class="card-body py-3 px-4">
-        <div class="d-flex flex-wrap gap-4 align-items-center">
-            <div class="form-check idcard-radio-option mb-0">
-                        <input class="form-check-input" type="radio" name="employee_type" id="permanent" value="Permanent Employee" 
+    <x-breadcrum title="Edit ID Card Request"></x-breadcrum>
+
+    <form action="{{ route('admin.employee_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+        @csrf
+        @method('PUT')
+
+        <!-- Employee Type Selection Card - Bootstrap 5.3 -->
+        <div class="card idcard-create-type-card mb-4 border-0 shadow-sm overflow-hidden">
+            <div class="card-body py-4 px-4">
+                <div class="d-flex flex-wrap gap-4 align-items-center">
+                    <div class="form-check idcard-radio-option mb-0">
+                        <input class="form-check-input" type="radio" name="employee_type" id="permanent" value="Permanent Employee"
                                {{ old('employee_type', $request->employee_type) == 'Permanent Employee' ? 'checked' : '' }} required>
                         <label class="form-check-label" for="permanent">Permanent Employee</label>
                     </div>
@@ -21,9 +26,9 @@
             </div>
         </div>
 
-        <!-- Request Form Card -->
-        <div class="card idcard-create-form-card mb-4">
-            <div class="card-body p-4">
+        <!-- Request Form Card - Bootstrap 5.3 -->
+        <div class="card idcard-create-form-card mb-4 border-0 shadow overflow-hidden">
+            <div class="card-body p-4 p-lg-5">
                 <h6 class="idcard-form-title mb-4">Please add the Request For Employee ID Card</h6>
                 <div class="row g-3">
                     <!-- Row 1: Card Type, Sub Type, Request For -->
@@ -58,10 +63,19 @@
                             <option value="Own ID Card" {{ old('request_for', $request->request_for) == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
                             <option value="Family ID Card" {{ old('request_for', $request->request_for) == 'Family ID Card' ? 'selected' : '' }}>Family ID Card</option>
                             <option value="Replacement" {{ old('request_for', $request->request_for) == 'Replacement' ? 'selected' : '' }}>Replacement</option>
+                            <option value="Duplication" {{ old('request_for', $request->request_for) == 'Duplication' ? 'selected' : '' }}>Duplication</option>
+                            <option value="Extension" {{ old('request_for', $request->request_for) == 'Extension' ? 'selected' : '' }}>Extension</option>
                         </select>
                         @error('request_for')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
+                    </div>
+                    <div class="col-12" id="duplicationExtensionEdit" style="{{ in_array(old('request_for', $request->request_for), ['Replacement', 'Duplication', 'Extension']) ? '' : 'display:none;' }}">
+                        <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#duplicationExtensionModalEdit">
+                            <i class="material-icons material-symbols-rounded align-middle" style="font-size:18px;">edit_note</i>
+                            Fill Duplication / Extension Details
+                        </button>
+                        <span class="ms-2 small text-muted" id="duplicationSummaryEdit"></span>
                     </div>
 
                     <!-- Row 2: Name, Designation -->
@@ -202,6 +216,25 @@
                         @enderror
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label">Upload Joining Letter</label>
+                        @if($request->joining_letter)
+                            <div class="alert alert-success py-2 px-3 mb-2 small">
+                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
+                                <a href="{{ asset('storage/' . $request->joining_letter) }}" target="_blank">View current</a>
+                            </div>
+                        @endif
+                        <div class="idcard-upload-zone" id="joiningLetterUploadArea">
+                            <input type="file" name="joining_letter" id="joining_letter" class="d-none @error('joining_letter') is-invalid @enderror" 
+                                   accept=".pdf,.doc,.docx" onchange="displayFileName(this, 'joiningLetterName')">
+                            <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
+                            <p class="mt-2 mb-0">Click to upload or drag and drop</p>
+                        </div>
+                        <small id="joiningLetterName" class="d-block mt-2 text-body-secondary"></small>
+                        @error('joining_letter')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Upload Documents (if any)</label>
                         @if($request->documents)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
@@ -247,14 +280,101 @@
                 <!-- Required Fields Note -->
                 <p class="small text-danger mt-4 mb-0">*Required Fields: All marked fields are mandatory for registration</p>
 
-                <!-- Action Buttons -->
-                <div class="d-flex gap-2 justify-content-end mt-4 pt-3 border-top">
-                    <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary px-4">
+                <!-- Action Buttons - Bootstrap 5.3 -->
+                <div class="d-flex gap-2 justify-content-end mt-4 pt-4 border-top">
+                    <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-secondary px-4 rounded-2">
                         Cancel
                     </a>
-                    <button type="submit" class="btn btn-primary px-4">
+                    <button type="submit" class="btn btn-primary px-4 rounded-2">
+                        <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:18px;">save</i>
                         Update
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Duplication / Extension Modal (edit) -->
+        <div class="modal fade" id="duplicationExtensionModalEdit" tabindex="-1" aria-labelledby="duplicationExtensionModalEditLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-3 overflow-hidden">
+                    <div class="modal-header border-0 pb-2">
+                        <h5 class="modal-title fw-bold" id="duplicationExtensionModalEditLabel">
+                            <i class="material-icons material-symbols-rounded align-middle me-2">content_copy</i>
+                            Add Duplicate / Extension ID Card Details
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">Fill the following details for Duplication (Expired / Lost / Damaged) or Extension requests.</p>
+                        <div class="row g-3">
+                            <div class="col-md-6" id="duplicationReasonFieldEdit">
+                                <label for="duplication_reason_edit" class="form-label">Reason for Applying Duplicate Card <span class="text-danger">*</span></label>
+                                <select name="duplication_reason" id="duplication_reason_edit" class="form-select">
+                                    <option value="">Select Reason</option>
+                                    <option value="Expired Card" {{ old('duplication_reason', $request->duplication_reason) == 'Expired Card' ? 'selected' : '' }}>Expired Card</option>
+                                    <option value="Lost" {{ old('duplication_reason', $request->duplication_reason) == 'Lost' ? 'selected' : '' }}>Card Lost</option>
+                                    <option value="Damage" {{ old('duplication_reason', $request->duplication_reason) == 'Damage' ? 'selected' : '' }}>Card Damaged</option>
+                                </select>
+                                @error('duplication_reason')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_card_number_edit" class="form-label">ID Card Number</label>
+                                <input type="text" name="id_card_number" id="id_card_number_edit" class="form-control" value="{{ old('id_card_number', $request->id_card_number) }}" placeholder="e.g. NOP00148">
+                                @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_card_valid_from_edit" class="form-label">ID Card Valid From</label>
+                                <input type="text" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
+                                @error('id_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_card_valid_upto_edit" class="form-label">ID Card Valid Upto</label>
+                                <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
+                                @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6" id="firReceiptFieldEdit" style="display:none;">
+                                <label class="form-label">Upload FIR (First Information Report) <span class="text-danger">*</span> <span class="text-muted">(Required when Card Lost)</span></label>
+                                <div class="idcard-upload-zone position-relative" id="firReceiptUploadAreaEdit">
+                                    <input type="file" name="fir_receipt" id="fir_receipt_edit" class="d-none" accept=".pdf,.doc,.docx,image/*">
+                                    <div class="idcard-upload-placeholder {{ $request->fir_receipt ? 'd-none' : '' }}" id="firReceiptPlaceholderEdit">
+                                        <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
+                                        <p class="mt-2 mb-0 small">Upload FIR filed against lost card</p>
+                                    </div>
+                                    <div class="idcard-upload-preview idcard-doc-preview {{ $request->fir_receipt ? '' : 'd-none' }}" id="firReceiptPreviewEdit">
+                                        <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
+                                        <span class="idcard-doc-name" id="firReceiptFileNameEdit">{{ $request->fir_receipt ? basename($request->fir_receipt) : '' }}</span>
+                                        @if($request->fir_receipt)
+                                        <small class="text-muted">Current: <a href="{{ asset('storage/' . $request->fir_receipt) }}" target="_blank">View</a></small>
+                                        @endif
+                                        <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="firReceiptRemoveEdit">&times;</button>
+                                    </div>
+                                </div>
+                                @error('fir_receipt')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Upload Payment Receipt</label>
+                                <div class="idcard-upload-zone position-relative" id="paymentReceiptUploadAreaEdit">
+                                    <input type="file" name="payment_receipt" id="payment_receipt_edit" class="d-none" accept=".pdf,.doc,.docx,image/*">
+                                    <div class="idcard-upload-placeholder {{ $request->payment_receipt ? 'd-none' : '' }}" id="paymentReceiptPlaceholderEdit">
+                                        <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
+                                        <p class="mt-2 mb-0 small">Click to upload</p>
+                                    </div>
+                                    <div class="idcard-upload-preview idcard-doc-preview {{ $request->payment_receipt ? '' : 'd-none' }}" id="paymentReceiptPreviewEdit">
+                                        <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
+                                        <span class="idcard-doc-name" id="paymentReceiptFileNameEdit">{{ $request->payment_receipt ? basename($request->payment_receipt) : '' }}</span>
+                                        @if($request->payment_receipt)
+                                        <small class="text-muted">Current: <a href="{{ asset('storage/' . $request->payment_receipt) }}" target="_blank">View</a></small>
+                                        @endif
+                                        <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="paymentReceiptRemoveEdit">&times;</button>
+                                    </div>
+                                </div>
+                                @error('payment_receipt')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-top">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -430,6 +550,95 @@
         }
         this.classList.remove('idcard-upload-zone-active');
     });
+
+    document.getElementById('joiningLetterUploadArea')?.addEventListener('click', function() {
+        document.getElementById('joining_letter').click();
+    });
+    document.getElementById('joiningLetterUploadArea')?.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('idcard-upload-zone-active');
+    });
+    document.getElementById('joiningLetterUploadArea')?.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('idcard-upload-zone-active');
+    });
+    document.getElementById('joiningLetterUploadArea')?.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            document.getElementById('joining_letter').files = files;
+            displayFileName(document.getElementById('joining_letter'), 'joiningLetterName');
+        }
+        this.classList.remove('idcard-upload-zone-active');
+    });
+
+    document.getElementById('request_for')?.addEventListener('change', function() {
+        const dupEl = document.getElementById('duplicationExtensionEdit');
+        const showDup = ['Replacement', 'Duplication', 'Extension'];
+        const isDupExt = showDup.includes(this.value);
+        if (dupEl) dupEl.style.display = isDupExt ? '' : 'none';
+        const idValid = document.getElementById('id_card_valid_upto');
+        if (idValid) idValid.disabled = isDupExt;
+        ['duplication_reason_edit', 'id_card_number_edit', 'id_card_valid_from_edit', 'id_card_valid_upto_edit', 'fir_receipt_edit', 'payment_receipt_edit'].forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el) el.disabled = !isDupExt;
+        });
+    });
+    document.getElementById('duplication_reason_edit')?.addEventListener('change', function() {
+        const firField = document.getElementById('firReceiptFieldEdit');
+        if (firField) firField.style.display = this.value === 'Lost' ? '' : 'none';
+    });
+    document.getElementById('duplicationExtensionModalEdit')?.addEventListener('shown.bs.modal', function() {
+        document.getElementById('duplication_reason_edit')?.dispatchEvent(new Event('change'));
+    });
+    document.getElementById('duplicationExtensionModalEdit')?.addEventListener('hidden.bs.modal', function() {
+        const reason = document.getElementById('duplication_reason_edit')?.value;
+        const validFrom = document.getElementById('id_card_valid_from_edit')?.value;
+        const validUpto = document.getElementById('id_card_valid_upto_edit')?.value;
+        const summary = [reason, validFrom, validUpto].filter(Boolean).join(' | ') || 'Not filled';
+        document.getElementById('duplicationSummaryEdit').textContent = summary ? '(' + summary + ')' : '';
+        if (['Duplication', 'Extension'].includes(document.getElementById('request_for')?.value)) {
+            const idValid = document.getElementById('id_card_valid_upto');
+            if (idValid) idValid.value = validUpto;
+        }
+    });
+    document.getElementById('fir_receipt_edit')?.addEventListener('change', function() {
+        if (this.files?.[0]) {
+            document.getElementById('firReceiptPlaceholderEdit')?.classList.add('d-none');
+            document.getElementById('firReceiptPreviewEdit')?.classList.remove('d-none');
+            document.getElementById('firReceiptFileNameEdit').textContent = this.files[0].name;
+        }
+    });
+    document.getElementById('payment_receipt_edit')?.addEventListener('change', function() {
+        if (this.files?.[0]) {
+            document.getElementById('paymentReceiptPlaceholderEdit')?.classList.add('d-none');
+            document.getElementById('paymentReceiptPreviewEdit')?.classList.remove('d-none');
+            document.getElementById('paymentReceiptFileNameEdit').textContent = this.files[0].name;
+        }
+    });
+    document.getElementById('firReceiptRemoveEdit')?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('fir_receipt_edit').value = '';
+        document.getElementById('firReceiptPlaceholderEdit')?.classList.remove('d-none');
+        document.getElementById('firReceiptPreviewEdit')?.classList.add('d-none');
+        document.getElementById('firReceiptFileNameEdit').textContent = '';
+    });
+    document.getElementById('paymentReceiptRemoveEdit')?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('payment_receipt_edit').value = '';
+        document.getElementById('paymentReceiptPlaceholderEdit')?.classList.remove('d-none');
+        document.getElementById('paymentReceiptPreviewEdit')?.classList.add('d-none');
+        document.getElementById('paymentReceiptFileNameEdit').textContent = '';
+    });
+    document.getElementById('firReceiptUploadAreaEdit')?.addEventListener('click', function(e) {
+        if (!e.target.closest('button')) document.getElementById('fir_receipt_edit').click();
+    });
+    document.getElementById('paymentReceiptUploadAreaEdit')?.addEventListener('click', function(e) {
+        if (!e.target.closest('button')) document.getElementById('payment_receipt_edit').click();
+    });
+    if (['Replacement', 'Duplication', 'Extension'].includes(document.getElementById('request_for')?.value)) {
+        document.getElementById('id_card_valid_upto').disabled = true;
+    }
 </script>
 <style>
 .idcard-upload-zone-active {

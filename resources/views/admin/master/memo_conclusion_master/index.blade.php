@@ -3,7 +3,95 @@
 @section('title', 'Memo Conclusion Master')
 
 @section('setup_content')
-<div class="container-fluid">
+<style>
+/* Memo Conclusion Master – SweetAlert form alignment */
+/* Desktop / base: keep labels aligned and fields full-width within the grid */
+body:has(.memo-conclusion-index) .swal2-container #conclusionForm {
+    width: 100%;
+}
+body:has(.memo-conclusion-index) .swal2-container #conclusionForm .row {
+    align-items: center;
+    margin-bottom: 0.6rem;
+}
+body:has(.memo-conclusion-index) .swal2-container #conclusionForm .col-auto {
+    white-space: nowrap;
+}
+body:has(.memo-conclusion-index) .swal2-container #conclusionForm .col {
+    min-width: 0;
+}
+body:has(.memo-conclusion-index) .swal2-container #conclusionForm input[type="text"],
+body:has(.memo-conclusion-index) .swal2-container #conclusionForm select {
+    width: 100%;
+    box-sizing: border-box;
+}
+/* Slightly wider label column on desktop for a clean vertical edge */
+@media (min-width: 768px) {
+    body:has(.memo-conclusion-index) .swal2-container #conclusionForm .col-auto {
+        min-width: 170px;
+        text-align: right;
+        padding-right: 0.75rem;
+    }
+}
+
+/* Tablet & below: stack label over field and equalise field heights */
+@media (max-width: 767.98px) {
+    body:has(.memo-conclusion-index) .swal2-container #conclusionForm .row {
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: 0.7rem;
+    }
+    body:has(.memo-conclusion-index) .swal2-container #conclusionForm .col-auto {
+        flex: 0 0 auto;
+        margin-bottom: 0.25rem;
+    }
+    body:has(.memo-conclusion-index) .swal2-container #conclusionForm input[type="text"],
+    body:has(.memo-conclusion-index) .swal2-container #conclusionForm select {
+        width: 100%;
+        max-width: 100%;
+        min-height: 42px;
+    }
+    body:has(.memo-conclusion-index) .swal2-container #conclusionForm label {
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+    body:has(.memo-conclusion-index) .swal2-container #conclusionForm small {
+        font-size: 0.78rem;
+    }
+    /* Actions: buttons full-width and stacked for easy tapping */
+    body:has(.memo-conclusion-index) .swal2-container .swal2-actions {
+        margin-top: 0.9rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+    body:has(.memo-conclusion-index) .swal2-container .swal2-actions .swal2-confirm,
+    body:has(.memo-conclusion-index) .swal2-container .swal2-actions .swal2-cancel {
+        width: 100%;
+        min-height: 40px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Small phones: tighten popup padding for better use of space */
+@media (max-width: 575.98px) {
+    body:has(.memo-conclusion-index) .swal2-container .swal2-popup {
+        margin: 0.5rem;
+        max-width: calc(100vw - 1rem);
+        width: calc(100vw - 1rem) !important;
+        padding: 1rem 0.75rem 0.75rem;
+    }
+    body:has(.memo-conclusion-index) .swal2-container .swal2-html-container {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+        margin: 0;
+    }
+    body:has(.memo-conclusion-index) .swal2-container .swal2-title {
+        font-size: 1.05rem;
+        margin-bottom: 0.75rem;
+    }
+}
+</style>
+<div class="container-fluid memo-conclusion-index">
 
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">

@@ -42,19 +42,17 @@
         padding-right: 0.75rem;
     }
     .course-memo-decision-mapping-index .course-memo-header-row {
-        flex-direction: column;
-        gap: 0.5rem;
+        row-gap: 0.5rem;
     }
     .course-memo-decision-mapping-index .course-memo-header-row .col-6 {
         flex: 0 0 100%;
         max-width: 100%;
     }
-    .course-memo-decision-mapping-index .course-memo-header-row .float-end {
-        float: none !important;
+    .course-memo-decision-mapping-index .course-memo-header-actions {
         display: flex;
         justify-content: stretch;
     }
-    .course-memo-decision-mapping-index .course-memo-header-row .float-end .btn {
+    .course-memo-decision-mapping-index .course-memo-header-actions .btn {
         width: 100%;
         justify-content: center;
     }
@@ -73,8 +71,12 @@
         font-size: 0.8125rem;
     }
     body:has(.course-memo-decision-mapping-index) .modal-dialog {
-        margin: 0.5rem;
+        margin: 0.5rem auto;
         max-width: calc(100% - 1rem);
+    }
+    body:has(.course-memo-decision-mapping-index) .modal-content {
+        max-height: calc(100vh - 1rem);
+        overflow-y: auto;
     }
     body:has(.course-memo-decision-mapping-index) .modal-body {
         padding: 1rem !important;
@@ -103,12 +105,12 @@
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row course-memo-header-row">
+                    <div class="row course-memo-header-row align-items-center">
                         <div class="col-6">
                             <h4>Course Memo Decision Mapping</h4>
                         </div>
                         <div class="col-6">
-                            <div class="float-end gap-2">
+                            <div class="d-flex justify-content-end align-items-center gap-2 course-memo-header-actions">
                                 <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
                                     Mapping</a> -->
                                 <button type="button" id="showConclusionAlert" class="btn btn-primary">

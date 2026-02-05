@@ -168,6 +168,7 @@
 
             .content-card .card-header .btn-group {
                 flex-wrap: wrap;
+                gap: 0.5rem;
             }
 
             .content-card .card-header small.text-muted {
@@ -176,9 +177,22 @@
                 font-size: 0.75rem;
             }
 
+            .feedback-section .text-center.mb-4 {
+                text-align: start !important;
+            }
+
             .feedback-section .text-center.mb-4 p {
                 font-size: 0.9rem;
                 word-break: break-word;
+                display: flex;
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 0 0.25rem;
+            }
+
+            .feedback-section .text-center.mb-4 p strong {
+                min-width: 7rem;
+                flex-shrink: 0;
             }
 
             .table-responsive {
@@ -236,9 +250,21 @@
                 font-size: 0.85rem;
             }
 
+            .feedback-section .text-center.mb-4 {
+                text-align: start !important;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                display: flex;
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 0 0.25rem;
+            }
+
             .feedback-section .text-center.mb-4 p strong {
                 display: inline-block;
-                min-width: 5rem;
+                min-width: 7rem;
+                flex-shrink: 0;
             }
 
             .table-responsive .table {
@@ -288,6 +314,7 @@
             .content-card .card-header .btn-group {
                 flex-direction: column;
                 width: 100%;
+                gap: 0.5rem;
             }
 
             .content-card .card-header .btn-group .btn {

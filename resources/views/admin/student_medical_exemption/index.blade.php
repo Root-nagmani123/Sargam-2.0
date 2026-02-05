@@ -61,7 +61,13 @@
 .datatables #medicalExemptionTable td {
     white-space: nowrap;
     padding: 10px 12px;
-    vertical-align: middle;
+    vertical-align: middle !important;
+}
+/* Medical Speciality column - ensure vertical alignment on mobile */
+.datatables #medicalExemptionTable th:nth-child(7),
+.datatables #medicalExemptionTable td:nth-child(7) {
+    vertical-align: middle !important;
+    line-height: 1.4;
 }
 
 /* Responsive - Tablet (768px - 991px) */
@@ -241,7 +247,7 @@
 
 
 </style>
-<div class="container-fluid">
+<div class="container-fluid student-medical-exemption-index">
     <x-breadcrum title="Medical Exemption Form" />
     <div class="datatables">
         <!-- start Zero Configuration -->
