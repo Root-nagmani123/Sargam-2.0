@@ -207,13 +207,13 @@
                 <!-- Right Side: Logout + Last Login -->
                 <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
                     <!-- Notification Icon (optional - keep for functionality) -->
-                    <div class="dropdown position-relative d-none d-md-block">
+                    <div class="dropdown position-relative">
                         <button type="button"
                             class="btn btn-link border-0 p-2 text-body-secondary position-relative"
                             id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                             aria-label="Notifications" title="Notifications">
                             <i class="material-icons material-symbols-rounded header-icon-sm"
-                                aria-hidden="true">notifications_active</i>
+                                aria-hidden="true">notifications</i>
                             @php
                             $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
                             @endphp
@@ -223,7 +223,7 @@
                             </span>
                             @endif
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-xl p-2"
+                        <ul class="dropdown-menu dropdown-menu-end-lg shadow-lg border-0 rounded-xl p-2"
                             style="min-width: 350px; max-height: 400px; overflow-y: auto;"
                             aria-labelledby="notificationDropdown">
                             <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2">
@@ -270,12 +270,16 @@
                         </ul>
                     </div>
 
+                    <!-- Divider -->
+                    <div class="header-logout-divider" aria-hidden="true"></div>
+
                     <!-- Logout Button -->
                     <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
                         @csrf
-                        <button type="submit" class="btn btn-link border-0 p-2 text-body-secondary"
-                            aria-label="Sign out from system" title="Sign Out">
+                        <button type="submit" class="btn btn-link border-0 header-logout-btn d-flex flex-column align-items-center justify-content-center"
+                            aria-label="Sign out from system">
                             <i class="material-icons material-symbols-rounded header-logout-icon" aria-hidden="true">logout</i>
+                            <span class="header-logout-text">Log out</span>
                         </button>
                     </form>
 
@@ -375,6 +379,25 @@
                         </ul>
                     </li>
 
+                    <!-- Notifications (Offcanvas on mobile for reliable display) -->
+                    <li class="nav-item" role="none">
+                        <button type="button"
+                            class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
+                            id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
+                            aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
+                            @php
+                            $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                            @endphp
+                            @if($unreadCountMobile > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
+                                {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
+                            </span>
+                            @endif
+                            <span>Notifications</span>
+                        </button>
+                    </li>
+
                     <!-- Search -->
                     <li class="nav-item" role="none">
                         <button class="nav-link mobile-tab-link search-trigger"
@@ -384,6 +407,44 @@
                         </button>
                     </li>
                 </ul>
+            </div>
+
+            <!-- Mobile Notifications Offcanvas (slides up from bottom) -->
+            <div class="offcanvas offcanvas-bottom d-lg-none" tabindex="-1" id="notificationOffcanvasMobile"
+                aria-labelledby="notificationOffcanvasMobileLabel" style="max-height: 70vh; border-radius: 16px 16px 0 0;">
+                <div class="offcanvas-header border-bottom py-3">
+                    <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
+                    @if($unreadCountMobile > 0)
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">
+                        Mark all as read
+                    </button>
+                    @endif
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body p-0 overflow-y-auto" style="max-height: calc(70vh - 60px);">
+                    <div id="notificationListMobile">
+                        @php
+                        $notificationsMobile = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                        @endphp
+                        @if($notificationsMobile->count() > 0)
+                        @foreach($notificationsMobile as $notification)
+                        <a class="d-block px-3 py-3 border-bottom text-decoration-none text-dark {{ $notification->is_read ? '' : 'bg-light' }}"
+                            href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
+                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}</div>
+                            <div class="text-muted small mt-1">{{ Str::limit($notification->message ?? '', 80) }}</div>
+                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
+                                {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                            </div>
+                        </a>
+                        @endforeach
+                        @else
+                        <div class="px-3 py-5 text-center text-muted">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 48px; opacity: 0.3;">notifications_none</i>
+                            <div class="mt-2">No notifications</div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
             </div>
 
             <style>
@@ -478,8 +539,47 @@
 /* Right side */
 .header-right-actions { margin-right: 1rem; }
 .header-icon-sm { font-size: 24px !important; }
-.header-logout-icon { font-size: 24px !important; }
+.header-logout-icon { font-size: 22px !important; }
 .header-last-login { font-size: 0.8125rem; }
+
+/* Divider before logout */
+.header-logout-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+}
+
+/* Logout button - enhanced */
+.header-logout-btn {
+    gap: 3px;
+    min-width: 52px;
+    padding: 6px 10px !important;
+    border-radius: 10px;
+    color: #6c757d !important;
+    border: 1px solid transparent;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.header-logout-btn:hover {
+    color: #004a93 !important;
+    background-color: rgba(0, 74, 147, 0.08) !important;
+    border-color: rgba(0, 74, 147, 0.12);
+}
+.header-logout-btn:active {
+    transform: scale(0.97);
+}
+
+/* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
+.dropdown-menu-end-lg[data-bs-popper] {
+    left: 0;
+    right: auto;
+}
+@media (min-width: 992px) {
+    .dropdown-menu-end-lg[data-bs-popper] {
+        left: auto;
+        right: 0;
+    }
+}
 
             @media (max-width: 991.98px) {
                 body {
@@ -544,6 +644,13 @@
                     display: block !important;
                 }
 
+                /* Expand side-mini-panel to full width on mobile when open - so child module (sidebar-nav) is visible */
+                .side-mini-panel.show-sidebar,
+                aside.side-mini-panel.show-sidebar,
+                aside.side-mini-panel.with-vertical.show-sidebar {
+                    width: 350px !important;
+                }
+
                 /* Show sidebar tab content when sidebar is open */
                 body.sidebar-open #sidebarTabContent {
                     display: block !important;
@@ -568,6 +675,7 @@
                     margin: 0 !important;
                     padding: 0 !important;
                     pointer-events: none !important;
+                    overflow: visible !important;
                 }
 
                 .nav-container.d-lg-none .mobile-tabbar {
@@ -594,6 +702,7 @@
                     list-style: none !important;
                     height: 64px !important;
                     pointer-events: auto !important;
+                    overflow: visible !important;
                 }
 
                 /* Hide mobile tab bar when sidebar is open - handled by JS */
@@ -607,6 +716,7 @@
                     margin: 0 !important;
                     padding: 0 !important;
                 }
+
 
                 .mobile-tab-link {
                     display: flex !important;
@@ -676,6 +786,13 @@
 
                 .mobile-tab-link span {
                     font-size: 9px !important;
+                }
+            }
+
+            /* Mobile notifications offcanvas - ensure it appears above tabbar */
+            @media (max-width: 991.98px) {
+                #notificationOffcanvasMobile {
+                    z-index: 1100 !important;
                 }
             }
 
@@ -985,7 +1102,7 @@
                         if (collapseInitialized.has(collapseBtn)) return;
                         collapseInitialized.add(collapseBtn);
                         
-                        // Add click handler for mobile collapse
+                        // Add click handler for mobile collapse - expand/collapse child menu only (do NOT close sidebar)
                         collapseBtn.addEventListener('click', function(e) {
                             const targetId = this.getAttribute('data-bs-target') || this.getAttribute('href');
                             if (!targetId) return;
@@ -993,13 +1110,8 @@
                             const targetElement = document.querySelector(targetId);
                             if (!targetElement) return;
                             
-                            // Toggle sidebar visibility when clicking collapse/expand buttons
-                            const sidebar = getActiveSidebar();
-                            if (sidebar && window.innerWidth < 992) {
-                                // On mobile: toggle show-sidebar class when clicking collapse/expand
-                                sidebar.classList.toggle('show-sidebar');
-                                updateSidebarState();
-                            }
+                            // On mobile: keep sidebar open - only expand/collapse the child submenu
+                            // (Previously incorrectly toggled sidebar visibility which closed the panel)
                             
                             // Don't prevent default - let Bootstrap handle collapse
                             // But ensure Bootstrap collapse is initialized

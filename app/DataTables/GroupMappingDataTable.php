@@ -229,7 +229,15 @@ public function html(): HtmlBuilder
         ->selectStyleSingle()
         ->addTableClass('table table-bordered table-hover align-middle custom-mapping-table')
         ->parameters([
-            'responsive' => true,
+            'responsive' => [
+                'details' => ['type' => 'inline'],
+                'breakpoints' => [
+                    ['name' => 'desktop', 'width' => 99999],
+                    ['name' => 'tablet', 'width' => 1024],
+                    ['name' => 'mobile-l', 'width' => 768],
+                    ['name' => 'mobile-p', 'width' => 480],
+                ],
+            ],
             'scrollX' => true,
             'autoWidth' => false,
             'ordering' => false,
@@ -252,46 +260,54 @@ public function html(): HtmlBuilder
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->responsivePriority(7),
             Column::make('course_name')
                 ->title('Course Name')
                 ->addClass('text-center')
                 ->searchable(true)
-                ->orderable(false),
+                ->orderable(false)
+                ->responsivePriority(1),
             Column::make('type_name')
                 ->title('Group Type')
                 ->addClass('text-center')
                 ->searchable(false)
-                ->orderable(false),
+                ->orderable(false)
+                ->responsivePriority(8),
             Column::make('group_name')
                 ->title('Group Name')
                 ->addClass('text-center')
-                ->searchable(true),
+                ->searchable(true)
+                ->responsivePriority(2),
             Column::make('Faculty')
                 ->title('Faculty')
                 ->addClass('text-center')
                 ->searchable(false)
-                ->orderable(false),
+                ->orderable(false)
+                ->responsivePriority(9),
             Column::computed('student_count')
                 ->title('Student Count')
                 ->addClass('text-center')
                 ->searchable(false)
-                ->orderable(false),
+                ->orderable(false)
+                ->responsivePriority(3),
             Column::computed('view_download')
                 ->title('View/Download')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false)
                 ->exportable(false)
-                ->printable(false),
-                Column::computed('status')
+                ->printable(false)
+                ->responsivePriority(4),
+            Column::computed('status')
                 ->addClass('text-center')
                 ->exportable(false)
-                ->printable(false),
+                ->printable(false)
+                ->responsivePriority(6),
             Column::computed('action')
                 ->addClass('text-center')
                 ->exportable(false)
                 ->printable(false)
+                ->responsivePriority(5)
         ];
     }
 

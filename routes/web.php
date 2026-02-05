@@ -626,6 +626,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/show/{employeeIDCardRequest}', 'show')->name('show');
         Route::get('/edit/{employeeIDCardRequest}', 'edit')->name('edit');
         Route::put('/update/{employeeIDCardRequest}', 'update')->name('update');
+        Route::patch('/amend-dup-ext/{employeeIDCardRequest}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
         Route::delete('/delete/{employeeIDCardRequest}', 'destroy')->name('destroy');
         Route::post('/restore/{id}', 'restore')->name('restore');
         Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');

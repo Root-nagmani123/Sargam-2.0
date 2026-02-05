@@ -169,8 +169,8 @@
             }
             .table-responsive .table th:nth-child(2),
             .table-responsive .table td:nth-child(2) {
-                max-width: 120px;
-                white-space: normal;
+                max-width: 140px;
+                white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }

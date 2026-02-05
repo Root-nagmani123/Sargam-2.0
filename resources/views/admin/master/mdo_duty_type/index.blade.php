@@ -8,19 +8,30 @@
 
 /* Responsive - Tablet (max 991px) */
 @media (max-width: 991.98px) {
+    .mdo-duty-type-index .datatables .card {
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+        border-left: 4px solid #004a93;
+    }
+
+    .mdo-duty-type-index .datatables .card-body {
+        padding: 1.25rem !important;
+    }
+
     .mdo-duty-type-index .datatables .table-responsive {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
     }
 
     .mdo-duty-type-index .datatables #mdodutytypemaster-table {
-        min-width: 400px;
+        min-width: 480px;
     }
 
     .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
     .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
-        padding: 8px 10px;
+        padding: 0.6rem 0.75rem;
         font-size: 0.9rem;
+        vertical-align: middle;
     }
 }
 
@@ -32,8 +43,67 @@
 
     .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
     .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
-        padding: 6px 8px;
+        padding: 0.5rem 0.6rem;
         font-size: 0.85rem;
+    }
+
+    /* Stack "Show entries" and "Search" controls on smaller screens */
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_wrapper .row:first-child,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_wrapper .dt-row:first-child {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter {
+        text-align: left !important;
+        margin-bottom: 0;
+        display: block;
+        width: 100%;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length label,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+        flex-wrap: wrap;
+        font-size: 0.9rem;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length select {
+        margin: 0;
+        min-width: 80px;
+        max-width: 100%;
+        min-height: 36px;
+        padding: 0.35rem 1.75rem 0.35rem 0.5rem;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter input {
+        margin-left: 0 !important;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-height: 36px;
+        padding: 0.375rem 0.75rem;
+    }
+
+    /* Make action buttons stack vertically to avoid horizontal scroll */
+    .mdo-duty-type-index .mdo-duty-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+    }
+
+    .mdo-duty-type-index .mdo-duty-actions .btn {
+        width: 100%;
+        justify-content: flex-start;
     }
 }
 
@@ -54,13 +124,14 @@
         max-width: 100%;
     }
 
+    /* Align header title and "Add MDO Duty Type" button cleanly on mobile */
     .mdo-duty-type-index .mdo-duty-type-header-row .d-flex.justify-content-end {
-        justify-content: stretch !important;
+        justify-content: flex-start !important;
     }
 
     .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
         width: 100%;
-        justify-content: center;
+        justify-content: flex-start;
     }
 
     .mdo-duty-type-index .datatables .card-body {
@@ -76,8 +147,23 @@
 
     .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
     .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
-        padding: 6px 8px;
-        font-size: 0.8125rem;
+        padding: 0.45rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    /* DataTables info + pagination: stack nicely */
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_info,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_paginate {
+        float: none !important;
+        text-align: center;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_paginate .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
     }
 
     .mdo-duty-type-index #dutyTypeModal .modal-dialog {
@@ -94,11 +180,16 @@
     }
 
     .mdo-duty-type-index .datatables .card-body {
-        padding: 0.5rem !important;
+        padding: 0.6rem !important;
     }
 
     .mdo-duty-type-index .mdo-duty-type-header-row h4 {
         font-size: 1rem;
+    }
+
+    .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.75rem;
     }
 }
 </style>
