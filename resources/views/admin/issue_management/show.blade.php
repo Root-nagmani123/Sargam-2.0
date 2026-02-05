@@ -39,12 +39,16 @@
                         <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back to List
                         </a>
+                        @if($issue->employee_master_pk == Auth::user()->user_id ||$issue->assigned_to == Auth::user()->user_id)
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
                             <i class="bi bi-arrow-up-circle"></i> Update Status
                         </button>
-                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
-                            <i class="bi bi-pencil"></i> Edit Issue
-                        </a>
+                        @endif
+                        @if($issue->created_by == Auth::id())
+                            <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
+                                <i class="bi bi-pencil"></i> Edit Issue
+                            </a>
+                        @endif
                     </div>
                 </div>
                 <hr>
@@ -123,6 +127,10 @@
                                 <tr>
                                     <th>Contact</th>
                                     <td>{{ $issue->assigned_to_contact ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Nodel Officer</th>
+                                    <td>{{ $issue->nodal_officer->name ?? 'N/A' }}</td>
                                 </tr>
                                 @if($issue->clear_date)
                                 <tr>
@@ -259,7 +267,7 @@
 <div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.issue-management.update', $issue->pk) }}">
+            <form method="POST" action="{{ route('admin.issue-management.status_update', $issue->pk) }}">
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
@@ -270,7 +278,18 @@
                     @php
                         // Get all statuses that have been used in history
                         $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
+                        // Check if issue is already assigned
+                        $isAssigned = !empty($issue->assigned_to);
                     @endphp
+
+                    <!-- Assignment Status Notice -->
+                    @if($isAssigned)
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Assignment Locked:</strong> This issue has been assigned. You can only update the status and remarks.
+                    </div>
+                    @endif
+
                     <div class="mb-3">
                         <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>
                         <select name="issue_status" id="issue_status" class="form-select" required>
@@ -283,6 +302,17 @@
                         </select>
                     </div>
 
+                    <!-- Assignment Section - Disabled if already assigned -->
+                    @if($isAssigned)
+                    <!-- Show current assignment as read-only -->
+                    <div class="mb-3">
+                        <label for="current_assignment" class="form-label">Currently Assigned To</label>
+                        <input type="text" class="form-control" id="current_assignment" readonly style="background-color: #e9ecef;">
+                        <input type="hidden" name="assigned_to" id="assigned_to_hidden">
+                        <input type="hidden" name="assigned_to_contact" id="assigned_to_contact_hidden">
+                    </div>
+                    @else
+                    <!-- Show assignment options if not yet assigned -->
                     <div class="mb-3">
                         <label for="assign_to_type" class="form-label">Assign To <span class="text-danger">*</span></label>
                         <select name="assign_to_type" id="assign_to_type" class="form-select" required>
@@ -299,11 +329,10 @@
                             @else
                                 <option value="" disabled>No employees found</option>
                             @endif
-                            
                         </select>
                     </div>
 
-                    <!-- Phone Number Display Field (Visible when employee selected) -->
+                    <!-- Phone Number Display Field -->
                     <div class="mb-3" id="phoneNumberSection" style="display: none;">
                         <label for="display_phone" class="form-label">Phone Number</label>
                         <input type="text" class="form-control" id="display_phone" readonly style="background-color: #e9ecef;">
@@ -313,17 +342,18 @@
                     <input type="hidden" name="assigned_to" id="assigned_to_hidden">
                     <input type="hidden" name="assigned_to_contact" id="assigned_to_contact_hidden">
 
-                    <!-- Other Option Fields (Hidden by default) -->
+                    <!-- Other Option Fields -->
                     <div id="otherFieldsSection" style="display: none;">
                         <div class="mb-3">
                             <label for="other_name" class="form-label">Member Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="other_name" placeholder="Enter member name">
+                            <input type="text" name="other_name" class="form-control" id="other_name" placeholder="Enter member name">
                         </div>
                         <div class="mb-3">
                             <label for="other_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="other_phone" placeholder="Enter phone number" maxlength="10">
+                            <input type="text" name="other_phone" class="form-control" id="other_phone" placeholder="Enter phone number" maxlength="10">
                         </div>
                     </div>
+                    @endif
 
                     <div class="mb-3">
                         <label for="remark" class="form-label">Remarks</label>
@@ -343,7 +373,27 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    // Handle assign_to_type change
+    @if($issue->assigned_to)
+    // Pre-fill current assignment if already assigned
+    var currentAssignment = '{{ $issue->assigned_to }}';
+    var currentContact = '{{ $issue->assigned_to_contact ?? "" }}';
+    
+    // Set hidden fields
+    $('#assigned_to_hidden').val(currentAssignment);
+    $('#assigned_to_contact_hidden').val(currentContact);
+    
+    // Display current assignment in read-only field
+    @php
+        $assignedEmployee = DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+        $assignmentText = $assignedEmployee ? 
+            trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) . 
+            ' (' . ($issue->assigned_to_contact ?? 'N/A') . ')' : 
+            'Unknown (' . ($issue->assigned_to_contact ?? 'N/A') . ')';
+    @endphp
+    $('#current_assignment').val('{{ $assignmentText }}');
+    @endif
+
+    // Handle assign_to_type change (only if not already assigned)
     $('#assign_to_type').change(function() {
         var selectedValue = $(this).val();
         
@@ -365,13 +415,13 @@ $(document).ready(function() {
             var name = selectedOption.data('name');
             var mobile = selectedOption.data('mobile');
             
-            // Extract employee pk from value (format: "employee_{pk}")
-            var employeePk = selectedValue.replace('employee_', '');
+            // Extract employee pk from value
+            var employeePk = selectedValue;
             
             // Display phone number
             $('#display_phone').val(mobile || 'N/A');
             
-            // Set hidden fields - assigned_to should contain pk, not name
+            // Set hidden fields
             $('#assigned_to_hidden').val(employeePk || '');
             $('#assigned_to_contact_hidden').val(mobile || '');
         } else {
@@ -385,8 +435,9 @@ $(document).ready(function() {
         }
     });
 
-    // Before form submission, if "other" is selected, populate hidden fields from other inputs
+    // Before form submission, if "other" is selected, populate hidden fields
     $('#updateStatusModal form').submit(function(e) {
+        @if(!$issue->assigned_to)
         var assignToType = $('#assign_to_type').val();
         
         if (assignToType === 'other') {
@@ -403,6 +454,7 @@ $(document).ready(function() {
             $('#assigned_to_hidden').val(otherName);
             $('#assigned_to_contact_hidden').val(otherPhone);
         }
+        @endif
     });
 });
 </script>
