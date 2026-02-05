@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Exports\EmployeeIDCardExport;
 use App\Models\EmployeeIDCardRequest;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
@@ -27,9 +28,21 @@ class EmployeeIDCardRequestController extends Controller
             ->latest()
             ->paginate(15, ['*'], 'archive_page');
         
+        // Get duplication requests (Replacement or Duplication - Lost/Damage)
+        $duplicationRequests = EmployeeIDCardRequest::whereIn('request_for', ['Replacement', 'Duplication'])
+            ->latest()
+            ->paginate(15, ['*'], 'duplication_page');
+        
+        // Get extension requests
+        $extensionRequests = EmployeeIDCardRequest::where('request_for', 'Extension')
+            ->latest()
+            ->paginate(15, ['*'], 'extension_page');
+        
         return view('admin.employee_idcard.index', [
             'activeRequests' => $activeRequests,
-            'archivedRequests' => $archivedRequests
+            'archivedRequests' => $archivedRequests,
+            'duplicationRequests' => $duplicationRequests,
+            'extensionRequests' => $extensionRequests
         ]);
     }
 
@@ -55,13 +68,16 @@ class EmployeeIDCardRequestController extends Controller
             'employee_type' => 'required|in:Permanent Employee,Contractual Employee',
             'card_type' => 'nullable|string|max:100',
             'sub_type' => 'nullable|string|max:100',
-            'request_for' => 'nullable|string|max:100',
+            'request_for' => 'nullable|string|max:100|in:Own ID Card,Family ID Card,Replacement,Duplication,Extension',
+            'duplication_reason' => 'nullable|string|in:Expired Card,Lost,Damage',
             'name' => 'required|string|max:255',
             'designation' => 'nullable|string|max:255',
             'date_of_birth' => 'nullable|date',
             'father_name' => 'nullable|string|max:255',
             'academy_joining' => 'nullable|date',
             'id_card_valid_upto' => 'nullable|string|max:50',
+            'id_card_valid_from' => 'nullable|string|max:50',
+            'id_card_number' => 'nullable|string|max:50',
             'mobile_number' => 'nullable|string|max:20',
             'telephone_number' => 'nullable|string|max:20',
             'blood_group' => 'nullable|string|max:10',
@@ -69,8 +85,13 @@ class EmployeeIDCardRequestController extends Controller
             'approval_authority' => 'nullable|string|max:255',
             'vendor_organization_name' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'joining_letter' => 'required_if:employee_type,Permanent Employee|nullable|mimes:pdf,doc,docx|max:5120',
+            'fir_receipt' => 'required_if:duplication_reason,Lost|nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'remarks' => 'nullable|string',
+        ], [
+            'fir_receipt.required_if' => 'FIR Receipt is required when the card is reported as Lost.',
         ]);
 
         $validated['created_by'] = Auth::id();
@@ -78,6 +99,18 @@ class EmployeeIDCardRequestController extends Controller
         // Handle file uploads
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('idcard/photos', 'public');
+        }
+
+        if ($request->hasFile('joining_letter')) {
+            $validated['joining_letter'] = $request->file('joining_letter')->store('idcard/joining_letters', 'public');
+        }
+
+        if ($request->hasFile('fir_receipt')) {
+            $validated['fir_receipt'] = $request->file('fir_receipt')->store('idcard/fir_receipts', 'public');
+        }
+
+        if ($request->hasFile('payment_receipt')) {
+            $validated['payment_receipt'] = $request->file('payment_receipt')->store('idcard/payment_receipts', 'public');
         }
 
         if ($request->hasFile('documents')) {
@@ -126,13 +159,16 @@ class EmployeeIDCardRequestController extends Controller
             'employee_type' => 'required|in:Permanent Employee,Contractual Employee',
             'card_type' => 'nullable|string|max:100',
             'sub_type' => 'nullable|string|max:100',
-            'request_for' => 'nullable|string|max:100',
+            'request_for' => 'nullable|string|max:100|in:Own ID Card,Family ID Card,Replacement,Duplication,Extension',
+            'duplication_reason' => 'nullable|string|in:Expired Card,Lost,Damage',
             'name' => 'required|string|max:255',
             'designation' => 'nullable|string|max:255',
             'date_of_birth' => 'nullable|date',
             'father_name' => 'nullable|string|max:255',
             'academy_joining' => 'nullable|date',
             'id_card_valid_upto' => 'nullable|string|max:50',
+            'id_card_valid_from' => 'nullable|string|max:50',
+            'id_card_number' => 'nullable|string|max:50',
             'mobile_number' => 'nullable|string|max:20',
             'telephone_number' => 'nullable|string|max:20',
             'blood_group' => 'nullable|string|max:10',
@@ -140,6 +176,9 @@ class EmployeeIDCardRequestController extends Controller
             'approval_authority' => 'nullable|string|max:255',
             'vendor_organization_name' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'joining_letter' => 'required_if:employee_type,Permanent Employee|nullable|mimes:pdf,doc,docx|max:5120',
+            'fir_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'status' => 'nullable|in:Pending,Approved,Rejected,Issued',
             'remarks' => 'nullable|string',
@@ -152,6 +191,18 @@ class EmployeeIDCardRequestController extends Controller
             $validated['photo'] = $request->file('photo')->store('idcard/photos', 'public');
         }
 
+        if ($request->hasFile('joining_letter')) {
+            $validated['joining_letter'] = $request->file('joining_letter')->store('idcard/joining_letters', 'public');
+        }
+
+        if ($request->hasFile('fir_receipt')) {
+            $validated['fir_receipt'] = $request->file('fir_receipt')->store('idcard/fir_receipts', 'public');
+        }
+
+        if ($request->hasFile('payment_receipt')) {
+            $validated['payment_receipt'] = $request->file('payment_receipt')->store('idcard/payment_receipts', 'public');
+        }
+
         if ($request->hasFile('documents')) {
             $validated['documents'] = $request->file('documents')->store('idcard/documents', 'public');
         }
@@ -161,6 +212,69 @@ class EmployeeIDCardRequestController extends Controller
         return redirect()
             ->route('admin.employee_idcard.show', $employeeIDCardRequest)
             ->with('success', 'Employee ID Card request updated successfully!');
+    }
+
+    /**
+     * Amend Duplication/Extension fields only (modal update).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\EmployeeIDCardRequest  $employeeIDCardRequest
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function amendDuplicationExtension(Request $request, EmployeeIDCardRequest $employeeIDCardRequest)
+    {
+        $validated = $request->validate([
+            'duplication_reason' => 'nullable|string|in:Expired Card,Lost,Damage',
+            'id_card_valid_from' => 'nullable|string|max:50',
+            'id_card_valid_upto' => 'nullable|string|max:50',
+            'id_card_number' => 'nullable|string|max:50',
+            'fir_receipt' => [
+                'nullable',
+                'mimes:pdf,doc,docx,jpeg,png,jpg',
+                'max:5120',
+                function ($attribute, $value, $fail) use ($request, $employeeIDCardRequest) {
+                    if ($request->duplication_reason === 'Lost' && ! $request->hasFile('fir_receipt') && ! $employeeIDCardRequest->fir_receipt) {
+                        $fail('FIR Receipt is required when the card is reported as Lost.');
+                    }
+                },
+            ],
+            'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+        ]);
+
+        $employeeIDCardRequest->updated_by = Auth::id();
+
+        if (array_key_exists('duplication_reason', $validated)) {
+            $employeeIDCardRequest->duplication_reason = $validated['duplication_reason'];
+        }
+        if (array_key_exists('id_card_valid_from', $validated)) {
+            $employeeIDCardRequest->id_card_valid_from = $validated['id_card_valid_from'];
+        }
+        if (array_key_exists('id_card_valid_upto', $validated)) {
+            $employeeIDCardRequest->id_card_valid_upto = $validated['id_card_valid_upto'];
+        }
+        if (array_key_exists('id_card_number', $validated)) {
+            $employeeIDCardRequest->id_card_number = $validated['id_card_number'];
+        }
+
+        if ($request->hasFile('fir_receipt')) {
+            $employeeIDCardRequest->fir_receipt = $request->file('fir_receipt')->store('idcard/fir_receipts', 'public');
+        }
+        if ($request->hasFile('payment_receipt')) {
+            $employeeIDCardRequest->payment_receipt = $request->file('payment_receipt')->store('idcard/payment_receipts', 'public');
+        }
+
+        $employeeIDCardRequest->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Duplication/Extension details updated successfully.',
+            'data' => [
+                'duplication_reason' => $employeeIDCardRequest->duplication_reason ?? '',
+                'id_card_valid_from' => $employeeIDCardRequest->id_card_valid_from ?? '',
+                'id_card_valid_upto' => $employeeIDCardRequest->id_card_valid_upto ?? '',
+                'id_card_number' => $employeeIDCardRequest->id_card_number ?? '',
+            ],
+        ]);
     }
 
     /**
@@ -221,11 +335,33 @@ class EmployeeIDCardRequestController extends Controller
         $tab = $request->get('tab', 'active');
         $format = $request->get('format', 'xlsx');
 
-        if (! in_array($tab, ['active', 'archive', 'all'])) {
+        if (! in_array($tab, ['active', 'archive', 'duplication', 'extension', 'all'])) {
             $tab = 'active';
         }
 
         $filename = 'employee_idcard_requests_' . $tab . '_' . now()->format('Y-m-d_His');
+
+        if ($format === 'pdf') {
+            $query = match ($tab) {
+                'archive' => EmployeeIDCardRequest::onlyTrashed()->latest(),
+                'duplication' => EmployeeIDCardRequest::whereIn('request_for', ['Replacement', 'Duplication'])->latest(),
+                'extension' => EmployeeIDCardRequest::where('request_for', 'Extension')->latest(),
+                'all' => EmployeeIDCardRequest::withTrashed()->latest(),
+                default => EmployeeIDCardRequest::latest(),
+            };
+            $requests = $query->get();
+
+            $pdf = Pdf::loadView('admin.employee_idcard.export_pdf', [
+                'requests' => $requests,
+                'tab' => $tab,
+                'export_date' => now()->format('d/m/Y H:i'),
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOption('isHtml5ParserEnabled', true)
+                ->setOption('isRemoteEnabled', true);
+
+            return $pdf->download($filename . '.pdf');
+        }
 
         if ($format === 'csv') {
             return Excel::download(

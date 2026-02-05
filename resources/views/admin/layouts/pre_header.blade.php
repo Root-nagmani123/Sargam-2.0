@@ -27,6 +27,8 @@
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
 <!-- Admin responsive helpers (mobile/tablet only) -->
 <link rel="stylesheet" href="{{asset('css/admin-responsive.css')}}">
+<!-- Admin UI Enhancements - Bootstrap 5.3 -->
+<link rel="stylesheet" href="{{asset('css/admin-ui-enhancements.css')}}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

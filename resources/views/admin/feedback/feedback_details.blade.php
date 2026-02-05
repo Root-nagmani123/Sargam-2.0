@@ -249,6 +249,15 @@
         }
 
         .btn-group .btn { border-radius: 0.5rem; }
+        .feedback-actions .btn-group {
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .session-header .row .col-md-4 {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
 
         /* Responsive - tablet and below (desktop unchanged) */
         @media (max-width: 991px) {
@@ -308,6 +317,7 @@
             .feedback-actions .btn-group {
                 flex-direction: column;
                 width: 100%;
+                gap: 0.5rem;
             }
             .feedback-actions .btn-group .btn {
                 width: 100%;
@@ -323,6 +333,10 @@
             .table-feedback th,
             .table-feedback td {
                 padding: 0.5rem 0.4rem;
+            }
+            .table-feedback thead th {
+                white-space: nowrap;
+                font-size: 0.75rem;
             }
             .rating-badge {
                 min-width: 24px;

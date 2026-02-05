@@ -20,6 +20,8 @@ class EmployeeIDCardExport implements FromCollection, WithHeadings
     {
         $query = match ($this->tab) {
             'archive' => EmployeeIDCardRequest::onlyTrashed()->latest(),
+            'duplication' => EmployeeIDCardRequest::whereIn('request_for', ['Replacement', 'Duplication'])->latest(),
+            'extension' => EmployeeIDCardRequest::where('request_for', 'Extension')->latest(),
             'all' => EmployeeIDCardRequest::withTrashed()->latest(),
             default => EmployeeIDCardRequest::latest(),
         };
@@ -27,17 +29,16 @@ class EmployeeIDCardExport implements FromCollection, WithHeadings
         $data = $query->get();
 
         return $data->map(function ($record, $index) {
-            $validFrom = optional($record->valid_from)->format('d/m/Y') ?? '--';
-            $validTo = optional($record->valid_to)->format('d/m/Y') ?? $record->id_card_valid_upto ?? '--';
             return [
                 $index + 1,
                 $record->created_at ? $record->created_at->format('d/m/Y') : '--',
                 $record->name ?? '--',
                 $record->designation ?? '--',
-                $record->id_card_no ?? $record->id ?? '--',
                 $record->card_type ?? '--',
-                $record->complete ?? '--',
-                $validFrom . ' - ' . $validTo,
+                $record->request_for ?? '--',
+                in_array($record->request_for, ['Replacement', 'Duplication']) ? ($record->duplication_reason ?? '--') : '--',
+                $record->request_for === 'Extension' ? ($record->id_card_valid_upto ?? '--') : '--',
+                $record->id_card_valid_upto ?? '--',
                 $record->status ?? '--',
             ];
         });
@@ -50,10 +51,11 @@ class EmployeeIDCardExport implements FromCollection, WithHeadings
             'Request Date',
             'Employee Name',
             'Designation',
-            'ID Card No.',
-            'ID Type',
-            'Complete',
-            'Valid From - To',
+            'Card Type',
+            'Request For',
+            'Duplication',
+            'Extension',
+            'Valid Upto',
             'Status',
         ];
     }

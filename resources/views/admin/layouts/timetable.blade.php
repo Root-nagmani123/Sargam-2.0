@@ -28,13 +28,26 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
+    <style>
+        /* Keep Ashoka + LBSNAA logos in one line on mobile */
+        .header .header-logo-ashoka,
+        .header .header-logo-lbsnaa { max-width: 100%; height: auto; object-fit: contain; }
+        @media (max-width: 991.98px) {
+            .header .header-logo-ashoka,
+            .header .header-logo-lbsnaa { height: 44px !important; max-width: 90px; }
+        }
+        @media (max-width: 575.98px) {
+            .header .header-logo-ashoka,
+            .header .header-logo-lbsnaa { height: 38px !important; max-width: 75px; }
+        }
+    </style>
 </head>
 <x-session_message />
 
 <body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #ffffff;">
     <!-- Top Blue Bar (Govt of India) -->
 <!-- Government Header Strips -->
-<div class="govt-header">
+<div class="govt-header d-none d-lg-block">
     <!-- Dark Blue Strip -->
     <div class="govt-header-top bg-primary text-white py-2">
         <div class="container-fluid">
@@ -82,14 +95,16 @@
     <div class="header sticky-top bg-white shadow-sm mb-4">
         <div class="container-fluid p-1">
             <nav class="navbar navbar-expand-lg">
-                 <a class="navbar-brand me-2" href="#">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-                            alt="Logo 1" height="80">
-                    </a>
-                    <span class="vr mx-2"></span>
-                    <a class="navbar-brand" href="#">
-                        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="80">
-                    </a>
+                 <div class="d-flex flex-nowrap align-items-center">
+                        <a class="navbar-brand me-2 py-0 d-flex align-items-center" href="#">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                                alt="Ashoka Emblem" class="header-logo-ashoka" height="80">
+                        </a>
+                        <span class="vr mx-1 mx-lg-2 flex-shrink-0"></span>
+                        <a class="navbar-brand py-0 d-flex align-items-center" href="#">
+                            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" class="header-logo-lbsnaa" height="80">
+                        </a>
+                    </div>
 
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">

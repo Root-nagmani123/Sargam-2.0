@@ -114,7 +114,11 @@
             .card-body .d-flex.justify-content-between.align-items-center.mb-3 {
                 flex-direction: column;
                 align-items: stretch !important;
-                gap: 1rem;
+                gap: 0.75rem;
+            }
+            /* Ensure Show entries + Search controls use full width and align nicely */
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 > div {
+                width: 100%;
             }
             .card-body .d-flex.justify-content-between.align-items-center.mb-3 .form-select.d-inline-block,
             .card-body .d-flex.justify-content-between.align-items-center.mb-3 .form-control.d-inline-block {
@@ -184,9 +188,19 @@
                 font-size: 10px;
                 padding: 2px 6px;
             }
+            /* Make comments modal fully visible & scrollable on small screens */
             .modal-dialog.modal-lg {
-                max-width: calc(100% - 1rem);
+                max-width: 100%;
+                width: 100%;
                 margin: 0.5rem;
+            }
+            #commentsModal .modal-content {
+                max-height: 80vh;
+                display: flex;
+                flex-direction: column;
+            }
+            #commentsModal .modal-body {
+                overflow-y: auto;
             }
         }
     </style>
@@ -632,19 +646,34 @@
                 const apiUrl = `/faculty/database/data?${params.toString()}`;
 
                 fetch(apiUrl)
-                    .then(response => response.json())
+                    .then(async (response) => {
+                        let data;
+                        try {
+                            data = await response.json();
+                        } catch (e) {
+                            console.error('Invalid JSON response for feedback data', e);
+                            throw new Error('Unexpected response from server.');
+                        }
+
+                        if (!response.ok || !data) {
+                            const message = (data && data.error) ? data.error : 'Error loading data from server.';
+                            throw new Error(message);
+                        }
+
+                        return data;
+                    })
                     .then(data => {
                         if (data.success) {
                             renderTable(data.data);
                             updatePagination(data);
                         } else {
-                            showErrorMessage(data.error || 'Error loading data');
+                            showErrorMessage(data.error || 'Error loading data.');
                         }
                         showLoading(false);
                     })
                     .catch(error => {
                         console.error('Error loading feedback data:', error);
-                        showErrorMessage('Error loading data. Please try again.');
+                        showErrorMessage(error.message || 'Error loading data. Please try again.');
                         showLoading(false);
                     });
             }

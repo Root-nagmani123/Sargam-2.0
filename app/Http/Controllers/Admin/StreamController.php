@@ -1,16 +1,16 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
+use App\DataTables\StreamDataTable;
 use App\Models\Stream;
 use Illuminate\Http\Request;
 
 
 class StreamController extends Controller
 {
-    public function index()
+    public function index(StreamDataTable $dataTable)
     {
-        $streams = Stream::paginate(10);
-        return view('admin.stream.index', compact('streams'));
+        return $dataTable->render('admin.stream.index');
     }
 
     public function create()
