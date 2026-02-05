@@ -138,6 +138,11 @@ class IssueLogManagement extends Model
         return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
     }
 
+     public function nodal_officer()
+    {
+        return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
+    }
+
     /**
      * Get the user who logged this issue.
      */

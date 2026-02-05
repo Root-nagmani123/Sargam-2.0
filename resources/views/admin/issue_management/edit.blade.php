@@ -35,6 +35,21 @@
             <div class="card-body">
                 <h4 class="mb-3">Edit Issue #{{ $issue->pk }}</h4>
                 <hr>
+                
+                @php
+                    // Check if issue is assigned - if statusHistory has any record with assign_to, it's assigned
+                    $isAssigned = $issue->statusHistory && $issue->statusHistory->whereNotNull('assign_to')->count() > 0;
+                @endphp
+
+                @if($isAssigned)
+                <div class="assignment-notice">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <div>
+                        <strong>Issue Assigned:</strong> This issue has been assigned. You can only update the status and add remarks. Other details are locked for editing.
+                    </div>
+                </div>
+                @endif
+
                 <form action="{{ route('admin.issue-management.update', $issue->pk) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
@@ -43,7 +58,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Complaint Category <span class="text-danger">*</span></label>
-                                <select name="issue_category_id" id="issue_category" class="form-select" required>
+                                <select name="issue_category_id" id="issue_category" class="form-select" {{ $isAssigned ? 'disabled' : '' }} required>
                                     <option value="">- select -</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->pk }}" {{ $issue->issue_category_master_pk == $category->pk ? 'selected' : '' }}>
@@ -235,10 +250,14 @@
                     </div>
 
                     
-
+                    @if($issue->issue_status == 0)
                     <div class="d-flex justify-content-end gap-2 pt-2">
                         <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-secondary rounded">Cancel</a>
                         <button type="submit" class="btn btn-primary">Update Issue</button>
+                    </div>
+                    @else
+                    <div class="alert alert-info mt-4">
+                        <i class="bi bi-info-circle"></i> This issue cannot be edited as its status is not "Open".
                     </div>
                 </form>
             </div>
