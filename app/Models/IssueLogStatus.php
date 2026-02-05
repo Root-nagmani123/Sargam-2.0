@@ -20,6 +20,7 @@ class IssueLogStatus extends Model
         'issue_status',
         'remarks',
         'assign_to',
+        'assigned_to_contact',
     ];
 
     protected $casts = [
