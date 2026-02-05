@@ -169,7 +169,10 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                        <label class="form-label">Upload Document</label>
+                        <label class="form-label">Upload Document <span class="text-danger">*</span></label>
+                        <small class="text-primary d-block mb-1">
+                        Please upload image or PDF files only. Maximum file size: 3 MB.</small>
+
                         <input type="file" name="Doc_upload" class="form-control col-form-label"accept="image/*,.pdf" id="Doc_upload">
                         <small id="fileInfo" class="text-muted"></small>
 						<small id="fileError" class="text-danger"></small>
