@@ -240,9 +240,11 @@
                                         <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-action btn-info btn-sm" title="View">
                                             <iconify-icon icon="solar:eye-bold"></iconify-icon>
                                         </a>
+                                        @if($issue->issue_logger == Auth::user()->user_id || $issue->created_by == Auth::user()->user_id)
                                         <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning btn-sm" title="Edit">
                                             <iconify-icon icon="solar:pen-bold"></iconify-icon>
                                         </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

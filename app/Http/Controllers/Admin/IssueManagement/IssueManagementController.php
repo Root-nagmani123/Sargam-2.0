@@ -29,6 +29,7 @@ class IssueManagementController extends Controller
      */
     public function index(Request $request)
     {
+        // echo Auth::user()->user_id; exit;
         $query = IssueLogManagement::with([
             'category',
             'priority',
@@ -37,7 +38,14 @@ class IssueManagementController extends Controller
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
             'statusHistory'
-        ])->orderBy('created_date', 'desc');
+        ]);
+       
+         if(hasRole('Admin')) {  }else{
+$query->where('employee_master_pk', Auth::user()->user_id);
+ $query->orWhere('issue_logger', Auth::user()->user_id); 
+ $query->orWhere('assigned_to', Auth::user()->user_id); 
+        }
+        $query->orderBy('created_date', 'desc');
 
         // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
         $tab = $request->get('tab', 'active');
@@ -53,31 +61,47 @@ class IssueManagementController extends Controller
         }
 
         // Filter by category
-        if ($request->has('category') && $request->category !== '') {
+        if ($request->has('category') && !empty($request->category)) {
             $query->where('issue_category_master_pk', $request->category);
         }
 
         // Filter by priority
-        if ($request->has('priority') && $request->priority !== '') {
+        if ($request->has('priority') && !empty($request->priority)) {
             $query->where('issue_priority_master_pk', $request->priority);
         }
 
         // Filter by date range
-        if ($request->has('date_from') && $request->date_from !== '') {
+        if ($request->filled('date_from')) {
             $query->whereDate('created_date', '>=', $request->date_from);
         }
-        if ($request->has('date_to') && $request->date_to !== '') {
+        if ($request->filled('date_to')) {
             $query->whereDate('created_date', '<=', $request->date_to);
         }
 
         $issues = $query->paginate(20);
+        // print_r($issues); exit;
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
         $baseQuery = IssueLogManagement::query();
-        $activeCount = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6])->count();
-        $archiveCount = (clone $baseQuery)->where('issue_status', 2)->count();
+        $activeCount = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6]);
+        if(! hasRole('Admin') && ! hasRole('SuperAdmin')) {
+
+            $activeCount->where('employee_master_pk', Auth::user()->user_id); 
+        }
+            $activeCount->orWhere('issue_logger', Auth::user()->user_id); 
+            $activeCount->orWhere('assigned_to', Auth::user()->user_id); 
+
+        $activeCount = $activeCount->count();
+        $archiveCount = (clone $baseQuery)->where('issue_status', 2);
+        if(! hasRole('Admin') && ! hasRole('SuperAdmin')) {
+        
+            $archiveCount->where('employee_master_pk', Auth::user()->user_id); 
+        }
+            $archiveCount->orWhere('issue_logger', Auth::user()->user_id); 
+            $archiveCount->orWhere('assigned_to', Auth::user()->user_id);
+        $archiveCount = $archiveCount->count();
 
         return view('admin.issue_management.index', compact('issues', 'categories', 'priorities', 'tab', 'activeCount', 'archiveCount'));
     }
@@ -156,6 +180,7 @@ class IssueManagementController extends Controller
             // Treat null and empty as the same
             'd.designation_name'
         )
+        ->orderBy('first_name')
         ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name');
 
     // If 'emp_id' is provided, filter the query for that specific employee
@@ -252,7 +277,7 @@ class IssueManagementController extends Controller
                 'description' => $request->description,
                 'created_by' => $request->created_by,
                 'employee_master_pk' => $request->nodal_employee_id,
-                'issue_logger' => Auth::id() ?? $request->created_by,
+                'issue_logger' => Auth::user()->user_id ?? $request->created_by,
                 'issue_status' => 0,
                 'created_date' => now()->setTimezone('Asia/Kolkata')->format('Y-m-d H:i:s'),
             );
@@ -379,6 +404,13 @@ class IssueManagementController extends Controller
             'hostelMapping',
             'creator'
         ])->findOrFail($id);
+        
+        // Check if logged-in user is the creator of this issue
+        if ($issue->created_by != Auth::user()->user_id) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'You can only edit issues you created.');
+        }
+        
         // print_r($issue->toArray()); exit;
 
         $categories = IssueCategoryMaster::active()->get();
@@ -455,6 +487,12 @@ class IssueManagementController extends Controller
     public function update(Request $request, $id)
     {
         $issue = IssueLogManagement::findOrFail($id);
+        
+        // Check if logged-in user is the creator of this issue
+        if ($issue->created_by != Auth::id()) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'You can only edit issues you created.');
+        }
 
         $request->validate([
             'issue_category_id' => 'required|integer|exists:issue_category_master,pk',
@@ -837,6 +875,96 @@ class IssueManagementController extends Controller
                 'message' => 'Error: ' . $e->getMessage(),
                 'data' => []
             ], 500);
+        }
+    }
+
+    /**
+     * Update issue status.
+     */
+    public function status_update(Request $request, $id)
+    {
+        $issue = IssueLogManagement::findOrFail($id);
+        
+        // Check if issue is already assigned
+        $isAssigned = !empty($issue->assigned_to);
+
+        // Validate request - assign_to_type only required if not already assigned
+        $rules = [
+            'issue_status' => 'required|in:0,1,2,3,6',
+            'remark' => 'nullable|string|max:500',
+        ];
+        
+        if (!$isAssigned) {
+            $rules['assign_to_type'] = 'required';
+        }
+        
+        $request->validate($rules);
+
+        DB::beginTransaction();
+        try {
+            $assignedTo = null;
+            $assignedToContact = null;
+
+            // Handle assignment based on type (only if not already assigned)
+            if (!$isAssigned) {
+                if ($request->assign_to_type === 'other') {
+                    // Validate other fields if "other" is selected
+                    $request->validate([
+                        'other_name' => 'required|string|max:255',
+                        'other_phone' => 'required|string|max:10',
+                    ]);
+                    
+                    $assignedTo = $request->other_name;
+                    $assignedToContact = $request->other_phone;
+                } else {
+                    // Employee selected - use hidden fields
+                    $assignedTo = $request->assigned_to;
+                    $assignedToContact = $request->assigned_to_contact;
+                }
+            } else {
+                // Keep existing assignment
+                $assignedTo = $issue->assigned_to;
+                $assignedToContact = $issue->assigned_to_contact;
+            }
+
+            // Update the main issue record
+            $updateData = [
+                'issue_status' => $request->issue_status,
+                'updated_by' => Auth::user()->user_id,
+                'updated_date' => now(),
+            ];
+            
+            // Add remark if provided
+            if ($request->remark) {
+                $updateData['remark'] = $request->remark;
+            }
+            
+            // Update assignment only if not already assigned
+            if (!$isAssigned) {
+                $updateData['assigned_to'] = $assignedTo;
+                $updateData['assigned_to_contact'] = $assignedToContact;
+            }
+            
+            $issue->update($updateData);
+
+            // Create status history record
+            IssueLogStatus::create([
+                'issue_log_management_pk' => $issue->pk,
+                'issue_date' => now(),
+                'created_by' => Auth::user()->user_id,
+                'issue_status' => $request->issue_status,
+                'remarks' => $request->remark,
+                'assign_to' => $assignedTo,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('success', 'Issue status updated successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Failed to update status: ' . $e->getMessage());
         }
     }
 
