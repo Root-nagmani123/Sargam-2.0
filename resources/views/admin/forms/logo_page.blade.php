@@ -3,7 +3,7 @@
 @section('title', 'Registration Page - Sargam | Lal Bahadur')
 
 @section('setup_content')
-    <div class="container-fluid">
+    <div class="container-fluid logo-page-form">
          <x-breadcrum title="Registration Page" />
         <!-- start Vertical Steps Example -->
         <div class="card" style="border-left: 4px solid #004a93;">

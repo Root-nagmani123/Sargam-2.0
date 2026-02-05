@@ -64,43 +64,43 @@ class CourseGroupTypeController extends Controller
             // Status Toggle
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
+                $badgeClass = $row->active_inactive == 1 ? 'bg-success' : 'bg-secondary';
+                $badgeText = $row->active_inactive == 1 ? 'Active' : 'Inactive';
 
                 return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
-                        data-table="course_group_type_master"
-                        data-column="active_inactive"
-                        data-id="' . $row->pk . '"
-                        ' . $checked . '>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge ' . $badgeClass . ' text-uppercase fw-semibold" style="font-size: 0.65rem; padding: 0.35em 0.6em;">' . $badgeText . '</span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
+                            data-table="course_group_type_master"
+                            data-column="active_inactive"
+                            data-id="' . $row->pk . '"
+                            ' . $checked . '>
+                    </div>
                 </div>';
             })
 
             // Action Dropdown
             ->addColumn('action', function ($row) {
-
-                $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+                $disabled = $row->active_inactive == 1 ? 'disabled-link' : '';
+                $disabledAttr = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
 
                 return '
-    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
-
-        <!-- Edit Action -->
-        <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . $row->type_name . '" 
-           class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-           aria-label="Edit course group type">
-            <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-            <span class="d-none d-md-inline">Edit</span>
-        </a>
-
-        <!-- Delete Action -->
-        
-            <a href="javascript:void(0)"
-                data-id="' . $row->pk . '"
-                class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                    <span class="d-none d-md-inline">Delete</span>
-                </a>
-    </div>';
+                <div class="btn-group btn-group-sm" role="group" aria-label="Row actions">
+                    <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . e($row->type_name) . '"
+                       class="btn btn-outline-primary edit-btn rounded-start-2 d-inline-flex align-items-center gap-1 px-3"
+                       aria-label="Edit course group type">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">edit</i>
+                        <span class="d-none d-lg-inline">Edit</span>
+                    </a>
+                    <a href="javascript:void(0)" data-id="' . $row->pk . '"
+                       class="btn btn-outline-danger delete-btn rounded-end-2 d-inline-flex align-items-center gap-1 px-3 ' . $disabled . '"
+                       ' . $disabledAttr . '
+                       aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">delete</i>
+                        <span class="d-none d-lg-inline">Delete</span>
+                    </a>
+                </div>';
             })
 
 

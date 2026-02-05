@@ -25,6 +25,10 @@ class VehiclePassTWApply extends Model
         'veh_card_forward_status',
         'vehicle_req_id',
         'gov_veh',
+        'applicant_type',
+        'applicant_name',
+        'designation',
+        'department',
     ];
 
     protected $casts = [
@@ -76,5 +80,21 @@ class VehiclePassTWApply extends Model
             2 => 'Card Ready',
             default => 'Unknown'
         };
+    }
+
+    /**
+     * Display name: applicant_name or employee full name with ID.
+     */
+    public function getDisplayNameAttribute()
+    {
+        if (!empty($this->applicant_name)) {
+            return $this->applicant_name . ($this->employee_id_card ? ' (' . $this->employee_id_card . ')' : '');
+        }
+        if ($this->employee) {
+            $name = trim($this->employee->first_name . ' ' . ($this->employee->last_name ?? ''));
+            $id = $this->employee_id_card ?: ($this->employee->emp_id ?? '');
+            return $id ? $name . ' (' . $id . ')' : $name;
+        }
+        return $this->employee_id_card ?: '--';
     }
 }

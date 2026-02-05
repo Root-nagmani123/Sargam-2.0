@@ -3,18 +3,114 @@
 @section('title', 'Course Memo Decision Mapping - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<style>
+/* Course Memo Decision Mapping - responsive (mobile/tablet only, desktop unchanged) */
+@media (max-width: 991.98px) {
+    .course-memo-decision-mapping-index .datatables .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .course-memo-decision-mapping-index .datatables #memoDecisionTable {
+        min-width: 500px;
+    }
+    .course-memo-decision-mapping-index .datatables #memoDecisionTable th,
+    .course-memo-decision-mapping-index .datatables #memoDecisionTable td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 767.98px) {
+    .course-memo-decision-mapping-index .datatables .card-body {
+        padding: 1rem !important;
+    }
+    .course-memo-decision-mapping-index .datatables #memoDecisionTable th,
+    .course-memo-decision-mapping-index .datatables #memoDecisionTable td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+    body:has(.course-memo-decision-mapping-index) .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    body:has(.course-memo-decision-mapping-index) .modal-content {
+        border-radius: 0.5rem;
+    }
+}
+@media (max-width: 575.98px) {
+    .course-memo-decision-mapping-index.container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .course-memo-decision-mapping-index .course-memo-header-row {
+        row-gap: 0.5rem;
+    }
+    .course-memo-decision-mapping-index .course-memo-header-row .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .course-memo-decision-mapping-index .course-memo-header-actions {
+        display: flex;
+        justify-content: stretch;
+    }
+    .course-memo-decision-mapping-index .course-memo-header-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .course-memo-decision-mapping-index .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+    .course-memo-decision-mapping-index .datatables .table-responsive {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .course-memo-decision-mapping-index .datatables #memoDecisionTable th,
+    .course-memo-decision-mapping-index .datatables #memoDecisionTable td {
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+    body:has(.course-memo-decision-mapping-index) .modal-dialog {
+        margin: 0.5rem auto;
+        max-width: calc(100% - 1rem);
+    }
+    body:has(.course-memo-decision-mapping-index) .modal-content {
+        max-height: calc(100vh - 1rem);
+        overflow-y: auto;
+    }
+    body:has(.course-memo-decision-mapping-index) .modal-body {
+        padding: 1rem !important;
+    }
+    body:has(.course-memo-decision-mapping-index) .modal-header,
+    body:has(.course-memo-decision-mapping-index) .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+}
+@media (max-width: 375px) {
+    .course-memo-decision-mapping-index.container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .course-memo-decision-mapping-index .datatables .card-body {
+        padding: 0.5rem !important;
+    }
+    .course-memo-decision-mapping-index .course-memo-header-row h4 {
+        font-size: 1.1rem;
+    }
+}
+</style>
+<div class="container-fluid course-memo-decision-mapping-index">
     <x-breadcrum title="Course Memo Decision Mapping" />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row course-memo-header-row align-items-center">
                         <div class="col-6">
                             <h4>Course Memo Decision Mapping</h4>
                         </div>
                         <div class="col-6">
-                            <div class="float-end gap-2">
+                            <div class="d-flex justify-content-end align-items-center gap-2 course-memo-header-actions">
                                 <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
                                     Mapping</a> -->
                                 <button type="button" id="showConclusionAlert" class="btn btn-primary">

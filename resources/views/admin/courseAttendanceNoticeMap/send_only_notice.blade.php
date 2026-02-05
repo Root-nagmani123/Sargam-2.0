@@ -14,8 +14,8 @@
                 </div>
             </div>
             <hr>
-            <div class="row">
-                <div class="col-2">
+            <div class="row g-3">
+                <div class="col-lg-2 col-md-6 col-12">
                     <label for="programme" class="form-label">Course Name :</label>
                     <div class="mb-3">
                         <select name="course_master_pk" id="programme" class="form-select select2" required>
@@ -27,7 +27,7 @@
                         <!-- <small class="form-text text-muted">Select Course</small> -->
                     </div>
                 </div>
-                <div class="col-2">
+                <div class="col-lg-2 col-md-6 col-12">
                     <label for="from_date" class="form-label">From Date :</label>
                     <div class="mb-3">
                         <input type="date" class="form-control" id="from_date" name="from_date" placeholder="From Date">
@@ -35,14 +35,14 @@
                     </div>
                 </div>
 
-                <div class="col-2">
+                <div class="col-lg-2 col-md-6 col-12">
                     <label for="to_date" class="form-label">To Date :</label>
                     <div class="mb-3">
                         <input type="date" class="form-control" id="to_date" name="to_date" placeholder="To Date">
                         <!-- <small class="form-text text-muted">Select To Date</small> -->
                     </div>
                 </div>
-                <div class="col-3">
+                <div class="col-lg-3 col-12">
                     <label class="form-label">Attendance Type :</label>
                     <div class="mb-3">
                         <div class="form-check form-check-inline" style="vertical-align: middle;">
@@ -62,7 +62,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-3" id="normal_session_container" style="display: none;">
+                <div class="col-lg-3 col-md-6 col-12" id="normal_session_container" style="display: none;">
                     <label for="session" class="form-label">Normal Session :</label>
                     <div class="mb-3">
                         <select name="session" id="session" class="form-select select2">
@@ -75,7 +75,7 @@
                     </div>
                 </div>
 
-                <div class="col-3" id="manual_session_container" style="display: none;">
+                <div class="col-lg-3 col-md-6 col-12" id="manual_session_container" style="display: none;">
                     <label for="manual_session" class="form-label">Manual Session:</label>
                     <div class="mb-3">
                         <select name="manual_session" id="manual_session" class="form-select select2">
@@ -91,7 +91,7 @@
             </div>
             <hr>
             <div class="text-end">
-                <button class="btn btn-primary hstack gap-6 float-end" id="searchAttendance" type="button">
+                <button class="btn btn-primary hstack gap-6 float-end w-100 w-sm-auto" id="searchAttendance" type="button">
                     <span class="material-symbols-rounded text-white fs-6">search</span>
                     Search
                 </button>

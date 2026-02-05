@@ -3,19 +3,19 @@
 @section('title', 'Faculty Expertise')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid faculty-expertise-index">
     <x-breadcrum title="Faculty Expertise"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row faculty-expertise-header-row">
                         <div class="col-6">
                             <h4>Faculty Expertise</h4>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
+                            <div class="d-flex justify-content-end align-items-center gap-2 faculty-expertise-actions">
 
                                 <!-- Add Group Mapping -->
                                 <a href="{{route('master.faculty.expertise.create')}}"
@@ -31,7 +31,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table text-nowrap">
+                        <table class="table text-nowrap" id="faculty-expertise-table">
                             <thead>
                                 <!-- start row -->
                                 <tr>

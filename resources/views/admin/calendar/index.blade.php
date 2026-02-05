@@ -2,7 +2,7 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 
 @php
     // Debug: Check if courseMaster is available
@@ -27,8 +27,9 @@
         background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         color: #fff;
         padding: 2.75rem 1.5rem;
-        border-radius: 1rem 1rem 1rem 1rem;
+        border-radius: 1rem;
         text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 74, 147, 0.25), 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     .course-header h1 {
@@ -38,8 +39,10 @@
     }
 
     .course-header .badge {
-        background: #ffffff;
-        color: #000;
+        background: rgba(255, 255, 255, 0.95);
+        color: #1a1a1a;
+        padding: 0.35rem 0.75rem;
+        font-weight: 600;
     }
 
     /* Responsive Design for Smaller Screens */

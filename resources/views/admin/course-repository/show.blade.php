@@ -127,6 +127,93 @@
     color: #0d6efd;
     margin-bottom: 0.5rem;
 }
+
+/* Create/Edit Modal - Blue Gradient Header */
+.upload-modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    padding: 1.5rem !important;
+}
+
+.upload-modal-header .header-icon-circle {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 50%;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5rem;
+}
+
+.upload-modal-header .header-icon-circle .material-icons,
+.upload-modal-header .header-icon-circle .material-symbols-rounded {
+    color: #0d6efd;
+    font-size: 1.3rem !important;
+}
+
+.upload-modal-header .modal-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.upload-modal-header .btn-close-white {
+    opacity: 0.9;
+}
+
+/* Upload Zone (Create Modal) */
+.upload-zone-ref {
+    display: block;
+    border: 2px dashed #b6d4fe;
+    border-radius: 12px;
+    background-color: #f8fbff;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    min-height: 180px;
+    padding: 0;
+}
+
+.upload-zone-ref:hover,
+.upload-zone-ref:focus-within {
+    border-color: #0d6efd;
+    background-color: #eef5ff;
+}
+
+.upload-zone-ref.upload-dragover {
+    border-color: #0d6efd;
+    background-color: #eef5ff;
+}
+
+.upload-zone-inner {
+    cursor: pointer;
+    height: 100%;
+}
+
+.upload-icon-ref {
+    font-size: 48px;
+    display: block;
+    color: #0d6efd;
+}
+
+.upload-zone-ref .upload-cta {
+    color: #0d6efd;
+}
+
+.btn-cancel-ref {
+    background-color: #fff;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.btn-cancel-ref:hover {
+    background-color: #fff5f5;
+    border-color: #dc3545;
+    color: #b02a37;
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -237,8 +324,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             data-bs-target="#createModal">
                             Add Category
                         </a>
-                        <a href="" class="btn btn-outline-primary btn-sm rounded">Upload Document
-                        </a>
+                          <button type="button"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <span class="material-icons material-symbols-rounded fs-6">
+                                upload
+                            </span>
+                            <span>Upload Documents</span>
+                        </button>
                     </div>
                 </div>
                 @else
@@ -288,9 +381,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <span
                                             class="text-muted small">{{ Str::limit($child->course_repository_details ?? 'N/A', 50) }}</span>
                                     </td>
-                                    <td>{{ $child->children->count() }} - sub-categories
+                                    <td>
+                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                            class="text-primary border-bottom text-decoration-none">
+                                            {{ $child->children->count() }} - sub-categories
+                                        </a>
                                     </td>
-                                    <td>{{ $child->getDocumentCount() }} - documents
+                                    <td>
+                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                            class="text-primary border-bottom text-decoration-none">
+                                            {{ $child->getDocumentCount() }} - documents
+                                        </a>
                                     </td>
                                     <td>
                                         <div class="btn-group d-flex gap-2 text-primary" role="group">
@@ -363,10 +464,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td class="text-center">
                                     <small class="text-muted">
                                         @if($doc->detail)
-                                        @if($doc->detail->timetable)
-                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
-                                        @elseif($doc->detail->topic_pk)
-                                        {{ Str::limit($doc->detail->topic_pk, 20) }}
+                                        @if($doc->detail->subject)
+                                        {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                        @elseif($doc->detail->subject_pk)
+                                        {{ Str::limit($doc->detail->subject_pk, 20) }}
                                         @else
                                         <span class="text-muted">N/A</span>
                                         @endif
@@ -378,8 +479,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td class="text-center">
                                     <small class="text-muted">
                                         @if($doc->detail)
-                                        @if($doc->detail->timetable)
-                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
+                                        @if($doc->detail->topic)
+                                        {{ Str::limit($doc->detail->topic->subject_topic, 20) }}
                                         @elseif($doc->detail->topic_pk)
                                         {{ Str::limit($doc->detail->topic_pk, 20) }}
                                         @else
@@ -446,11 +547,31 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
+                                        <a href="javascript:void(0)" class="text-success edit-doc" 
+                                            data-pk="{{ $doc->pk }}"
+                                            data-detail-pk="{{ $doc->detail->pk ?? '' }}"
+                                            data-type="{{ $doc->detail->type ?? 'CO' }}"
+                                            data-file-title="{{ $doc->file_title ?? '' }}"
+                                            data-upload-document="{{ $doc->upload_document ?? '' }}"
+                                            data-course-pk="{{ $doc->detail->course_master_pk ?? '' }}"
+                                            data-subject-pk="{{ $doc->detail->subject_pk ?? '' }}"
+                                            data-subject-name="{{ $doc->detail->subject->subject_name ?? $doc->detail->subject_pk ?? '' }}"
+                                            data-topic-pk="{{ $doc->detail->topic_pk ?? '' }}"
+                                            data-topic-name="{{ $doc->detail->topic->topic_name ?? $doc->detail->topic_pk ?? '' }}"
+                                            data-session-date="{{ $doc->detail->session_date ?? '' }}"
+                                            data-author-pk="{{ $doc->detail->author_name ?? '' }}"
+                                            data-sector-pk="{{ $doc->detail->sector_master_pk ?? '' }}"
+                                            data-ministry-pk="{{ $doc->detail->ministry_master_pk ?? '' }}"
+                                            data-videolink="{{ $doc->detail->videolink ?? '' }}"
+                                            data-keyword="{{ $doc->detail->keyword ?? '' }}"
+                                            data-bs-toggle="tooltip" title="Edit">
+                                            <span class="material-icons material-symbols-rounded">edit</span>
+                                        </a>
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}"
                                             class="text-primary" data-bs-toggle="tooltip" title="Download">
                                             <span class="material-icons material-symbols-rounded">download</span>
                                         </a>
-                                        <a class="text-primary delete-doc" data-pk="{{ $doc->pk }}"
+                                        <a href="javascript:void(0)" class="text-danger delete-doc" data-pk="{{ $doc->pk }}"
                                             data-bs-toggle="tooltip" title="Delete">
                                             <span class="material-icons material-symbols-rounded">delete</span>
                                         </a>
@@ -472,17 +593,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Create Category Modal -->
 <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
 
-            <!-- Header -->
-            <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4">
-                <h5 class="modal-title fw-semibold d-flex align-items-center" id="createModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2 fs-5">
-                        add_circle
+            <!-- Modal Header - Blue Gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="createModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">add_circle</span>
                     </span>
                     Create New Category
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>
 
@@ -495,78 +616,73 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="modal-body p-4">
 
                     <!-- Category Name -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <input type="text" class="form-control form-control-lg" id="course_repository_name"
-                                name="course_repository_name" placeholder="Category Name" required>
-                            <label for="course_repository_name">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    folder
-                                </span>
-                                Category Name <span class="text-danger">*</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Details -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <textarea class="form-control" id="course_repository_details"
-                                name="course_repository_details" placeholder="Details" style="height: 110px"></textarea>
-                            <label for="course_repository_details">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    subject
-                                </span>
-                                Details (Optional)
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Upload Section -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
+                        <label for="course_repository_name" class="form-label fw-medium text-dark mb-2">
+                            Category Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg"
+                            id="course_repository_name" name="course_repository_name"
+                            placeholder="Enter category name" required>
+                    </div>
+
+                    <!-- Details (Optional) -->
+                    <div class="mb-3">
+                        <label for="course_repository_details" class="form-label fw-medium text-dark mb-2">
+                            Details <span class="text-muted small">(Optional)</span>
+                        </label>
+                        <textarea class="form-control form-control-lg"
+                            id="course_repository_details" name="course_repository_details" rows="3"
+                            placeholder="Enter category details"></textarea>
+                    </div>
+
+                    <!-- Category Image Section -->
+                    <div class="mb-0">
+                        <label class="form-label fw-medium text-dark mb-3 d-block">
                             Category Image
                         </label>
 
-                        <label for="category_image_create" class="upload-zone">
-
-                            <div class="text-center">
-                                <span class="material-icons material-symbols-rounded upload-icon">
-                                    cloud_upload
-                                </span>
-                                <p class="mb-1 fw-medium">
-                                    <span class="text-primary">Click to upload</span>
-                                    or drag and drop
-                                </p>
-                                <small class="text-muted">
-                                    JPEG, PNG, JPG, GIF (Max 2MB)
-                                </small>
+                        <label for="category_image_create" class="upload-zone-ref d-block mb-0">
+                            <div class="upload-zone-inner d-flex align-items-center justify-content-center">
+                                <div class="text-center">
+                                    <span class="material-icons material-symbols-rounded upload-icon-ref mb-2 d-block">
+                                        cloud_upload
+                                    </span>
+                                    <p class="mb-1 fw-medium upload-cta">
+                                        Click to upload or drag and drop
+                                    </p>
+                                    <small class="text-muted">
+                                        JPEG, PNG, JPG, GIF (Max 2MB)
+                                    </small>
+                                </div>
                             </div>
 
                             <input type="file" id="category_image_create" name="category_image"
-                                accept="image/jpeg,image/png,image/jpg,image/gif" hidden>
+                                accept="image/jpeg,image/png,image/jpg,image/gif" class="visually-hidden">
                         </label>
 
                         <!-- Preview -->
                         <div class="mt-3">
-                            <img id="preview_create_show" class="img-thumbnail shadow-sm d-none"
-                                alt="Category image preview" style="max-width: 150px;">
+                            <img id="preview_create_show" alt="Image preview" class="img-fluid rounded-2 d-none"
+                                style="max-width: 120px; object-fit: cover;">
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Footer -->
-                <div class="modal-footer bg-light border-0 px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                <!-- Modal Footer -->
+                <div class="modal-footer border-0 px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
+                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
+                            check_circle
+                        </span>
                         Save Category
                     </button>
                 </div>
-            </form>
 
+            </form>
         </div>
     </div>
 </div>
@@ -588,6 +704,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 @csrf
                 @method('PUT')
                 <div class="modal-body p-4">
+                    <!-- DEBUG INFO -->
+                    <div class="alert alert-info mb-3" id="debugInfo" style="font-family: monospace; font-size: 12px;">
+                        <strong>🔍 Debug Information:</strong><br>
+                        <div class="mt-2">
+                            <strong>Current Page URL:</strong><br>
+                            <span id="debugCurrentUrl" class="text-primary">Loading...</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Form Action URL:</strong><br>
+                            <span id="debugFormAction" class="text-danger">Not set</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Category PK:</strong><br>
+                            <span id="debugPk" class="text-success">Not set</span>
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="edit_course_repository_name" class="form-label fw-semibold">
                             Category Name <span class="text-danger">*</span>
@@ -648,6 +781,10 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <form id="uploadForm" method="POST" action="javascript:void(0);" enctype="multipart/form-data" novalidate>
                 @csrf
+                <input type="hidden" id="edit_mode" name="edit_mode" value="0">
+                <input type="hidden" id="edit_document_pk" name="edit_document_pk">
+                <input type="hidden" id="edit_detail_pk" name="edit_detail_pk">
+                <input type="hidden" id="edit_old_filename" name="edit_old_filename" value="">
                 <div id="uploadFormErrors" class="alert alert-danger d-none mx-4 mt-3 mb-0" role="alert"></div>
                 <div class="modal-body p-4 bg-light"
                     style="max-height: calc(100vh - 250px); overflow-y: auto; overflow-x: hidden;">
@@ -668,13 +805,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     Other
                                 </label>
                             </div>
-                            <div class="form-check">
+                            <!-- <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_institutional" value="Institutional">
                                 <label class="form-check-label fw-medium" for="category_institutional">
                                     Institutional
                                 </label>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
 
@@ -757,7 +894,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Session Date <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" class="form-select" id="session_date" name="session_date"
-                                            placeholder="ABCD12345" required>
+                                            placeholder="ABCD12345" required readonly>
                                         <small class="text-muted d-flex align-items-center mt-1">
                                             <i class="bi bi-info-circle me-1"></i> Select Session Date
                                         </small>
@@ -846,8 +983,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <!-- Attachments Table -->
                                     <div class="table-responsive" id="course_attachments_container"
                                         style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg">
+                                        <table class="table table-bordered mb-0">
+                                            <thead>
                                                 <tr>
                                                     <th style="width: 5%;">S.No.</th>
                                                     <th>Attachment Title</th>
@@ -889,6 +1026,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Add More Attachment
                                         </button>
                                     </div>
+                                    
+                                    <!-- Current File Info (shown when editing) -->
+                                    <div id="current_file_info" style="display: none;"></div>
                                 </div>
                             </div>
 
@@ -1045,13 +1185,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <!-- Attachments Table -->
                                     <div class="table-responsive" id="other_attachments_container"
                                         style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg-light">
+                                        <table class="table table-hover mb-0">
+                                            <thead>
                                                 <tr>
-                                                    <th style="width: 5%;">S.No.</th>
+                                                    <th>S.No.</th>
                                                     <th>Attachment Title</th>
                                                     <th>Upload File</th>
-                                                    <th style="width: 8%;">Action</th>
+                                                    <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="other_attachments_tbody">
@@ -1089,6 +1229,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Add More Attachment
                                         </button>
                                     </div>
+                                    
+                                    <!-- Current File Info for Other Category (shown when editing) -->
+                                    <div id="current_file_info_other" style="display: none;"></div>
                                 </div>
                             </div>
 
@@ -1372,7 +1515,18 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
     var showUploadError = function(msg) {
         var text = (typeof msg === 'string') ? msg : String(msg);
         if (uploadFormErrorsEl) {
-            uploadFormErrorsEl.textContent = text;
+            // Check if message contains bullet points (multiple errors)
+            if (text.includes('\n•')) {
+                // Format as HTML list
+                var lines = text.split('\n');
+                var mainMsg = lines[0];
+                var items = lines.slice(1).map(function(line) {
+                    return '<li>' + line.replace('• ', '') + '</li>';
+                }).join('');
+                uploadFormErrorsEl.innerHTML = '<strong>' + mainMsg + '</strong><ul class="mb-0 mt-2">' + items + '</ul>';
+            } else {
+                uploadFormErrorsEl.innerHTML = text;
+            }
             uploadFormErrorsEl.classList.remove('d-none');
             uploadFormErrorsEl.style.display = 'block';
             uploadFormErrorsEl.scrollIntoView({
@@ -1484,6 +1638,8 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
 
         var validAttachmentCount = 0;
         var validationErrors = [];
+        var editMode = document.getElementById('edit_mode').value === '1';
+        
         if (selectedCategory === 'Institutional') {
             attachmentFiles.forEach(function(fileInput) {
                 if (fileInput.files && fileInput.files.length > 0) validAttachmentCount += fileInput
@@ -1498,6 +1654,12 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 var hasFile = fileInput.files && fileInput.files.length > 0;
                 var titleEl = attachmentTitles[index];
                 var hasTitle = titleEl && titleEl.value && titleEl.value.trim() !== '';
+                
+                // In edit mode, skip completely empty rows (no title, no file)
+                if (editMode && !hasFile && !hasTitle) {
+                    return; // Skip this row
+                }
+                
                 if (hasFile && !hasTitle) validationErrors.push('Row ' + (index + 1) +
                     ': File selected but title is missing');
                 else if (hasTitle && !hasFile) validationErrors.push('Row ' + (index + 1) +
@@ -1508,7 +1670,8 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 showUploadError(validationErrors.join(' | '));
                 return;
             }
-            if (validAttachmentCount === 0) {
+            // In edit mode, at least one file should be new (to keep existing file), or no files needed (just metadata update)
+            if (!editMode && validAttachmentCount === 0) {
                 showUploadError('Please add at least one attachment with both title and file.');
                 return;
             }
@@ -1590,8 +1753,26 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
         }
 
         var repositoryPk = {{ $repository->pk }};
-        fetch('/course-repository/' + repositoryPk + '/upload-document', {
-                method: 'POST',
+        
+        // Check if in edit mode
+        var editMode = document.getElementById('edit_mode').value === '1';
+        var documentPk = document.getElementById('edit_document_pk').value;
+        var detailPk = document.getElementById('edit_detail_pk').value;
+        
+        var fetchUrl, fetchMethod;
+        if (editMode && documentPk) {
+            // Edit mode - use update endpoint
+            fetchUrl = '/course-repository/document/' + documentPk + '/update';
+            fetchMethod = 'POST';
+            uploadData.append('detail_pk', detailPk);
+        } else {
+            // Upload mode - use upload endpoint
+            fetchUrl = '/course-repository/' + repositoryPk + '/upload-document';
+            fetchMethod = 'POST';
+        }
+        
+        fetch(fetchUrl, {
+                method: fetchMethod,
                 body: uploadData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -1618,7 +1799,8 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 if (result.ok && result.data && result.data.success) {
                     hideUploadError();
                     form.reset();
-                    alert('Upload successful!');
+                    var successMsg = editMode ? 'Document updated successfully!' : 'Upload successful!';
+                    alert(successMsg);
                     setTimeout(function() {
                         location.reload();
                     }, 1500);
@@ -1631,15 +1813,32 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 if (uploadModal) try {
                     uploadModal.show();
                 } catch (s) {}
-                var errMsg = (result.data && result.data.error) || 'Upload failed';
-                if (result.data && result.data.errors && typeof result.data.errors === 'object') {
-                    var parts = [];
+                
+                // Build detailed error message
+                var errMsg = (result.data && result.data.error) || 'Upload/Update failed';
+                var errorList = [];
+                
+                // Try to use error_list first (properly formatted)
+                if (result.data && result.data.error_list && Array.isArray(result.data.error_list)) {
+                    errorList = result.data.error_list;
+                } 
+                // Fallback to parsing errors object
+                else if (result.data && result.data.errors && typeof result.data.errors === 'object') {
                     Object.keys(result.data.errors).forEach(function(field) {
                         var val = result.data.errors[field];
-                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                        if (Array.isArray(val)) {
+                            errorList = errorList.concat(val);
+                        } else {
+                            errorList.push(val);
+                        }
                     });
-                    if (parts.length) errMsg = parts.join(' | ');
                 }
+                
+                // Format error message
+                if (errorList && errorList.length > 0) {
+                    errMsg = errMsg + ':\n• ' + errorList.join('\n• ');
+                }
+                
                 showUploadError(errMsg);
             })
             .catch(function(error) {
@@ -1684,7 +1883,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const previewImage = document.getElementById('preview_edit_show');
                 if (previewImage) previewImage.style.display = 'none';
                 const editForm = document.getElementById('editForm');
-                if (editForm && pk) editForm.action = '/course-repository/' + pk;
+                if (editForm && pk) {
+                    editForm.action = '/course-repository/' + pk;
+                    
+                    // UPDATE DEBUG INFO
+                    const debugCurrentUrl = document.getElementById('debugCurrentUrl');
+                    const debugFormAction = document.getElementById('debugFormAction');
+                    const debugPk = document.getElementById('debugPk');
+                    
+                    if (debugCurrentUrl) debugCurrentUrl.textContent = window.location.href;
+                    if (debugFormAction) debugFormAction.textContent = editForm.action;
+                    if (debugPk) debugPk.textContent = pk;
+                }
                 const editModalEl = document.getElementById('editModal');
                 if (editModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                     (new bootstrap.Modal(editModalEl)).show();
@@ -1700,6 +1910,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const tokenEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
             const token = tokenEl ? (tokenEl.getAttribute('content') || tokenEl.value) : null;
             if (!pk || !token) return;
+            
+            // CAPTURE CURRENT PAGE URL BEFORE DELETE
+            const currentPageUrl = window.location.href;
+            
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     title: 'Are you sure?',
@@ -1711,40 +1925,75 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmButtonText: 'Yes, delete it!'
                 }).then(function(result) {
                     if (result.isConfirmed) {
-                        var form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '/course-repository/' + pk;
-                        var csrfInput = document.createElement('input');
-                        csrfInput.type = 'hidden';
-                        csrfInput.name = '_token';
-                        csrfInput.value = token;
-                        var methodInput = document.createElement('input');
-                        methodInput.type = 'hidden';
-                        methodInput.name = '_method';
-                        methodInput.value = 'DELETE';
-                        form.appendChild(csrfInput);
-                        form.appendChild(methodInput);
-                        document.body.appendChild(form);
-                        form.submit();
+                        // USE AJAX INSTEAD OF FORM SUBMIT
+                        fetch('/course-repository/' + pk, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ _method: 'DELETE' })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: data.message || 'Category deleted successfully',
+                                    showConfirmButton: false,
+                                    timer: 1000
+                                }).then(() => {
+                                    // RELOAD CURRENT PAGE INSTEAD OF REDIRECTING TO ROOT
+                                    console.log('Reloading current page:', currentPageUrl);
+                                    window.location.href = currentPageUrl;
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: data.message || 'Failed to delete category'
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Delete error:', error);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Failed to delete category. Please try again.'
+                            });
+                        });
                     }
                 });
             } else {
                 if (confirm('Are you sure you want to delete this category?')) {
-                    var form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '/course-repository/' + pk;
-                    var csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = '_token';
-                    csrfInput.value = token;
-                    var methodInput = document.createElement('input');
-                    methodInput.type = 'hidden';
-                    methodInput.name = '_method';
-                    methodInput.value = 'DELETE';
-                    form.appendChild(csrfInput);
-                    form.appendChild(methodInput);
-                    document.body.appendChild(form);
-                    form.submit();
+                    // USE AJAX FOR NON-SWEETALERT CASE TOO
+                    fetch('/course-repository/' + pk, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ _method: 'DELETE' })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message || 'Category deleted successfully');
+                            window.location.href = currentPageUrl;
+                        } else {
+                            alert(data.message || 'Failed to delete category');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Delete error:', error);
+                        alert('Failed to delete category. Please try again.');
+                    });
                 }
             }
             return;
@@ -1802,6 +2051,334 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             } catch (err) { console.warn('Delete document error:', err); }
+        }
+        
+        const editDocBtn = e.target.closest('.edit-doc');
+        if (editDocBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const pk = editDocBtn.getAttribute('data-pk');
+            const detailPk = editDocBtn.getAttribute('data-detail-pk');
+            const docType = editDocBtn.getAttribute('data-type') || 'CO'; // CO=Course, OT=Other, IN=Institutional
+            const fileTitle = editDocBtn.getAttribute('data-file-title');
+            const uploadDocument = editDocBtn.getAttribute('data-upload-document');
+            const coursePk = editDocBtn.getAttribute('data-course-pk');
+            const subjectPk = editDocBtn.getAttribute('data-subject-pk');
+            const subjectName = editDocBtn.getAttribute('data-subject-name');
+            const topicPk = editDocBtn.getAttribute('data-topic-pk');
+            const topicName = editDocBtn.getAttribute('data-topic-name');
+            const sessionDate = editDocBtn.getAttribute('data-session-date');
+            const authorPk = editDocBtn.getAttribute('data-author-pk');
+            const sectorPk = editDocBtn.getAttribute('data-sector-pk');
+            const ministryPk = editDocBtn.getAttribute('data-ministry-pk');
+            const videolink = editDocBtn.getAttribute('data-videolink');
+            const keyword = editDocBtn.getAttribute('data-keyword');
+            
+            // Debug: Log retrieved values
+            console.log('Edit Mode - Document Type:', docType);
+            console.log('Session Date from data-attribute:', sessionDate);
+            console.log('All data:', { pk, docType, sessionDate, authorPk, videolink, keyword });
+            
+            // Set edit mode hidden fields
+            document.getElementById('edit_mode').value = '1';
+            document.getElementById('edit_document_pk').value = pk || '';
+            document.getElementById('edit_detail_pk').value = detailPk || '';
+            
+            // Store old file name for display
+            document.getElementById('edit_old_filename').value = uploadDocument || '';
+            
+            // Change modal title to Edit
+            const modalTitle = document.getElementById('uploadModalLabel');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span class="material-icons material-symbols-rounded me-2 text-success" style="font-size: 22px;">edit_document</span>Edit Document';
+            }
+            
+            // SET CATEGORY BASED ON DOCUMENT TYPE
+            const categoryRadios = document.querySelectorAll('input[name="category"]');
+            const courseFields = document.getElementById('courseFields');
+            // Helper function to extract date from datetime string
+            function extractDate(datetimeString) {
+                if (!datetimeString) return '';
+                // If it contains space (datetime format), take only the date part
+                if (datetimeString.includes(' ')) {
+                    return datetimeString.split(' ')[0];
+                }
+                // Otherwise return as-is (already in date format)
+                return datetimeString;
+            }
+            
+            const otherFields = document.getElementById('otherFields');
+            const institutionalFields = document.getElementById('institutionalFields');
+            
+            // Uncheck all radio buttons first
+            categoryRadios.forEach(radio => radio.checked = false);
+            
+            // Set appropriate category based on type
+            if (docType === 'OT') {
+                // Other category
+                const otherRadio = document.querySelector('input[name="category"][value="Other"]');
+                if (otherRadio) otherRadio.checked = true;
+                if (courseFields) courseFields.style.display = 'none';
+                if (otherFields) otherFields.style.display = 'block';
+                if (institutionalFields) institutionalFields.style.display = 'none';
+                
+                // Populate Other fields (use names for text inputs, PKs for selects)
+                document.getElementById('course_name_other').value = coursePk || '';
+                document.getElementById('major_subject_other').value = subjectName || subjectPk || '';
+                document.getElementById('topic_name_other').value = topicName || topicPk || '';
+                document.getElementById('session_date_other').value = extractDate(sessionDate) || '';
+                document.getElementById('author_name_other').value = authorPk || '';
+                document.getElementById('sector_master_other').value = sectorPk || '';
+                document.getElementById('ministry_master_other').value = ministryPk || '';
+                document.getElementById('keywords_other').value = keyword || '';
+                document.getElementById('video_link_other').value = videolink || '';
+                
+                console.log('Session date set to input field:', extractDate(sessionDate), '(from:', sessionDate, ')');
+            } else if (docType === 'IN') {
+                // Institutional category
+                const institutionalRadio = document.querySelector('input[name="category"][value="Institutional"]');
+                if (institutionalRadio) institutionalRadio.checked = true;
+                if (courseFields) courseFields.style.display = 'none';
+                if (otherFields) otherFields.style.display = 'none';
+                if (institutionalFields) institutionalFields.style.display = 'block';
+                
+                // Populate Institutional fields
+                document.getElementById('Key_words_institutional').value = keyword || '';
+                document.getElementById('keyword_institutional').value = videolink || '';
+            } else {
+                // Course category (default)
+                const courseRadio = document.querySelector('input[name="category"][value="Course"]');
+                if (courseRadio) courseRadio.checked = true;
+                if (courseFields) courseFields.style.display = 'block';
+                if (otherFields) otherFields.style.display = 'none';
+                if (institutionalFields) institutionalFields.style.display = 'none';
+                
+                // Populate Course fields
+                document.getElementById('course_name').value = coursePk || '';
+                document.getElementById('subject_name').value = subjectPk || '';
+                document.getElementById('timetable_name').value = topicPk || '';
+                document.getElementById('session_date').value = extractDate(sessionDate) || '';
+                document.getElementById('author_name').value = authorPk || '';
+                document.getElementById('sector_master').value = sectorPk || '';
+                document.getElementById('ministry_master').value = ministryPk || '';
+                document.getElementById('keywords_course').value = keyword || '';
+                document.getElementById('video_link_course').value = videolink || '';
+            }
+            
+            // Set file title in first attachment row
+            if (docType === 'OT') {
+                // Other category - use the specific selector for other attachments
+                const otherFirstTitleInput = document.querySelector('#other_attachments_tbody input[name="attachment_titles_other[]"]');
+                if (otherFirstTitleInput) {
+                    otherFirstTitleInput.value = fileTitle || '';
+                }
+            } else {
+                // Course or Institutional - use the generic selector
+                const firstTitleInput = document.querySelector('input[name="attachment_titles[]"]');
+                if (firstTitleInput) {
+                    firstTitleInput.value = fileTitle || '';
+                }
+            }
+            
+            // Show current file info if editing
+            const currentFileInfo = document.getElementById('current_file_info');
+            const currentFileInfoOther = document.getElementById('current_file_info_other');
+            
+            if (uploadDocument) {
+                const fileInfoHtml = '<div class="alert alert-info mt-3"><strong>ℹ️ Current File:</strong> ' + uploadDocument + '<br><small class="text-muted">Your existing file will be kept. Add new files below if needed, or leave empty to keep only the current file.</small></div>';
+                
+                if (docType === 'OT') {
+                    // Show file info in Other section
+                    if (currentFileInfoOther) {
+                        currentFileInfoOther.innerHTML = fileInfoHtml;
+                        currentFileInfoOther.style.display = 'block';
+                    }
+                    // Hide file info in Course section
+                    if (currentFileInfo) {
+                        currentFileInfo.style.display = 'none';
+                    }
+                } else {
+                    // Show file info in Course/Institutional section
+                    if (currentFileInfo) {
+                        currentFileInfo.innerHTML = fileInfoHtml;
+                        currentFileInfo.style.display = 'block';
+                    }
+                    // Hide file info in Other section
+                    if (currentFileInfoOther) {
+                        currentFileInfoOther.style.display = 'none';
+                    }
+                }
+            } else {
+                // Hide all file info divs if no file
+                if (currentFileInfo) {
+                    currentFileInfo.style.display = 'none';
+                }
+                if (currentFileInfoOther) {
+                    currentFileInfoOther.style.display = 'none';
+                }
+            }
+            
+            // Clear first attachment row's file input (so it doesn't try to upload old file)
+            if (docType === 'OT') {
+                const otherFirstFileInput = document.querySelector('#other_attachments_tbody input[name="attachments_other[]"]');
+                if (otherFirstFileInput) {
+                    otherFirstFileInput.value = '';
+                }
+            } else {
+                const firstFileInput = document.querySelector('input[name="attachments[]"]');
+                if (firstFileInput) {
+                    firstFileInput.value = '';
+                }
+            }
+            
+            // Set video link and keywords
+            const videoLinkInput = document.getElementById('video_link_course');
+            const keywordsInput = document.getElementById('keywords_course');
+            if (videoLinkInput) videoLinkInput.value = videolink || '';
+            if (keywordsInput) keywordsInput.value = keyword || '';
+            
+            // Helper function to load data via AJAX and return promise
+            function loadDropdownData(fetchUrl) {
+                return fetch(fetchUrl)
+                    .then(response => response.json())
+                    .catch(error => {
+                        console.error('Error fetching data:', error);
+                        return { data: [] };
+                    });
+            }
+            
+            // Helper function to populate dropdown with options
+            function populateDropdown(selectId, data, labelKey) {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                
+                select.innerHTML = '<option value="">Select</option>';
+                if (Array.isArray(data) && data.length > 0) {
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.pk || item.session_date || item;
+                        option.textContent = item[labelKey] || item.display || item;
+                        select.appendChild(option);
+                    });
+                }
+            }
+            
+            // Set course and load subjects
+            const courseSelect = document.getElementById('course_name');
+            if (courseSelect && coursePk) {
+                courseSelect.value = coursePk;
+                $(courseSelect).trigger('change');
+                
+                // Load subjects directly via AJAX
+                console.log('Loading subjects for course:', coursePk);
+                loadDropdownData(`/course-repository/subjects/${coursePk}`)
+                    .then(response => {
+                        const subjects = response.data || response || [];
+                        console.log('Subjects response:', response);
+                        populateDropdown('subject_name', subjects, 'subject_name');
+                        console.log('Subjects loaded:', subjects);
+                        
+                        // Set subject
+                        if (subjectPk) {
+                            const subjectSelect = document.getElementById('subject_name');
+                            if (subjectSelect) {
+                                subjectSelect.value = subjectPk;
+                                $(subjectSelect).trigger('change');
+                                
+                                // Load topics for this subject
+                                console.log('Loading topics for subject:', subjectPk);
+                                loadDropdownData(`/course-repository/topics/${subjectPk}?course_master_pk=${coursePk}`)
+                                    .then(response => {
+                                        const topics = response.data || response || [];
+                                        console.log('Topics response:', response);
+                                        populateDropdown('timetable_name', topics, 'subject_topic');
+                                        console.log('Topics loaded:', topics);
+                                        
+                                        // Set topic
+                                        if (topicPk) {
+                                            const topicSelect = document.getElementById('timetable_name');
+                                            if (topicSelect) {
+                                                topicSelect.value = topicPk;
+                                                $(topicSelect).trigger('change');
+                                                
+                                                // Load session dates and authors for this topic
+                                                console.log('Loading session dates and authors for topic:', topicPk);
+                                                Promise.all([
+                                                    loadDropdownData(`/course-repository/session-dates?topic_pk=${topicPk}`),
+                                                    loadDropdownData(`/course-repository/authors-by-topic?topic_pk=${topicPk}`)
+                                                ])
+                                                    .then(([sessionResponse, authorResponse]) => {
+                                                        const sessionDates = sessionResponse.data || sessionResponse || [];
+                                                        const authors = authorResponse.data || authorResponse || [];
+                                                        
+                                                        console.log('Session dates response:', sessionResponse);
+                                                        console.log('Authors response:', authorResponse);
+                                                        
+                                                        // Populate authors dropdown
+                                                        populateDropdown('author_name', authors, 'full_name');
+                                                        
+                                                        // Set session date value directly to INPUT field (not dropdown)
+                                                        if (sessionDate) {
+                                                            const sessionDateInput = document.getElementById('session_date');
+                                                            if (sessionDateInput) {
+                                                                // Session date is an input field (type="date"), format should be YYYY-MM-DD
+                                                                // Extract only date part if it contains time (e.g., "2026-01-05 00:00:00" -> "2026-01-05")
+                                                                const dateOnly = sessionDate.substring(0, 10);
+                                                                sessionDateInput.value = dateOnly;
+                                                                console.log('Session date set to input field:', dateOnly, '(from:', sessionDate + ')');
+                                                            }
+                                                        }
+                                                        
+                                                        // Set author value
+                                                        if (authorPk) {
+                                                            const authorSelect = document.getElementById('author_name');
+                                                            if (authorSelect) {
+                                                                authorSelect.value = authorPk;
+                                                                console.log('Author set to:', authorPk);
+                                                            }
+                                                        }
+                                                    });
+                                            }
+                                        }
+                                    });
+                            }
+                        }
+                    });
+            }
+            
+            // Set sector and load ministries
+            const sectorSelect = document.getElementById('sector_master');
+            if (sectorSelect && sectorPk) {
+                sectorSelect.value = sectorPk;
+                $(sectorSelect).trigger('change');
+                
+                // Load ministries directly via AJAX
+                console.log('Loading ministries for sector:', sectorPk);
+                loadDropdownData(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
+                    .then(response => {
+                        const ministries = response.data || response || [];
+                        console.log('Ministries response:', response);
+                        populateDropdown('ministry_master', ministries, 'ministry_name');
+                        console.log('Ministries loaded:', ministries);
+                        
+                        // Set ministry
+                        if (ministryPk) {
+                            const ministrySelect = document.getElementById('ministry_master');
+                            if (ministrySelect) {
+                                ministrySelect.value = ministryPk;
+                                console.log('Ministry set to:', ministryPk);
+                            }
+                        }
+                    });
+            }
+            
+            // Show upload modal
+            const uploadModalEl = document.getElementById('uploadModal');
+            if (uploadModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                (new bootstrap.Modal(uploadModalEl)).show();
+                
+            }
+            return;
         }
     });
 
@@ -1931,6 +2508,107 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     const repositoryPk = {{ $repository->pk }};
+    
+    // Global flag to prevent modal close from triggering unwanted actions
+    window.isEditFormSubmitting = false;
+    
+    // ===== RESET EDIT MODE WHEN EDIT MODAL CLOSES =====
+    const editModalEl = document.getElementById('editModal');
+    if (editModalEl) {
+        editModalEl.addEventListener('hide.bs.modal', function(event) {
+            // Reset edit mode flag when edit modal closes
+            const editModeInput = document.getElementById('edit_mode');
+            if (editModeInput) editModeInput.value = '0';
+            
+            // NOTE: Page reload is handled in the form submit success handler
+            // If form is submitting, don't interfere with navigation
+            if (window.isEditFormSubmitting) {
+                console.log('Modal closing after form submit - navigation will be handled by submit handler');
+                return;
+            }
+        });
+    }
+    
+    // ===== UPLOAD BUTTON CLICK - RESET BEFORE MODAL OPENS =====
+    document.querySelectorAll('[data-bs-target="#uploadModal"]').forEach(function(uploadBtn) {
+        uploadBtn.addEventListener('click', function(e) {
+            // Reset all hidden fields
+            const editModeInput = document.getElementById('edit_mode');
+            const editDocPkInput = document.getElementById('edit_document_pk');
+            const editDetailPkInput = document.getElementById('edit_detail_pk');
+            const editOldFilenameInput = document.getElementById('edit_old_filename');
+            
+            if (editModeInput) editModeInput.value = '0';
+            if (editDocPkInput) editDocPkInput.value = '';
+            if (editDetailPkInput) editDetailPkInput.value = '';
+            if (editOldFilenameInput) editOldFilenameInput.value = '';
+            
+            // Reset current file info display
+            const currentFileInfo = document.getElementById('current_file_info');
+            const currentFileInfoOther = document.getElementById('current_file_info_other');
+            if (currentFileInfo) currentFileInfo.style.display = 'none';
+            if (currentFileInfoOther) currentFileInfoOther.style.display = 'none';
+            
+            // Reset modal title
+            const modalTitle = document.getElementById('uploadModalLabel');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<span class="material-icons material-symbols-rounded me-2 text-primary" style="font-size: 22px;">cloud_upload</span>Upload Document';
+            }
+            
+            // Reset the entire upload form
+            const uploadForm = document.getElementById('uploadForm');
+            if (uploadForm) {
+                uploadForm.reset();
+                
+                // Manually clear all inputs
+                uploadForm.querySelectorAll('input[type="text"], input[type="date"], input[type="email"], input[type="number"], input[type="file"], textarea, select').forEach(input => {
+                    input.value = '';
+                });
+                
+                // Hide error messages
+                const uploadFormErrorsEl = document.getElementById('uploadFormErrors');
+                if (uploadFormErrorsEl) {
+                    uploadFormErrorsEl.classList.add('d-none');
+                    uploadFormErrorsEl.innerHTML = '';
+                }
+                
+                // Reset category to Course
+                const categoryRadios = document.querySelectorAll('input[name="category"]');
+                categoryRadios.forEach(radio => radio.checked = false);
+                if (categoryRadios.length > 0) categoryRadios[0].checked = true;
+                
+                // Show Course fields, hide others
+                const courseFields = document.getElementById('courseFields');
+                const otherFields = document.getElementById('otherFields');
+                const institutionalFields = document.getElementById('institutionalFields');
+                
+                if (courseFields) courseFields.style.display = 'block';
+                if (otherFields) otherFields.style.display = 'none';
+                if (institutionalFields) institutionalFields.style.display = 'none';
+                
+                // Clear attachment rows (keep only first row)
+                ['course_attachments_container', 'other_attachments_container'].forEach(function(containerId) {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        const tbody = container.querySelector('tbody');
+                        if (tbody) {
+                            const rows = tbody.querySelectorAll('tr');
+                            for (let i = rows.length - 1; i > 0; i--) {
+                                rows[i].remove();
+                            }
+                            if (rows[0]) {
+                                const fileInput = rows[0].querySelector('input[type="file"]');
+                                const titleInput = rows[0].querySelector('input[type="text"]');
+                                if (fileInput) fileInput.value = '';
+                                if (titleInput) titleInput.value = '';
+                            }
+                        }
+                        updateDeleteButtons(containerId);
+                    }
+                });
+            }
+        });
+    });
 
     // ===== COURSE FILTERING LOGIC =====
     const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
@@ -3196,14 +3874,50 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Edit form submit
+    // Edit form submit - FORCE STAY ON SAME PAGE
     document.getElementById('editForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        
+        // CRITICAL: Stop event from bubbling to prevent any other handlers
+        if (e.stopImmediatePropagation) {
+            e.stopImmediatePropagation();
+        }
+
+        // Set flag to prevent modal close from interfering
+        window.isEditFormSubmitting = true;
+
+        // Capture current URL BEFORE any operation
+        const currentPageUrl = window.location.href;
+        console.log('=== EDIT FORM SUBMIT START ===');
+        console.log('Current page URL captured:', currentPageUrl);
+
+        // Show in debug info
+        const debugInfo = document.getElementById('debugInfo');
+        if (debugInfo) {
+            debugInfo.innerHTML = `
+                <strong>🔄 Processing Update...</strong><br>
+                <div class="mt-2">
+                    <strong>Current Page URL:</strong><br>
+                    <span class="text-primary">${currentPageUrl}</span>
+                </div>
+                <div class="mt-2">
+                    <strong>Sending Request To:</strong><br>
+                    <span class="text-warning">${this.action}</span>
+                </div>
+                <div class="mt-2">
+                    <strong>Status:</strong> <span class="text-info">Sending...</span>
+                </div>
+            `;
+        }
 
         const formData = new FormData(this);
         const submitBtn = this.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+        console.log('Sending update to:', this.action);
 
         fetch(this.action, {
                 method: 'POST',
@@ -3213,38 +3927,103 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
+                
+                // Update debug info with response
+                if (debugInfo) {
+                    debugInfo.innerHTML = `
+                        <strong>✅ Update Successful!</strong><br>
+                        <div class="mt-2">
+                            <strong>Current Page URL:</strong><br>
+                            <span class="text-primary">${currentPageUrl}</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Will Reload To:</strong><br>
+                            <span class="text-success">${currentPageUrl}</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>Response:</strong> <span class="text-success">${data.message || 'Success'}</span>
+                        </div>
+                    `;
+                }
+                
                 if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: data.message || 'Category updated successfully',
-                        showConfirmButton: false,
-                        timer: 1500
-                    }).then(() => {
-                        location.reload();
-                    });
+                    console.log('✓ Update successful! Force reloading current page...');
+                    
+                    // Close modal first
+                    const editModalEl = document.getElementById('editModal');
+                    if (editModalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(editModalEl);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                    }
+                    
+                    // Show brief success message then reload
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: data.message || 'Category updated successfully',
+                            showConfirmButton: false,
+                            timer: 800
+                        }).then(() => {
+                            // FORCE reload current page - don't let anything redirect
+                            console.log('NOW RELOADING TO:', currentPageUrl);
+                            window.location.href = currentPageUrl;
+                        });
+                    } else {
+                        // No SweetAlert, direct reload
+                        console.log('NOW RELOADING TO:', currentPageUrl);
+                        window.location.href = currentPageUrl;
+                    }
                 } else {
+                    window.isEditFormSubmitting = false;
+                    if (debugInfo) {
+                        debugInfo.innerHTML = `
+                            <strong>❌ Update Failed</strong><br>
+                            <div class="mt-2 text-danger">${data.message || 'Unknown error'}</div>
+                        `;
+                    }
                     Swal.fire({
                         icon: 'error',
                         title: 'Error!',
                         text: data.message || 'Failed to update category'
                     });
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Update';
+                    submitBtn.innerHTML = originalBtnText;
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                window.isEditFormSubmitting = false;
+                console.error('Fetch error:', error);
+                
+                if (debugInfo) {
+                    debugInfo.innerHTML = `
+                        <strong>❌ Network Error</strong><br>
+                        <div class="mt-2 text-danger">${error.message}</div>
+                    `;
+                }
+                
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: 'Failed to update category'
+                    text: 'Failed to update category. Please try again.'
                 });
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> Update';
+                submitBtn.innerHTML = originalBtnText;
             });
+        
+        // Return false to absolutely prevent any default form submission
+        return false;
     });
 
     // Add new attachment row - Category Specific

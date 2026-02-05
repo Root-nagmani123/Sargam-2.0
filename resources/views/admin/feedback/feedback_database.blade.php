@@ -90,6 +90,119 @@
             opacity: 1;
             height: auto;
         }
+
+        /* Responsive styles - only apply below desktop (992px), desktop view unchanged */
+        @media (max-width: 991px) {
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem;
+            }
+            .export-btn-group {
+                width: 100%;
+                display: flex;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+            }
+            .export-btn-group .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 0.75rem;
+            }
+            /* Ensure Show entries + Search controls use full width and align nicely */
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 > div {
+                width: 100%;
+            }
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 .form-select.d-inline-block,
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 .form-control.d-inline-block {
+                width: 100% !important;
+            }
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 label {
+                display: block;
+                margin-bottom: 0.25rem;
+            }
+            #tableContainer {
+                margin-left: -0.75rem;
+                margin-right: -0.75rem;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #feedbackTable {
+                font-size: 0.875rem;
+            }
+            #feedbackTable th,
+            #feedbackTable td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+            #paginationSection {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: center !important;
+                text-align: center;
+            }
+            #paginationSection .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .page-title {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            .card-body {
+                padding: 1rem;
+            }
+            .row.g-3 {
+                margin-left: -0.25rem;
+                margin-right: -0.25rem;
+            }
+            .row.g-3 > [class*="col-"] {
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
+            }
+            .export-btn-group {
+                flex-direction: column;
+            }
+            .export-btn-group .btn {
+                min-width: 100%;
+            }
+            #feedbackTable th,
+            #feedbackTable td {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.3rem;
+            }
+            .percentage-badge {
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+            /* Make comments modal fully visible & scrollable on small screens */
+            .modal-dialog.modal-lg {
+                max-width: 100%;
+                width: 100%;
+                margin: 0.5rem;
+            }
+            #commentsModal .modal-content {
+                max-height: 80vh;
+                display: flex;
+                flex-direction: column;
+            }
+            #commentsModal .modal-body {
+                overflow-y: auto;
+            }
+        }
     </style>
 
     <div class="container-fluid">
@@ -533,19 +646,34 @@
                 const apiUrl = `/faculty/database/data?${params.toString()}`;
 
                 fetch(apiUrl)
-                    .then(response => response.json())
+                    .then(async (response) => {
+                        let data;
+                        try {
+                            data = await response.json();
+                        } catch (e) {
+                            console.error('Invalid JSON response for feedback data', e);
+                            throw new Error('Unexpected response from server.');
+                        }
+
+                        if (!response.ok || !data) {
+                            const message = (data && data.error) ? data.error : 'Error loading data from server.';
+                            throw new Error(message);
+                        }
+
+                        return data;
+                    })
                     .then(data => {
                         if (data.success) {
                             renderTable(data.data);
                             updatePagination(data);
                         } else {
-                            showErrorMessage(data.error || 'Error loading data');
+                            showErrorMessage(data.error || 'Error loading data.');
                         }
                         showLoading(false);
                     })
                     .catch(error => {
                         console.error('Error loading feedback data:', error);
-                        showErrorMessage('Error loading data. Please try again.');
+                        showErrorMessage(error.message || 'Error loading data. Please try again.');
                         showLoading(false);
                     });
             }

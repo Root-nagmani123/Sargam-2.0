@@ -5,7 +5,7 @@
 @section('title', 'Memo/Notice Templates - Sargam | LBSNAA')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid memo-notice-index-page">
     <x-breadcrum title="Memo/Notice Template Management" />
 
     <x-session_message />
@@ -150,16 +150,86 @@
 
 @push('styles')
 <style>
-.table th {
+.memo-notice-index-page .table th {
     background-color: #f8f9fa;
 }
 
-.badge {
+.memo-notice-index-page .badge {
     font-size: 0.8em;
 }
 
-.btn-group .btn {
+.memo-notice-index-page .btn-group .btn {
     margin-right: 2px;
+}
+
+/* Responsive: tablet and below only - desktop unchanged */
+@media (max-width: 991.98px) {
+    .memo-notice-index-page .card-header.d-flex {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .memo-notice-index-page .card-header .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+    .memo-notice-index-page .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .memo-notice-index-page .table {
+        min-width: 600px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .memo-notice-index-page .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .memo-notice-index-page .card-body {
+        padding: 0.75rem;
+    }
+    .memo-notice-index-page .row.g-3 > [class*="col-"] {
+        width: 100%;
+    }
+    .memo-notice-index-page .col-md-4.d-flex.align-items-end {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    .memo-notice-index-page .col-md-4.d-flex .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    .memo-notice-index-page .col-md-4.d-flex .btn.me-2 {
+        margin-right: 0 !important;
+    }
+    .memo-notice-index-page .card-header .btn-primary {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .memo-notice-index-page .table td,
+    .memo-notice-index-page .table th {
+        padding: 0.5rem 0.35rem;
+        font-size: 0.85rem;
+    }
+    .memo-notice-index-page .d-inline-flex.gap-2 {
+        flex-wrap: wrap;
+        gap: 0.35rem !important;
+    }
+    .memo-notice-index-page .d-inline-flex .btn {
+        padding: 0.35rem 0.5rem;
+    }
+    .memo-notice-index-page .form-check-input {
+        margin-left: 0 !important;
+    }
+    .memo-notice-index-page .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .memo-notice-index-page .pagination .page-link {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.85rem;
+    }
 }
 </style>
 @endpush
