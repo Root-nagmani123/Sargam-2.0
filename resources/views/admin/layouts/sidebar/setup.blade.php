@@ -1,4 +1,4 @@
-<aside class="side-mini-panel with-vertical">
+<aside class="side-mini-panel with-vertical sidebar-google-style">
     <div>
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
@@ -6,13 +6,13 @@
         <div class="iconbar">
             <div>
                 <div class="mini-nav">
-                    <div class="d-flex align-items-center justify-content-end" style="margin-right: 0.5rem;">
+                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
     <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
-        data-bs-custom-class="custom-tooltip" data-bs-placement="right"ria-label="Toggle menu">
+        data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
 
-        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded text-dark"
-            style="font-size: 40px;">
-            keyboard_double_arrow_right
+        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded"
+            style="font-size: 24px;">
+            menu
         </i>
 
     </a>
@@ -30,47 +30,32 @@
                                         <div class="simplebar-content" style="padding: 0px;">
                                             <li class="mini-nav-item" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="Training / Academic">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">
-                                                            dashboard_customize
-                                                        </i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">dashboard_customize</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Academic</span>
                                                 </a>
                                             </li>
 
                                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="Time Table">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">
-                                                            calendar_month
-                                                        </i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">calendar_month</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Time Table</span>
                                                 </a>
                                             </li>
                                             
                                             <li class="mini-nav-item" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="User Management">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">
-                                                            user_attributes
-                                                        </i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">user_attributes</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Users</span>
                                                 </a>
                                             </li>
                                              <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
@@ -85,68 +70,47 @@
                                             @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="Master">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">
-                                                            menu_open
-                                                        </i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">menu_open</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Master</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                id="mini-3">
+                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-3">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="FC Forms">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">note_add</i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">note_add</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">FC Forms</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                id="mini-8">
+                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-8">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="Mess Management">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">add_notes</i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">add_notes</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Mess</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}"
-                                                id="mini-9">
+                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="Security Management">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">shield</i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">shield</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Security</span>
                                                 </a>
                                             </li>
-                                             <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}"
-                                                id="mini-10">
+                                            <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="Issue Management (CENTCOM)">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">report_problem</i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">report_problem</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Issues</span>
                                                 </a>
                                             </li>
                                             @endif
@@ -158,7 +122,7 @@
                                 </div>
                             </div>
 
-                            <div class="simplebar-placeholder" style="width: 80px; height: 537px;"></div>
+                            <div class="simplebar-placeholder" style="width: 80px; min-width: 80px; height: 537px;"></div>
                         </div>
                         <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
                             <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
@@ -219,6 +183,93 @@
     </div>
 </aside>
 
+<style>
+/* Google-style sidebar - light gray, icon above text, oval selected state */
+#sidebar-setup .sidebar-google-style.side-mini-panel {
+    width: 80px;
+}
+#sidebar-setup .sidebar-google-style .mini-nav {
+    background: #F0F0F0 !important;
+    padding: 12px 0;
+    border-radius: 10px;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-hamburger {
+    padding: 16px 0;
+    margin: 0;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
+    color: #555 !important;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item {
+    list-style: none;
+    display: flex !important;
+    justify-content: center !important;
+    width: 100%;
+}
+#sidebar-setup .sidebar-google-style .mini-nav ul.mini-nav-ul {
+    padding-inline-start: 0 !important;
+    list-style: none !important;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 8px !important;
+    padding-left: 8px !important;
+    margin: 4px 8px !important;
+    background: transparent !important;
+    height: auto !important;
+    min-height: 56px;
+    width: 100%;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px;
+    text-align: center !important;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 48px;
+    height: 32px;
+    margin-inline: auto;
+    border-radius: 24px;
+    transition: background 0.2s;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
+    line-height: 1 !important;
+    vertical-align: middle !important;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
+    font-size: 24px !important;
+    color: #555 !important;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-label {
+    font-size: 11px;
+    color: #555 !important;
+    font-weight: 400;
+    text-align: center;
+    line-height: 1.2;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
+    color: #333 !important;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
+    background: #E0E0E0 !important;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
+    color: #333 !important;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
+    display: none !important;
+}
+</style>
 
 <script>
 // Global function to collapse all menus
@@ -248,11 +299,11 @@ function collapseAllMenus() {
 
 // Add accordion behavior - when one opens, others close
 document.addEventListener('DOMContentLoaded', function() {
-    const setupTab = document.getElementById('tab-setup');
-    if (!setupTab) return;
+    const setupSidebar = document.getElementById('sidebar-setup');
+    if (!setupSidebar) return;
 
     // Add accordion behavior to collapsible menus
-    const collapseElements = setupTab.querySelectorAll('.sidebar-item [data-bs-toggle="collapse"]');
+    const collapseElements = setupSidebar.querySelectorAll('.sidebar-item [data-bs-toggle="collapse"]');
     collapseElements.forEach(trigger => {
         trigger.addEventListener('click', function(e) {
             const targetId = this.getAttribute('href') || this.getAttribute('data-bs-target');
@@ -290,16 +341,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Setup sidebar script started');
-    // Scope to ONLY the setup tab
-    const setupTab = document.getElementById('tab-setup');
-    if (!setupTab) {
-        console.error('Setup tab not found');
+    // Scope to setup sidebar (in #sidebar-setup tab pane)
+    const setupSidebar = document.getElementById('sidebar-setup');
+    if (!setupSidebar) {
+        console.error('Setup sidebar not found');
         return;
     }
 
         // Initialize mini-navbar functionality for setup ONLY
-        const miniNavItems = setupTab.querySelectorAll('.mini-nav .mini-nav-item');
-        const sidebarMenus = setupTab.querySelectorAll('.sidebarmenu nav');
+        const miniNavItems = setupSidebar.querySelectorAll('.mini-nav .mini-nav-item');
+        const sidebarMenus = setupSidebar.querySelectorAll('.sidebarmenu nav');
 
         console.log('Found mini-nav items in setup tab:', miniNavItems.length);
         console.log('Found sidebar menus in setup tab:', sidebarMenus.length);
@@ -464,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(expandActiveMenus, 100);
                 } else {
                     // Only one selected from server, if any
-                    const hasSelected = setupTab.querySelector('.mini-nav .mini-nav-item.selected');
+                    const hasSelected = setupSidebar.querySelector('.mini-nav .mini-nav-item.selected');
                     if (hasSelected) {
                         // Remove selected from all, add only to this one
                         miniNavItems.forEach(function(navItem) {

@@ -94,20 +94,76 @@
 @media (max-width: 767.98px) {
     .programme-index.container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
     .programme-index .card-body.p-4.p-lg-5 { padding: 1rem !important; }
+    /* DataTables: Stack Show entries + Search to prevent overlap */
+    .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:first-child {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .programme-index #coursemaster-table_wrapper .row:first-child > [class*="col-"] {
+        flex: 0 0 auto;
+        max-width: 100%;
+        display: block;
+    }
     .programme-index #coursemaster-table_wrapper .dataTables_length,
     .programme-index #coursemaster-table_wrapper .dataTables_filter {
         text-align: left !important;
+        margin-bottom: 0;
+        display: block;
+        width: 100%;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_length label,
+    .programme-index #coursemaster-table_wrapper .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+        flex-wrap: wrap;
     }
     .programme-index #coursemaster-table_wrapper .dataTables_length select {
-        margin: 0 0.5rem 0 0;
+        margin: 0;
+        min-width: 70px;
+        max-width: 100%;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_filter input {
+        margin-left: 0 !important;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    /* DataTables: Stack count + pagination to prevent overlap */
+    .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:last-child {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .programme-index #coursemaster-table_wrapper .row:last-child > [class*="col-"] {
+        flex: 0 0 auto;
+        max-width: 100%;
+        text-align: center !important;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_info,
+    .programme-index #coursemaster-table_wrapper .dataTables_paginate {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_paginate ul.pagination {
+        justify-content: center !important;
+        flex-wrap: wrap;
     }
     .programme-index .btn-group[role="group"] .btn span { display: inline; }
     /* Stack header: title above actions */
     .programme-index section[role="region"] .col-12.col-md-4 { margin-bottom: 0.75rem; }
     .programme-index section[role="region"] .d-flex.flex-wrap { justify-content: flex-start !important; }
-    /* Filter row: full width, stacked */
+    /* Active/Archived + Add Course: compact on tablet */
+    .programme-index .btn-group[role="group"] .btn { padding: 0.4rem 0.75rem !important; font-size: 0.8125rem; }
+    .programme-index a.btn.btn-primary[href*="programme.create"] { padding: 0.4rem 0.75rem; font-size: 0.8125rem; }
+    /* Filter row: compact reset button */
     .programme-index .row.g-3.mb-4.align-items-end .col-12 { margin-bottom: 0.5rem; }
-    .programme-index .row.g-3.mb-4 .btn-outline-secondary { width: 100%; justify-content: center; }
+    .programme-index .row.g-3.mb-4 .btn-outline-secondary {
+        padding: 0.4rem 0.75rem; font-size: 0.8125rem;
+        width: auto; max-width: 100%; justify-content: center;
+    }
     /* Table horizontal scroll */
     .programme-index .table-responsive { overflow-x: auto !important; overflow-y: visible; -webkit-overflow-scrolling: touch; margin: 0 -0.5rem; }
     .programme-index .table-responsive .table { min-width: 600px; margin-bottom: 0; }
@@ -118,15 +174,64 @@
 @media (max-width: 575.98px) {
     .programme-index.container-fluid { padding-left: 0.375rem !important; padding-right: 0.375rem !important; }
     .programme-index .card-body.p-4.p-lg-5 { padding: 0.75rem !important; }
-    .programme-index .btn-group[role="group"] { flex-direction: column; width: 100%; }
-    .programme-index .btn-group[role="group"] .btn { width: 100%; border-radius: 0.375rem !important; padding: 0.5rem 1rem; }
+    /* Active/Archived: compact inline, smaller text */
+    .programme-index .btn-group[role="group"] { flex-direction: row; width: auto; }
+    .programme-index .btn-group[role="group"] .btn {
+        width: auto; border-radius: 0.375rem !important;
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.75rem;
+    }
     .programme-index .btn-group[role="group"] .btn:first-child,
     .programme-index .btn-group[role="group"] .btn:last-child { border-radius: 0.375rem !important; }
-    .programme-index a.btn.btn-primary[href*="programme.create"] { width: 100%; justify-content: center; }
-    .programme-index .d-flex.flex-wrap.gap-3 { gap: 0.5rem !important; }
+    .programme-index .btn-group[role="group"] .btn i { margin-right: 0.25rem !important; }
+    /* Add Course: compact */
+    .programme-index a.btn.btn-primary[href*="programme.create"] {
+        width: auto; padding: 0.35rem 0.5rem; font-size: 0.75rem;
+    }
+    .programme-index .d-flex.flex-wrap.gap-3 { gap: 0.375rem !important; }
+    /* Reset Filters: compact */
+    .programme-index .row.g-3.mb-4 .btn-outline-secondary {
+        padding: 0.35rem 0.5rem !important; font-size: 0.75rem;
+    }
+    .programme-index .row.g-3.mb-4 .btn-outline-secondary span { font-size: inherit; }
+    /* DataTables: compact stacked layout, no overlap */
+    .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:first-child {
+        gap: 0.5rem;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_length,
+    .programme-index #coursemaster-table_wrapper .dataTables_filter {
+        font-size: 0.8125rem;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_length select {
+        max-width: 90px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_filter input {
+        width: 100% !important;
+        max-width: 100%;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+        box-sizing: border-box;
+    }
+    .programme-index #coursemaster-table_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.35rem 0.5rem;
+        font-size: 0.8125rem;
+    }
     #viewCourseModal .modal-dialog { margin: 0.5rem; max-width: calc(100% - 1rem); }
     #viewCourseModal .modal-body .row.g-3 .col-md-6 { flex: 0 0 100%; max-width: 100%; }
     #viewCourseModal .modal-body .d-flex.align-items-center { flex-wrap: wrap; }
+}
+
+/* Extra small phones - minimal footprint */
+@media (max-width: 400px) {
+    .programme-index .btn-group[role="group"] .btn { padding: 0.3rem 0.4rem !important; font-size: 0.7rem; }
+    .programme-index a.btn.btn-primary[href*="programme.create"] { padding: 0.3rem 0.4rem; font-size: 0.7rem; }
+    .programme-index .row.g-3.mb-4 .btn-outline-secondary { padding: 0.3rem 0.4rem !important; font-size: 0.7rem; }
+    .programme-index .d-flex.flex-wrap.gap-3 { gap: 0.25rem !important; }
+    .programme-index #coursemaster-table_wrapper .dataTables_length,
+    .programme-index #coursemaster-table_wrapper .dataTables_filter { font-size: 0.75rem; }
+    .programme-index #coursemaster-table_wrapper .dataTables_paginate .paginate_button { padding: 0.3rem 0.4rem; font-size: 0.75rem; }
 }
 </style>
 <div class="container-fluid px-3 px-md-4 py-3 programme-index">

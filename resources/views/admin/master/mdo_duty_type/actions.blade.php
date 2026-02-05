@@ -1,4 +1,4 @@
-<div class="d-inline-flex align-items-center gap-2"
+<div class="d-inline-flex align-items-center gap-2 mdo-duty-actions"
      role="group"
      aria-label="MDO Duty Type actions">
 

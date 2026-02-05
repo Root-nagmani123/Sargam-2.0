@@ -401,6 +401,87 @@
 
 /* Tablet portrait */
 @media (max-width: 767.98px) {
+  /* DataTables: Stack Show entries + Search for proper mobile alignment (global) */
+  .body-wrapper .dataTables_wrapper .row:first-child,
+  .body-wrapper .dataTables_wrapper .dt-row:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  .body-wrapper .dataTables_wrapper .row:first-child > [class*="col-"],
+  .body-wrapper .dataTables_wrapper .dt-row:first-child > div {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .body-wrapper .dataTables_length,
+  .body-wrapper .dataTables_filter {
+    text-align: left !important;
+    margin-bottom: 0;
+    display: block;
+    width: 100%;
+  }
+  .body-wrapper .dataTables_length label,
+  .body-wrapper .dataTables_filter label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+  }
+  .body-wrapper .dataTables_length select {
+    margin: 0;
+    min-width: 80px;
+    max-width: 100%;
+    min-height: 38px;
+    padding: 0.375rem 2rem 0.375rem 0.5rem;
+  }
+  .body-wrapper .dataTables_filter input {
+    margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 38px;
+    padding: 0.375rem 0.75rem;
+  }
+  /* DataTables: Stack info + pagination row on mobile */
+  .body-wrapper .dataTables_wrapper .row:last-child,
+  .body-wrapper .dataTables_wrapper .dt-row:last-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  .body-wrapper .dataTables_wrapper .row:last-child > [class*="col-"],
+  .body-wrapper .dataTables_wrapper .dt-row:last-child > div {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+  .body-wrapper .dataTables_info,
+  .body-wrapper .dataTables_paginate {
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 0.8125rem;
+  }
+  .body-wrapper .dataTables_paginate ul.pagination {
+    justify-content: center !important;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .body-wrapper .dataTables_paginate .paginate_button {
+    min-height: 36px;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8125rem;
+  }
+
   .employee-type-index .datatables .card-body {
     padding: 1rem !important;
   }
@@ -874,6 +955,41 @@
 
 /* Phone */
 @media (max-width: 575.98px) {
+  /* DataTables: Extra compact + properly stacked controls on very small phones */
+  .body-wrapper .dataTables_length label,
+  .body-wrapper .dataTables_filter label {
+    font-size: 0.8125rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .body-wrapper .dataTables_length select,
+  .body-wrapper .dataTables_filter input {
+    min-height: 40px;
+    font-size: 0.875rem;
+    width: 100%;
+    max-width: 100%;
+  }
+  .body-wrapper .dataTables_info {
+    font-size: 0.75rem;
+  }
+  .body-wrapper .dataTables_paginate .paginate_button {
+    min-height: 34px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  .body-wrapper .datatables .table-responsive,
+  .body-wrapper .card .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* DataTables header text: keep on single line with horizontal scroll */
+  .body-wrapper table.dataTable thead th {
+    white-space: nowrap;
+    font-size: 0.8125rem;
+  }
+
   /* Class session master - extra small screens */
   .class-session-master-index.container-fluid {
     padding-left: 0.5rem !important;
@@ -905,6 +1021,39 @@
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Pending feedback – students: keep headers/data in single line with horizontal scroll */
+  .pending-feedback-page .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pending-feedback-page .table-responsive .table th,
+  .pending-feedback-page .table-responsive .table td {
+    white-space: nowrap;
+  }
+
+  /* Pending feedback – students: compact header + filters on mobile */
+  .pending-feedback-page .page-header-row {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.25rem;
+  }
+
+  .pending-feedback-page .pending-filters-row {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+
+  .pending-feedback-page .pending-export-actions {
+    text-align: left !important;
+  }
+
+  .pending-feedback-page .pending-export-actions .btn {
+    width: 100%;
+    margin-bottom: 0.25rem;
   }
 
   /* Student course list - extra small screens */
@@ -2271,17 +2420,114 @@
 
 /* Course Group Mapping page - tablet and below */
 @media (max-width: 991.98px) {
-  .group-mapping-index .table-responsive {
-    overflow-x: auto !important;
+  .group-mapping-index .group-mapping-table-section {
+    position: relative;
+    width: 100%;
+  }
+  /* Table wrapper: horizontal scroll for wide table */
+  .group-mapping-index .group-mapping-table-wrapper {
+    position: relative;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    width: 100%;
+    max-width: 100%;
+  }
+  /* Keep Show entries + Search visible when scrolling horizontally - sticky to left */
+  .group-mapping-index .group-mapping-table-wrapper .dataTables_wrapper .row:first-child,
+  .group-mapping-index .group-mapping-table-wrapper .dataTables_wrapper .dt-row:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background: #fff;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.08);
+    width: 100%;
+    min-width: fit-content;
+    box-sizing: border-box;
+  }
+  .group-mapping-index .group-mapping-table-wrapper .dataTables_scrollBody {
+    box-shadow: inset -8px 0 12px -8px rgba(0, 0, 0, 0.08);
+    position: relative;
+  }
+  /* Ensure DataTables scroll structure displays correctly - single scroll on wrapper */
+  .group-mapping-index .group-mapping-table-wrapper .dataTables_scroll {
+    overflow: visible;
+  }
+  .group-mapping-index .group-mapping-scroll-hint {
+    padding: 0.35rem 0.5rem;
+    background: rgba(0, 74, 147, 0.06);
+    border-radius: 0.375rem;
+    font-size: 0.8rem;
+  }
+  .group-mapping-index .group-mapping-table-wrapper .dataTables_scrollBody::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.06), transparent);
+    pointer-events: none;
   }
   .group-mapping-index #group-mapping-table {
     min-width: 700px;
+  }
+  .group-mapping-index #group-mapping-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #004a93;
+    color: #fff;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
+  }
+  .group-mapping-index #group-mapping-table thead th:first-child,
+  .group-mapping-index #group-mapping-table thead th.dtr-control {
+    left: 0;
+    z-index: 3;
+    background: #004a93;
+    color: #fff;
+    box-shadow: 1px 1px 0 0 rgba(255, 255, 255, 0.2);
+  }
+  .group-mapping-index #group-mapping-table tbody td:first-child,
+  .group-mapping-index #group-mapping-table tbody td.dtr-control {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #fff;
+    box-shadow: 1px 0 0 0 #dee2e6;
+  }
+  .group-mapping-index #group-mapping-table tbody tr:hover td:first-child,
+  .group-mapping-index #group-mapping-table tbody tr:hover td.dtr-control {
+    background: #f8f9fa;
+  }
+  .group-mapping-index #group-mapping-table tbody tr.dtr-expanded td:first-child,
+  .group-mapping-index #group-mapping-table tbody tr.dtr-expanded td.dtr-control {
+    background: #f8f9fa;
+  }
+  /* Child row container - ensure list view is visible and not clipped */
+  .group-mapping-index #group-mapping-table tbody tr.child td {
+    padding: 0;
+    border-top: none;
+    overflow: visible;
+  }
+  .group-mapping-index #group-mapping-table tbody tr.child .dtr-details {
+    display: block !important;
   }
   .group-mapping-index #group-mapping-table th,
   .group-mapping-index #group-mapping-table td {
     padding: 8px 10px;
     font-size: 0.9rem;
+  }
+  .group-mapping-index #group-mapping-table tbody tr {
+    border-bottom: 1px solid #eee;
+  }
+  .group-mapping-index #group-mapping-table tbody tr:hover {
+    background-color: rgba(0, 74, 147, 0.04);
   }
   .group-mapping-index .dataTables_wrapper .row:first-child {
     flex-wrap: wrap;
@@ -2295,15 +2541,68 @@
     min-width: 140px;
     max-width: 100%;
   }
+  /* Expand/collapse control - touch friendly */
+  .group-mapping-index .dtr-control {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    cursor: pointer;
+    padding: 0.5rem !important;
+  }
+  .group-mapping-index .dtr-control::before {
+    font-size: 1.1rem;
+  }
+  /* Child row details (list view) - proper alignment and visibility */
+  .group-mapping-index .dtr-details {
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border-left: 3px solid #004a93;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+  .group-mapping-index .dtr-details li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: flex-start;
+  }
+  .group-mapping-index .dtr-details li:last-child {
+    border-bottom: none;
+  }
+  .group-mapping-index .dtr-details .dtr-title {
+    font-weight: 600;
+    min-width: 7rem;
+    color: #495057;
+    flex-shrink: 0;
+  }
+  .group-mapping-index .dtr-details .dtr-data {
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+  }
+  /* Status toggle in table - touch friendly */
+  .group-mapping-index #group-mapping-table .form-check-input {
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+  }
 }
 
 @media (max-width: 767.98px) {
   .group-mapping-index.container-fluid {
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
+    overflow-x: hidden;
   }
   .group-mapping-index .datatables .card-body {
     padding: 1rem !important;
+    overflow-x: hidden;
+  }
+  .group-mapping-index .group-mapping-header-row h4 {
+    font-size: 1.15rem;
   }
   .group-mapping-index .group-mapping-header-row .col-12,
   .group-mapping-index .group-mapping-header-row .col-md-4,
@@ -2311,43 +2610,333 @@
     flex: 0 0 100%;
     max-width: 100%;
   }
+  /* Action buttons: 2-column grid with proper touch targets */
   .group-mapping-index .group-mapping-header-row .d-flex {
-    justify-content: stretch !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    justify-content: stretch;
   }
   .group-mapping-index .group-mapping-header-row .btn {
-    flex: 1 1 140px;
-    min-width: 140px;
+    flex: none;
+    min-width: 0;
+    min-height: 44px;
+    width: 100%;
     justify-content: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  .group-mapping-index .group-mapping-header-row .btn iconify-icon {
+    flex-shrink: 0;
+  }
+  /* Filter section (grouping details): proper stacking and alignment */
+  .group-mapping-index .group-mapping-filters-row {
+    flex-wrap: wrap;
+    padding: 1rem 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    margin-top: 0.5rem;
+    gap: 0;
+    row-gap: 1rem;
   }
   .group-mapping-index .group-mapping-filters-row > [class*="col-"] {
     flex: 0 0 100%;
     max-width: 100%;
+    margin-bottom: 0;
+  }
+  .group-mapping-index .group-mapping-filters-row .form-label {
+    margin-bottom: 0.35rem;
+    display: block;
+  }
+  .group-mapping-index .group-mapping-filters-row .form-select,
+  .group-mapping-index .group-mapping-filters-row #resetFilters {
+    width: 100%;
+    max-width: 100%;
+  }
+  /* Active/Archive first on mobile - show at top of filter section */
+  .group-mapping-index .group-mapping-status-col {
+    order: -1;
+    flex: 0 0 100%;
+    max-width: 100%;
+    text-align: left !important;
+    margin-bottom: 0;
+  }
+  .group-mapping-index .group-mapping-status-col .form-label {
+    margin-bottom: 0.35rem;
+  }
+  .group-mapping-index .group-mapping-status-col .btn-group {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+  }
+  .group-mapping-index .group-mapping-status-col .btn-group .btn {
+    flex: 1;
+    min-height: 44px;
+    font-size: 0.9rem;
   }
   .group-mapping-index .group-mapping-filters-row .btn-group {
     width: 100%;
   }
+  /* Add Student to Group modal - prevent cropping on mobile */
+  .group-mapping-index #addStudentModal .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  .group-mapping-index #addStudentModal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .group-mapping-index #addStudentModal .modal-header,
+  .group-mapping-index #addStudentModal .modal-footer {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+  }
+  .group-mapping-index #addStudentModal .modal-footer .btn {
+    min-height: 44px;
+  }
+  /* Edit Student modal - same mobile fix */
+  .group-mapping-index #editStudentModal .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  .group-mapping-index #editStudentModal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .group-mapping-index #editStudentModal .modal-header,
+  .group-mapping-index #editStudentModal .modal-footer {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+  }
+  .group-mapping-index #editStudentModal .modal-footer .btn {
+    min-height: 44px;
+  }
+  /* Student Details modal - prevent cropping on mobile */
+  .group-mapping-index #studentDetailsModal .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  .group-mapping-index #studentDetailsModal .modal-body {
+    max-height: 65vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .group-mapping-index #studentDetailsModal .modal-header,
+  .group-mapping-index #studentDetailsModal .modal-footer {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+  }
+  .group-mapping-index #studentDetailsModal .modal-footer .btn {
+    min-height: 44px;
+  }
+  .group-mapping-index .group-mapping-filters-row .form-select,
+  .group-mapping-index .group-mapping-filters-row #resetFilters {
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+  /* DataTables: Show entries + Search - proper stacking and alignment */
+  .group-mapping-index .dataTables_wrapper .row:first-child,
+  .group-mapping-index .dataTables_wrapper .dt-row:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  .group-mapping-index .dataTables_wrapper .row:first-child > [class*="col-"],
+  .group-mapping-index .dataTables_wrapper .dt-row:first-child > div {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .group-mapping-index .dataTables_length,
+  .group-mapping-index .dataTables_filter {
+    text-align: left !important;
+    margin-bottom: 0;
+    display: block;
+    width: 100%;
+  }
+  .group-mapping-index .dataTables_length label,
+  .group-mapping-index .dataTables_filter label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+  }
+  .group-mapping-index .dataTables_length select {
+    margin: 0;
+    min-width: 80px;
+    max-width: 100%;
+    min-height: 40px;
+    padding: 0.35rem 1.75rem 0.35rem 0.5rem;
+  }
+  .group-mapping-index .dataTables_filter input {
+    margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 40px;
+    padding: 0.375rem 0.75rem;
+  }
+  /* DataTables bottom bar - tablet */
+  .group-mapping-index .dataTables_wrapper .row:last-child {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .group-mapping-index .dataTables_info {
+    text-align: left;
+  }
+}
+
+/* Tablet: Course + Group Type side by side for space efficiency */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .group-mapping-index .group-mapping-filters-row .col-12.col-md-4:first-child,
+  .group-mapping-index .group-mapping-filters-row .col-12.col-md-3:nth-child(2) {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+  .group-mapping-index .group-mapping-filters-row .col-12.col-md-2,
+  .group-mapping-index .group-mapping-filters-row .col-12.col-md-3.group-mapping-status-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
 }
 
 @media (max-width: 575.98px) {
-  .group-mapping-index .table-responsive {
+  .group-mapping-index.container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    overflow-x: hidden;
+  }
+  .group-mapping-index .datatables .card-body {
+    padding: 0.75rem !important;
+    overflow-x: hidden;
+  }
+  .group-mapping-index .group-mapping-header-row h4 {
+    font-size: 1.05rem;
+  }
+  .group-mapping-index .group-mapping-header-row .d-flex {
+    gap: 0.4rem;
+  }
+  .group-mapping-index .group-mapping-header-row .btn {
+    font-size: 0.8125rem;
+    padding: 0.45rem 0.5rem;
+    min-height: 42px;
+  }
+  .group-mapping-index .group-mapping-header-row .btn iconify-icon {
+    width: 1em !important;
+    height: 1em !important;
+  }
+  .group-mapping-index .group-mapping-filters-row {
+    padding: 0.75rem 0;
+    gap: 0;
+    row-gap: 0.75rem;
+  }
+  .group-mapping-index .group-mapping-filters-row .form-label {
+    font-size: 0.875rem;
+  }
+  /* DataTables Show entries + Search - compact on small phones */
+  .group-mapping-index .dataTables_length label,
+  .group-mapping-index .dataTables_filter label {
+    font-size: 0.8125rem;
+  }
+  .group-mapping-index .dataTables_length select {
+    max-width: 90px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+  .group-mapping-index .dataTables_filter input {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+  .group-mapping-index .group-mapping-status-col .btn-group .btn {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+    min-height: 42px;
+  }
+  .group-mapping-index .group-mapping-table-wrapper {
     margin-left: -0.5rem;
     margin-right: -0.5rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
-    box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+    box-shadow: inset -10px 0 12px -10px rgba(0,0,0,0.08);
+    border-radius: 0.5rem;
   }
   .group-mapping-index #group-mapping-table {
-    min-width: 750px;
+    min-width: 600px;
   }
   .group-mapping-index #group-mapping-table th,
   .group-mapping-index #group-mapping-table td {
     padding: 6px 8px;
     font-size: 0.82rem;
   }
+  .group-mapping-index .dtr-control {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+  .group-mapping-index .dtr-details {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  .group-mapping-index .dtr-details .dtr-title {
+    min-width: 6rem;
+    font-size: 0.8125rem;
+  }
+  /* Action buttons in table - touch friendly */
+  .group-mapping-index #group-mapping-table .btn-sm {
+    min-height: 36px;
+    padding: 0.35rem 0.5rem;
+  }
+  .group-mapping-index #group-mapping-table .d-inline-flex.gap-2 {
+    flex-wrap: wrap;
+    gap: 0.35rem !important;
+  }
+  .group-mapping-index #group-mapping-table a[class*="view-student"] i,
+  .group-mapping-index #group-mapping-table a[href*="export"] i {
+    font-size: 1.5rem !important;
+  }
+  .group-mapping-index #group-mapping-table .form-check-input {
+    min-width: 36px;
+    min-height: 36px;
+  }
   .group-mapping-index .group-mapping-header-row .btn,
   .group-mapping-index .group-mapping-filters-row .btn,
   .group-mapping-index .group-mapping-filters-row .form-select {
     width: 100%;
+  }
+  /* DataTables bottom bar - stack on mobile */
+  .group-mapping-index .dataTables_wrapper .row:last-child {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .group-mapping-index .dataTables_info {
+    font-size: 0.8rem;
+    text-align: center;
+    margin-bottom: 0;
+    order: 1;
+  }
+  .group-mapping-index .dataTables_paginate {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    justify-content: center;
+    order: 2;
+  }
+  .group-mapping-index .dataTables_paginate .paginate_button {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.85rem;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .group-mapping-index .dataTables_paginate .paginate_button.previous,
+  .group-mapping-index .dataTables_paginate .paginate_button.next {
+    min-width: 44px;
   }
 }
 
@@ -2887,6 +3476,98 @@
 @media (max-width: 380px) {
   .fc-registration-master-list .table-responsive #fcregistrationmasterlistdatable-table {
     min-width: 750px;
+  }
+}
+
+/* ========== Student Medical Exemption - mobile ========== */
+@media (max-width: 991.98px) {
+  .student-medical-exemption-index .dataTables_wrapper .row:first-child {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .student-medical-exemption-index .dataTables_length,
+  .student-medical-exemption-index .dataTables_filter {
+    margin-bottom: 0.5rem;
+  }
+  .student-medical-exemption-index .dataTables_filter input {
+    min-width: 140px;
+    max-width: 100%;
+  }
+  /* Medical Speciality column - vertical alignment */
+  .student-medical-exemption-index #medicalExemptionTable th,
+  .student-medical-exemption-index #medicalExemptionTable td {
+    vertical-align: middle !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .student-medical-exemption-index .dataTables_wrapper .row:first-child,
+  .student-medical-exemption-index .dataTables_wrapper .dt-row:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  .student-medical-exemption-index .dataTables_wrapper .row:first-child > [class*="col-"],
+  .student-medical-exemption-index .dataTables_wrapper .dt-row:first-child > div {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .student-medical-exemption-index .dataTables_length,
+  .student-medical-exemption-index .dataTables_filter {
+    text-align: left !important;
+    margin-bottom: 0;
+    display: block;
+    width: 100%;
+  }
+  .student-medical-exemption-index .dataTables_length label,
+  .student-medical-exemption-index .dataTables_filter label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+  }
+  .student-medical-exemption-index .dataTables_length select {
+    margin: 0;
+    min-width: 80px;
+    max-width: 100%;
+    min-height: 40px;
+    padding: 0.35rem 1.75rem 0.35rem 0.5rem;
+  }
+  .student-medical-exemption-index .dataTables_filter input {
+    margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 40px;
+    padding: 0.375rem 0.75rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .student-medical-exemption-index .dataTables_length label,
+  .student-medical-exemption-index .dataTables_filter label {
+    font-size: 0.8125rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .student-medical-exemption-index .dataTables_length select {
+    max-width: 100%;
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+  .student-medical-exemption-index .dataTables_filter input {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
   }
 }
 

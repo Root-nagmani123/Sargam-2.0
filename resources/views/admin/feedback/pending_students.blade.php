@@ -2,10 +2,10 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid pending-feedback-page">
 
     <!-- Page Header -->
-  <div class="row mb-3 align-items-center">
+  <div class="row mb-3 align-items-center page-header-row">
     <div class="col-md-6">
         <h4 class="mb-0">Pending Feedback – Students</h4>
         <small class="text-muted">Total: {{ $pendingStudents->total() }} records</small>
@@ -25,7 +25,7 @@
         <div class="card-body">
             <form id="exportForm" method="POST">
                 @csrf
-                <div class="row align-items-end">
+                <div class="row align-items-end g-2 pending-filters-row">
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Filter by Course</label>
                         <select id="course_filter" name="course_pk" class="form-select">
@@ -40,8 +40,8 @@
                             @endisset
                         </select>
                     </div>
-                    <div class="col-md-8 text-end">
-                        <button type="button" id="export_pdf" class="btn btn-primary">
+                    <div class="col-md-8 text-end pending-export-actions">
+                        <button type="button" id="export_pdf" class="btn btn-primary me-1">
                             <i class="fas fa-file-pdf"></i> Export PDF
                         </button>
                         <button type="button" id="export_excel" class="btn btn-success">

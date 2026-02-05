@@ -2,14 +2,14 @@
 @section('title', 'Generate New ID Card - Sargam | Lal Bahadur Shastri')
 @section('setup_content')
 <div class="container-fluid idcard-create-page">
-<x-breadcrum title="Generate New ID Card"></x-breadcrum>
+    <x-breadcrum title="Generate New ID Card"></x-breadcrum>
 
     <form action="{{ route('admin.employee_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="idcardForm" novalidate>
         @csrf
 
-        <!-- Employee Type Selection Card -->
-        <div class="card idcard-create-type-card mb-4">
-            <div class="card-body py-3 px-4">
+            <!-- Employee Type Selection Card - Bootstrap 5.3 -->
+        <div class="card idcard-create-type-card mb-4 border-0 shadow-sm overflow-hidden">
+            <div class="card-body py-4 px-4">
                 <div class="d-flex flex-wrap gap-4 align-items-center">
                     <div class="form-check idcard-radio-option mb-0">
                         <input class="form-check-input" type="radio" name="employee_type" id="permanent" value="Permanent Employee"
@@ -25,9 +25,9 @@
             </div>
         </div>
 
-        <!-- Request Form Card -->
-        <div class="card idcard-create-form-card mb-4">
-            <div class="card-body p-4">
+        <!-- Request Form Card - Bootstrap 5.3 -->
+        <div class="card idcard-create-form-card mb-4 border-0 shadow overflow-hidden">
+            <div class="card-body p-4 p-lg-5">
                 <h6 class="idcard-form-title mb-4">Please add the Request For Employee ID Card</h6>
 
                 @php
@@ -73,8 +73,17 @@
                                 <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
                                 <option value="Family ID Card" {{ $oldRequestFor == 'Family ID Card' ? 'selected' : '' }}>Family ID Card</option>
                                 <option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
+                                <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
+                                <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option>
                             </select>
                             @error('request_for')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-12 duplication-extension-field" id="duplicationExtensionPerm" style="{{ in_array($oldRequestFor, ['Replacement', 'Duplication', 'Extension']) ? '' : 'display:none;' }}">
+                            <button type="button" class="btn btn-outline-warning btn-sm" id="openDuplicationModalPerm" data-bs-toggle="modal" data-bs-target="#duplicationExtensionModal">
+                                <i class="material-icons material-symbols-rounded align-middle" style="font-size:18px;">edit_note</i>
+                                Fill Duplication / Extension Details
+                            </button>
+                            <span class="ms-2 small text-muted" id="duplicationSummaryPerm"></span>
                         </div>
                         <div class="col-md-6">
                             <label for="name_perm" class="form-label">Name <span class="text-danger">*</span></label>
@@ -122,12 +131,12 @@
                             </select>
                             @error('blood_group')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-6">
                             <label for="id_card_valid_upto_perm" class="form-label">ID Card Valid Upto</label>
                             <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
                             @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
                             <div class="idcard-upload-zone position-relative" id="photoUploadAreaPerm">
                                 <input type="file" name="photo" id="photo_perm" class="d-none idcard-perm-field" data-field="photo" accept="image/*" required>
@@ -140,7 +149,29 @@
                                     <button type="button" class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="photoRemovePerm" aria-label="Remove photo">&times;</button>
                                 </div>
                             </div>
+                            <small class="text-muted">Photo should be in JPG/PNG format and should be less than 2MB</small>
                             @error('photo')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Upload Joining Letter <span class="text-danger">*</span></label>
+                            <div class="idcard-upload-zone position-relative" id="joiningLetterUploadAreaPerm">
+                                <input type="file" name="joining_letter" id="joining_letter_perm" class="d-none idcard-perm-field" data-field="joining_letter" accept=".pdf,.doc,.docx">
+                                <div class="idcard-upload-placeholder" id="joiningLetterPlaceholderPerm">
+                                    <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
+                                    <p class="mt-2 mb-0">Click to upload or drag and drop</p>
+                                </div>
+                                <div class="idcard-upload-preview idcard-doc-preview d-none" id="joiningLetterPreviewPerm">
+                                    <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
+                                    <span class="idcard-doc-name" id="joiningLetterFileNamePerm"></span>
+                                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="joiningLetterPreviewBtnPerm" aria-label="Preview joining letter">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">visibility</i> Preview
+                                        </button>
+                                        <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="joiningLetterRemovePerm" aria-label="Remove joining letter">&times;</button>
+                                    </div>
+                                </div>
+                            </div>
+                            @error('joining_letter')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                     </div>
                 </div>
@@ -173,7 +204,16 @@
                                 <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
                                 <option value="Family ID Card" {{ $oldRequestFor == 'Family ID Card' ? 'selected' : '' }}>Family ID Card</option>
                                 <option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
+                                <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
+                                <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option>
                             </select>
+                        </div>
+                        <div class="col-12 duplication-extension-field" id="duplicationExtensionCont" style="{{ in_array($oldRequestFor, ['Replacement', 'Duplication', 'Extension']) ? '' : 'display:none;' }}">
+                            <button type="button" class="btn btn-outline-warning btn-sm idcard-cont-field" id="openDuplicationModalCont" data-bs-toggle="modal" data-bs-target="#duplicationExtensionModal" disabled>
+                                <i class="material-icons material-symbols-rounded align-middle" style="font-size:18px;">edit_note</i>
+                                Fill Duplication / Extension Details
+                            </button>
+                            <span class="ms-2 small text-muted" id="duplicationSummaryCont"></span>
                         </div>
                         <div class="col-md-6">
                             <label for="name_cont" class="form-label">Name <span class="text-danger">*</span></label>
@@ -260,6 +300,27 @@
                             </div>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label">Upload Joining Letter</label>
+                            <div class="idcard-upload-zone position-relative" id="joiningLetterUploadAreaCont">
+                                <input type="file" name="joining_letter" id="joining_letter_cont" class="d-none idcard-cont-field" accept=".pdf,.doc,.docx" disabled>
+                                <div class="idcard-upload-placeholder" id="joiningLetterPlaceholderCont">
+                                    <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
+                                    <p class="mt-2 mb-0">Click to upload or drag and drop</p>
+                                </div>
+                                <div class="idcard-upload-preview idcard-doc-preview d-none" id="joiningLetterPreviewCont">
+                                    <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
+                                    <span class="idcard-doc-name" id="joiningLetterFileNameCont"></span>
+                                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="joiningLetterPreviewBtnCont" aria-label="Preview joining letter">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">visibility</i> Preview
+                                        </button>
+                                        <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="joiningLetterRemoveCont" aria-label="Remove joining letter">&times;</button>
+                                    </div>
+                                </div>
+                            </div>
+                            @error('joining_letter')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Upload Documents (if any)</label>
                             <div class="idcard-upload-zone position-relative" id="documentsUploadArea">
                                 <input type="file" name="documents" id="documents" class="d-none @error('documents') is-invalid @enderror" accept=".pdf,.doc,.docx" disabled>
@@ -290,13 +351,96 @@
                 <!-- Required Fields Note -->
                 <p class="small text-danger mt-4 mb-0">*Required Fields: All marked fields are mandatory for registration</p>
 
-                <!-- Action Buttons -->
-                <div class="d-flex gap-2 justify-content-end mt-4 pt-3 border-top">
-                    <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-outline-primary px-4">Cancel</a>
-                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                <!-- Action Buttons - Bootstrap 5.3 -->
+                <div class="d-flex gap-2 justify-content-end mt-4 pt-4 border-top">
+                    <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-outline-secondary px-4 rounded-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4 rounded-2">
+                        <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:18px;">save</i>
+                        Save
+                    </button>
                 </div>
             </div>
         </div>
+
+        <!-- Duplication / Extension Modal (inside form for submission) -->
+    <div class="modal fade" id="duplicationExtensionModal" tabindex="-1" aria-labelledby="duplicationExtensionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3 overflow-hidden">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="duplicationExtensionModalLabel">
+                        <i class="material-icons material-symbols-rounded align-middle me-2">content_copy</i>
+                        Add Duplicate / Extension ID Card Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Fill the following details for Duplication (Expired / Lost / Damaged) or Extension requests.</p>
+                    <div class="row g-3">
+                        <div class="col-md-6" id="duplicationReasonField">
+                            <label for="duplication_reason_modal" class="form-label">Reason for Applying Duplicate Card <span class="text-danger">*</span></label>
+                            <select name="duplication_reason" id="duplication_reason_modal" class="form-select">
+                                <option value="">Select Reason</option>
+                                <option value="Expired Card" {{ old('duplication_reason') == 'Expired Card' ? 'selected' : '' }}>Expired Card</option>
+                                <option value="Lost" {{ old('duplication_reason') == 'Lost' ? 'selected' : '' }}>Card Lost</option>
+                                <option value="Damage" {{ old('duplication_reason') == 'Damage' ? 'selected' : '' }}>Card Damaged</option>
+                            </select>
+                            @error('duplication_reason')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_card_number_modal" class="form-label">ID Card Number</label>
+                            <input type="text" name="id_card_number" id="id_card_number_modal" class="form-control" value="{{ old('id_card_number') }}" placeholder="e.g. NOP00148">
+                            @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_card_valid_from_modal" class="form-label">ID Card Valid From</label>
+                            <input type="text" name="id_card_valid_from" id="id_card_valid_from_modal" class="form-control" value="{{ old('id_card_valid_from') }}" placeholder="DD/MM/YYYY">
+                            @error('id_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_card_valid_upto_modal" class="form-label">ID Card Valid Upto <span class="text-muted">(New validity for Extension)</span></label>
+                            <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_modal" class="form-control" value="{{ old('id_card_valid_upto', $oldIdValid ?? '') }}" placeholder="DD/MM/YYYY">
+                            @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6" id="firReceiptField" style="display:none;">
+                            <label class="form-label">Upload FIR (First Information Report) <span class="text-danger">*</span> <span class="text-muted">(Required when Card Lost)</span></label>
+                            <div class="idcard-upload-zone position-relative" id="firReceiptUploadArea">
+                                <input type="file" name="fir_receipt" id="fir_receipt_modal" class="d-none" accept=".pdf,.doc,.docx,image/*">
+                                <div class="idcard-upload-placeholder" id="firReceiptPlaceholder">
+                                    <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
+                                    <p class="mt-2 mb-0 small">Upload FIR filed against lost card</p>
+                                </div>
+                                <div class="idcard-upload-preview idcard-doc-preview d-none" id="firReceiptPreview">
+                                    <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
+                                    <span class="idcard-doc-name" id="firReceiptFileName"></span>
+                                    <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="firReceiptRemove">&times;</button>
+                                </div>
+                            </div>
+                            @error('fir_receipt')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Upload Payment Receipt</label>
+                            <div class="idcard-upload-zone position-relative" id="paymentReceiptUploadArea">
+                                <input type="file" name="payment_receipt" id="payment_receipt_modal" class="d-none" accept=".pdf,.doc,.docx,image/*">
+                                <div class="idcard-upload-placeholder" id="paymentReceiptPlaceholder">
+                                    <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
+                                    <p class="mt-2 mb-0 small">Click to upload</p>
+                                </div>
+                                <div class="idcard-upload-preview idcard-doc-preview d-none" id="paymentReceiptPreview">
+                                    <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
+                                    <span class="idcard-doc-name" id="paymentReceiptFileName"></span>
+                                    <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="paymentReceiptRemove">&times;</button>
+                                </div>
+                            </div>
+                            @error('payment_receipt')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-top">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     </form>
 </div>
 
@@ -375,6 +519,7 @@
 .idcard-doc-preview { flex-direction: column; gap: 0.5rem; }
 .idcard-doc-icon { font-size: 3rem !important; color: #6c757d; }
 .idcard-doc-name { font-size: 0.875rem; color: #495057; text-align: center; word-break: break-all; padding: 0 1.5rem; }
+.duplication-reason-field .form-select.w-auto { min-width: 180px; }
 </style>
 
 <script>
@@ -416,6 +561,101 @@
     contRad.addEventListener('change', showContractual);
     if (contRad.checked) showContractual();
     else showPermanent();
+
+    function toggleDuplicationExtension() {
+        var reqPerm = document.getElementById('request_for_perm');
+        var reqCont = document.getElementById('request_for_cont');
+        var dupPerm = document.getElementById('duplicationExtensionPerm');
+        var dupCont = document.getElementById('duplicationExtensionCont');
+        var showDup = ['Replacement', 'Duplication', 'Extension'];
+        var isDupExt = (reqPerm && showDup.includes(reqPerm.value)) || (reqCont && showDup.includes(reqCont.value));
+        if (dupPerm) dupPerm.style.display = (reqPerm && showDup.includes(reqPerm.value)) ? '' : 'none';
+        if (dupCont) dupCont.style.display = (reqCont && showDup.includes(reqCont.value)) ? '' : 'none';
+        var openBtnCont = document.getElementById('openDuplicationModalCont');
+        if (openBtnCont) openBtnCont.disabled = !(reqCont && showDup.includes(reqCont.value));
+        var modalInputs = ['duplication_reason_modal', 'id_card_number_modal', 'id_card_valid_from_modal', 'id_card_valid_upto_modal', 'fir_receipt_modal', 'payment_receipt_modal'];
+        modalInputs.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.disabled = !isDupExt;
+        });
+        var permValid = document.getElementById('id_card_valid_upto_perm');
+        var contValid = document.getElementById('id_card_valid_upto_cont');
+        if (permValid) permValid.disabled = (reqPerm && showDup.includes(reqPerm.value));
+        if (contValid) contValid.disabled = (reqCont && showDup.includes(reqCont.value));
+    }
+    document.getElementById('request_for_perm').addEventListener('change', toggleDuplicationExtension);
+    document.getElementById('request_for_cont').addEventListener('change', toggleDuplicationExtension);
+    toggleDuplicationExtension();
+
+    document.getElementById('duplication_reason_modal').addEventListener('change', function() {
+        var firField = document.getElementById('firReceiptField');
+        firField.style.display = this.value === 'Lost' ? '' : 'none';
+    });
+    if (document.getElementById('duplication_reason_modal').value) {
+        document.getElementById('duplication_reason_modal').dispatchEvent(new Event('change'));
+    }
+
+    document.getElementById('duplicationExtensionModal').addEventListener('shown.bs.modal', function() {
+        document.getElementById('duplication_reason_modal').dispatchEvent(new Event('change'));
+    });
+    document.getElementById('duplicationExtensionModal').addEventListener('hidden.bs.modal', function() {
+        var reason = document.getElementById('duplication_reason_modal').value;
+        var validFrom = document.getElementById('id_card_valid_from_modal').value;
+        var validUpto = document.getElementById('id_card_valid_upto_modal').value;
+        var summary = [reason, validFrom, validUpto].filter(Boolean).join(' | ') || 'Not filled';
+        document.getElementById('duplicationSummaryPerm').textContent = summary ? '(' + summary + ')' : '';
+        document.getElementById('duplicationSummaryCont').textContent = summary ? '(' + summary + ')' : '';
+        var reqPerm = document.getElementById('request_for_perm');
+        if (reqPerm && ['Duplication', 'Extension'].includes(reqPerm.value)) {
+            var permValid = document.getElementById('id_card_valid_upto_perm');
+            if (permValid) permValid.value = validUpto;
+        }
+        var reqCont = document.getElementById('request_for_cont');
+        if (reqCont && ['Duplication', 'Extension'].includes(reqCont.value)) {
+            var contValid = document.getElementById('id_card_valid_upto_cont');
+            if (contValid) contValid.value = validUpto;
+        }
+    });
+
+    function showDocPreviewModal(input, placeholderId, previewId, fileNameId) {
+        var placeholder = document.getElementById(placeholderId);
+        var preview = document.getElementById(previewId);
+        var fileNameEl = document.getElementById(fileNameId);
+        if (!input.files || !input.files[0]) return;
+        var file = input.files[0];
+        if (placeholder) placeholder.classList.add('d-none');
+        if (preview) { preview.classList.remove('d-none'); if (fileNameEl) fileNameEl.textContent = file.name; }
+    }
+    function clearDocPreviewModal(placeholderId, previewId, fileNameId) {
+        var placeholder = document.getElementById(placeholderId);
+        var preview = document.getElementById(previewId);
+        var fileNameEl = document.getElementById(fileNameId);
+        if (placeholder) placeholder.classList.remove('d-none');
+        if (preview) preview.classList.add('d-none');
+        if (fileNameEl) fileNameEl.textContent = '';
+    }
+    document.getElementById('fir_receipt_modal').addEventListener('change', function() {
+        showDocPreviewModal(this, 'firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
+    });
+    document.getElementById('payment_receipt_modal').addEventListener('change', function() {
+        showDocPreviewModal(this, 'paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
+    });
+    document.getElementById('firReceiptRemove').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('fir_receipt_modal').value = '';
+        clearDocPreviewModal('firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
+    });
+    document.getElementById('paymentReceiptRemove').addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById('payment_receipt_modal').value = '';
+        clearDocPreviewModal('paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
+    });
+    document.getElementById('firReceiptUploadArea').addEventListener('click', function(e) {
+        if (!e.target.closest('button')) document.getElementById('fir_receipt_modal').click();
+    });
+    document.getElementById('paymentReceiptUploadArea').addEventListener('click', function(e) {
+        if (!e.target.closest('button')) document.getElementById('payment_receipt_modal').click();
+    });
 
     function showPhotoPreview(input, placeholderId, previewId, imgId) {
         var placeholder = document.getElementById(placeholderId);
@@ -474,6 +714,30 @@
     document.getElementById('documents').addEventListener('change', function() {
         showDocPreview(this, 'documentsPlaceholder', 'documentsPreview', 'documentsFileName');
     });
+    document.getElementById('joining_letter_perm').addEventListener('change', function() {
+        showDocPreview(this, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+    });
+    document.getElementById('joining_letter_cont').addEventListener('change', function() {
+        showDocPreview(this, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+    });
+
+    function openDocPreview(inputId) {
+        var input = document.getElementById(inputId);
+        if (!input || !input.files || !input.files[0]) return;
+        var file = input.files[0];
+        var url = URL.createObjectURL(file);
+        window.open(url, '_blank', 'noopener,noreferrer');
+        setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+    }
+
+    document.getElementById('joiningLetterPreviewBtnPerm').addEventListener('click', function(e) {
+        e.stopPropagation();
+        openDocPreview('joining_letter_perm');
+    });
+    document.getElementById('joiningLetterPreviewBtnCont').addEventListener('click', function(e) {
+        e.stopPropagation();
+        openDocPreview('joining_letter_cont');
+    });
 
     document.getElementById('photoRemovePerm').addEventListener('click', function(e) {
         e.stopPropagation();
@@ -493,10 +757,24 @@
         input.value = '';
         clearDocPreview('documentsPlaceholder', 'documentsPreview', 'documentsFileName');
     });
+    document.getElementById('joiningLetterRemovePerm').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var input = document.getElementById('joining_letter_perm');
+        input.value = '';
+        clearDocPreview('joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+    });
+    document.getElementById('joiningLetterRemoveCont').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var input = document.getElementById('joining_letter_cont');
+        input.value = '';
+        clearDocPreview('joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+    });
 
     var uploadAreas = [
         { areaId: 'photoUploadAreaPerm', inputId: 'photo_perm' },
         { areaId: 'photoUploadAreaCont', inputId: 'photo_cont' },
+        { areaId: 'joiningLetterUploadAreaPerm', inputId: 'joining_letter_perm' },
+        { areaId: 'joiningLetterUploadAreaCont', inputId: 'joining_letter_cont' },
         { areaId: 'documentsUploadArea', inputId: 'documents' }
     ];
     uploadAreas.forEach(function(item) {
@@ -504,7 +782,7 @@
         var input = document.getElementById(item.inputId);
         if (!area || !input) return;
         area.addEventListener('click', function(e) {
-            if (e.target.closest('.idcard-preview-remove')) return;
+            if (e.target.closest('button')) return;
             if (!input.disabled) input.click();
         });
         area.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('idcard-upload-zone-active'); });
@@ -516,6 +794,8 @@
                 input.files = files;
                 if (item.inputId === 'photo_perm') showPhotoPreview(input, 'photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
                 else if (item.inputId === 'photo_cont') showPhotoPreview(input, 'photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
+                else if (item.inputId === 'joining_letter_perm') showDocPreview(input, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+                else if (item.inputId === 'joining_letter_cont') showDocPreview(input, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
                 else showDocPreview(input, 'documentsPlaceholder', 'documentsPreview', 'documentsFileName');
             }
             this.classList.remove('idcard-upload-zone-active');
