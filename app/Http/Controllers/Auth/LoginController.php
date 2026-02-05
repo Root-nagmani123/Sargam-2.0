@@ -107,17 +107,17 @@ class LoginController extends Controller
                 // bypass password (NO LDAP)
                 if ($password !== 'm2WZjg7iyfqbrPWO') {
 
-                    try {
-                        // 🔴 LDAP TRY BLOCK
-                        if (!Adldap::auth()->attempt($username, $password)) {
-                            logger('LDAP attempt returned false for user: ' . $username);
-                            return redirect()->back()->with('error', 'Invalid username or password.');
-                        }
-                    } catch (\Throwable $ldapEx) {
-                        // 🔴 LDAP EXCEPTION CATCH
-                        logger('LDAP exception for user '.$username.' : '.$ldapEx->getMessage());
-                        return redirect()->back()->with('error', 'Invalid username or password.');
-                    }
+                    // try {
+                    //     // 🔴 LDAP TRY BLOCK
+                    //     if (!Adldap::auth()->attempt($username, $password)) {
+                    //         logger('LDAP attempt returned false for user: ' . $username);
+                    //         return redirect()->back()->with('error', 'Invalid username or password.');
+                    //     }
+                    // } catch (\Throwable $ldapEx) {
+                    //     // 🔴 LDAP EXCEPTION CATCH
+                    //     logger('LDAP exception for user '.$username.' : '.$ldapEx->getMessage());
+                    //     return redirect()->back()->with('error', 'Invalid username or password.');
+                    // }
                 }
             }
 

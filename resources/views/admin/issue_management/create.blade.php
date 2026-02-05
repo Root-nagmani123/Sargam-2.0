@@ -89,53 +89,25 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Category <span class="text-danger">*</span></label>
-                                <select name="issue_category_master_pk" id="issue_category" class="form-select" required>
-                                    <option value="">Select Category</option>
+                                <label class="form-label">Complaint Category <span class="text-danger">*</span></label>
+                                <select name="issue_category_id" id="issue_category" class="form-select" required>
+                                    <option value="">- select -</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
                                     @endforeach
                                 </select>
-                                @error('issue_category_master_pk')
+                                @error('issue_category_id')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Sub-Categories</label>
-                                <select name="sub_categories[]" id="sub_categories" class="form-select" multiple>
-                                    <option value="">Select sub-categories</option>
+                                <label class="form-label">Complaint Sub-Category <span class="text-danger">*</span></label>
+                                <select name="issue_sub_category_id" id="sub_categories" class="form-select" required>
+                                    <option value="">-- Select --</option>
                                 </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Priority <span class="text-danger">*</span></label>
-                                <select name="issue_priority_master_pk" class="form-select" required>
-                                    <option value="">Select Priority</option>
-                                    @foreach($priorities as $priority)
-                                        <option value="{{ $priority->pk }}">{{ $priority->priority }}</option>
-                                    @endforeach
-                                </select>
-                                @error('issue_priority_master_pk')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Reproducibility <span class="text-danger">*</span></label>
-                                <select name="issue_reproducibility_master_pk" class="form-select" required>
-                                    <option value="">Select Reproducibility</option>
-                                    @foreach($reproducibilities as $reproducibility)
-                                        <option value="{{ $reproducibility->pk }}">{{ $reproducibility->reproducibility_name }}</option>
-                                    @endforeach
-                                </select>
-                                @error('issue_reproducibility_master_pk')
+                                @error('issue_sub_category_id')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -145,41 +117,89 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Reported Behalf <span class="text-danger">*</span></label>
-                                <select name="behalf" class="form-select" required>
-                                    <option value="1">MySelf</option>
-                                    <option value="0">Centcom (On behalf of someone)</option>
+                                <label class="form-label">Complainant <span class="text-danger">*</span></label>
+                                <select name="created_by" id="complainant" class="form-select" required>
+                                    <option value="">- Select -</option>
+                                    @if(isset($employees))
+                                        @foreach($employees as $employee)
+                                            <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}">{{ $employee->employee_name }}</option>
+                                        @endforeach
+                                    @endif
                                 </select>
+                                @error('created_by')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Location Type <span class="text-danger">*</span></label>
-                                <select name="location_type" id="location_type" class="form-select" required>
-                                    <option value="other">Other</option>
-                                    <option value="building">Building</option>
-                                    <option value="hostel">Hostel</option>
+                                <label class="form-label">Mobile Number</label>
+                                <input type="text" class="form-control" placeholder="Auto-filled" readonly id="mobile_number" name="mobile_number">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nodal Employee <span class="text-danger">*</span></label>
+                                <select name="nodal_employee_id" id="nodal_employee" class="form-select" required>
+                                    <option value="">- Select Category First -</option>
                                 </select>
+                                @error('nodal_employee_id')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Sub Category Name <span class="text-danger">*</span></label>
+                                <input type="text" name="sub_category_name" id="sub_category_name" class="form-control" placeholder="Sub category name will auto-fill" readonly required>
+                                @error('sub_category_name')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Description <span class="text-danger">*</span></label>
-                        <textarea name="description" id="description" class="form-control" rows="5" maxlength="1000" placeholder="Type your message here......" required>{{ old('description') }}</textarea>
+                        <label class="form-label">Detail Description <span class="text-danger">*</span></label>
+                        <textarea name="description" id="description" class="form-control" rows="5" maxlength="1000" placeholder="Enter Detailed Description" required>{{ old('description') }}</textarea>
                         <div class="char-counter"><span id="char-count">0</span>/1000 Character</div>
                         @error('description')
                             <div class="text-danger small mt-1">{{ $message }}</div>
                         @enderror
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Location <span class="text-danger">*</span></label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="location" id="loc_hostel" value="H" required {{ old('location') == 'H' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="loc_hostel">Hostel</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="location" id="loc_other" value="O" {{ old('location') == 'O' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="loc_other">Others</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="location" id="loc_residential" value="R" {{ old('location') == 'R' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="loc_residential">Residential</label>
+                            </div>
+                        </div>
+                        @error('location')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     <div id="building_section" class="d-none">
+                        <h6 class="mt-3 mb-3">Building Details</h6>
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label class="form-label">Building</label>
-                                    <select name="building_master_pk" class="form-select">
-                                        <option value="">Select Building</option>
+                                    <label class="form-label">Building/Hostel <span class="text-danger">*</span></label>
+                                    <select name="building_master_pk" id="building_select" class="form-select">
+                                        <option value="">-- Select --</option>
                                         @foreach($buildings as $building)
                                             <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
                                         @endforeach
@@ -188,72 +208,31 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label class="form-label">Floor</label>
-                                    <input type="text" name="floor_name" class="form-control" placeholder="Select Floor">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Room</label>
-                                    <input type="text" name="room_name" class="form-control" placeholder="Room">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="hostel_section" class="d-none">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Hostel</label>
-                                    <select name="hostel_building_master_pk" class="form-select">
-                                        <option value="">Select Hostel</option>
-                                        @foreach($hostels as $hostel)
-                                            <option value="{{ $hostel->pk }}">{{ $hostel->hostel_name }}</option>
-                                        @endforeach
+                                    <label class="form-label">Floor Name/Type :</label>
+                                    <select id="floor_select" class="form-select" name="floor_id">
+                                        <option value="">Select Floor Name</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label class="form-label">Floor</label>
-                                    <input type="text" name="floor_name" class="form-control" placeholder="Select Floor">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Room</label>
-                                    <input type="text" name="room_name" class="form-control" placeholder="Room">
+                                    <label class="form-label">Room No/House No. :</label>
+                                    <select name="room_name" id="room_select" class="form-select">
+                                        <option value="">Select Room</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Location Details</label>
-                        <input type="text" name="location" class="form-control" value="{{ old('location') }}" placeholder="Select Location">
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Attach Document (Optional)</label>
-                                <input type="file" name="document" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-                                <small class="text-muted">Max size: 5MB. Allowed: PDF, JPG, PNG, DOC, DOCX</small>
-                            </div>
-                        </div>
+                    <div class="row g-3 mt-3">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Attach Image (Optional)</label>
-                                <input type="file" name="image" class="form-control" accept=".jpg,.jpeg,.png">
-                                <small class="text-muted">Max size: 5MB. Allowed: JPG, PNG</small>
+                                <input type="file" name="complaint_img_url" class="form-control" accept=".jpg,.jpeg,.png" multiple>
+                                <small class="text-muted">Max size: 5MB per file. Allowed: JPG, PNG</small>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label">Remarks</label>
-                        <textarea name="remark" class="form-control" rows="2" placeholder="Type your message here......">{{ old('remark') }}</textarea>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 pt-2">
@@ -268,6 +247,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
     // Character counter for description (max 1000)
@@ -281,31 +261,160 @@ $(document).ready(function() {
     // Load sub-categories when category changes
     $('#issue_category').change(function() {
         var categoryId = $(this).val();
+        
+        // Reset nodal employee dropdown when category changes
+        $('#nodal_employee').html('<option value="">- Select -</option>');
+        
         if(categoryId) {
+            // Load sub-categories
             $.ajax({
                 url: '/admin/issue-management/sub-categories/' + categoryId,
                 type: 'GET',
                 success: function(data) {
-                    $('#sub_categories').html('<option value="">Select sub-categories</option>');
+                    $('#sub_categories').html('<option value="">-- Select --</option>');
                     $.each(data, function(key, value) {
                         $('#sub_categories').append('<option value="'+ value.pk +'">'+ value.issue_sub_category +'</option>');
                     });
                 }
             });
+            
+            // Load nodal employees for this category
+            $.ajax({
+                url: '/admin/issue-management/nodal-employees/' + categoryId,
+                type: 'GET',
+                success: function(response) {
+                    if(response.success && response.data.length > 0) {
+                        $('#nodal_employee').html('<option value="">- Select -</option>');
+                        $.each(response.data, function(key, employee) {
+                            var fullName = employee.first_name + ' ' + (employee.middle_name ? employee.middle_name + ' ' : '') + employee.last_name;
+                            $('#nodal_employee').append('<option value="'+ employee.employee_pk +'">'+ fullName +'</option>');
+                        });
+                    } else {
+                        $('#nodal_employee').html('<option value="">No nodal employees available</option>');
+                    }
+                },
+                error: function() {
+                    console.log('Error loading nodal employees');
+                    $('#nodal_employee').html('<option value="">Error loading employees</option>');
+                }
+            });
         } else {
-            $('#sub_categories').html('<option value="">Select sub-categories</option>');
+            $('#sub_categories').html('<option value="">-- Select --</option>');
+            $('#nodal_employee').html('<option value="">- Select Category First -</option>');
         }
     });
 
-    // Show/hide location sections
-    $('#location_type').change(function() {
+    // Auto-fill sub_category_name when sub-category is selected
+    $('#sub_categories').change(function() {
+        var selectedText = $(this).find('option:selected').text();
+        $('#sub_category_name').val(selectedText);
+    });
+
+    // Auto-fill mobile number when complainant is selected
+    $('#complainant').change(function() {
+        var mobile = $(this).find('option:selected').data('mobile');
+        $('#mobile_number').val(mobile || '');
+    });
+
+    // Show/hide location sections based on location type
+    $('input[name="location"]').change(function() {
         var type = $(this).val();
-        $('#building_section, #hostel_section').addClass('d-none');
-        if(type == 'building') {
+        $('#building_section').addClass('d-none');
+        
+        // Reset building details
+        $('#building_select').val('').html('<option value="">-- Select --</option>');
+        $('#floor_select').val('').html('<option value="">Select Floor Name</option>');
+        $('#room_select').val('').html('<option value="">Select Room</option>');
+        
+        if(type == 'H' || type == 'R' || type == 'O') {
             $('#building_section').removeClass('d-none');
-        } else if(type == 'hostel') {
-            $('#hostel_section').removeClass('d-none');
+            
+            // Load buildings based on location type
+            $.ajax({
+                url: '/admin/issue-management/buildings',
+                type: 'GET',
+                data: { type: type },
+                success: function(response) {
+                    if(response.status) {
+                        $('#building_select').html('<option value="">-- Select --</option>');
+                        $.each(response.data, function(key, value) {
+                            $('#building_select').append('<option value="'+ value.pk +'">'+ value.building_name +'</option>');
+                        });
+                    }
+                },
+                error: function() {
+                    console.log('Error loading buildings');
+                }
+            });
         }
+    });
+
+    // Load floors based on building/hostel
+    $('#building_select').change(function() {
+        var buildingId = $(this).val();
+        var locationType = $('input[name="location"]:checked').val();
+
+        if(buildingId) {
+            $.ajax({
+                url: '/admin/issue-management/floors',
+                type: 'GET',
+                data: { building_id: buildingId, type: locationType },
+                success: function(response) {
+                    if(response.status) {
+                        $('#floor_select').html('<option value="">Select Floor Name</option>');
+                        $.each(response.data, function(key, value) {
+                            // Handle different field names for different location types
+                            var floorId = value.floor_id || value.pk || value.estate_unit_sub_type_master_pk;
+                            var floorName = value.floor_name || value.floor || value.unit_sub_type;
+                            $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
+                        });
+                    }
+                },
+                error: function() {
+                    console.log('Error loading floors');
+                }
+            });
+        } else {
+            $('#floor_select').html('<option value="">Select Floor Name</option>');
+            $('#room_select').html('<option value="">Select Room</option>');
+        }
+    });
+
+    // Load rooms based on floor
+    $('#floor_select').change(function() {
+        var floorId = $(this).val();
+        var buildingId = $('#building_select').val();
+        var locationType = $('input[name="location"]:checked').val();
+
+        if(floorId && buildingId) {
+            $.ajax({
+                url: '/admin/issue-management/rooms',
+                type: 'GET',
+                data: { building_id: buildingId, floor_id: floorId, type: locationType },
+                success: function(response) {
+                    if(response.status) {
+                        $('#room_select').html('<option value="">Select Room</option>');
+                        $.each(response.data, function(key, value) {
+                            // Handle different field names for different location types
+                            var roomId = value.pk;
+                            var roomName = value.room_name || value.house_no || value.floor;
+                            $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
+                        });
+                    }
+                },
+                error: function() {
+                    console.log('Error loading rooms');
+                }
+            });
+        } else {
+            $('#room_select').html('<option value="">Select Room</option>');
+        }
+    });
+
+    // Update nodal employee when complainant is selected
+    $('#complainant').change(function() {
+        var employeeName = $(this).find('option:selected').text();
+        $('#nodal_employee').val(employeeName);
     });
 });
 </script>

@@ -3,14 +3,204 @@
 @section('title', 'MDO Duty Type')
 
 @section('setup_content')
-<div class="container-fluid">
+<style>
+/* MDO Duty Type - responsive (mobile/tablet only, desktop unchanged) */
+
+/* Responsive - Tablet (max 991px) */
+@media (max-width: 991.98px) {
+    .mdo-duty-type-index .datatables .card {
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+        border-left: 4px solid #004a93;
+    }
+
+    .mdo-duty-type-index .datatables .card-body {
+        padding: 1.25rem !important;
+    }
+
+    .mdo-duty-type-index .datatables .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mdo-duty-type-index .datatables #mdodutytypemaster-table {
+        min-width: 480px;
+    }
+
+    .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
+    .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+}
+
+/* Responsive - Small tablet / large phone (max 767px) */
+@media (max-width: 767.98px) {
+    .mdo-duty-type-index .datatables .card-body {
+        padding: 1rem !important;
+    }
+
+    .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
+    .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    /* Stack "Show entries" and "Search" controls on smaller screens */
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_wrapper .row:first-child,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_wrapper .dt-row:first-child {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter {
+        text-align: left !important;
+        margin-bottom: 0;
+        display: block;
+        width: 100%;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length label,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+        flex-wrap: wrap;
+        font-size: 0.9rem;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length select {
+        margin: 0;
+        min-width: 80px;
+        max-width: 100%;
+        min-height: 36px;
+        padding: 0.35rem 1.75rem 0.35rem 0.5rem;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter input {
+        margin-left: 0 !important;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-height: 36px;
+        padding: 0.375rem 0.75rem;
+    }
+
+    /* Make action buttons stack vertically to avoid horizontal scroll */
+    .mdo-duty-type-index .mdo-duty-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+    }
+
+    .mdo-duty-type-index .mdo-duty-actions .btn {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .mdo-duty-type-index.container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .mdo-duty-type-index .mdo-duty-type-header-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .mdo-duty-type-index .mdo-duty-type-header-row .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    /* Align header title and "Add MDO Duty Type" button cleanly on mobile */
+    .mdo-duty-type-index .mdo-duty-type-header-row .d-flex.justify-content-end {
+        justify-content: flex-start !important;
+    }
+
+    .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .mdo-duty-type-index .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .mdo-duty-type-index .datatables .table-responsive {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
+    .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
+        padding: 0.45rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    /* DataTables info + pagination: stack nicely */
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_info,
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_paginate {
+        float: none !important;
+        text-align: center;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_paginate .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .mdo-duty-type-index #dutyTypeModal .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+}
+
+/* Responsive - Very small phone (max 375px) */
+@media (max-width: 375px) {
+    .mdo-duty-type-index.container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .mdo-duty-type-index .datatables .card-body {
+        padding: 0.6rem !important;
+    }
+
+    .mdo-duty-type-index .mdo-duty-type-header-row h4 {
+        font-size: 1rem;
+    }
+
+    .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.75rem;
+    }
+}
+</style>
+<div class="container-fluid mdo-duty-type-index">
     <x-breadcrum title="MDO Duty Type"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row mdo-duty-type-header-row">
                         <div class="col-6">
                             <!-- left column empty or header title above -->
                             <h4>MDO Duty Type</h4>

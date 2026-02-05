@@ -3,7 +3,7 @@
 @section('title', 'Active Course - Sargam | Lal Bahadur')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid active-course-index">
     <x-breadcrum title="Active Course"></x-breadcrum>
 
     <div class="card" style="border-left: 4px solid #004a93;">

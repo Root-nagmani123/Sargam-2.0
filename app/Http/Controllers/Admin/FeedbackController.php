@@ -20,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str; // Add this import
+use Illuminate\Support\Facades\Validator;
 use App\Exports\PendingFeedbackExport;
 
 
@@ -141,7 +142,7 @@ class FeedbackController extends Controller
     {
         try {
             /* ---------------- Validation ---------------- */
-            $validated = $request->validate([
+            $validator = Validator::make($request->all(), [
                 'course_id'    => 'required|integer',
                 'search_param' => 'nullable|string|in:all,faculty,topic',
                 'faculty_id'   => 'nullable|integer',
@@ -149,6 +150,15 @@ class FeedbackController extends Controller
                 'per_page'     => 'nullable|integer',
                 'page'         => 'nullable|integer',
             ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => $validator->errors()->first(),
+                    'data'    => [],
+                    'total'   => 0,
+                ], 422);
+            }
 
             /* ---------------- Base Query ---------------- */
             $query = $this->baseDatabaseQuery($request);

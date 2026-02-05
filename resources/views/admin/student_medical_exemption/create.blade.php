@@ -3,9 +3,80 @@
 @section('title', 'Student Medical Exemption - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<style>
+/* Responsive - Student Medical Exemption Create Form */
+@media (max-width: 991.98px) {
+    .student-medical-create .card-body {
+        padding: 1rem !important;
+    }
+    .student-medical-create .card-title {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .student-medical-create .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .student-medical-create .card-body {
+        padding: 0.75rem !important;
+    }
+    .student-medical-create .d-sm-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    .student-medical-create .d-sm-flex .breadcrumb {
+        margin-top: 0.5rem;
+        margin-left: 0 !important;
+    }
+    .student-medical-create .form-actions {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    .student-medical-create .form-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .student-medical-create .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .student-medical-create .card-body {
+        padding: 0.5rem !important;
+    }
+    .student-medical-create .card-title {
+        font-size: 1rem;
+    }
+    .student-medical-create .badge.fs-2 {
+        font-size: 0.875rem !important;
+    }
+    .student-medical-create .form-label {
+        font-size: 0.9rem;
+    }
+    .student-medical-create .form-control,
+    .student-medical-create select.form-control {
+        font-size: 0.9rem;
+    }
+}
+
+/* Select2 responsive - ensure full width on mobile */
+@media (max-width: 575.98px) {
+    .student-medical-create .select2-container {
+        width: 100% !important;
+    }
+}
+
+/* Prevent datetime inputs from overflowing on mobile */
+.student-medical-create input[type="datetime-local"] {
+    max-width: 100%;
+}
+</style>
+<div class="container-fluid student-medical-create">
     <x-session_message />
-    <div class="card card-body py-3" style="border-left:4px solid #004a93;">
+    <div class="card card-body py-3 student-medical-create" style="border-left:4px solid #004a93;">
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
@@ -29,15 +100,15 @@
         </div>
     </div>
 
-    <div class="card mt-3" style="border-left:4px solid #004a93;">
+    <div class="card mt-3 student-medical-create" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">Student Medical Exemption</h4>
             <hr>
             <form method="POST" action="{{ route('student.medical.exemption.store') }}" enctype="multipart/form-data">
                 @csrf
 
-                <div class="row">
-                    <div class="col-md-6">
+                <div class="row g-2 g-md-3">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
                             <select name="employee_master_pk" class="form-control col-form-label" readonly required>
@@ -47,7 +118,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Course <span class="text-danger">*</span></label>
                             <select name="course_master_pk" class="form-control col-form-label" id="courseDropdown" required>
@@ -65,7 +136,7 @@
                         @enderror
                     </div>
 
-                  <div class="col-md-6">
+                  <div class="col-12 col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Student Name <span class="text-danger">*</span></label>
                         <select name="student_master_pk" class="form-control select2" id="studentDropdown" required>
@@ -75,14 +146,14 @@
                     </div>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-3">
                         <label class="form-label">OT Code</label>
                         <input type="text" class="form-control" name="ot_code" id="otCodeField" readonly>
                     </div>
                 </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Exemption Category <span class="text-danger">*</span></label>
                             <select name="exemption_category_master_pk" class="form-control col-form-label" required>
@@ -100,7 +171,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">OPD Category</label>
                             <select name="opd_category" class="form-control col-form-label">
@@ -117,7 +188,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
                             <select name="exemption_medical_speciality_pk" class="form-control col-form-label" required>
@@ -135,7 +206,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">From Date & Time <span class="text-danger">*</span></label>
                             <input type="datetime-local" name="from_date" class="form-control col-form-label" required
@@ -146,7 +217,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">To Date & Time</label>
                             <input type="datetime-local" name="to_date" class="form-control col-form-label"
@@ -157,7 +228,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Description</label>
                             <textarea name="Description" class="form-control col-form-label"
@@ -167,10 +238,15 @@
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Upload Document</label>
-                            <input type="file" name="Doc_upload" class="form-control col-form-label">
+                        <label class="form-label">Upload Document <span class="text-danger">*</span></label>
+                        <small class="text-primary d-block mb-1">
+                        Please upload image or PDF files only. Maximum file size: 3 MB.</small>
+
+                        <input type="file" name="Doc_upload" class="form-control col-form-label"accept="image/*,.pdf" id="Doc_upload">
+                        <small id="fileInfo" class="text-muted"></small>
+						<small id="fileError" class="text-danger"></small>
                         </div>
                         @error('Doc_upload')
                         <small class="text-danger">{{ $message }}</small>
@@ -193,7 +269,7 @@
                     </div> --}}
                 </div>
                 <hr>
-                <div class="text-end gap-3">
+                <div class="d-flex flex-wrap justify-content-end gap-2 gap-sm-3 form-actions">
                     <button class="btn btn-success" type="submit">Submit</button>
                     <a href="{{ route('student.medical.exemption.index') }}" class="btn btn-secondary">Back</a>
                 </div>
@@ -254,4 +330,55 @@ $(document).ready(function() {
     });
 });
 </script>
+
+
+
+<script>
+    // File upload validation by Dhananjay
+document.getElementById('Doc_upload').addEventListener('change', function () {
+
+    const file = this.files[0];
+    const fileInfo = document.getElementById('fileInfo');
+    const fileError = document.getElementById('fileError');
+
+    fileInfo.innerHTML = '';
+    fileError.innerHTML = '';
+
+    if (!file) return;
+
+    const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'application/pdf'
+    ];
+
+    const maxSize = 3 * 1024 * 1024; // 3MB
+
+    //  File type
+    if (!allowedTypes.includes(file.type)) {
+        fileError.innerHTML = 'Only image files or PDF are allowed.';
+        this.value = '';
+        return;
+    }
+
+    // Size check
+    if (file.size > maxSize) {
+        fileError.innerHTML = 'File size must not exceed 3 MB.';
+        this.value = '';
+        return;
+    }
+
+    // Show file info
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+    fileInfo.innerHTML = `
+        Selected: <strong>${file.name}</strong><br>
+        Type: ${file.type}<br>
+        Size: ${sizeMB} MB
+    `;
+});
+</script>
+
+
 @endpush

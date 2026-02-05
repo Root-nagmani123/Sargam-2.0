@@ -39,7 +39,7 @@
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse show" id="generalMasterMenu">
+                            <ul class="collapse" id="generalMasterMenu">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('Venue-Master.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Venue
@@ -59,7 +59,7 @@
                             </ul>
 
                             <!-- HOSTEL -->
-                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2 d-none" style="background: #4077ad;
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -77,20 +77,20 @@
                                         href="{{ route('master.hostel.building.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Building Master</span>
                                     </a></li>
-                                {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
-                                <span class="hide-menu">Hostel
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
+                                <span class="hide-menu small small-sm-normal text-nowrap">Hostel
                                     Room</span>
-                                </a></li> --}}
+                                </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.hostel.floor.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">
                                             Floor</span>
                                     </a></li>
-                                {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
-                                <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span
-                                    class="hide-menu">Hostel
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                                <span
+                                    class="hide-menu small small-sm-normal text-nowrap">Hostel
                                     Floor Mapping</span>
-                                </a></li> --}}
+                                </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('hostel.building.floor.room.map.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Building

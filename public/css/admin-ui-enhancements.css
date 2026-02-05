@@ -1,0 +1,205 @@
+/* ============================================
+   Admin UI Enhancements - Bootstrap 5.3
+   Modern, polished look without changing logic
+   ============================================ */
+
+:root {
+    --admin-primary: #004a93;
+    --admin-primary-hover: #003d7a;
+    --admin-primary-subtle: rgba(0, 74, 147, 0.08);
+    --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --admin-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --admin-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+    --admin-radius: 0.5rem;
+    --admin-radius-lg: 0.75rem;
+    --admin-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cards - Bootstrap 5.3 enhanced */
+.admin-card,
+.idcard-index-card,
+.idcard-create-form-card,
+.idcard-create-type-card {
+    border-radius: var(--admin-radius-lg) !important;
+    box-shadow: var(--admin-shadow) !important;
+    transition: box-shadow var(--admin-transition), transform var(--admin-transition);
+}
+
+.admin-card:hover,
+.idcard-index-card:hover {
+    box-shadow: var(--admin-shadow-lg) !important;
+}
+
+/* Nav pills/tabs - Bootstrap 5.3 nav-underline style */
+.nav-pills.idcard-index-tabs .nav-link {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all var(--admin-transition);
+}
+
+.nav-pills.idcard-index-tabs .nav-link:not(.active):hover {
+    background: rgba(0, 74, 147, 0.06) !important;
+    color: var(--admin-primary) !important;
+}
+
+/* Table enhancements */
+.table.idcard-index-table thead th {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.table.idcard-index-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+/* Form controls - Bootstrap 5.3 focus ring */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, var(--admin-primary) 0%, #0066cc 100%);
+    border: none;
+    transition: all var(--admin-transition);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--admin-primary-hover) 0%, #0052a3 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.3);
+}
+
+.btn-outline-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.2);
+}
+
+/* Badges - Bootstrap 5.3 text-bg-* style */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    letter-spacing: 0.02em;
+}
+
+/* Dropdown - modern styling */
+.dropdown-menu {
+    border-radius: var(--admin-radius-lg);
+    box-shadow: var(--admin-shadow-lg);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dropdown-item {
+    border-radius: 0.375rem;
+    margin: 0 0.25rem;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.15s ease;
+}
+
+/* Modal enhancements */
+.modal-content {
+    border-radius: var(--admin-radius-lg);
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.15);
+    border: none;
+}
+
+.modal-header {
+    border-radius: var(--admin-radius-lg) var(--admin-radius-lg) 0 0;
+}
+
+/* Upload zones - enhanced */
+.idcard-upload-zone {
+    transition: all var(--admin-transition);
+}
+
+.idcard-upload-zone:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.1);
+}
+
+/* Empty states */
+.table-empty-state {
+    padding: 3rem 2rem;
+}
+
+.table-empty-state .material-icons {
+    opacity: 0.5;
+}
+
+/* Pagination */
+.pagination .page-link {
+    border-radius: 0.375rem !important;
+    transition: all 0.15s ease;
+}
+
+.pagination .page-item.active .page-link {
+    font-weight: 600;
+}
+
+/* Action buttons in tables */
+.idcard-index-table .btn-link,
+.idcard-index-table a {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.idcard-index-table .btn-link:hover,
+.idcard-index-table a:hover {
+    opacity: 0.85;
+    transform: scale(1.05);
+}
+
+/* Sidebar - subtle enhancements */
+#sidebar-setup .sidebar-google-style .mini-nav,
+#sidebar-home .sidebar-google-style .mini-nav {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Override base styles.css - force icon center alignment */
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+    align-items: center !important;
+    justify-content: center !important;
+    padding-left: 8px !important;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap,
+#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+    margin-inline: auto !important;
+}
+
+/* Form labels - consistent spacing */
+.form-label {
+    font-weight: 500;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .admin-card,
+    .idcard-index-card,
+    .btn-primary,
+    .btn-outline-primary,
+    .idcard-upload-zone,
+    .pagination .page-link {
+        transition: none;
+    }
+
+    .btn-primary:hover,
+    .btn-outline-primary:hover,
+    .idcard-upload-zone:hover {
+        transform: none;
+    }
+}

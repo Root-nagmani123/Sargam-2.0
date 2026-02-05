@@ -8,8 +8,8 @@
             background-color: #ffe6e6 !important;
         }
     </style>
-    <div class="container-fluid">
-
+    <div class="container-fluid fc-registration-master-list">
+<x-breadcrum title="Registration List" />
         <div class="card" style="border-left: 4px solid #004a93;">
             {{-- <div class="card-body">
                 <!-- Filters Form -->
@@ -270,7 +270,7 @@
         <!-- Preview / Template Upload -->
         <div class="col-md-6">
             <form action="{{ route('fc.preview.upload') }}" method="POST" enctype="multipart/form-data"
-                class="d-flex gap-2">
+                class="d-flex gap-2 fc-preview-form">
                 @csrf
                 <button type="button" onclick="window.location='{{ route('fc.download.template') }}'"
                     class="btn btn-outline-success w-100">

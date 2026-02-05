@@ -2,59 +2,159 @@
 
 @section('title', 'Course Group Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
+@section('css')
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+/* Fix Select2 dropdown cropping on Group Mapping index page */
+.group-mapping-index .select2-container { width: 100% !important; }
+.group-mapping-index .select2-selection--single .select2-selection__rendered {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+}
+/* Ensure Select2 dropdown is visible and above modals */
+body .select2-dropdown {
+    z-index: 99999 !important;
+}
+body:has(.group-mapping-index) .select2-dropdown {
+    min-width: 280px !important;
+    z-index: 99999 !important;
+}
+body:has(.group-mapping-index) .select2-results__option {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+body:has(.group-mapping-index) .select2-results__options {
+    max-height: 300px;
+}
+
+/* Group Mapping Index - Bootstrap 5.3 enhanced */
+.group-mapping-index .group-mapping-card {
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-start: 4px solid #004a93;
+    transition: box-shadow 0.2s ease;
+}
+.group-mapping-index .group-mapping-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+.group-mapping-index .form-label {
+    font-weight: 500;
+    color: #495057;
+}
+.group-mapping-index .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid #dee2e6;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.group-mapping-index .form-select:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+.group-mapping-index .btn-group .btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.group-mapping-index .btn-primary,
+.group-mapping-index .btn-info,
+.group-mapping-index .btn-success,
+.group-mapping-index .btn-outline-primary {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.group-mapping-index .btn-primary:hover,
+.group-mapping-index .btn-info:hover,
+.group-mapping-index .btn-success:hover,
+.group-mapping-index .btn-outline-primary:hover {
+    transform: translateY(-1px);
+}
+.group-mapping-index .modal-content {
+    border-radius: 0.75rem;
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.15);
+}
+.group-mapping-index .modal-header {
+    border-radius: 0.75rem 0.75rem 0 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.group-mapping-index .modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+@media (prefers-reduced-motion: reduce) {
+    .group-mapping-index .group-mapping-card,
+    .group-mapping-index .btn { transition: none; }
+    .group-mapping-index .btn:hover { transform: none; }
+}
+/* Mobile: ensure DataTable wrapper is contained and scrollable */
+@media (max-width: 991.98px) {
+    .group-mapping-index .group-mapping-table-wrapper,
+    .group-mapping-index #group-mapping-table_wrapper {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+</style>
+@endsection
+
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid group-mapping-index py-3">
 
     <x-breadcrum title="Course Group Mapping" />
     <x-session_message />
 
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row mb-3">
-                        <div class="row align-items-center mb-4">
-
-                            <div class="col-12 col-md-4">
-                                <h4 class="fw-bold mb-3 mb-md-0">Course Group Mapping</h4>
-                            </div>
-
-                            <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
-
-                                <a href="{{ route('group.mapping.create') }}"
-                                    class="btn btn-primary px-3 d-flex align-items-center shadow-sm">
-                                    <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em"
-                                        class="me-2"></iconify-icon>
-                                    Add Group Mapping
-                                </a>
-
-                                <button type="button" class="btn btn-info px-3 d-flex align-items-center shadow-sm"
-                                    data-bs-toggle="modal" data-bs-target="#addStudentModal">
-                                    <iconify-icon icon="mdi:account-plus" width="1.2em" height="1.2em" class="me-2">
-                                    </iconify-icon>
-                                    Add Student
-                                </button>
-
-                                <button type="button" class="btn btn-success px-3 d-flex align-items-center shadow-sm"
-                                    data-bs-toggle="modal" data-bs-target="#importModal">
-                                    <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em" class="me-2">
-                                    </iconify-icon>
-                                    Import Excel
-                                </button>
-
-                                <a href="{{ route('group.mapping.export.student.list') }}"
-                                    class="btn btn-outline-primary px-3 d-flex align-items-center shadow-sm">
-                                    <iconify-icon icon="material-symbols:sim-card-download-rounded" width="1.4em"
-                                        height="1.4em" class="me-2"></iconify-icon>
-                                    Export Excel
-                                </a>
+        <div class="card group-mapping-card shadow-sm overflow-visible">
+            <div class="card-body p-4 p-lg-5">
+                {{-- Header and filters: fixed, no horizontal scroll --}}
+                <div class="group-mapping-top-section">
+                    <div class="row mb-4 group-mapping-header-row align-items-center">
+                        <div class="col-12 col-md-4 mb-3 mb-md-0">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-3 bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-diagram-3-fill text-primary" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <h4 class="fw-semibold mb-0">Course Group Mapping</h4>
+                                    <p class="text-muted small mb-0">Manage courses, groups and student assignments</p>
+                                </div>
                             </div>
                         </div>
 
+                        <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
+
+                            <a href="{{ route('group.mapping.create') }}"
+                                class="btn btn-primary px-3 d-flex align-items-center gap-2 shadow-sm">
+                                <i class="bi bi-plus-circle-fill"></i>
+                                Add Group Mapping
+                            </a>
+
+                            <button type="button" class="btn btn-info px-3 d-flex align-items-center gap-2 shadow-sm"
+                                data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                                <i class="bi bi-person-plus-fill"></i>
+                                Add Student
+                            </button>
+
+                            <button type="button" class="btn btn-success px-3 d-flex align-items-center gap-2 shadow-sm"
+                                data-bs-toggle="modal" data-bs-target="#importModal">
+                                <i class="bi bi-file-earmark-excel-fill"></i>
+                                Import Excel
+                            </button>
+
+                            <a href="{{ route('group.mapping.export.student.list') }}"
+                                class="btn btn-outline-primary px-3 d-flex align-items-center gap-2 shadow-sm">
+                                <i class="bi bi-download"></i>
+                                Export Excel
+                            </a>
+                        </div>
+                    </div>
+
                         {{-- Status Filter --}}
-                        <div class="row mb-4">
-                            <div class="col-md-4">
+                        <div class="row g-3 mb-4 align-items-end group-mapping-filters-row">
+                            <div class="col-12 col-md-4">
                                 <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
                                 <select id="courseFilter" class="form-select shadow-sm">
                                     <option value="">All Courses</option>
@@ -64,7 +164,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="col-12 col-md-3">
                                 <label for="groupTypeFilter" class="form-label fw-semibold">Group Type</label>
                                 <select id="groupTypeFilter" class="form-select shadow-sm">
                                     <option value="">All Group Types</option>
@@ -74,14 +174,17 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-2 d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary px-4 py-2 mt-lg-4 shadow-sm btn-sm"
+                            <div class="col-12 col-md-2 d-flex gap-2 align-items-end">
+                                <button type="button"
+                                    class="btn btn-outline-secondary px-4 py-2 mt-0 mt-md-4 shadow-sm w-100 w-md-auto"
                                     id="resetFilters">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                                 </button>
                             </div>
-                            <div class="col-3 text-end">
-                                <div class="btn-group shadow-sm rounded-pill" role="group"
+                            <div class="col-12 col-md-3 text-md-end group-mapping-status-col">
+                                <label class="form-label fw-semibold d-md-none mb-2">Status</label>
+                                <div class="btn-group shadow-sm w-100 w-md-auto"
+                                    role="group"
                                     aria-label="Group Mapping Status Filter">
                                     <button type="button" class="btn btn-outline-success px-4 py-2 fw-semibold"
                                         id="filterGroupActive" aria-pressed="false">
@@ -96,27 +199,28 @@
                             </div>
                         </div>
 
-                        {{-- Filters --}}
-                        <div class="row g-3 mb-4 align-items-end">
-
-
-                        </div>
-
+                        {{-- Filters reserved row (kept for future advanced filters) --}}
+                        <div class="row g-3 mb-4 align-items-end"></div>
+                </div>
+                {{-- End group-mapping-top-section --}}
 
                         <!-- Add Student Modal -->
                         <div class="modal fade" id="addStudentModal" tabindex="-1"
                             aria-labelledby="addStudentModalLabel" aria-hidden="true" data-bs-backdrop="static"
                             data-bs-keyboard="false">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
+                            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+                                <div class="modal-content border-0 shadow-lg">
                                     <form id="addStudentForm">
                                         @csrf
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="addStudentModalLabel">Add Student to Group</h5>
+                                        <div class="modal-header border-bottom bg-light">
+                                            <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addStudentModalLabel">
+                                                <i class="bi bi-person-plus-fill text-primary"></i>
+                                                Add Student to Group
+                                            </h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                 aria-label="Close"></button>
                                         </div>
-                                        <div class="modal-body">
+                                        <div class="modal-body py-4">
                                             <div id="addStudentAlert" class="alert d-none" role="alert"></div>
 
                                             <div class="mb-3">
@@ -169,11 +273,11 @@
                                                     first</small>
                                             </div>
                                         </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary"
+                                        <div class="modal-footer border-top bg-light">
+                                            <button type="button" class="btn btn-outline-secondary"
                                                 data-bs-dismiss="modal">Cancel</button>
                                             <button type="submit" class="btn btn-primary">
-                                                <i class="mdi mdi-content-save"></i> Add Student
+                                                <i class="bi bi-person-plus me-1"></i> Add Student
                                             </button>
                                         </div>
                                     </form>
@@ -183,18 +287,21 @@
                         <!-- End Add Student Modal -->
 
                         <!-- Import Excel Modal -->
-                        <div class="modal fade modal-xl" id="importModal" tabindex="-1"
+                        <div class="modal fade" id="importModal" tabindex="-1"
                             aria-labelledby="importModalLabel" aria-hidden="true" data-bs-backdrop="static"
                             data-bs-keyboard="false">
 
-                            <div class="modal-dialog">
-                                <div class="modal-content"> 
+                            <div class="modal-dialog modal-xl modal-dialog-centered">
+                                <div class="modal-content border-0 shadow-lg"> 
                                     <form method="POST" enctype="multipart/form-data" id="importExcelForm">
                                         @csrf
 
                                         <!-- Modal Header -->
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="importModalLabel">Import Excel File</h5>
+                                        <div class="modal-header border-bottom bg-light">
+                                            <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="importModalLabel">
+                                                <i class="bi bi-file-earmark-excel-fill text-success"></i>
+                                                Import Excel File
+                                            </h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                      
@@ -222,16 +329,16 @@
                                         </div>
 
                                         <!-- Modal Footer -->
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <div class="modal-footer border-top bg-light">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
 
                                             <button type="button" class="btn btn-success" id="upload_import">
-                                                <i class="mdi mdi-upload"></i> Upload & Import
+                                                <i class="bi bi-upload me-1"></i> Upload & Import
                                             </button>
 
                                             <a href="{{ asset('admin_assets/sample/group_mapping_sample.xlsx') }}"
                                                 class="btn btn-info" download>
-                                                <i class="mdi mdi-download"></i> Download Sample
+                                                <i class="bi bi-download me-1"></i> Download Sample
                                             </a>
                                         </div>
                                     </form>
@@ -264,7 +371,7 @@
                         <!-- Student Details Modal -->
                         <div class="modal fade" id="studentDetailsModal" tabindex="-1"
                             aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
-                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                            <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered modal-fullscreen-sm-down">
                                 <div class="modal-content border-0 shadow-lg rounded-4">
 
                                     <!-- Header -->
@@ -375,10 +482,13 @@
                         <!-- Edit Student Modal -->
                         <div class="modal fade" id="editStudentModal" tabindex="-1"
                             aria-labelledby="editStudentModalLabel" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="editStudentModalLabel">Edit Student</h5>
+                            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+                                <div class="modal-content border-0 shadow-lg">
+                                    <div class="modal-header border-bottom bg-light">
+                                        <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="editStudentModalLabel">
+                                            <i class="bi bi-pencil-square text-primary"></i>
+                                            Edit Student
+                                        </h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"
                                             aria-label="Close"></button>
                                     </div>
@@ -403,8 +513,8 @@
                                                     name="contact_no" maxlength="20">
                                             </div>
                                         </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary"
+                                        <div class="modal-footer border-top bg-light">
+                                            <button type="button" class="btn btn-outline-secondary"
                                                 data-bs-dismiss="modal">Cancel</button>
                                             <button type="submit" class="btn btn-primary">
                                                 <i class="bi bi-save me-1"></i> Save Changes
@@ -416,8 +526,16 @@
                         </div>
 
 
-                        <hr>
-                        {!! $dataTable->table(['class' => 'table text-nowrap']) !!}
+                        <hr class="my-4">
+                        {{-- Table: controls above scroll area so they stay visible on mobile --}}
+                        <div class="group-mapping-table-section">
+                            <p class="group-mapping-scroll-hint d-md-none text-muted small mb-2 text-center">
+                                <i class="bi bi-arrow-left-right me-1"></i> Swipe horizontally to see all columns
+                            </p>
+                            <div class="group-mapping-table-wrapper table-responsive">
+                                {!! $dataTable->table(['class' => 'table text-nowrap']) !!}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -427,6 +545,18 @@
     @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
+        // Fix: Allow dropdowns (Select2, native select) to receive clicks inside Bootstrap 5 modals
+        (function() {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal && bootstrap.Modal.prototype._enforceFocus) {
+                var _enforceFocus = bootstrap.Modal.prototype._enforceFocus;
+                bootstrap.Modal.prototype._enforceFocus = function() {
+                    if (document.querySelector('.select2-container--open') || document.activeElement?.closest?.('.select2-container')) return;
+                    if (document.activeElement?.tagName === 'OPTION') return;
+                    _enforceFocus.apply(this, arguments);
+                };
+            }
+        })();
+
         $(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
             // Only send filters if they are explicitly set
             if (window.groupMappingCurrentFilter) {
@@ -646,7 +776,7 @@
                     complete: function() {
                         // Re-enable submit button
                         submitBtn.prop('disabled', false).html(
-                            '<i class="mdi mdi-content-save"></i> Add Student');
+                            '<i class="bi bi-person-plus me-1"></i> Add Student');
                     }
                 });
             });

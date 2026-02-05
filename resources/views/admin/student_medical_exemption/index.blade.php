@@ -61,7 +61,122 @@
 .datatables #medicalExemptionTable td {
     white-space: nowrap;
     padding: 10px 12px;
-    vertical-align: middle;
+    vertical-align: middle !important;
+}
+/* Medical Speciality column - ensure vertical alignment on mobile */
+.datatables #medicalExemptionTable th:nth-child(7),
+.datatables #medicalExemptionTable td:nth-child(7) {
+    vertical-align: middle !important;
+    line-height: 1.4;
+}
+
+/* Responsive - Tablet (768px - 991px) */
+@media (max-width: 991.98px) {
+    .datatables #medicalExemptionTable th,
+    .datatables #medicalExemptionTable td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Responsive - Small tablet / large phone (576px - 767px) */
+@media (max-width: 767.98px) {
+    .datatables .card-body {
+        padding: 1rem !important;
+    }
+
+    .datatables #medicalExemptionTable th,
+    .datatables #medicalExemptionTable td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+
+    .btn-group[role="group"] .btn {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        font-size: 0.875rem;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .datatables .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .datatables .row.align-items-center.g-3 {
+        gap: 0.75rem !important;
+    }
+
+    .datatables .row.align-items-center.g-3 .col-lg-4:first-child h4 {
+        font-size: 1.1rem !important;
+    }
+
+    .datatables .btn-group[role="group"] {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .datatables .btn-group[role="group"] .btn {
+        flex: 1;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.8125rem;
+    }
+
+    .datatables .d-flex.justify-content-md-end .btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: center;
+    }
+
+    .datatables .d-flex.justify-content-md-end .btn span.d-none.d-md-inline {
+        display: none !important;
+    }
+
+    .datatables #medicalExemptionTable th,
+    .datatables #medicalExemptionTable td {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
+
+    .datatables .row.mb-3.align-items-end .col-md-3,
+    .datatables .row.mb-3.align-items-end .col-md-2 {
+        margin-bottom: 0.5rem;
+    }
+
+    .datatables #resetFilters {
+        width: 100% !important;
+    }
+}
+
+/* Reset button: auto width on desktop */
+@media (min-width: 768px) {
+    .datatables #resetFilters {
+        width: auto !important;
+    }
+}
+
+/* Responsive - Very small phone (max 375px) */
+@media (max-width: 375px) {
+    .datatables .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .datatables .card-body {
+        padding: 0.5rem !important;
+    }
+
+    .datatables #medicalExemptionTable th,
+    .datatables #medicalExemptionTable td {
+        padding: 4px 6px;
+        font-size: 0.75rem;
+    }
 }
 
 /* Print Styles */
@@ -127,12 +242,12 @@
         margin-top: 20px;
         font-size: 10px;
     }
-    
+
 }
 
 
 </style>
-<div class="container-fluid">
+<div class="container-fluid student-medical-exemption-index">
     <x-breadcrum title="Medical Exemption Form" />
     <div class="datatables">
         <!-- start Zero Configuration -->
@@ -141,14 +256,14 @@
                 <div class="row align-items-center g-3 mb-3">
 
                     <!-- Title -->
-                    <div class="col-lg-4 col-md-12">
+                    <div class="col-12 col-lg-4 col-md-12">
                         <h4 class="mb-0 fw-bold text-dark">
                             Medical Exemption Form
                         </h4>
                     </div>
 
                      <!-- Active / Archive -->
-                    <div class="col-lg-4 col-md-6 text-end">
+                    <div class="col-12 col-lg-4 col-md-6 text-md-end text-start">
                         <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                             aria-label="Course Status Filter">
                             <a href="javascript:void(0)"
@@ -165,7 +280,7 @@
                     </div>
 
                     <!-- Actions -->
-                    <div class="col-lg-4 col-md-6">
+                    <div class="col-12 col-lg-4 col-md-6">
                         <div class="d-flex justify-content-md-end justify-content-start flex-wrap gap-2">
 
                             <button type="button"
@@ -184,10 +299,11 @@
                             </a>
 
                             <a href="{{route('student.medical.exemption.create')}}"
-                                class="btn btn-primary d-flex align-items-center gap-1 px-4 fw-semibold">
+                                class="btn btn-primary d-flex align-items-center gap-1 px-3 px-md-4 fw-semibold">
                                 <i class="material-icons material-symbols-rounded" style="font-size:22px;"
                                     aria-hidden="true">add</i>
-                                Add Student Medical Exemption
+                                <span class="d-none d-sm-inline">Add Student Medical Exemption</span>
+                                <span class="d-inline d-sm-none">Add</span>
                             </a>
 
                         </div>
@@ -199,9 +315,9 @@
                 <hr>
 
                 <!-- Filters Section -->
-                <div class="row mb-3 align-items-end">
+                <div class="row mb-3 align-items-end g-2 g-sm-3">
                     <!-- Search Filter -->
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
                         <label for="search" class="form-label fw-semibold">Search</label>
                         <div class="input-group">
                             <span class="input-group-text">
@@ -214,7 +330,7 @@
                     </div>
 
                        <!-- Course Filter -->
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
                         <label for="course_filter" class="form-label fw-semibold">Course</label>
                         <select name="course_filter" id="course_filter" class="form-select">
                             <option value="">-- All Courses --</option>
@@ -228,23 +344,23 @@
 
 
                     <!-- From Date Filter -->
-                    <div class="col-md-2">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label for="from_date_filter" class="form-label fw-semibold">From Date</label>
                         <input type="date" name="from_date_filter" id="from_date_filter" class="form-control"
                             value="">
                     </div>
 
                     <!-- To Date Filter -->
-                    <div class="col-md-2">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label for="to_date_filter" class="form-label fw-semibold">To Date</label>
                         <input type="date" name="to_date_filter" id="to_date_filter" class="form-control"
                             value="">
                     </div>
 
                     <!-- Reset Button -->
-                    <div class="col-md-2">
+                    <div class="col-12 col-md-2">
                         <label class="form-label fw-semibold d-block">&nbsp;</label>
-                        <a href="javascript:void(0)" style="width: 229px;" id="resetFilters"
+                        <a href="javascript:void(0)" id="resetFilters"
                                 class="btn btn-outline-danger">
                                 Reset
                                 </a>
@@ -252,7 +368,7 @@
                 </div>
 
                 <!-- Total Records Count Row -->
-             
+
 
                 <div class="table-responsive">
                     <table class="table" id="medicalExemptionTable">
@@ -272,7 +388,7 @@
                                 <th class="col">Status</th>
                             </tr>
                         </thead>
-                       
+
                     </table>
                 </div>
             </div>
@@ -382,9 +498,9 @@ $(document).ready(function () {
         table.ajax.reload(null, false);
     });
 
-    
+
 $(document).on('click', '.delete-btn', function () {
-    
+
 
     let deleteUrl = $(this).data('url');
 
@@ -573,7 +689,5 @@ function printTable() {
 </script>
 
 
-
-</script>
 
 @endpush

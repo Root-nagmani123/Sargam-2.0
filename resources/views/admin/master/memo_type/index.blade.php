@@ -3,26 +3,194 @@
 @section('title', 'Memo Type Master')
 
 @section('setup_content')
-<div class="container-fluid">
+<style>
+/* Memo Type Master - responsive (mobile/tablet only, desktop unchanged) */
+@media (max-width: 991.98px) {
+    .memo-type-index .datatables .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .memo-type-index .datatables #memotypemaster-table {
+        min-width: 400px;
+    }
+    .memo-type-index .datatables #memotypemaster-table th,
+    .memo-type-index .datatables #memotypemaster-table td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 767.98px) {
+    /* Card + table tightening */
+    .memo-type-index .datatables .card-body {
+        padding: 1rem !important;
+    }
+    .memo-type-index .datatables #memotypemaster-table th,
+    .memo-type-index .datatables #memotypemaster-table td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+
+    /* Header: title + Add button alignment on mobile/tablet */
+    .memo-type-index .memo-type-header-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .memo-type-index .memo-type-header-row .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .memo-type-index .memo-type-header-row .d-flex.justify-content-end {
+        justify-content: stretch !important;
+    }
+    .memo-type-index .memo-type-header-row .add-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* DataTables: Show entries + Search spacing for this page */
+    .memo-type-index .dataTables_length,
+    .memo-type-index .dataTables_filter {
+        margin-bottom: 0.5rem;
+        width: 100%;
+    }
+
+    /* SweetAlert form: stack label + field on small tablets/phones */
+    body:has(.memo-type-index) .swal2-container #memoTypeForm .row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    body:has(.memo-type-index) .swal2-container #memoTypeForm .col-auto {
+        flex: 0 0 auto;
+        margin-bottom: 0.25rem;
+    }
+}
+@media (max-width: 575.98px) {
+    .memo-type-index.container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .memo-type-index .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+    .memo-type-index .datatables .table-responsive {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .memo-type-index .datatables #memotypemaster-table th,
+    .memo-type-index .datatables #memotypemaster-table td {
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+
+    /* DataTables controls: stack label + field nicely */
+    .memo-type-index .dataTables_length label,
+    .memo-type-index .dataTables_filter label {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+        font-size: 0.8125rem;
+    }
+    .memo-type-index .dataTables_length select {
+        width: 100%;
+        max-width: 100%;
+        min-height: 38px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+    .memo-type-index .dataTables_filter input {
+        width: 100%;
+        max-width: 100%;
+        min-height: 38px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+
+    /* SweetAlert popup responsive (scoped to this page via :has) */
+    body:has(.memo-type-index) .swal2-container .swal2-popup {
+        margin: 0.5rem;
+        max-width: calc(100vw - 1rem);
+        width: calc(100vw - 1rem) !important;
+        padding: 1rem 0.75rem 0.75rem;
+    }
+    body:has(.memo-type-index) .swal2-container .swal2-title {
+        font-size: 1.05rem;
+        margin-bottom: 0.75rem;
+    }
+    body:has(.memo-type-index) .swal2-container .swal2-html-container {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+        margin: 0;
+    }
+
+    /* SweetAlert Add/Edit Memo form – clean mobile layout */
+    body:has(.memo-type-index) .swal2-container #memoTypeForm .row {
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: 0.6rem;
+    }
+    body:has(.memo-type-index) .swal2-container #memoTypeForm .col-auto {
+        flex: 0 0 auto;
+        margin-bottom: 0.25rem;
+    }
+    body:has(.memo-type-index) .swal2-container #memoTypeForm label {
+        font-size: 0.875rem;
+        margin-bottom: 0;
+    }
+    body:has(.memo-type-index) .swal2-container #memoTypeForm input[type="text"],
+    body:has(.memo-type-index) .swal2-container #memoTypeForm input[type="file"],
+    body:has(.memo-type-index) .swal2-container #memoTypeForm select {
+        width: 100%;
+        max-width: 100%;
+        min-height: 42px;
+        font-size: 0.875rem;
+    }
+    body:has(.memo-type-index) .swal2-container #memoTypeForm small {
+        font-size: 0.75rem;
+    }
+
+    /* SweetAlert actions: buttons refined for phones */
+    body:has(.memo-type-index) .swal2-container .swal2-actions {
+        margin-top: 0.75rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    body:has(.memo-type-index) .swal2-container .swal2-actions .swal2-confirm,
+    body:has(.memo-type-index) .swal2-container .swal2-actions .swal2-cancel {
+        width: 100%;
+        min-height: 40px;
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 375px) {
+    .memo-type-index.container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .memo-type-index .datatables .card-body {
+        padding: 0.5rem !important;
+    }
+    .memo-type-index .memo-type-header-row h4 {
+        font-size: 1.1rem;
+    }
+}
+</style>
+<div class="container-fluid memo-type-index">
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row memo-type-header-row">
                         <div class="col-6">
                             <h4>Memo Type Master</h4>
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-center gap-2">
-                                <!-- Add Group Mapping -->
-                                <!-- <a href="javascript:void(0);" id="showMemoAlert"
-                                    class="btn btn-primary d-flex align-items-center">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">add</i>
-                                    Add Memo Type
-                                </a> -->
-                                <button id="showMemoAlert" class="btn btn-primary">
+                                <button id="showMemoAlert" class="btn btn-primary add-btn">
                                     Add Memo Type
                                 </button>
                             </div>
