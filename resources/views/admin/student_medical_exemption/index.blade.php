@@ -510,6 +510,7 @@ $(document).on('click', '.delete-btn', function () {
 
         if (result.isConfirmed) {
 
+           /*
             $.ajax({
                 url: deleteUrl,
                 type: 'DELETE',
@@ -533,7 +534,46 @@ $(document).on('click', '.delete-btn', function () {
                         'error'
                     );
                 }
-            });
+            });*/
+
+
+            $.ajax({
+    url: deleteUrl,
+    type: 'DELETE',
+    data: {
+        _token: '{{ csrf_token() }}'
+    },
+    success: function (response) {
+
+       Swal.fire({
+            title: 'Deleted!',
+            text: response.message ?? 'Record deleted successfully.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
+
+
+        table.ajax.reload(null, false);
+    },
+    error: function (xhr) {
+
+        let message = 'Something went wrong.';
+
+        if (xhr.responseJSON && xhr.responseJSON.message) {
+            message = xhr.responseJSON.message;
+        }
+
+        Swal.fire(
+            'Not Allowed',
+            message,
+            'warning'
+        );
+    }
+});
+
+
+
         }
     });
 });
