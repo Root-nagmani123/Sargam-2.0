@@ -549,15 +549,25 @@ class StudentMedicalExemptionController extends Controller
         return redirect()->route('student.medical.exemption.index')->with('success', 'Record updated successfully.');
     }
 
-
-    public function delete($id)
+ public function delete($id)
     {
-        StudentMedicalExemption::destroy(decrypt($id));
-         return response()->json([
-        'message' => 'Medical exemption deleted successfully'
-        ]);
+        //StudentMedicalExemption::destroy(decrypt($id));
+        $record = StudentMedicalExemption::findOrFail(decrypt($id));
+
+        if ($record->active_inactive == 1) {
+            return response()->json([
+            'message' => 'Active medical exemption cannot be deleted.'
+            ], 403);
+            }
+
+            $record->delete();
+
+            return response()->json([
+            'message' => 'Medical exemption deleted successfully'
+            ]);
        // return redirect()->route('student.medical.exemption.index')->with('success', 'Deleted successfully.');
     }
+
     public function getStudentsByCourse(Request $request)
     {
         $courseId = $request->input('course_id');
