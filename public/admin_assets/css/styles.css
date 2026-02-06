@@ -17768,7 +17768,11 @@
     --bs-indigo: #6610f2;
     --bs-purple: #6f42c1;
     --bs-pink: #d63384;
+<<<<<<< HEAD
     --bs-red: #004a93;
+=======
+    --bs-red: #af2910;
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
     --bs-orange: #fd7e14;
     --bs-yellow: #f8c20a;
     --bs-green: #36c76c;
@@ -17896,8 +17900,13 @@
     --bs-focus-ring-color: rgba(99, 91, 255, 0.25);
     --bs-form-valid-color: #36c76c;
     --bs-form-valid-border-color: #36c76c;
+<<<<<<< HEAD
     --bs-form-invalid-color: #004a93;
     --bs-form-invalid-border-color: #004a93;
+=======
+    --bs-form-invalid-color: #af2910;
+    --bs-form-invalid-border-color: #af2910;
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
 }
 
 [data-bs-theme="dark"] {
@@ -21569,7 +21578,11 @@ textarea.form-control.is-valid {
 .was-validated .form-control:invalid {
     border-color: var(--bs-form-invalid-border-color);
     padding-right: calc(1.5em + 20px);
+<<<<<<< HEAD
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23004a93'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23004a93' stroke='none'/%3e%3c/svg%3e");
+=======
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23af2910'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23af2910' stroke='none'/%3e%3c/svg%3e");
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
     background-repeat: no-repeat;
     background-position: right calc(0.375em + 5px) center;
     background-size: calc(0.75em + 10px) calc(0.75em + 10px);
@@ -21596,7 +21609,11 @@ textarea.form-control.is-invalid {
 .form-select.is-invalid:not([multiple])[size="1"],
 .was-validated .form-select:invalid:not([multiple]):not([size]),
 .was-validated .form-select:invalid:not([multiple])[size="1"] {
+<<<<<<< HEAD
     --bs-form-select-bg-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23004a93'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23004a93' stroke='none'/%3e%3c/svg%3e");
+=======
+    --bs-form-select-bg-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23af2910'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23af2910' stroke='none'/%3e%3c/svg%3e");
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
     padding-right: 78px;
     background-position: right 16px center, center right 38px;
     background-size: 16px 12px, calc(0.75em + 10px) calc(0.75em + 10px);
@@ -22086,6 +22103,7 @@ fieldset:disabled .btn {
 }
 
 .btn-outline-danger {
+<<<<<<< HEAD
     --bs-btn-color: #004a93;
     --bs-btn-border-color: #004a93;
     --bs-btn-hover-color: #fff;
@@ -22099,6 +22117,21 @@ fieldset:disabled .btn {
     --bs-btn-disabled-color: #004a93;
     --bs-btn-disabled-bg: transparent;
     --bs-btn-disabled-border-color: #004a93;
+=======
+    --bs-btn-color: #af2910;
+    --bs-btn-border-color: #af2910;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #af2910;
+    --bs-btn-hover-border-color: #af2910;
+    --bs-btn-focus-shadow-rgb: 175, 41, 16;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #af2910;
+    --bs-btn-active-border-color: #af2910;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #af2910;
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: #af2910;
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
     --bs-gradient: none;
 }
 
@@ -48577,7 +48610,11 @@ body .apexcharts-tooltip-title {
             transparent 50%,
             transparent),
         linear-gradient(162deg,
+<<<<<<< HEAD
             #004a93 50%,
+=======
+            #af2910 50%,
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
             var(--bs-gray-100) 50%,
             var(--bs-gray-100));
 }
@@ -50489,7 +50526,11 @@ body div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm:focus
 }
 
 body div:where(.swal2-container) button:where(.swal2-styled).swal2-cancel {
+<<<<<<< HEAD
     background-color: #004a93 !important;
+=======
+    background-color: #af2910 !important;
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
     border-radius: var(--bs-border-radius-sm);
 }
 
@@ -50683,7 +50724,11 @@ button.toast-close-button {
 }
 
 .toast-error {
+<<<<<<< HEAD
     background-color: #004a93 !important;
+=======
+    background-color: #af2910 !important;
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
 }
 
 .toast-info {
