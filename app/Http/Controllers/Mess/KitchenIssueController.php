@@ -10,6 +10,11 @@ use App\Models\Mess\Store;
 use App\Models\Mess\Inventory;
 use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\ClientType;
+use App\Models\FacultyMaster;
+use App\Models\EmployeeMaster;
+use App\Models\DepartmentMaster;
+use App\Models\CourseMaster;
+use App\Models\StudentMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -23,27 +28,37 @@ class KitchenIssueController extends Controller
      */
     public function index(Request $request)
     {
-        $query = KitchenIssueMaster::with(['storeMaster', 'items.itemSubcategory', 'clientTypeCategory', 'employee', 'student']);
+        $query = KitchenIssueMaster::with(['store', 'items.itemSubcategory', 'clientTypeCategory', 'employee', 'student']);
 
         if ($request->filled('store')) {
-            $query->where('inve_store_master_pk', $request->store);
+            $query->where('store_id', $request->store);
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        if ($request->filled('approve_status')) {
-            $query->where('approve_status', $request->approve_status);
-        }
         if ($request->filled('payment_type')) {
             $query->where('payment_type', $request->payment_type);
         }
+        if ($request->filled('client_type')) {
+            $query->where('client_type', $request->client_type);
+        }
+        if ($request->filled('kitchen_issue_type')) {
+            $query->where('kitchen_issue_type', $request->kitchen_issue_type);
+        }
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('request_date', [$request->start_date, $request->end_date]);
+            $query->whereBetween('issue_date', [$request->start_date, $request->end_date]);
         }
 
-        $kitchenIssues = $query->orderBy('request_date', 'desc')
+        $kitchenIssues = $query->orderBy('issue_date', 'desc')
             ->orderBy('pk', 'desc')
             ->paginate(20);
+
+        $otCourses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name']);
 
         $stores = Store::active()->get();
         $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
@@ -57,8 +72,55 @@ class KitchenIssueController extends Controller
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
             ->groupBy('client_type');
+        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+            ->map(function ($e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+            })
+            ->filter(fn($e) => $e->full_name !== '—')
+            ->values();
 
-        return view('mess.kitchen-issues.index', compact('kitchenIssues', 'stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType'));
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $messStaff = $officersMessDept
+            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+                ->where('department_master_pk', $officersMessDept->pk)
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                ->map(function ($e) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                })
+                ->filter(fn($e) => $e->full_name !== '—')
+                ->values()
+            : collect();
+
+        return view('mess.kitchen-issues.index', compact('kitchenIssues', 'stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff', 'otCourses'));
+    }
+
+    /**
+     * Get students by course_pk for OT Client Name flow.
+     * Match: course.pk = student_master_course__map.course_master_pk
+     * Return student display_name from student_master.
+     */
+    public function getStudentsByCourse(Request $request, $course_pk)
+    {
+        $students = StudentMaster::join(
+            'student_master_course__map',
+            'student_master.pk',
+            '=',
+            'student_master_course__map.student_master_pk'
+        )
+        ->where('student_master_course__map.course_master_pk', $course_pk)
+        ->select('student_master.pk', 'student_master.display_name')
+        ->orderBy('student_master.display_name')
+        ->get();
+
+        return response()->json([
+            'students' => $students->map(fn($s) => ['pk' => $s->pk, 'display_name' => $s->display_name ?? '—'])->filter(fn($s) => $s['display_name'] !== '—')->values(),
+        ]);
     }
 
     /**
@@ -78,8 +140,32 @@ class KitchenIssueController extends Controller
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()
             ->groupBy('client_type');
+        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+            ->map(function ($e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+            })
+            ->filter(fn($e) => $e->full_name !== '—')
+            ->values();
 
-        return view('mess.kitchen-issues.create', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType'));
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $messStaff = $officersMessDept
+            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+                ->where('department_master_pk', $officersMessDept->pk)
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                ->map(function ($e) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                })
+                ->filter(fn($e) => $e->full_name !== '—')
+                ->values()
+            : collect();
+
+        return view('mess.kitchen-issues.create', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff'));
     }
 
     /**
@@ -88,13 +174,14 @@ class KitchenIssueController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'inve_store_master_pk' => 'required|exists:mess_stores,id',
-            'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
+            'store_id' => 'required|exists:mess_stores,id',
+            'payment_type' => 'required|integer|in:0,1,2',
+            'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
-            'client_name' => 'nullable|string|max:255',
+            'client_id' => 'nullable|integer',
+            'name_id' => 'nullable|integer',
+            'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
-            'transfer_to' => 'nullable|string|max:255',
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
@@ -106,26 +193,25 @@ class KitchenIssueController extends Controller
         try {
             DB::beginTransaction();
 
+            // Map client_type_slug to numeric value
+            $clientTypeMap = [
+                'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
+                'ot' => KitchenIssueMaster::CLIENT_OT,
+                'course' => KitchenIssueMaster::CLIENT_COURSE,
+                'other' => KitchenIssueMaster::CLIENT_OTHER,
+            ];
+
             $master = KitchenIssueMaster::create([
-                'inve_item_master_pk' => 0, // 0 = multi-item voucher (items in kitchen_issue_items). Run migration 2026_02_02_120000_make_kitchen_issue_master_inve_item_nullable to allow NULL.
-                'inve_store_master_pk' => $request->inve_store_master_pk,
-                'quantity' => 0,
-                'unit_price' => 0,
+                'store_id' => $request->store_id,
                 'payment_type' => $request->payment_type,
-                'client_type' => 0,
+                'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'client_type_pk' => $request->client_type_pk,
+                'client_id' => $request->client_id,
+                'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
-                'employee_student_pk' => 0,
                 'issue_date' => $request->issue_date,
-                'request_date' => now(),
-                'user_id' => Auth::id(),
-                'created_by' => Auth::id(),
+                'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
                 'status' => KitchenIssueMaster::STATUS_APPROVED,
-                'approve_status' => KitchenIssueMaster::APPROVE_APPROVED,
-                'send_for_approval' => 0,
-                'notify_status' => 0,
-                'paid_unpaid' => KitchenIssueMaster::UNPAID,
-                'transfer_to' => $request->transfer_to ?? 0,
                 'remarks' => $request->remarks,
             ]);
 
@@ -168,12 +254,9 @@ class KitchenIssueController extends Controller
     public function show(Request $request, $id)
     {
         $kitchenIssue = KitchenIssueMaster::with([
-            'storeMaster',
-            'itemMaster',
+            'store',
             'items.itemSubcategory',
             'clientTypeCategory',
-            'paymentDetails',
-            'approvals.approver',
             'employee',
             'student'
         ])->findOrFail($id);
@@ -181,14 +264,15 @@ class KitchenIssueController extends Controller
         if ($request->wantsJson()) {
             $voucher = [
                 'pk' => $kitchenIssue->pk,
-                'request_date' => $kitchenIssue->request_date ? $kitchenIssue->request_date->format('d/m/Y') : '-',
-                'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('d/m/Y') : '-',
-                'store_name' => $kitchenIssue->storeMaster->store_name ?? 'N/A',
-                'client_type' => $kitchenIssue->clientTypeCategory ? ucfirst($kitchenIssue->clientTypeCategory->client_type ?? '') : '-',
+                'request_date' => $kitchenIssue->created_at ? $kitchenIssue->created_at->format('d/m/Y') : '—',
+                'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('d/m/Y') : '—',
+                'store_name' => $kitchenIssue->store->store_name ?? 'N/A',
+                'client_type' => $kitchenIssue->client_type_label ?? '-',
                 'client_name' => $kitchenIssue->client_name ?? '-',
-                'payment_type' => $kitchenIssue->payment_type == 1 ? 'Credit' : ($kitchenIssue->payment_type == 0 ? 'Cash' : ($kitchenIssue->payment_type == 2 ? 'Online' : '-')),
+                'payment_type' => $kitchenIssue->payment_type_label ?? '-',
+                'kitchen_issue_type' => $kitchenIssue->kitchen_issue_type_label ?? '-',
                 'status' => $kitchenIssue->status,
-                'status_label' => $kitchenIssue->status == 0 ? 'Pending' : ($kitchenIssue->status == 2 ? 'Approved' : ($kitchenIssue->status == 4 ? 'Completed' : (string)$kitchenIssue->status)),
+                'status_label' => $kitchenIssue->status_label ?? '-',
                 'remarks' => $kitchenIssue->remarks ?? '',
                 'created_at' => $kitchenIssue->created_at ? $kitchenIssue->created_at->format('d/m/Y H:i') : '-',
                 'updated_at' => $kitchenIssue->updated_at ? $kitchenIssue->updated_at->format('d/m/Y H:i') : null,
@@ -223,24 +307,28 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::with(['items.itemSubcategory', 'clientTypeCategory'])->findOrFail($id);
 
-        if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'Cannot edit approved voucher'], 403);
-            }
-            return redirect()->route('admin.mess.material-management.index')
-                           ->with('error', 'Cannot edit approved kitchen issue');
-        }
-
         if ($request->wantsJson()) {
-            $clientTypeSlug = $kitchenIssue->clientTypeCategory ? $kitchenIssue->clientTypeCategory->client_type : 'employee';
+            // Map numeric client_type back to slug
+            $clientTypeSlugMap = [
+                KitchenIssueMaster::CLIENT_EMPLOYEE => 'employee',
+                KitchenIssueMaster::CLIENT_OT => 'ot',
+                KitchenIssueMaster::CLIENT_COURSE => 'course',
+                KitchenIssueMaster::CLIENT_OTHER => 'other',
+            ];
+            $clientTypeSlug = $clientTypeSlugMap[$kitchenIssue->client_type] ?? 'employee';
+            
             $voucher = [
                 'pk' => $kitchenIssue->pk,
                 'payment_type' => (int) $kitchenIssue->payment_type,
+                'client_type' => (int) $kitchenIssue->client_type,
                 'client_type_pk' => $kitchenIssue->client_type_pk,
                 'client_type_slug' => $clientTypeSlug,
+                'client_id' => $kitchenIssue->client_id,
+                'name_id' => $kitchenIssue->name_id,
                 'client_name' => $kitchenIssue->client_name,
                 'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '',
-                'inve_store_master_pk' => $kitchenIssue->inve_store_master_pk,
+                'store_id' => $kitchenIssue->store_id,
+                'inve_store_master_pk' => $kitchenIssue->store_id, // For backward compatibility with view
                 'remarks' => $kitchenIssue->remarks,
             ];
             $items = $kitchenIssue->items->map(function ($item) {
@@ -270,17 +358,14 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
-        if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
-            return redirect()->route('admin.mess.material-management.index')
-                           ->with('error', 'Cannot edit approved kitchen issue');
-        }
-
         $request->validate([
-            'inve_store_master_pk' => 'required|exists:mess_stores,id',
-            'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
+            'store_id' => 'required|exists:mess_stores,id',
+            'payment_type' => 'required|integer|in:0,1,2',
+            'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
-            'client_name' => 'nullable|string|max:255',
+            'client_id' => 'nullable|integer',
+            'name_id' => 'nullable|integer',
+            'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -302,9 +387,12 @@ class KitchenIssueController extends Controller
             ];
 
             $kitchenIssue->update([
-                'inve_store_master_pk' => $request->inve_store_master_pk,
+                'store_id' => $request->store_id,
                 'payment_type' => $request->payment_type,
+                'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'client_type_pk' => $request->client_type_pk,
+                'client_id' => $request->client_id,
+                'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,
                 'remarks' => $request->remarks,
@@ -348,20 +436,13 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
-        // Only allow deletion if not approved or completed
-        if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED ||
-            $kitchenIssue->status == KitchenIssueMaster::STATUS_COMPLETED) {
-            return redirect()->route('admin.mess.material-management.index')
-                           ->with('error', 'Cannot delete approved or completed kitchen issue');
-        }
-
         try {
             $kitchenIssue->delete();
 
             return redirect()->route('admin.mess.material-management.index')
-                           ->with('success', 'Material Management deleted successfully');
+                           ->with('success', 'Selling Voucher deleted successfully');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to delete Material Management: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete Selling Voucher: ' . $e->getMessage());
         }
     }
 
@@ -370,7 +451,7 @@ class KitchenIssueController extends Controller
      */
     public function returnData(Request $request, $id)
     {
-        $kitchenIssue = KitchenIssueMaster::with(['storeMaster', 'items.itemSubcategory'])->findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::with(['store', 'items.itemSubcategory'])->findOrFail($id);
 
         if (!$request->wantsJson()) {
             return redirect()->route('admin.mess.material-management.index');
@@ -475,8 +556,8 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
-        if ($kitchenIssue->send_for_approval == 1) {
-            return back()->with('error', 'Material Management already sent for approval');
+        if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
+            return back()->with('error', 'Material Management already approved');
         }
 
         try {

@@ -8,9 +8,15 @@ use App\Models\Mess\SellingVoucherDateRangeReportItem;
 use App\Models\Mess\Store;
 use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\ClientType;
+use App\Models\FacultyMaster;
+use App\Models\EmployeeMaster;
+use App\Models\DepartmentMaster;
+use App\Models\CourseMaster;
+use App\Models\StudentMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Selling Voucher with Date Range - standalone module (design/pattern like Selling Voucher, data/logic separate).
@@ -46,8 +52,57 @@ class SellingVoucherDateRangeController extends Controller
         });
         $clientTypes = ClientType::clientTypes();
         $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get()->groupBy('client_type');
+        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+            ->map(function ($e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+            })
+            ->filter(fn($e) => $e->full_name !== '—')
+            ->values();
 
-        return view('mess.selling-voucher-date-range.index', compact('reports', 'stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType'));
+        $otCourses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name']);
+
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $messStaff = $officersMessDept
+            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+                ->where('department_master_pk', $officersMessDept->pk)
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                ->map(function ($e) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                })
+                ->filter(fn($e) => $e->full_name !== '—')
+                ->values()
+            : collect();
+
+        return view('mess.selling-voucher-date-range.index', compact('reports', 'stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff', 'otCourses'));
+    }
+
+    /**
+     * Get students by course_pk for OT Client Name flow.
+     * Match: course.pk = student_master_course__map.course_master_pk
+     * Return student display_name from student_master.
+     */
+    public function getStudentsByCourse(Request $request, $course_pk)
+    {
+        $students = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
+            ->where('student_master_course__map.course_master_pk', $course_pk)
+            ->select('student_master.pk', 'student_master.display_name')
+            ->orderBy('student_master.display_name')
+            ->get();
+
+        return response()->json([
+            'students' => $students->map(fn($s) => ['pk' => $s->pk, 'display_name' => $s->display_name ?? '—'])->filter(fn($s) => $s['display_name'] !== '—')->values(),
+        ]);
     }
 
     public function create()
@@ -60,9 +115,9 @@ class SellingVoucherDateRangeController extends Controller
         $request->validate([
             'inve_store_master_pk' => 'required|exists:mess_stores,id',
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
-            'client_name' => 'nullable|string|max:255',
+            'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -224,9 +279,9 @@ class SellingVoucherDateRangeController extends Controller
         $request->validate([
             'inve_store_master_pk' => 'required|exists:mess_stores,id',
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
-            'client_name' => 'nullable|string|max:255',
+            'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',

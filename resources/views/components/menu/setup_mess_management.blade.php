@@ -123,21 +123,6 @@
                     <span class="hide-menu small small-sm-normal text-nowrap">Process Mess Bills (Employee)</span>
                 </a>
             </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.monthly-bills.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Monthly Bills</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.finance-bookings.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Finance Bookings</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.invoices.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Invoices</span>
-                </a>
-            </li>
         </ul>
 
         <!-- ======= REPORTS ======= -->

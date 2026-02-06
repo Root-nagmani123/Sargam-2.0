@@ -100,7 +100,7 @@ class KitchenIssueMaster extends Model
      */
     public function employee()
     {
-        return $this->belongsTo(User::class, 'employee_student_pk', 'pk');
+        return $this->belongsTo(\App\Models\EmployeeMaster::class, 'client_id', 'pk');
     }
 
     /**
@@ -108,23 +108,7 @@ class KitchenIssueMaster extends Model
      */
     public function student()
     {
-        return $this->belongsTo(User::class, 'employee_student_pk', 'pk');
-    }
-
-    /**
-     * Get client type category (Client Name row from mess_client_types)
-     */
-    public function clientTypeCategory()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * Get the modifier
-     */
-    public function modifier()
-    {
-        return $this->belongsTo(User::class, 'modified_by');
+        return $this->belongsTo(\App\Models\StudentMaster::class, 'client_id', 'pk');
     }
 
     /**
