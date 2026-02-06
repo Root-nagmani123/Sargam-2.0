@@ -16,37 +16,21 @@ class KitchenIssueMaster extends Model
     protected $primaryKey = 'pk';
 
     protected $fillable = [
-        'inve_item_master_pk',
-        'inve_store_master_pk',
-        'requested_store_id',
-        'quantity',
-        'user_id',
-        'status',
-        'store_employee_master_pk',
-        'request_date',
-        'unit_price',
-        'payment_type',
-        'issue_date',
-        'transfer_to',
         'client_type',
+        'payment_type',
+        'client_id',
+        'name_id',
+        'issue_date',
+        'store_id',
+        'kitchen_issue_type',
+        'remarks',
+        'status',
         'client_type_pk',
         'client_name',
-        'employee_student_pk',
-        'bill_no',
-        'send_for_approval',
-        'notify_status',
-        'approve_status',
-        'paid_unpaid',
-        'remarks',
-        'created_by',
-        'modified_by',
     ];
 
     protected $casts = [
-        'request_date' => 'datetime',
         'issue_date' => 'date',
-        'quantity' => 'decimal:2',
-        'unit_price' => 'decimal:2',
     ];
 
     // Constants for status
@@ -59,44 +43,32 @@ class KitchenIssueMaster extends Model
     // Constants for payment types
     const PAYMENT_CASH = 0;
     const PAYMENT_CREDIT = 1;
-    const PAYMENT_DEBIT = 2;
-    const PAYMENT_ACCOUNT = 5;
-
-    // Constants for approval status
-    const APPROVE_PENDING = 0;
-    const APPROVE_APPROVED = 1;
-    const APPROVE_REJECTED = 2;
-
-    // Constants for paid/unpaid
-    const UNPAID = 0;
-    const PAID = 1;
+    const PAYMENT_ONLINE = 2;
 
     // Constants for client types
-    const CLIENT_STUDENT = 2;
-    const CLIENT_EMPLOYEE = 5;
+    const CLIENT_EMPLOYEE = 1;
+    const CLIENT_OT = 2;
+    const CLIENT_COURSE = 3;
+    const CLIENT_OTHER = 4;
+
+    // Constants for kitchen issue types
+    const TYPE_SELLING_VOUCHER = 1;
+    const TYPE_SELLING_VOUCHER_DATE_RANGE = 2;
 
     /**
-     * Get the item master
+     * Get the store
      */
-    public function itemMaster()
+    public function store()
     {
-        return $this->belongsTo(Inventory::class, 'inve_item_master_pk', 'id');
+        return $this->belongsTo(Store::class, 'store_id', 'id');
     }
 
     /**
-     * Get the store master
+     * Alias for backward compatibility
      */
     public function storeMaster()
     {
-        return $this->belongsTo(Store::class, 'inve_store_master_pk', 'id');
-    }
-
-    /**
-     * Get the requested store
-     */
-    public function requestedStore()
-    {
-        return $this->belongsTo(Store::class, 'requested_store_id', 'id');
+        return $this->store();
     }
 
     /**
@@ -128,31 +100,15 @@ class KitchenIssueMaster extends Model
      */
     public function employee()
     {
-        return $this->belongsTo(User::class, 'employee_student_pk', 'pk');
+        return $this->belongsTo(\App\Models\EmployeeMaster::class, 'client_id', 'pk');
     }
 
     /**
-     * Get the student (if client_type is student)
+     * Get the student (if client_type is OT/Course)
      */
     public function student()
     {
-        return $this->belongsTo(User::class, 'employee_student_pk', 'pk');
-    }
-
-    /**
-     * Get the creator
-     */
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * Get the modifier
-     */
-    public function modifier()
-    {
-        return $this->belongsTo(User::class, 'modified_by');
+        return $this->belongsTo(\App\Models\StudentMaster::class, 'client_id', 'pk');
     }
 
     /**
@@ -195,41 +151,38 @@ class KitchenIssueMaster extends Model
         $labels = [
             self::PAYMENT_CASH => 'Cash',
             self::PAYMENT_CREDIT => 'Credit',
-            self::PAYMENT_DEBIT => 'Debit',
-            self::PAYMENT_ACCOUNT => 'Account',
+            self::PAYMENT_ONLINE => 'Online',
         ];
 
         return $labels[$this->payment_type] ?? 'Unknown';
     }
 
     /**
-     * Get approve status label
+     * Get client type label
      */
-    public function getApproveStatusLabelAttribute()
+    public function getClientTypeLabelAttribute()
     {
         $labels = [
-            self::APPROVE_PENDING => 'Pending Approval',
-            self::APPROVE_APPROVED => 'Approved',
-            self::APPROVE_REJECTED => 'Rejected',
+            self::CLIENT_EMPLOYEE => 'Employee',
+            self::CLIENT_OT => 'OT',
+            self::CLIENT_COURSE => 'Course',
+            self::CLIENT_OTHER => 'Other',
         ];
 
-        return $labels[$this->approve_status] ?? 'Unknown';
+        return $labels[$this->client_type] ?? 'Unknown';
     }
 
     /**
-     * Get paid status label
+     * Get kitchen issue type label
      */
-    public function getPaidStatusLabelAttribute()
+    public function getKitchenIssueTypeLabelAttribute()
     {
-        return $this->paid_unpaid === self::PAID ? 'Paid' : 'Unpaid';
-    }
+        $labels = [
+            self::TYPE_SELLING_VOUCHER => 'Selling Voucher',
+            self::TYPE_SELLING_VOUCHER_DATE_RANGE => 'Selling Voucher with Date Range',
+        ];
 
-    /**
-     * Get total amount
-     */
-    public function getTotalAmountAttribute()
-    {
-        return $this->quantity * $this->unit_price;
+        return $labels[$this->kitchen_issue_type] ?? 'Unknown';
     }
 
     /**
@@ -238,37 +191,13 @@ class KitchenIssueMaster extends Model
     public function getClientFullNameAttribute()
     {
         if ($this->client_type == self::CLIENT_EMPLOYEE && $this->employee) {
-            return $this->employee->first_name . ' ' . $this->employee->last_name;
-        } elseif ($this->client_type == self::CLIENT_STUDENT && $this->student) {
-            return $this->student->first_name . ' ' . $this->student->last_name;
+            $emp = $this->employee;
+            return trim(($emp->first_name ?? '') . ' ' . ($emp->middle_name ?? '') . ' ' . ($emp->last_name ?? ''));
+        } elseif (in_array($this->client_type, [self::CLIENT_OT, self::CLIENT_COURSE]) && $this->student) {
+            return $this->student->display_name ?? $this->student->first_name ?? '';
         }
         
         return $this->client_name ?? 'N/A';
-    }
-
-    /**
-     * Scope for pending approvals
-     */
-    public function scopePendingApproval($query)
-    {
-        return $query->where('send_for_approval', 1)
-                     ->where('approve_status', self::APPROVE_PENDING);
-    }
-
-    /**
-     * Scope for approved records
-     */
-    public function scopeApproved($query)
-    {
-        return $query->where('approve_status', self::APPROVE_APPROVED);
-    }
-
-    /**
-     * Scope for unpaid bills
-     */
-    public function scopeUnpaid($query)
-    {
-        return $query->where('paid_unpaid', self::UNPAID);
     }
 
     /**
@@ -276,7 +205,7 @@ class KitchenIssueMaster extends Model
      */
     public function scopeByStore($query, $storeId)
     {
-        return $query->where('inve_store_master_pk', $storeId);
+        return $query->where('store_id', $storeId);
     }
 
     /**
@@ -284,6 +213,22 @@ class KitchenIssueMaster extends Model
      */
     public function scopeDateRange($query, $startDate, $endDate)
     {
-        return $query->whereBetween('request_date', [$startDate, $endDate]);
+        return $query->whereBetween('issue_date', [$startDate, $endDate]);
+    }
+
+    /**
+     * Scope for by client type
+     */
+    public function scopeByClientType($query, $clientType)
+    {
+        return $query->where('client_type', $clientType);
+    }
+
+    /**
+     * Scope for by kitchen issue type
+     */
+    public function scopeByKitchenIssueType($query, $type)
+    {
+        return $query->where('kitchen_issue_type', $type);
     }
 }
