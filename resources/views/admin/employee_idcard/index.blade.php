@@ -167,8 +167,12 @@
                                                     'Issued' => 'primary',
                                                     default => 'secondary'
                                                 };
+                                                $statusLabel = $request->status ?? '--';
+                                                if ($request->status === 'Pending') {
+                                                    $statusLabel = $request->approved_by_a1 ? 'Pending (A2)' : 'Pending (A1)';
+                                                }
                                             @endphp
-                                            <span class="badge bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
+                                            <span class="badge bg-{{ $statusClass }}">{{ $statusLabel }}</span>
                                         </td>
                                         <td class="text-end">
                                             <div class="d-flex align-items-center justify-content-end gap-1" role="group">

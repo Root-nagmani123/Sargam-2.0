@@ -353,6 +353,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reject/{id}', 'reject')->name('reject');
     });
 
+    // Employee ID Card Approval Routes (Approval I & II)
+    Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
+        Route::get('/approval1', 'approval1')->name('approval1');
+        Route::get('/approval2', 'approval2')->name('approval2');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::post('/approve1/{id}', 'approve1')->name('approve1');
+        Route::post('/approve2/{id}', 'approve2')->name('approve2');
+        Route::post('/reject1/{id}', 'reject1')->name('reject1');
+        Route::post('/reject2/{id}', 'reject2')->name('reject2');
+    });
+
     // Visitor/Gate Pass Routes
     Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
         Route::get('/', 'index')->name('index');
