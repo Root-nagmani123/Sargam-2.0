@@ -225,7 +225,7 @@ class IssueManagementController extends Controller
         try {
             $employees = DB::table('issue_category_master as a')
                 ->join('issue_category_employee_map as b', 'a.pk', '=', 'b.issue_category_master_pk')
-                ->join('employee_master as d', 'b.employee_master_pk', '=', 'd.pk_old')
+                ->join('employee_master as d', 'b.employee_master_pk', '=', 'd.pk')
                 ->where('a.pk', $categoryId)
                 ->select(
                     'a.issue_category',
