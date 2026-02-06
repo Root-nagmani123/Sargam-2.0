@@ -385,6 +385,24 @@
                         <span class="text-muted">Last Updated:</span>
                         <strong class="text-dark">{{ $request->updated_at->diffForHumans() }}</strong>
                     </div>
+                    @if($request->approver1)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Approved By A1:</span>
+                        <strong class="text-success">{{ $request->approver1->name ?? '--' }}</strong>
+                    </div>
+                    @endif
+                    @if($request->approver2)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Approved By A2:</span>
+                        <strong class="text-success">{{ $request->approver2->name ?? '--' }}</strong>
+                    </div>
+                    @endif
+                    @if($request->rejection_reason)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Rejection Reason:</span>
+                        <strong class="text-danger small">{{ Str::limit($request->rejection_reason, 30) }}</strong>
+                    </div>
+                    @endif
                     <hr>
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Status:</span>
