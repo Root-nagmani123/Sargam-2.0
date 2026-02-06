@@ -13,7 +13,8 @@
     <!-- Filter Card -->
     <div class="card mb-4">
         <div class="card-body">
-            <form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3">
+            {{--<form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3">--}}
+                <form id="filterForm" class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Filter by Course</label>
                     <select name="course_master_pk" class="form-select">
@@ -51,11 +52,29 @@
                 <i class="fas fa-plus me-1"></i> Create New Template
             </a>
         </div>
-        <div class="card-body">
+        <div class="card-body" id="template-wrapper">
             @if ($templates->isEmpty())
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> No templates found. Create your first template!
-            </div>
+             <div class="table-responsive">
+                <table class="table text-nowrap">
+                  <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Course</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="fas fa-info-circle me-2"></i> No templates found. Create your first template!
+                            </td>
+
+                        </tr>
+                         </tbody>
+                </table>
             @else
             <div class="table-responsive">
                 <table class="table text-nowrap">
@@ -85,7 +104,7 @@
                           <td>{{ $template->memo_notice_type }}</td>
                             <td>
                                 <div class="form-check form-switch d-inline-block ms-2">
-                                    <input class="form-check-input status-toggle-data" 
+                                    <input class="form-check-input status-toggle-data"
                                         type="checkbox"
                                         role="switch"
                                         data-id="{{ $template->pk }}"
@@ -252,8 +271,8 @@ $(document).on('change', '.status-toggle-data', function () {
 
     Swal.fire({
         title: 'Are you sure?',
-        text: newStatus == 1 
-            ? "Do you want to activate this template?" 
+        text: newStatus == 1
+            ? "Do you want to activate this template?"
             : "Do you want to deactivate this template?",
         icon: 'warning',
         showCancelButton: true,
@@ -318,6 +337,45 @@ $(document).on('change', '.status-toggle-data', function () {
     });
 
 });
+
+
+
+//filter form submit on course change
+
+
+$('#filterForm').on('submit', function(e){
+    e.preventDefault();
+    loadTemplates($(this).serialize());
+});
+
+$('.btn-secondary').on('click', function(e){
+    e.preventDefault();
+
+    $('select[name="course_master_pk"]').val('');
+    loadTemplates('');
+});
+
+// Pagination AJAX
+$(document).on('click', '#template-wrapper .pagination a', function(e){
+    e.preventDefault();
+    loadTemplates($(this).attr('href').split('?')[1]);
+});
+
+function loadTemplates(params = '') {
+
+    $.ajax({
+        url: "{{ route('admin.memo-notice.index') }}",
+        type: "GET",
+        data: params,
+        success: function(response){
+
+            let html = $(response).find('#template-wrapper').html();
+            $('#template-wrapper').html(html);
+
+        }
+    });
+}
+
 
 
 </script>

@@ -18,7 +18,7 @@ class MemoNoticeController extends Controller
         $data_course_id =  get_Role_by_course();
         $query = MemoNoticeTemplate::with('course')
             ->orderBy('created_date', 'desc');
-            
+
         if(!empty($data_course_id)){
             $query->whereIn('course_master_pk',$data_course_id);
         }
@@ -58,7 +58,7 @@ class MemoNoticeController extends Controller
             if(!empty($data_course_id)){
                 $courses->whereIn('pk',$data_course_id);
             }
-            $courses->orderBy('course_name')
+            $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
