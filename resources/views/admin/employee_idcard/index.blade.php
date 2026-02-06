@@ -176,7 +176,11 @@
                                                     $statusLabel = $request->approved_by_a1 ? 'Pending (A2)' : 'Pending (A1)';
                                                 }
                                             @endphp
+<<<<<<< HEAD
                                             <span class="badge text-{{ $statusClass }} fw-bold">{{ $statusLabel }}</span>
+=======
+                                            <span class="badge bg-{{ $statusClass }}">{{ $statusLabel }}</span>
+>>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
                                         </td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2" role="group">
