@@ -40,44 +40,44 @@
     Skip to main content
 </a>
 
-<header class="header-top-bar d-none d-lg-block">
-<div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+    <header class="header-top-bar d-none d-lg-block">
+    <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
 
-<!-- Left: Government Identity -->
-<div class="d-flex align-items-center gap-2">
-    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-         alt="Emblem of India" class="header-flag-icon">
-    <span class="fw-semibold small text-white">
-        भारत सरकार | Government of India
-    </span>
-</div>
+    <!-- Left: Government Identity -->
+    <div class="d-flex align-items-center gap-2">
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+            alt="Emblem of India" class="header-flag-icon">
+        <span class="fw-semibold small text-white">
+            भारत सरकार | Government of India
+        </span>
+    </div>
 
-<!-- Right: Utilities with vertical separators -->
-<nav aria-label="Utility Navigation">
-    <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
-        <li class="list-inline-item">
-            <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
-        </li>
-        <li class="header-utility-sep" aria-hidden="true"></li>
-        <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
-            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
-            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
-            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
-        </li>
-        <li class="header-utility-sep" aria-hidden="true"></li>
-        <li class="list-inline-item">
-            <div class="header-lang-dropdown">
-                <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
-                <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
-                    <option selected>English</option>
-                    <option>हिन्दी</option>
-                </select>
-            </div>
-        </li>
-    </ul>
-</nav>
-</div>
-</header>
+    <!-- Right: Utilities with vertical separators -->
+    <nav aria-label="Utility Navigation">
+        <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
+            <li class="list-inline-item">
+                <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
+            </li>
+            <li class="header-utility-sep" aria-hidden="true"></li>
+            <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
+            </li>
+            <li class="header-utility-sep" aria-hidden="true"></li>
+            <li class="list-inline-item">
+                <div class="header-lang-dropdown">
+                    <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
+                    <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
+                        <option selected>English</option>
+                        <option>हिन्दी</option>
+                    </select>
+                </div>
+            </li>
+        </ul>
+    </nav>
+    </div>
+    </header>
 
 <main id="main-content" tabindex="-1"></main>
 
@@ -206,102 +206,125 @@
 
                 <!-- Right Side: Logout + Last Login -->
                 <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
-                    <!-- Notification Icon (optional - keep for functionality) -->
-                    <div class="dropdown position-relative">
-                        <button type="button"
-                            class="btn btn-link border-0 p-2 text-body-secondary position-relative"
-                            id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                            aria-label="Notifications" title="Notifications">
-                            <i class="material-icons material-symbols-rounded header-icon-sm"
-                                aria-hidden="true">notifications</i>
-                            @php
-                            $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
-                            @endphp
-                            @if($unreadCount > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">
-                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
-                            </span>
-                            @endif
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end-lg shadow-lg border-0 rounded-xl p-2"
-                            style="min-width: 350px; max-height: 400px; overflow-y: auto;"
-                            aria-labelledby="notificationDropdown">
-                            <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2">
-                                <span class="fw-semibold">Notifications</span>
-                                @if($unreadCount > 0)
-                                <button type="button" class="btn btn-sm btn-link text-primary p-0"
-                                    onclick="markAllAsRead()">
-                                    Mark all as read
-                                </button>
-                                @endif
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <div id="notificationList">
-                                @php
-                                $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
-                                @endphp
-                                @if($notifications->count() > 0)
-                                @foreach($notifications as $notification)
-                                <li>
-                                    <a class="dropdown-item px-3 py-2 rounded-lg {{ $notification->is_read ? '' : 'bg-light' }}"
-                                        href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
-                                        <div class="d-flex flex-column">
-                                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}
-                                            </div>
-                                            <div class="text-muted small mt-1">
-                                                {{ Str::limit($notification->message ?? '', 50) }}</div>
-                                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
-                                                {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
-                                            </div>
-                                        </div>
-                                    </a>
-                                </li>
-                                @endforeach
-                                @else
-                                <li class="px-3 py-4 text-center text-muted">
-                                    <i class="material-icons material-symbols-rounded"
-                                        style="font-size: 48px; opacity: 0.3;">notifications_none</i>
-                                    <div class="mt-2">No notifications</div>
-                                </li>
-                                @endif
-                            </div>
-                        </ul>
-                    </div>
 
-                    <!-- Divider -->
-                    <div class="header-logout-divider" aria-hidden="true"></div>
+    <!-- Notifications -->
+    <div class="dropdown position-relative">
+        <button type="button"
+            class="btn btn-light rounded-circle p-2 position-relative shadow-sm notification-btn"
+            id="notificationDropdown"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            aria-label="Notifications">
 
-                    <!-- Logout Button -->
-                    <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
-                        @csrf
-                        <button type="submit" class="btn btn-link border-0 header-logout-btn d-flex flex-column align-items-center justify-content-center"
-                            aria-label="Sign out from system">
-                            <i class="material-icons material-symbols-rounded header-logout-icon" aria-hidden="true">logout</i>
-                            <span class="header-logout-text">Log out</span>
-                        </button>
-                    </form>
+            <i class="material-icons material-symbols-rounded fs-5">
+                notifications
+            </i>
 
-                    <!-- Last Login -->
-                    <div class="d-flex align-items-center gap-2 header-last-login">
-                        <span class="text-body-secondary small">Last login:</span>
-                        @php
-                        $lastLogin = Auth::user()->last_login ?? null;
-                        if ($lastLogin) {
-                            $date = \Carbon\Carbon::parse($lastLogin);
-                            $formattedDate = $date->format('Y-m-d H:i:s');
-                            $isoDate = $date->toIso8601String();
-                        } else {
-                            $formattedDate = 'Never';
-                            $isoDate = '';
-                        }
-                        @endphp
-                        <time id="myTime" datetime="{{ $isoDate }}" class="text-body-secondary small" aria-live="polite">
-                            {{ $formattedDate }}
-                        </time>
-                    </div>
-                </div>
+            @php
+                $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+            @endphp
+
+            @if($unreadCount > 0)
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                </span>
+            @endif
+        </button>
+
+        <!-- Dropdown -->
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
+            aria-labelledby="notificationDropdown">
+
+            <!-- Header -->
+            <li class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                <span class="fw-semibold">Notifications</span>
+                @if($unreadCount > 0)
+                    <button type="button"
+                        class="btn btn-sm btn-link text-primary p-0"
+                        onclick="markAllAsRead()">
+                        Mark all as read
+                    </button>
+                @endif
+            </li>
+
+            <div id="notificationList" class="notification-list">
+                @php
+                    $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                @endphp
+
+                @if($notifications->count() > 0)
+                    @foreach($notifications as $notification)
+                        <li>
+                            <a class="dropdown-item px-3 py-3 d-flex gap-2 notification-item
+                                {{ $notification->is_read ? '' : 'unread' }}"
+                               href="javascript:void(0)"
+                               onclick="markAsRead({{ $notification->pk }})">
+
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold small">
+                                        {{ $notification->title ?? 'Notification' }}
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        {{ Str::limit($notification->message ?? '', 60) }}
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size: 11px;">
+                                        {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                    @endforeach
+                @else
+                    <li class="text-center px-4 py-5 text-muted">
+                        <i class="material-icons material-symbols-rounded fs-1 opacity-25">
+                            notifications_none
+                        </i>
+                        <div class="mt-2 small">No notifications</div>
+                    </li>
+                @endif
+            </div>
+        </ul>
+    </div>
+
+    <!-- Divider -->
+    <div class="vr opacity-50"></div>
+
+    <!-- Logout -->
+    <form action="{{ route('logout') }}" method="POST" class="m-0">
+        @csrf
+        <button type="submit"
+            class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 rounded-pill shadow-sm"
+            aria-label="Sign out">
+            <i class="material-icons material-symbols-rounded fs-6">logout</i>
+            <span class="small fw-medium">Logout</span>
+        </button>
+    </form>
+
+    <!-- Last Login -->
+    <div class="d-flex align-items-center gap-1 text-body-secondary small">
+        <i class="material-icons material-symbols-rounded fs-6 opacity-50">
+            history
+        </i>
+        <span>Last login:</span>
+
+        @php
+            $lastLogin = Auth::user()->last_login ?? null;
+            if ($lastLogin) {
+                $date = \Carbon\Carbon::parse($lastLogin);
+                $formattedDate = $date->format('Y-m-d H:i:s');
+                $isoDate = $date->toIso8601String();
+            } else {
+                $formattedDate = 'Never';
+                $isoDate = '';
+            }
+        @endphp
+
+        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}">
+            {{ $formattedDate }}
+        </time>
+    </div>
+</div>
+
             </div>
 
             <!-- Mobile Navigation Container (FB/Instagram-style) -->
@@ -448,6 +471,41 @@
             </div>
 
             <style>
+                .notification-btn:hover {
+    background-color: var(--bs-light);
+    transform: translateY(-1px);
+}
+
+.notification-badge {
+    font-size: 10px;
+    padding: 4px 6px;
+}
+
+.notification-dropdown {
+    width: 360px;
+    max-height: 420px;
+    overflow: hidden;
+}
+
+.notification-list {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    border-left: 3px solid transparent;
+    transition: background-color 0.2s ease;
+}
+
+.notification-item.unread {
+    background-color: var(--bs-light);
+    border-left-color: var(--bs-primary);
+}
+
+.notification-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
                 /* Skip link visibility */
 .skip-link {
     position: absolute;
