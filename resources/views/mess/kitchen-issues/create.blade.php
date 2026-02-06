@@ -234,7 +234,7 @@
     });
 
     // Client type: restrict payment for Employee/OT/Course to Credit only
-    const creditOnly = ['employee', 'ot', 'course', 'section'];
+    const creditOnly = ['employee', 'ot', 'course'];
     document.querySelectorAll('.client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
             const paymentSelect = document.querySelector('select[name="payment_type"]');
