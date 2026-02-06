@@ -105,11 +105,11 @@
                                 </tr>
                                 <tr>
                                     <th>Created By</th>
-                                    <td>{{ $issue->creator->name ?? 'N/A' }}</td>
+                                    <td>{{ $issue->logger->name ?? 'N/A' }}</td>
                                 </tr>
                                 <tr>
                                     <th>Issue Logger</th>
-                                    <td>{{ $issue->logger->name ?? 'N/A' }}</td>
+                                    <td>{{ $issue->creator->name ?? 'N/A' }}</td>
                                 </tr>
                                 <tr>
                                     <th>Assigned To</th>

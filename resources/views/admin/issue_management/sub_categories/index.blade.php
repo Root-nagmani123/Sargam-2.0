@@ -66,7 +66,7 @@
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-warning" 
-                                                onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_fk }}, '{{ addslashes($subCategory->issue_sub_category) }}', '{{ addslashes($subCategory->description) }}', {{ $subCategory->status }})">
+                                                onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_master_pk ?? 'null' }}, {{ json_encode($subCategory->issue_sub_category) }}, {{ json_encode($subCategory->description ?? '') }}, {{ $subCategory->status }})">
                                             <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
                                         </button>
                                         <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}" 
@@ -111,8 +111,8 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="issue_category_fk" class="form-label">Category <span class="text-danger">*</span></label>
-                        <select class="form-select @error('issue_category_fk') is-invalid @enderror" 
-                                id="issue_category_fk" name="issue_category_fk" required>
+                        <select class="form-select @error('issue_category_master_pk') is-invalid @enderror" 
+                                id="issue_category_fk" name="issue_category_master_pk" required>
                             <option value="">Select Category</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
@@ -166,7 +166,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="edit_issue_category_fk" class="form-label">Category <span class="text-danger">*</span></label>
-                        <select class="form-select" id="edit_issue_category_fk" name="issue_category_fk" required>
+                        <select class="form-select" id="edit_issue_category_fk" name="issue_category_master_pk" required>
                             <option value="">Select Category</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
@@ -207,7 +207,7 @@
 @section('scripts')
 <script>
 function editSubCategory(id, categoryId, name, description, status) {
-    document.getElementById('edit_issue_category_fk').value = categoryId;
+    document.getElementById('edit_issue_category_fk').value = categoryId != null ? String(categoryId) : '';
     document.getElementById('edit_issue_sub_category').value = name;
     document.getElementById('edit_description').value = description || '';
     document.getElementById('edit_status').value = status;

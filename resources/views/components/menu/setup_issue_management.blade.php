@@ -19,7 +19,7 @@
                             </li>
                             <li class="sidebar-item mb-2">
                                 <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.centcom') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">CENTCOM - Reported Complaints</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">CENTCOM -  Assigned Complaints</span>
                                 </a>
                             </li>
                             <li class="sidebar-item mb-2">
