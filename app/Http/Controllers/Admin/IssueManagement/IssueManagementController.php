@@ -9,7 +9,7 @@ use App\Models\{
     IssueSubCategoryMaster,
     IssuePriorityMaster,
     IssueReproducibilityMaster,
-    IssueLogSubCategoryMap,
+    IssueLogSubCategoryMap, 
     IssueLogBuildingMap,
     IssueLogHostelMap, 
     IssueLogStatus,
@@ -39,44 +39,54 @@ class IssueManagementController extends Controller
             'hostelMapping.hostelBuilding',
             'statusHistory'
         ]);
-       
-         if(hasRole('Admin')) {  }else{
-$query->where('employee_master_pk', Auth::user()->user_id);
- $query->orWhere('issue_logger', Auth::user()->user_id); 
- $query->orWhere('assigned_to', Auth::user()->user_id); 
-        }
+
+        $applyUserScope = function ($builder) {
+            if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+                $builder->where(function ($q) {
+                    $q->where('employee_master_pk', Auth::user()->user_id)
+                        ->orWhere('issue_logger', Auth::user()->user_id)
+                        ->orWhere('assigned_to', Auth::user()->user_id);
+                });
+            }
+        };
+
+        $applyFilters = function ($builder) use ($request) {
+            // Status filter is applied in main query block (All Status vs specific)
+
+            // Filter by category
+            if ($request->has('category') && !empty($request->category)) {
+                $builder->where('issue_category_master_pk', $request->category);
+            }
+
+            // Filter by priority
+            if ($request->has('priority') && !empty($request->priority)) {
+                $builder->where('issue_priority_master_pk', $request->priority);
+            }
+
+            // Filter by date range
+            if ($request->filled('date_from')) {
+                $builder->whereDate('created_date', '>=', $request->date_from);
+            }
+            if ($request->filled('date_to')) {
+                $builder->whereDate('created_date', '<=', $request->date_to);
+            }
+        };
+
+        $applyUserScope($query);
         $query->orderBy('created_date', 'desc');
 
         // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
+        // When "All Status" is selected, show all statuses (0,1,2,3,6)
         $tab = $request->get('tab', 'active');
-        if ($tab === 'archive') {
-            $query->where('issue_status', 2); // Completed only
-        } else {
-            $query->whereIn('issue_status', [0, 1, 3, 6]); // Reported, In Progress, Pending, Reopened
-        }
-
-        // Filter by status (further refines within the tab)
-        if ($request->has('status') && $request->status !== '') {
+        if ($request->filled('status') && $request->status !== '') {
+            // Specific status selected - filter by that only
             $query->where('issue_status', $request->status);
+        } else {
+            // All Status - show all issues
+            $query->whereIn('issue_status', [0, 1, 2, 3, 6]);
         }
 
-        // Filter by category
-        if ($request->has('category') && !empty($request->category)) {
-            $query->where('issue_category_master_pk', $request->category);
-        }
-
-        // Filter by priority
-        if ($request->has('priority') && !empty($request->priority)) {
-            $query->where('issue_priority_master_pk', $request->priority);
-        }
-
-        // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_date', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_date', '<=', $request->date_to);
-        }
+        $applyFilters($query);
 
         $issues = $query->paginate(20);
         // print_r($issues); exit;
@@ -85,23 +95,16 @@ $query->where('employee_master_pk', Auth::user()->user_id);
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
         $baseQuery = IssueLogManagement::query();
-        $activeCount = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6]);
-        if(! hasRole('Admin') && ! hasRole('SuperAdmin')) {
 
-            $activeCount->where('employee_master_pk', Auth::user()->user_id); 
-        }
-            $activeCount->orWhere('issue_logger', Auth::user()->user_id); 
-            $activeCount->orWhere('assigned_to', Auth::user()->user_id); 
+        $activeCountQuery = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6]);
+        $applyUserScope($activeCountQuery);
+        $applyFilters($activeCountQuery);
+        $activeCount = $activeCountQuery->count();
 
-        $activeCount = $activeCount->count();
-        $archiveCount = (clone $baseQuery)->where('issue_status', 2);
-        if(! hasRole('Admin') && ! hasRole('SuperAdmin')) {
-        
-            $archiveCount->where('employee_master_pk', Auth::user()->user_id); 
-        }
-            $archiveCount->orWhere('issue_logger', Auth::user()->user_id); 
-            $archiveCount->orWhere('assigned_to', Auth::user()->user_id);
-        $archiveCount = $archiveCount->count();
+        $archiveCountQuery = (clone $baseQuery)->where('issue_status', 2);
+        $applyUserScope($archiveCountQuery);
+        $applyFilters($archiveCountQuery);
+        $archiveCount = $archiveCountQuery->count();
 
         return view('admin.issue_management.index', compact('issues', 'categories', 'priorities', 'tab', 'activeCount', 'archiveCount'));
     }
@@ -111,8 +114,7 @@ $query->where('employee_master_pk', Auth::user()->user_id);
      */
     public function centcom(Request $request)
     {
-        $query = IssueLogManagement::reportedOnBehalf()
-            ->with([
+        $query = IssueLogManagement::with([
                 'category',
                 'priority',
                 'reproducibility',
@@ -121,17 +123,33 @@ $query->where('employee_master_pk', Auth::user()->user_id);
                 'hostelMapping.hostelBuilding',
                 'statusHistory'
             ])->orderBy('created_date', 'desc');
+            $query->where(function ($q) {
+                $q->where('assigned_to', Auth::user()->user_id);
+                $q->orWhere('employee_master_pk', Auth::user()->user_id);
+            });
 
-        // Apply filters similar to index
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('issue_status', $request->status);
+        // Filters (use filled() so "0" works correctly)
+        if ($request->filled('status')) {
+            $query->where('issue_status', (int) $request->status);
         }
 
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('issue_category_master_pk', $request->category);
+        if ($request->filled('category')) {
+            $query->where('issue_category_master_pk', (int) $request->category);
+        }
+
+        if ($request->filled('priority')) {
+            $query->where('issue_priority_master_pk', (int) $request->priority);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_date', '<=', $request->date_to);
         }
 
         $issues = $query->paginate(20);
+        // print_r($issues); exit;
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
@@ -175,7 +193,7 @@ $query->where('employee_master_pk', Auth::user()->user_id);
         ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
         ->select(
             'e.pk as employee_pk',
-            DB::raw("TRIM(CONCAT(e.first_name, ' ', COALESCE(e.middle_name, ''), ' ', e.last_name)) as employee_name"),
+            DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
             DB::raw("COALESCE(e.mobile, '') as mobile"),  // Treat null and empty as the same
             // Treat null and empty as the same
             'd.designation_name'
@@ -183,12 +201,6 @@ $query->where('employee_master_pk', Auth::user()->user_id);
         ->orderBy('first_name')
         ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name');
 
-    // If 'emp_id' is provided, filter the query for that specific employee
-    // if ($employeePk) {
-    //     $query->where('e.pk', $employeePk);
-    // }
-
-    // Execute the query and get the result
     $employees = $query->get();
             
         } catch (\Exception $e) {
@@ -222,7 +234,7 @@ $query->where('employee_master_pk', Auth::user()->user_id);
                     'd.first_name',
                     'd.middle_name',
                     'd.last_name',
-                    DB::raw("TRIM(CONCAT(d.first_name, ' ', COALESCE(d.middle_name, ''), ' ', d.last_name)) as employee_name")
+                    DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
                 )
                 ->orderBy('priority', 'asc')
                 ->get();
@@ -378,8 +390,8 @@ $query->where('employee_master_pk', Auth::user()->user_id);
                 'e.pk as employee_pk',
                 'e.first_name as first_name',
                 'e.last_name as last_name',
-                // DB::raw("CONCAT(e.first_name, ' ', e.last_name) as employee_name"),
-            DB::raw("TRIM(CONCAT(e.first_name, ' ', COALESCE(e.middle_name, ''), ' ', e.last_name)) as employee_name"),
+                // DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
+            DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
 
                 'e.mobile'
             )
@@ -421,7 +433,7 @@ $query->where('employee_master_pk', Auth::user()->user_id);
         $query = DB::table('employee_master as e')
             ->select(
                 'e.pk as employee_pk',
-                DB::raw("CONCAT(e.first_name, ' ', e.last_name) as employee_name"),
+                DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                 'e.mobile'
             )
             ->orderBy('employee_name');
