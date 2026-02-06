@@ -837,3 +837,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
 });
 
+Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
+    ->middleware('auth');
