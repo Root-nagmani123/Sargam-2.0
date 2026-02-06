@@ -174,6 +174,7 @@
                                 <select name="action" class="form-select form-select-sm" required>
                                     <option value="">Please Select Action</option>
                                     <option value="generate_invoice" selected>Generate Invoice</option>
+                                    <option value="generate_payment">Generate Payment</option>
                                 </select>
                                 <a href="#" class="text-primary text-decoration-none small text-nowrap">Generate Bulk Invoice</a>
                             </div>
@@ -317,7 +318,7 @@
                         '<td>' + (b.payment_type || '—') + '</td>' +
                         '<td>' + (b.total || '0') + '</td>' +
                         '<td>' + (b.paid_amount || '0') + '</td>' +
-                        '<td><a href="#" class="text-primary text-decoration-none small">Generate Invoice</a></td>' +
+                        '<td><a href="#" class="text-primary text-decoration-none small generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '') + '">Generate Invoice</a><br><a href="#" class="text-success text-decoration-none small generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '') + '">Generate Payment</a></td>' +
                         '<td><a href="' + printReceiptBaseUrl.replace('__ID__', b.id) + '" target="_blank" class="text-primary text-decoration-none small">Print Reciept</a></td>' +
                         '<td>' + (b.bill_no || '—') + '</td>' +
                         '</tr>';
@@ -348,6 +349,104 @@
                 }.bind(this));
             });
         }
+
+        // Handle Generate Invoice button click
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('generate-invoice-btn')) {
+                e.preventDefault();
+                var billId = e.target.getAttribute('data-bill-id');
+                var buyerName = e.target.getAttribute('data-buyer-name');
+                
+                if (!billId) {
+                    alert('Bill ID not found');
+                    return;
+                }
+                
+                if (confirm('Generate invoice and send notification to ' + buyerName + '?')) {
+                    var csrfTokenElement = document.querySelector('meta[name="csrf-token"]') || document.querySelector('input[name="_token"]');
+                    var csrfToken = '';
+                    
+                    if (csrfTokenElement) {
+                        csrfToken = csrfTokenElement.content || csrfTokenElement.value || '';
+                    }
+                    
+                    var generateInvoiceUrl = '{{ url("admin/mess/process-mess-bills-employee") }}' + '/' + billId + '/generate-invoice';
+                    
+                    fetch(generateInvoiceUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        if (data.success) {
+                            alert('Success! ' + data.message);
+                            loadModalBills(); // Reload the table
+                        } else {
+                            alert('Error: ' + (data.message || 'Failed to generate invoice'));
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('Error:', error);
+                        alert('Error: Failed to generate invoice. Please try again.');
+                    });
+                }
+            }
+            
+            // Handle Generate Payment button click
+            if (e.target && e.target.classList.contains('generate-payment-btn')) {
+                e.preventDefault();
+                var billId = e.target.getAttribute('data-bill-id');
+                var buyerName = e.target.getAttribute('data-buyer-name');
+                
+                if (!billId) {
+                    alert('Bill ID not found');
+                    return;
+                }
+                
+                if (confirm('Mark payment as completed and send notification to ' + buyerName + '?')) {
+                    var csrfTokenElement = document.querySelector('meta[name="csrf-token"]') || document.querySelector('input[name="_token"]');
+                    var csrfToken = '';
+                    
+                    if (csrfTokenElement) {
+                        csrfToken = csrfTokenElement.content || csrfTokenElement.value || '';
+                    }
+                    
+                    var generatePaymentUrl = '{{ url("admin/mess/process-mess-bills-employee") }}' + '/' + billId + '/generate-payment';
+                    
+                    fetch(generatePaymentUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        if (data.success) {
+                            alert('✓ Success! ' + data.message + '\n\nUser: ' + buyerName + '\nBill ID: ' + data.bill_id);
+                            loadModalBills(); // Reload the table to remove paid bill
+                        } else {
+                            alert('Error: ' + (data.message || 'Failed to process payment'));
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('Error:', error);
+                        alert('Error: Failed to process payment. Please try again.');
+                    });
+                }
+            }
+        });
     });
 </script>
 @endpush
