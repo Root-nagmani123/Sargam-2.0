@@ -455,13 +455,8 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
 
-            Route::post(
-    'admin/memo-notice-management/filter', 'filter'
-)->name('filter');
-
- Route::get(
-    'admin/memo-notice-management/filter', 'clear_filter'
-)->name('clear_filter');
+            Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
+            Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
 
         });
 
@@ -794,14 +789,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
     Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
     Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
-    
+
     // AJAX Routes (must come BEFORE parameterized routes like {id})
     Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
     Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
     Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
     Route::get('issue-management/floors', [IssueManagementController::class, 'getFloors'])->name('issue-management.floors');
     Route::get('issue-management/rooms', [IssueManagementController::class, 'getRooms'])->name('issue-management.rooms');
-    
+
     // Parameterized Routes (must come AFTER specific routes)
     Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
     Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
