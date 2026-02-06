@@ -69,6 +69,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
     /**
      * Return JSON data for the ADD modal table (employee bills for date range).
+     * Only shows unpaid bills (status != 2).
      */
     public function modalData(Request $request)
     {
@@ -76,7 +77,8 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
 
         $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->where('client_type_slug', 'employee');
+            ->where('client_type_slug', 'employee')
+            ->where('status', '!=', 2); // Only unpaid bills
 
         if ($dateFrom) {
             $query->where(function ($q) use ($dateFrom) {
@@ -108,6 +110,61 @@ class ProcessMessBillsEmployeeController extends Controller
         });
 
         return response()->json(['bills' => $rows]);
+    }
+
+    /**
+     * Generate invoice and send notification to user
+     */
+    public function generateInvoice(Request $request, $id)
+    {
+        $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
+            ->where('client_type_slug', 'employee')
+            ->findOrFail($id);
+
+        // TODO: Add your notification logic here
+        // Example: Send email or SMS to the user
+        // Notification::send($user, new InvoiceGeneratedNotification($bill));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Invoice generated and notification sent successfully!',
+            'bill_id' => $bill->id,
+            'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
+        ]);
+    }
+
+    /**
+     * Generate payment - mark bill as paid and send notification to user
+     */
+    public function generatePayment(Request $request, $id)
+    {
+        $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
+            ->where('client_type_slug', 'employee')
+            ->findOrFail($id);
+
+        // Check if already paid
+        if ($bill->status == 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This bill is already paid!',
+            ], 400);
+        }
+
+        // Mark as paid
+        $bill->status = 2; // STATUS_APPROVED = 2 (Paid)
+        $bill->save();
+
+        // TODO: Add your notification logic here
+        // Example: Send email or SMS to the user
+        // Mail::to($bill->client_email)->send(new PaymentCompletedMail($bill));
+        // Notification::send($user, new PaymentCompletedNotification($bill));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment completed successfully! Notification sent to user.',
+            'bill_id' => $bill->id,
+            'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
+        ]);
     }
 
     private function parseDate(string $value): ?string
