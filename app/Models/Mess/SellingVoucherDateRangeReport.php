@@ -21,6 +21,7 @@ class SellingVoucherDateRangeReport extends Model
         'remarks',
         'client_type_slug',
         'client_type_pk',
+        'course_master_pk',
         'client_name',
         'payment_type',
         'issue_date',

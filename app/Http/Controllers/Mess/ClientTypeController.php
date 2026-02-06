@@ -56,7 +56,7 @@ class ClientTypeController extends Controller
     protected function validatedData(Request $request, ?ClientType $clientType = null): array
     {
         $validated = $request->validate([
-            'client_type' => ['required', 'string', 'in:employee,ot,course,other,section'],
+            'client_type' => ['required', 'string', 'in:employee,ot,course,other'],
             'client_name' => ['required', 'string', 'max:255'],
             'status'      => ['nullable', 'in:active,inactive'],
         ]);
