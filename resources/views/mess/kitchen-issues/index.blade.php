@@ -85,11 +85,20 @@
                             <td>{{ $item->quantity }}</td>
                             <td>{{ $item->return_quantity ?? 0 }}</td>
                             <td>{{ $voucher->storeMaster->store_name ?? '—' }}</td>
-                            <td>{{ $voucher->clientTypeCategory ? ucfirst($voucher->clientTypeCategory->client_type ?? '') : '—' }}</td>
-                            <td>{{ $voucher->clientTypeCategory ? ($voucher->clientTypeCategory->client_name ?? '—') : '—' }}</td>
+                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                            <td>
+                                @if($voucher->clientTypeCategory)
+                                    {{ $voucher->clientTypeCategory->client_name }}
+                                @elseif(in_array($voucher->client_type, [2, 3]))
+                                    {{-- For OT/Course, show course name or client_name --}}
+                                    {{ $voucher->client_name ?? '—' }}
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td>{{ $voucher->client_name ?? '—' }}</td>
                             <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'Online' : '—')) }}</td>
-                            <td>{{ $voucher->request_date ? \Carbon\Carbon::parse($voucher->request_date)->format('d/m/Y') : '—' }}</td>
+                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
                             <td>
                                 @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
                                 @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
@@ -99,25 +108,17 @@
                             <td>
                                 @if(($item->return_quantity ?? 0) > 0)
                                     <span class="badge bg-info">Returned</span>
-                                @else
-                                    —
                                 @endif
-                                @if($loop->first)
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                                @endif
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
                             <td>
-                                @if($loop->first)
-                                    <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                    @if($voucher->approve_status != 1)
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
-                                    @endif
-                                    <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
-                                    </form>
-                                @endif
+                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
+                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                </form>
                             </td>
                         </tr>
                     @empty
@@ -127,20 +128,27 @@
                             <td>—</td>
                             <td>—</td>
                             <td>{{ $voucher->storeMaster->store_name ?? '—' }}</td>
-                            <td>{{ $voucher->clientTypeCategory ? ucfirst($voucher->clientTypeCategory->client_type ?? '') : '—' }}</td>
-                            <td>{{ $voucher->clientTypeCategory ? ($voucher->clientTypeCategory->client_name ?? '—') : '—' }}</td>
+                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                            <td>
+                                @if($voucher->clientTypeCategory)
+                                    {{ $voucher->clientTypeCategory->client_name }}
+                                @elseif(in_array($voucher->client_type, [2, 3]))
+                                    {{-- For OT/Course, show course name or client_name --}}
+                                    {{ $voucher->client_name ?? '—' }}
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td>{{ $voucher->client_name ?? '—' }}</td>
                             <td>—</td>
-                            <td>{{ $voucher->request_date ? \Carbon\Carbon::parse($voucher->request_date)->format('d/m/Y') : '—' }}</td>
+                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
                             <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                @if($voucher->approve_status != 1)
-                                    <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
-                                @endif
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
@@ -217,20 +225,59 @@
                                     </select>
                                     <small class="text-muted" id="modalPaymentTypeHint">Employee / OT / Course: Credit only</small>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-4" id="modalClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select" id="modalClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}">{{ $c->client_name }}</option>
+                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
                                             @endforeach
                                         @endforeach
                                     </select>
+                                    <select id="modalOtCourseSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Course</option>
+                                        @foreach($otCourses ?? [] as $course)
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="modalCourseSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Course</option>
+                                        @foreach($otCourses ?? [] as $course)
+                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-4" id="modalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <input type="text" name="client_name" id="modalClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <select id="modalFacultySelect" class="form-select" style="display:none;">
+                                        <option value="">Select Faculty</option>
+                                        @foreach($faculties ?? [] as $f)
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Academy Staff</option>
+                                        @foreach($employees ?? [] as $e)
+                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="modalMessStaffSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Mess Staff</option>
+                                        @foreach($messStaff ?? [] as $e)
+                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="modalOtStudentSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Student</option>
+                                    </select>
+                                    <select id="modalCourseNameSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Course</option>
+                                        @foreach($otCourses ?? [] as $course)
+                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Issue Date <span class="text-danger">*</span></label>
@@ -238,10 +285,10 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select" required>
+                                    <select name="store_id" class="form-select" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
-                                            <option value="{{ $store->id }}" {{ old('inve_store_master_pk') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                            <option value="{{ $store->id }}" {{ old('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -357,20 +404,50 @@
                                         <option value="2">Online</option>
                                     </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-4" id="editModalClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
                                     <select name="client_type_pk" class="form-select" id="editClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}">{{ $c->client_name }}</option>
+                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
                                             @endforeach
                                         @endforeach
                                     </select>
+                                    <select id="editModalOtCourseSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Course</option>
+                                        @foreach($otCourses ?? [] as $course)
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-4" id="editModalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" class="form-control edit-client-name" placeholder="Client / section / role name" required>
+                                    <input type="text" name="client_name" class="form-control edit-client-name" id="editModalClientNameInput" placeholder="Client / section / role name" required>
+                                    <select id="editModalFacultySelect" class="form-select" style="display:none;">
+                                        <option value="">Select Faculty</option>
+                                        @foreach($faculties ?? [] as $f)
+                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Academy Staff</option>
+                                        @foreach($employees ?? [] as $e)
+                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Mess Staff</option>
+                                        @foreach($messStaff ?? [] as $e)
+                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
+                                        <option value="">Select Course</option>
+                                        @foreach($otCourses ?? [] as $course)
+                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Issue Date <span class="text-danger">*</span></label>
@@ -378,7 +455,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select edit-store" required>
+                                    <select name="store_id" class="form-select edit-store" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -574,7 +651,20 @@
 </div>
 
 <script>
-(function() {
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Selling Voucher script loaded');
+    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+    
+    // Debug: Check if buttons exist
+    const viewButtons = document.querySelectorAll('.btn-view-sv');
+    const editButtons = document.querySelectorAll('.btn-edit-sv');
+    const returnButtons = document.querySelectorAll('.btn-return-sv');
+    console.log('Found buttons:', {
+        view: viewButtons.length,
+        edit: editButtons.length,
+        return: returnButtons.length
+    });
+    
     const itemSubcategories = @json($itemSubcategories);
     const editSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     const viewSvBaseUrl = "{{ url('admin/mess/material-management') }}";
@@ -633,39 +723,100 @@
         });
     }
 
-    document.getElementById('modalAddItemRow').addEventListener('click', function() {
-        const tbody = document.getElementById('modalItemsBody');
-        tbody.insertAdjacentHTML('beforeend', getRowHtml(rowIndex));
-        rowIndex++;
-        updateRemoveButtons();
-    });
-
-    document.getElementById('modalItemsBody').addEventListener('change', function(e) {
-        if (e.target.classList.contains('sv-item-select')) {
-            const row = e.target.closest('.sv-item-row');
-            if (row) { updateUnit(row); calcRow(row); updateGrandTotal(); }
-        }
-    });
-
-    document.getElementById('modalItemsBody').addEventListener('input', function(e) {
-        if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
-            const row = e.target.closest('.sv-item-row');
-            if (row) { calcRow(row); updateGrandTotal(); }
-        }
-    });
-
-    document.getElementById('modalItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('sv-remove-row')) {
-            const row = e.target.closest('.sv-item-row');
-            if (row && document.querySelectorAll('#modalItemsBody .sv-item-row').length > 1) {
-                row.remove();
-                updateGrandTotal();
+    const modalAddItemBtn = document.getElementById('modalAddItemRow');
+    if (modalAddItemBtn) {
+        modalAddItemBtn.addEventListener('click', function() {
+            const tbody = document.getElementById('modalItemsBody');
+            if (tbody) {
+                tbody.insertAdjacentHTML('beforeend', getRowHtml(rowIndex));
+                rowIndex++;
                 updateRemoveButtons();
             }
-        }
-    });
+        });
+    }
 
-    const creditOnly = ['employee', 'ot', 'course', 'section'];
+    const modalItemsBody = document.getElementById('modalItemsBody');
+    if (modalItemsBody) {
+        modalItemsBody.addEventListener('change', function(e) {
+            if (e.target.classList.contains('sv-item-select')) {
+                const row = e.target.closest('.sv-item-row');
+                if (row) { updateUnit(row); calcRow(row); updateGrandTotal(); }
+            }
+        });
+
+        modalItemsBody.addEventListener('input', function(e) {
+            if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
+                const row = e.target.closest('.sv-item-row');
+                if (row) { calcRow(row); updateGrandTotal(); }
+            }
+        });
+
+        modalItemsBody.addEventListener('click', function(e) {
+            if (e.target.classList.contains('sv-remove-row')) {
+                const row = e.target.closest('.sv-item-row');
+                if (row && document.querySelectorAll('#modalItemsBody .sv-item-row').length > 1) {
+                    row.remove();
+                    updateGrandTotal();
+                    updateRemoveButtons();
+                }
+            }
+        });
+    }
+
+    const creditOnly = ['employee', 'ot', 'course'];
+    function updateModalNameField() {
+        const clientTypeRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
+        const clientNameSelect = document.getElementById('modalClientNameSelect');
+        const nameInput = document.getElementById('modalClientNameInput');
+        const facultySelect = document.getElementById('modalFacultySelect');
+        const academyStaffSelect = document.getElementById('modalAcademyStaffSelect');
+        const messStaffSelect = document.getElementById('modalMessStaffSelect');
+        const otStudentSelect = document.getElementById('modalOtStudentSelect');
+        const courseSelect = document.getElementById('modalCourseSelect');
+        const courseNameSelect = document.getElementById('modalCourseNameSelect');
+        if (!clientTypeRadio || !clientNameSelect || !nameInput) return;
+        const isEmployee = (clientTypeRadio.value || '').toLowerCase() === 'employee';
+        const isOt = (clientTypeRadio.value || '').toLowerCase() === 'ot';
+        const isCourse = (clientTypeRadio.value || '').toLowerCase() === 'course';
+        const opt = clientNameSelect.options[clientNameSelect.selectedIndex];
+        const clientNameVal = (opt && opt.dataset.clientName) ? opt.dataset.clientName : '';
+        const isFaculty = clientNameVal === 'faculty';
+        const isAcademyStaff = clientNameVal === 'academy staff';
+        const isMessStaff = clientNameVal === 'mess staff';
+        const showFaculty = isEmployee && isFaculty;
+        const showAcademyStaff = isEmployee && isAcademyStaff;
+        const showMessStaff = isEmployee && isMessStaff;
+        const showAny = showFaculty || showAcademyStaff || showMessStaff;
+        if (isOt) {
+            nameInput.style.display = 'none';
+            nameInput.removeAttribute('required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { otStudentSelect.style.display = 'block'; }
+            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+        } else if (isCourse) {
+            nameInput.style.display = 'none';
+            nameInput.removeAttribute('required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            if (courseSelect) { courseSelect.style.display = 'block'; }
+            if (courseNameSelect) { courseNameSelect.style.display = 'block'; }
+        } else {
+            nameInput.style.display = showAny ? 'none' : 'block';
+            nameInput.removeAttribute('required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
+                if (!sel) return;
+                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
+                sel.style.display = show ? 'block' : 'none';
+                sel.removeAttribute('required');
+                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
+            });
+            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+            if (!showAny) nameInput.setAttribute('required', 'required');
+        }
+    }
     document.querySelectorAll('#addSellingVoucherModal .client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
             const paymentSelect = document.querySelector('#addSellingVoucherModal select[name="payment_type"]');
@@ -680,17 +831,262 @@
                 paymentSelect && paymentSelect.querySelectorAll('option').forEach(function(opt) { opt.disabled = false; });
                 if (hint) hint.textContent = 'Cash / Online / Credit';
             }
+            const isOt = (this.value || '').toLowerCase() === 'ot';
+            const isCourse = (this.value || '').toLowerCase() === 'course';
             const clientSelect = document.getElementById('modalClientNameSelect');
-            if (clientSelect) {
-                clientSelect.querySelectorAll('option').forEach(function(opt) {
-                    if (opt.value === '') { opt.hidden = false; return; }
-                    opt.hidden = opt.dataset.type !== this.value;
-                }.bind(this));
+            const otCourseSelect = document.getElementById('modalOtCourseSelect');
+            const otStudentSelect = document.getElementById('modalOtStudentSelect');
+            const courseSelect = document.getElementById('modalCourseSelect');
+            const courseNameSelect = document.getElementById('modalCourseNameSelect');
+            const nameInput = document.getElementById('modalClientNameInput');
+            if (isOt) {
+                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
+                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+            } else if (isCourse) {
+                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                if (courseSelect) { courseSelect.style.display = 'block'; courseSelect.setAttribute('required', 'required'); courseSelect.value = ''; }
+                if (courseNameSelect) { courseNameSelect.style.display = 'block'; courseNameSelect.setAttribute('required', 'required'); courseNameSelect.value = ''; }
+                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+            } else {
+                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (clientSelect) {
+                    clientSelect.querySelectorAll('option').forEach(function(opt) {
+                        if (opt.value === '') { opt.hidden = false; return; }
+                        opt.hidden = opt.dataset.type !== this.value;
+                    }.bind(this));
+                }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
             }
+            updateModalNameField();
         });
+    });
+    const modalOtCourseSelect = document.getElementById('modalOtCourseSelect');
+    if (modalOtCourseSelect) {
+        modalOtCourseSelect.addEventListener('change', function() {
+            const coursePk = this.value;
+            const otStudentSelect = document.getElementById('modalOtStudentSelect');
+            const nameInput = document.getElementById('modalClientNameInput');
+            if (!otStudentSelect || !nameInput) return;
+            otStudentSelect.innerHTML = '<option value="">Loading...</option>';
+            otStudentSelect.value = '';
+            nameInput.value = '';
+            if (!coursePk) {
+                otStudentSelect.innerHTML = '<option value="">Select course first</option>';
+                return;
+            }
+            fetch(editSvBaseUrl + '/students-by-course/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(function(data) {
+                    otStudentSelect.innerHTML = '<option value="">Select Student</option>';
+                    (data.students || []).forEach(function(s) {
+                        const opt = document.createElement('option');
+                        opt.value = s.display_name || '';
+                        opt.textContent = s.display_name || '—';
+                        otStudentSelect.appendChild(opt);
+                    });
+                })
+                .catch(function() { otStudentSelect.innerHTML = '<option value="">Error loading students</option>'; });
+        });
+    }
+    
+    const modalOtStudentSelect = document.getElementById('modalOtStudentSelect');
+    if (modalOtStudentSelect) {
+        modalOtStudentSelect.addEventListener('change', function() {
+            const inp = document.getElementById('modalClientNameInput');
+            if (inp) inp.value = this.value || '';
+        });
+    }
+    
+    const modalCourseSelect = document.getElementById('modalCourseSelect');
+    if (modalCourseSelect) {
+        modalCourseSelect.addEventListener('change', function() {
+            const val = this.value || '';
+            const courseNameSelect = document.getElementById('modalCourseNameSelect');
+            const inp = document.getElementById('modalClientNameInput');
+            if (courseNameSelect) courseNameSelect.value = val;
+            if (inp) inp.value = val;
+        });
+    }
+    
+    const modalCourseNameSelect = document.getElementById('modalCourseNameSelect');
+    if (modalCourseNameSelect) {
+        modalCourseNameSelect.addEventListener('change', function() {
+            const val = this.value || '';
+            const courseSelect = document.getElementById('modalCourseSelect');
+            const inp = document.getElementById('modalClientNameInput');
+            if (courseSelect) courseSelect.value = val;
+            if (inp) inp.value = val;
+        });
+    }
+    
+    const modalClientNameSelect = document.getElementById('modalClientNameSelect');
+    if (modalClientNameSelect) {
+        modalClientNameSelect.addEventListener('change', updateModalNameField);
+    }
+    
+    const modalFacultySelect = document.getElementById('modalFacultySelect');
+    if (modalFacultySelect) {
+        modalFacultySelect.addEventListener('change', function() {
+            const inp = document.getElementById('modalClientNameInput');
+            if (inp) inp.value = this.value || '';
+        });
+    }
+    const modalAcademyEl = document.getElementById('modalAcademyStaffSelect');
+    if (modalAcademyEl) modalAcademyEl.addEventListener('change', function() {
+        const inp = document.getElementById('modalClientNameInput');
+        if (inp) inp.value = this.value || '';
+    });
+    const modalMessEl = document.getElementById('modalMessStaffSelect');
+    if (modalMessEl) modalMessEl.addEventListener('change', function() {
+        const inp = document.getElementById('modalClientNameInput');
+        if (inp) inp.value = this.value || '';
     });
     const checked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
     if (checked) checked.dispatchEvent(new Event('change'));
+
+    // Edit modal: same Faculty / Academy Staff / Mess Staff dropdown logic
+    function updateEditModalNameField() {
+        const clientTypeRadio = document.querySelector('#editSellingVoucherModal .edit-client-type-radio:checked');
+        const clientNameSelect = document.getElementById('editClientNameSelect');
+        const nameInput = document.getElementById('editModalClientNameInput');
+        const facultySelect = document.getElementById('editModalFacultySelect');
+        const academyStaffSelect = document.getElementById('editModalAcademyStaffSelect');
+        const messStaffSelect = document.getElementById('editModalMessStaffSelect');
+        const editCourseSelect = document.getElementById('editModalCourseSelect');
+        const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
+        if (!clientTypeRadio || !clientNameSelect || !nameInput) return;
+        const isEmployee = (clientTypeRadio.value || '').toLowerCase() === 'employee';
+        const isOt = (clientTypeRadio.value || '').toLowerCase() === 'ot';
+        const isCourse = (clientTypeRadio.value || '').toLowerCase() === 'course';
+        const opt = clientNameSelect.options[clientNameSelect.selectedIndex];
+        const clientNameVal = (opt && opt.dataset.clientName) ? opt.dataset.clientName : '';
+        const isFaculty = clientNameVal === 'faculty';
+        const isAcademyStaff = clientNameVal === 'academy staff';
+        const isMessStaff = clientNameVal === 'mess staff';
+        const showFaculty = isEmployee && isFaculty;
+        const showAcademyStaff = isEmployee && isAcademyStaff;
+        const showMessStaff = isEmployee && isMessStaff;
+        const showAny = showFaculty || showAcademyStaff || showMessStaff;
+        if (isOt || isCourse) {
+            nameInput.style.display = 'none';
+            nameInput.removeAttribute('required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
+            if (isCourse && editCourseSelect) { editCourseSelect.style.display = 'block'; }
+            if (isCourse && editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; }
+        } else {
+            nameInput.style.display = showAny ? 'none' : 'block';
+            nameInput.removeAttribute('required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
+                if (!sel) return;
+                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
+                sel.style.display = show ? 'block' : 'none';
+                sel.removeAttribute('required');
+                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
+            });
+            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
+            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.value = ''; editCourseNameSelect.removeAttribute('required'); }
+            if (!showAny) nameInput.setAttribute('required', 'required');
+        }
+    }
+    document.querySelectorAll('#editSellingVoucherModal .edit-client-type-radio').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const isOt = (this.value || '').toLowerCase() === 'ot';
+            const isCourse = (this.value || '').toLowerCase() === 'course';
+            const clientSelect = document.getElementById('editClientNameSelect');
+            const otCourseSelect = document.getElementById('editModalOtCourseSelect');
+            const editCourseSelect = document.getElementById('editModalCourseSelect');
+            const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
+            const nameInput = document.getElementById('editModalClientNameInput');
+            if (isOt) {
+                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (nameInput) { nameInput.style.display = 'none'; nameInput.readOnly = true; nameInput.placeholder = 'Select course above'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+            } else if (isCourse) {
+                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.value = nameInput.value || ''; }
+                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = nameInput.value || ''; }
+                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+            } else {
+                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (clientSelect) {
+                    clientSelect.querySelectorAll('option').forEach(function(opt) {
+                        if (opt.value === '') { opt.hidden = false; return; }
+                        opt.hidden = (opt.dataset.type || '') !== (this.value || '');
+                    }.bind(this));
+                }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
+            }
+            updateEditModalNameField();
+        });
+    });
+    const editModalOtCourseSelect = document.getElementById('editModalOtCourseSelect');
+    if (editModalOtCourseSelect) {
+        editModalOtCourseSelect.addEventListener('change', function() {
+            const inp = document.getElementById('editModalClientNameInput');
+            if (inp) inp.value = this.value || '';
+        });
+    }
+    
+    const editModalCourseSelect = document.getElementById('editModalCourseSelect');
+    if (editModalCourseSelect) {
+        editModalCourseSelect.addEventListener('change', function() {
+            const val = this.value || '';
+            const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
+            const inp = document.getElementById('editModalClientNameInput');
+            if (editCourseNameSelect) editCourseNameSelect.value = val;
+            if (inp) inp.value = val;
+        });
+    }
+    
+    const editModalCourseNameSelect = document.getElementById('editModalCourseNameSelect');
+    if (editModalCourseNameSelect) {
+        editModalCourseNameSelect.addEventListener('change', function() {
+            const val = this.value || '';
+            const editCourseSelect = document.getElementById('editModalCourseSelect');
+            const inp = document.getElementById('editModalClientNameInput');
+            if (editCourseSelect) editCourseSelect.value = val;
+            if (inp) inp.value = val;
+        });
+    }
+    
+    const editClientNameSelect = document.getElementById('editClientNameSelect');
+    if (editClientNameSelect) {
+        editClientNameSelect.addEventListener('change', updateEditModalNameField);
+    }
+    
+    const editModalFacultySelect = document.getElementById('editModalFacultySelect');
+    if (editModalFacultySelect) {
+        editModalFacultySelect.addEventListener('change', function() {
+            const inp = document.getElementById('editModalClientNameInput');
+            if (inp) inp.value = this.value || '';
+        });
+    }
+    const editModalAcademyEl = document.getElementById('editModalAcademyStaffSelect');
+    if (editModalAcademyEl) editModalAcademyEl.addEventListener('change', function() {
+        const inp = document.getElementById('editModalClientNameInput');
+        if (inp) inp.value = this.value || '';
+    });
+    const editModalMessEl = document.getElementById('editModalMessStaffSelect');
+    if (editModalMessEl) editModalMessEl.addEventListener('change', function() {
+        const inp = document.getElementById('editModalClientNameInput');
+        if (inp) inp.value = this.value || '';
+    });
 
     function getEditRowHtml(index, item) {
         const options = itemSubcategories.map(s =>
@@ -732,12 +1128,23 @@
         });
     }
 
-    document.querySelectorAll('.btn-view-sv').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const voucherId = this.getAttribute('data-voucher-id');
+    // View button handler
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('btn-view-sv')) {
+            e.preventDefault();
+            const voucherId = e.target.getAttribute('data-voucher-id');
+            if (!voucherId) {
+                console.error('No voucher ID found');
+                return;
+            }
+            console.log('Fetching voucher:', voucherId);
             fetch(viewSvBaseUrl + '/' + voucherId, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP error ' + r.status);
+                    return r.json();
+                })
                 .then(data => {
+                    console.log('Voucher data:', data);
                     const v = data.voucher;
                     const items = data.items || [];
                     document.getElementById('viewSellingVoucherModalLabel').textContent = 'View Selling Voucher #' + (v.pk || voucherId);
@@ -773,18 +1180,33 @@
                     } else {
                         document.getElementById('viewUpdatedAtWrap').style.display = 'none';
                     }
-                    new bootstrap.Modal(document.getElementById('viewSellingVoucherModal')).show();
+                    const modal = new bootstrap.Modal(document.getElementById('viewSellingVoucherModal'));
+                    modal.show();
                 })
-                .catch(err => { console.error(err); alert('Failed to load selling voucher.'); });
-        });
+                .catch(err => { 
+                    console.error('Error loading voucher:', err); 
+                    alert('Failed to load selling voucher: ' + err.message); 
+                });
+        }
     });
 
-    document.querySelectorAll('.btn-return-sv').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const voucherId = this.getAttribute('data-voucher-id');
+    // Return button handler
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('btn-return-sv')) {
+            e.preventDefault();
+            const voucherId = e.target.getAttribute('data-voucher-id');
+            if (!voucherId) {
+                console.error('No voucher ID found for return');
+                return;
+            }
+            console.log('Loading return data for voucher:', voucherId);
             fetch(returnSvBaseUrl + '/' + voucherId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP error ' + r.status);
+                    return r.json();
+                })
                 .then(data => {
+                    console.log('Return data:', data);
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
@@ -801,28 +1223,67 @@
                             '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm" value="' + retDate + '"></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
-                    new bootstrap.Modal(document.getElementById('returnItemModal')).show();
+                    const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));
+                    modal.show();
                 })
-                .catch(err => { console.error(err); alert('Failed to load return data.'); });
-        });
+                .catch(err => { 
+                    console.error('Error loading return data:', err); 
+                    alert('Failed to load return data: ' + err.message); 
+                });
+        }
     });
 
-    document.querySelectorAll('.btn-edit-sv').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const voucherId = this.getAttribute('data-voucher-id');
+    // Edit button handler
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('btn-edit-sv')) {
+            e.preventDefault();
+            const voucherId = e.target.getAttribute('data-voucher-id');
+            if (!voucherId) {
+                console.error('No voucher ID found for edit');
+                return;
+            }
+            console.log('Loading edit data for voucher:', voucherId);
             fetch(editSvBaseUrl + '/' + voucherId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP error ' + r.status);
+                    return r.json();
+                })
                 .then(data => {
+                    console.log('Edit data:', data);
                     if (data.error) { alert(data.error); return; }
                     const v = data.voucher;
                     const items = data.items || [];
                     document.getElementById('editSellingVoucherForm').action = editSvBaseUrl + '/' + voucherId;
-                    document.querySelector('#editSellingVoucherModal input[name="client_type_slug"][value="' + (v.client_type_slug || 'employee') + '"]').checked = true;
+                    
+                    // Set client type radio
+                    const clientTypeRadio = document.querySelector('#editSellingVoucherModal input[name="client_type_slug"][value="' + (v.client_type_slug || 'employee') + '"]');
+                    if (clientTypeRadio) {
+                        clientTypeRadio.checked = true;
+                        clientTypeRadio.dispatchEvent(new Event('change'));
+                    }
+                    
                     document.querySelector('#editSellingVoucherModal select.edit-payment-type').value = String(v.payment_type ?? 1);
-                    document.querySelector('#editSellingVoucherModal select[name="client_type_pk"]').value = v.client_type_pk || '';
-                    document.querySelector('#editSellingVoucherModal input.edit-client-name').value = v.client_name || '';
+                    
+                    const clientTypePkSelect = document.querySelector('#editSellingVoucherModal select[name="client_type_pk"]');
+                    if (clientTypePkSelect) clientTypePkSelect.value = v.client_type_pk || '';
+                    
+                    document.getElementById('editModalClientNameInput').value = v.client_name || '';
+                    document.getElementById('editModalFacultySelect').value = v.client_name || '';
+                    const editAcademyEl = document.getElementById('editModalAcademyStaffSelect');
+                    if (editAcademyEl) editAcademyEl.value = v.client_name || '';
+                    const editMessEl = document.getElementById('editModalMessStaffSelect');
+                    if (editMessEl) editMessEl.value = v.client_name || '';
+                    const editOtCourseEl = document.getElementById('editModalOtCourseSelect');
+                    if (editOtCourseEl) editOtCourseEl.value = v.client_name || '';
+                    const editCourseEl = document.getElementById('editModalCourseSelect');
+                    if (editCourseEl) editCourseEl.value = v.client_name || '';
+                    const editCourseNameEl = document.getElementById('editModalCourseNameSelect');
+                    if (editCourseNameEl) editCourseNameEl.value = v.client_name || '';
                     document.querySelector('#editSellingVoucherModal input.edit-issue-date').value = v.issue_date || '';
-                    document.querySelector('#editSellingVoucherModal select.edit-store').value = v.inve_store_master_pk || '';
+                    
+                    const storeSelect = document.querySelector('#editSellingVoucherModal select.edit-store');
+                    if (storeSelect) storeSelect.value = v.inve_store_master_pk || v.store_id || '';
+                    
                     document.querySelector('#editSellingVoucherModal input.edit-remarks').value = v.remarks || '';
                     const tbody = document.getElementById('editModalItemsBody');
                     tbody.innerHTML = '';
@@ -835,52 +1296,81 @@
                         });
                         editRowIndex = items.length;
                     }
+                    const isOt = (v.client_type_slug || '') === 'ot';
+                    const editClientSelect = document.getElementById('editClientNameSelect');
+                    const editOtSelect = document.getElementById('editModalOtCourseSelect');
+                    const editNameInp = document.getElementById('editModalClientNameInput');
+                    if (isOt) {
+                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.value = v.client_name || ''; }
+                        if (editNameInp) { editNameInp.readOnly = true; editNameInp.placeholder = 'Select course above'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
+                    } else {
+                        if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (v.client_type_slug || 'employee'); }); }
+                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.value = ''; }
+                        if (editNameInp) { editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
+                    }
+                    updateEditModalNameField();
                     updateEditGrandTotal();
                     updateEditRemoveButtons();
-                    new bootstrap.Modal(document.getElementById('editSellingVoucherModal')).show();
+                    const modal = new bootstrap.Modal(document.getElementById('editSellingVoucherModal'));
+                    modal.show();
                 })
-                .catch(err => { console.error(err); alert('Failed to load selling voucher.'); });
-        });
-    });
-
-    document.getElementById('editModalAddItemRow').addEventListener('click', function() {
-        const tbody = document.getElementById('editModalItemsBody');
-        tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
-        editRowIndex++;
-        updateEditRemoveButtons();
-    });
-
-    document.getElementById('editModalItemsBody').addEventListener('change', function(e) {
-        if (e.target.classList.contains('sv-item-select')) {
-            const row = e.target.closest('.sv-item-row');
-            if (row) { updateUnit(row); calcRow(row); updateEditGrandTotal(); }
+                .catch(err => { 
+                    console.error('Error loading voucher for edit:', err); 
+                    alert('Failed to load selling voucher: ' + err.message); 
+                });
         }
     });
-    document.getElementById('editModalItemsBody').addEventListener('input', function(e) {
-        if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
-            const row = e.target.closest('.sv-item-row');
-            if (row) { calcRow(row); updateEditGrandTotal(); }
-        }
-    });
-    document.getElementById('editModalItemsBody').addEventListener('click', function(e) {
-        if (e.target.classList.contains('sv-remove-row')) {
-            const row = e.target.closest('.sv-item-row');
-            if (row && document.querySelectorAll('#editModalItemsBody .sv-item-row').length > 1) {
-                row.remove();
-                updateEditGrandTotal();
+
+    const editModalAddItemRow = document.getElementById('editModalAddItemRow');
+    if (editModalAddItemRow) {
+        editModalAddItemRow.addEventListener('click', function() {
+            const tbody = document.getElementById('editModalItemsBody');
+            if (tbody) {
+                tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
+                editRowIndex++;
                 updateEditRemoveButtons();
             }
-        }
-    });
+        });
+    }
+
+    const editModalItemsBody = document.getElementById('editModalItemsBody');
+    if (editModalItemsBody) {
+        editModalItemsBody.addEventListener('change', function(e) {
+            if (e.target.classList.contains('sv-item-select')) {
+                const row = e.target.closest('.sv-item-row');
+                if (row) { updateUnit(row); calcRow(row); updateEditGrandTotal(); }
+            }
+        });
+        
+        editModalItemsBody.addEventListener('input', function(e) {
+            if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
+                const row = e.target.closest('.sv-item-row');
+                if (row) { calcRow(row); updateEditGrandTotal(); }
+            }
+        });
+        
+        editModalItemsBody.addEventListener('click', function(e) {
+            if (e.target.classList.contains('sv-remove-row')) {
+                const row = e.target.closest('.sv-item-row');
+                if (row && document.querySelectorAll('#editModalItemsBody .sv-item-row').length > 1) {
+                    row.remove();
+                    updateEditGrandTotal();
+                    updateEditRemoveButtons();
+                }
+            }
+        });
+    }
 
     @if($errors->any() || session('open_selling_voucher_modal'))
-    document.addEventListener('DOMContentLoaded', function() {
-        var modal = document.getElementById('addSellingVoucherModal');
-        if (modal && typeof bootstrap !== 'undefined') {
-            (new bootstrap.Modal(modal)).show();
-        }
-    });
+    var modal = document.getElementById('addSellingVoucherModal');
+    if (modal && typeof bootstrap !== 'undefined') {
+        (new bootstrap.Modal(modal)).show();
+    }
     @endif
-})();
+    
+    console.log('✅ All event listeners attached successfully');
+    console.log('Script initialization complete');
+});
 </script>
 @endsection
