@@ -379,13 +379,16 @@ class IssueManagementController extends Controller
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
             'statusHistory.creator',
+            'nodal_officer',
             // 'escalationHistory',
             'creator',
             'logger'
         ])->findOrFail($id);
-
+        $department_id = $issue->nodal_officer->department_master_pk;
         // Load all employees for assignment dropdown in modal
         $query = DB::table('employee_master as e')
+         ->where('e.department_master_pk', $department_id)
+
             ->select(
                 'e.pk as employee_pk',
                 'e.first_name as first_name',
