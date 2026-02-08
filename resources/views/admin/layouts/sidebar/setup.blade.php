@@ -1,11 +1,11 @@
 <aside class="side-mini-panel with-vertical sidebar-google-style">
-    <div>
+    <div style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar">
-            <div>
-                <div class="mini-nav">
+        <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+            <div style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+                <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
                     <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
     <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
         data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
@@ -17,7 +17,7 @@
 
     </a>
 </div>
-                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init">
+                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto; min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer"></div>
@@ -261,6 +261,14 @@
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
     background: #E0E0E0 !important;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    transform: scale(1.05);
+    margin: 4px 8px;
+    width: 100%;
+    height: 100%;
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {

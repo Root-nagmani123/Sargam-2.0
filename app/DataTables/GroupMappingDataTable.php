@@ -34,12 +34,16 @@ class GroupMappingDataTable extends DataTable
                     if (!empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
                         $exportUrl = route('group.mapping.export.student.list', $id);
                         $html = <<<HTML
-    <a href="javascript:void(0)" class="view-student" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">visibility</i>
-    </a>
-    <a href="{$exportUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">download</i>
-    </a>
+    <div class="d-inline-flex align-items-center gap-2">
+        <a href="javascript:void(0)" class="view-student btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 py-1" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students" aria-label="View Students">
+            <i class="bi bi-eye-fill"></i>
+            <span class="d-none d-md-inline">View</span>
+        </a>
+        <a href="{$exportUrl}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 px-2 py-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List" aria-label="Download Student List">
+            <i class="bi bi-download"></i>
+            <span class="d-none d-md-inline">Download</span>
+        </a>
+    </div>
     HTML;
                     return $html;
                 }
@@ -64,8 +68,7 @@ class GroupMappingDataTable extends DataTable
             class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
             aria-label="Edit group name mapping"
         >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
+            <span class="material-icons material-symbols-rounded fs-6"
                   aria-hidden="true">
                 edit
             </span>
@@ -81,8 +84,7 @@ class GroupMappingDataTable extends DataTable
                 aria-disabled="true"
                 title="Cannot delete active group mapping"
             >
-                <span class="material-icons material-symbols-rounded"
-                      style="font-size:18px;"
+                <span class="material-icons material-symbols-rounded fs-6"
                       aria-hidden="true">
                     delete
                 </span>
@@ -225,20 +227,13 @@ public function html(): HtmlBuilder
         ->columns($this->getColumns())
         ->minifiedAjax()
         ->orderBy(1)
-        ->responsive(true)
+        ->responsive(false)
         ->selectStyleSingle()
-        ->addTableClass('table table-bordered table-hover align-middle custom-mapping-table')
+        ->addTableClass('table table-bordered table-hover align-middle text-nowrap')
         ->parameters([
-            'responsive' => [
-                'details' => ['type' => 'inline'],
-                'breakpoints' => [
-                    ['name' => 'desktop', 'width' => 99999],
-                    ['name' => 'tablet', 'width' => 1024],
-                    ['name' => 'mobile-l', 'width' => 768],
-                    ['name' => 'mobile-p', 'width' => 480],
-                ],
-            ],
+            'responsive' => false,
             'scrollX' => true,
+            'scrollCollapse' => true,
             'autoWidth' => false,
             'ordering' => false,
             'searching' => true,
@@ -260,54 +255,46 @@ public function html(): HtmlBuilder
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->responsivePriority(7),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
             Column::make('course_name')
                 ->title('Course Name')
                 ->addClass('text-center')
                 ->searchable(true)
-                ->orderable(false)
-                ->responsivePriority(1),
+                ->orderable(false),
             Column::make('type_name')
                 ->title('Group Type')
                 ->addClass('text-center')
                 ->searchable(false)
-                ->orderable(false)
-                ->responsivePriority(8),
+                ->orderable(false),
             Column::make('group_name')
                 ->title('Group Name')
                 ->addClass('text-center')
-                ->searchable(true)
-                ->responsivePriority(2),
+                ->searchable(true),
             Column::make('Faculty')
                 ->title('Faculty')
                 ->addClass('text-center')
                 ->searchable(false)
-                ->orderable(false)
-                ->responsivePriority(9),
+                ->orderable(false),
             Column::computed('student_count')
                 ->title('Student Count')
                 ->addClass('text-center')
                 ->searchable(false)
-                ->orderable(false)
-                ->responsivePriority(3),
+                ->orderable(false),
             Column::computed('view_download')
                 ->title('View/Download')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false)
                 ->exportable(false)
-                ->printable(false)
-                ->responsivePriority(4),
+                ->printable(false),
             Column::computed('status')
                 ->addClass('text-center')
                 ->exportable(false)
-                ->printable(false)
-                ->responsivePriority(6),
+                ->printable(false),
             Column::computed('action')
                 ->addClass('text-center')
                 ->exportable(false)
                 ->printable(false)
-                ->responsivePriority(5)
         ];
     }
 

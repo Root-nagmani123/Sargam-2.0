@@ -1,6 +1,6 @@
 <!-- Event Details Modal -->
 <div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <div class="d-flex flex-column w-100"> 
@@ -42,14 +42,14 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="d`etail-item">
+                            <div class="detail-item">
                                 <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
                                 <strong>Session:</strong>
                                 <span id="eventclasssession" class="ms-1"></span>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="d`etail-item">
+                            <div class="detail-item">
                                 <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
                                 <strong>Group name:</strong>
                                 <span id="eventgroupname" class="ms-1"></span>

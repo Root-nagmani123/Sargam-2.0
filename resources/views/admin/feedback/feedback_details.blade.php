@@ -5,7 +5,7 @@
 @section('setup_content')
     <style>
         :root {
-            --primary: #af2910;
+            --primary: #004a93;
             --primary-rgb: 175, 41, 16;
             --secondary: #f4f6f9;
             --accent: #f2b705;
@@ -662,13 +662,8 @@
                                 <nav aria-label="Feedback pagination">
                                     <ul class="pagination justify-content-center flex-wrap mb-0">
                                         <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
-                                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First page" title="First">
-                                                <i class="fas fa-angle-double-left" aria-hidden="true"></i>
-                                            </a>
-                                        </li>
-                                        <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
                                             <a class="page-link" href="javascript:void(0)" onclick="goToPage({{ $currentPage - 1 }})" aria-label="Previous page" title="Previous">
-                                                <i class="fas fa-angle-left" aria-hidden="true"></i>
+                                                <span class="material-icons material-symbols-rounded" aria-hidden="true" style="font-size: 1.25rem;">chevron_left</span>
                                             </a>
                                         </li>
                                         @php
@@ -682,12 +677,7 @@
                                         @endfor
                                         <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
                                             <a class="page-link" href="javascript:void(0)" onclick="goToPage({{ $currentPage + 1 }})" aria-label="Next page" title="Next">
-                                                <i class="fas fa-angle-right" aria-hidden="true"></i>
-                                            </a>
-                                        </li>
-                                        <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
-                                            <a class="page-link" href="javascript:void(0)" onclick="goToPage({{ $totalPages }})" aria-label="Last page" title="Last">
-                                                <i class="fas fa-angle-double-right" aria-hidden="true"></i>
+                                                <span class="material-icons material-symbols-rounded" aria-hidden="true" style="font-size: 1.25rem;">chevron_right</span>
                                             </a>
                                         </li>
                                     </ul>
@@ -912,13 +902,8 @@
                 <nav aria-label="Feedback pagination">
                     <ul class="pagination justify-content-center flex-wrap mb-0">
                         <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First page" title="First">
-                                <i class="fas fa-angle-double-left" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                        <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
                             <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous page" title="Previous">
-                                <i class="fas fa-angle-left" aria-hidden="true"></i>
+                                <span class="material-icons material-symbols-rounded" aria-hidden="true" style="font-size: 1.25rem;">chevron_left</span>
                             </a>
                         </li>
         `;
@@ -938,12 +923,7 @@
                     pagination += `
                         <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
                             <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next page" title="Next">
-                                <i class="fas fa-angle-right" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                        <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last page" title="Last">
-                                <i class="fas fa-angle-double-right" aria-hidden="true"></i>
+                                <span class="material-icons material-symbols-rounded" aria-hidden="true" style="font-size: 1.25rem;">chevron_right</span>
                             </a>
                         </li>
                     </ul>

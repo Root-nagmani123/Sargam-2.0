@@ -4,98 +4,16 @@
 
 @section('css')
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+{{-- Select2 & DataTables overrides only (cannot use Bootstrap classes) --}}
 <style>
-/* Fix Select2 dropdown cropping on Group Mapping index page */
 .group-mapping-index .select2-container { width: 100% !important; }
-.group-mapping-index .select2-selection--single .select2-selection__rendered {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
-}
-/* Ensure Select2 dropdown is visible and above modals */
-body .select2-dropdown {
-    z-index: 99999 !important;
-}
-body:has(.group-mapping-index) .select2-dropdown {
-    min-width: 280px !important;
-    z-index: 99999 !important;
-}
-body:has(.group-mapping-index) .select2-results__option {
-    white-space: normal !important;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-}
-body:has(.group-mapping-index) .select2-results__options {
-    max-height: 300px;
-}
-
-/* Group Mapping Index - Bootstrap 5.3 enhanced */
-.group-mapping-index .group-mapping-card {
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-start: 4px solid #004a93;
-    transition: box-shadow 0.2s ease;
-}
-.group-mapping-index .group-mapping-card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-.group-mapping-index .form-label {
-    font-weight: 500;
-    color: #495057;
-}
-.group-mapping-index .form-select {
-    border-radius: 0.5rem;
-    border: 1px solid #dee2e6;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.group-mapping-index .form-select:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
-}
-.group-mapping-index .btn-group .btn {
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-.group-mapping-index .btn-primary,
-.group-mapping-index .btn-info,
-.group-mapping-index .btn-success,
-.group-mapping-index .btn-outline-primary {
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-.group-mapping-index .btn-primary:hover,
-.group-mapping-index .btn-info:hover,
-.group-mapping-index .btn-success:hover,
-.group-mapping-index .btn-outline-primary:hover {
-    transform: translateY(-1px);
-}
-.group-mapping-index .modal-content {
-    border-radius: 0.75rem;
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.15);
-}
-.group-mapping-index .modal-header {
-    border-radius: 0.75rem 0.75rem 0 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-.group-mapping-index .modal-footer {
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-@media (prefers-reduced-motion: reduce) {
-    .group-mapping-index .group-mapping-card,
-    .group-mapping-index .btn { transition: none; }
-    .group-mapping-index .btn:hover { transform: none; }
-}
-/* Mobile: ensure DataTable wrapper is contained and scrollable */
-@media (max-width: 991.98px) {
-    .group-mapping-index .group-mapping-table-wrapper,
-    .group-mapping-index #group-mapping-table_wrapper {
-        width: 100%;
-        max-width: 100%;
-    }
-}
+.group-mapping-index .select2-selection--single .select2-selection__rendered { white-space: normal; overflow: visible; text-overflow: unset; }
+body .select2-dropdown { z-index: 99999 !important; }
+body:has(.group-mapping-index) .select2-dropdown { min-width: 280px !important; z-index: 99999 !important; }
+body:has(.group-mapping-index) .select2-results__option { white-space: normal !important; word-wrap: break-word; overflow-wrap: break-word; }
+body:has(.group-mapping-index) .select2-results__options { max-height: 300px; }
+.group-mapping-index #group-mapping-table thead th { white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .group-mapping-index .group-mapping-card, .group-mapping-index .btn { transition: none; } .group-mapping-index .btn:hover { transform: none; } }
 </style>
 @endsection
 
@@ -107,7 +25,7 @@ body:has(.group-mapping-index) .select2-results__options {
     <x-session_message />
 
     <div class="datatables">
-        <div class="card group-mapping-card shadow-sm overflow-visible">
+        <div class="card group-mapping-card shadow-sm overflow-visible rounded-3">
             <div class="card-body p-4 p-lg-5">
                 {{-- Header and filters: fixed, no horizontal scroll --}}
                 <div class="group-mapping-top-section">
@@ -115,7 +33,7 @@ body:has(.group-mapping-index) .select2-results__options {
                         <div class="col-12 col-md-4 mb-3 mb-md-0">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="rounded-3 bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center">
-                                    <i class="bi bi-diagram-3-fill text-primary" style="font-size: 1.5rem;"></i>
+                                    <i class="bi bi-diagram-3-fill text-primary fs-4"></i>
                                 </div>
                                 <div>
                                     <h4 class="fw-semibold mb-0">Course Group Mapping</h4>
@@ -127,25 +45,25 @@ body:has(.group-mapping-index) .select2-results__options {
                         <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
 
                             <a href="{{ route('group.mapping.create') }}"
-                                class="btn btn-primary px-3 d-flex align-items-center gap-2 shadow-sm">
+                                class="btn btn-primary px-3 d-flex align-items-center gap-2 shadow-sm rounded-2">
                                 <i class="bi bi-plus-circle-fill"></i>
                                 Add Group Mapping
                             </a>
 
-                            <button type="button" class="btn btn-info px-3 d-flex align-items-center gap-2 shadow-sm"
+                            <button type="button" class="btn btn-info px-3 d-flex align-items-center gap-2 shadow-sm rounded-2"
                                 data-bs-toggle="modal" data-bs-target="#addStudentModal">
                                 <i class="bi bi-person-plus-fill"></i>
                                 Add Student
                             </button>
 
-                            <button type="button" class="btn btn-success px-3 d-flex align-items-center gap-2 shadow-sm"
+                            <button type="button" class="btn btn-success px-3 d-flex align-items-center gap-2 shadow-sm rounded-2"
                                 data-bs-toggle="modal" data-bs-target="#importModal">
                                 <i class="bi bi-file-earmark-excel-fill"></i>
                                 Import Excel
                             </button>
 
                             <a href="{{ route('group.mapping.export.student.list') }}"
-                                class="btn btn-outline-primary px-3 d-flex align-items-center gap-2 shadow-sm">
+                                class="btn btn-outline-primary px-3 d-flex align-items-center gap-2 shadow-sm rounded-2">
                                 <i class="bi bi-download"></i>
                                 Export Excel
                             </a>
@@ -155,8 +73,8 @@ body:has(.group-mapping-index) .select2-results__options {
                         {{-- Status Filter --}}
                         <div class="row g-3 mb-4 align-items-end group-mapping-filters-row">
                             <div class="col-12 col-md-4">
-                                <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
-                                <select id="courseFilter" class="form-select shadow-sm">
+                                <label for="courseFilter" class="form-label fw-medium text-body-secondary">Course Name</label>
+                                <select id="courseFilter" class="form-select shadow-sm rounded-2 border">
                                     <option value="">All Courses</option>
                                     @foreach($courses ?? [] as $pk => $name)
                                     <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -165,8 +83,8 @@ body:has(.group-mapping-index) .select2-results__options {
                             </div>
 
                             <div class="col-12 col-md-3">
-                                <label for="groupTypeFilter" class="form-label fw-semibold">Group Type</label>
-                                <select id="groupTypeFilter" class="form-select shadow-sm">
+                                <label for="groupTypeFilter" class="form-label fw-medium text-body-secondary">Group Type</label>
+                                <select id="groupTypeFilter" class="form-select shadow-sm rounded-2 border">
                                     <option value="">All Group Types</option>
                                     @foreach($groupTypes ?? [] as $pk => $name)
                                     <option value="{{ $pk }}">{{ $name }}</option>
@@ -176,22 +94,22 @@ body:has(.group-mapping-index) .select2-results__options {
 
                             <div class="col-12 col-md-2 d-flex gap-2 align-items-end">
                                 <button type="button"
-                                    class="btn btn-outline-secondary px-4 py-2 mt-0 mt-md-4 shadow-sm w-100 w-md-auto"
+                                    class="btn btn-outline-secondary px-4 py-2 mt-0 mt-md-4 shadow-sm w-100 w-md-auto rounded-2"
                                     id="resetFilters">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                                 </button>
                             </div>
                             <div class="col-12 col-md-3 text-md-end group-mapping-status-col">
-                                <label class="form-label fw-semibold d-md-none mb-2">Status</label>
-                                <div class="btn-group shadow-sm w-100 w-md-auto"
+                                <label class="form-label fw-medium text-body-secondary d-md-none mb-2">Status</label>
+                                <div class="btn-group shadow-sm w-100 w-md-auto rounded-2"
                                     role="group"
                                     aria-label="Group Mapping Status Filter">
-                                    <button type="button" class="btn btn-outline-success px-4 py-2 fw-semibold"
+                                    <button type="button" class="btn btn-outline-success px-4 py-2 fw-semibold rounded-start-2"
                                         id="filterGroupActive" aria-pressed="false">
                                         <i class="bi bi-check-circle me-1"></i> Active
                                     </button>
 
-                                    <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-semibold"
+                                    <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-semibold rounded-end-2"
                                         id="filterGroupArchive" aria-pressed="false">
                                         <i class="bi bi-archive me-1"></i> Archive
                                     </button>
@@ -209,7 +127,7 @@ body:has(.group-mapping-index) .select2-results__options {
                             aria-labelledby="addStudentModalLabel" aria-hidden="true" data-bs-backdrop="static"
                             data-bs-keyboard="false">
                             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
-                                <div class="modal-content border-0 shadow-lg">
+                                <div class="modal-content border-0 shadow-lg rounded-3">
                                     <form id="addStudentForm">
                                         @csrf
                                         <div class="modal-header border-bottom bg-light">
@@ -226,20 +144,20 @@ body:has(.group-mapping-index) .select2-results__options {
                                             <div class="mb-3">
                                                 <label for="studentName" class="form-label">Name <span
                                                         class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="studentName" name="name"
+                                                <input type="text" class="form-control rounded-2" id="studentName" name="name"
                                                     placeholder="Enter student name" required maxlength="255">
                                             </div>
 
                                             <div class="mb-3">
                                                 <label for="studentOtCode" class="form-label">OT Code <span
                                                         class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="studentOtCode" name="otcode"
+                                                <input type="text" class="form-control rounded-2" id="studentOtCode" name="otcode"
                                                     placeholder="Enter OT code" required maxlength="255">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="studentEmail" class="form-label">Course <span
                                                         class="text-danger">*</span></label>
-                                                <select class="form-select" id="studentCourse" name="course_master_pk" required>
+                                                <select class="form-select rounded-2" id="studentCourse" name="course_master_pk" required>
                                                     <option value="">Select Course</option>
                                                     @foreach($courses ?? [] as $pk => $name)
                                                     <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -250,7 +168,7 @@ body:has(.group-mapping-index) .select2-results__options {
                                             <div class="mb-3">
                                                 <label for="studentGroupType" class="form-label">Group Type <span
                                                         class="text-danger">*</span></label>
-                                                <select class="form-select" id="studentGroupType" name="group_type"
+                                                <select class="form-select rounded-2" id="studentGroupType" name="group_type"
                                                     required>
                                                     <option value="">Select Group Type</option>
                                                     @foreach($groupTypes ?? [] as $pk => $name)
@@ -265,7 +183,7 @@ body:has(.group-mapping-index) .select2-results__options {
                                             <div class="mb-3">
                                                 <label for="studentGroupName" class="form-label">Group Name <span
                                                         class="text-danger">*</span></label>
-                                                <select class="form-select" id="studentGroupName" name="group_name"
+                                                <select class="form-select rounded-2" id="studentGroupName" name="group_name"
                                                     required disabled>
                                                     <option value="">Select Group Name</option>
                                                 </select>
@@ -292,7 +210,7 @@ body:has(.group-mapping-index) .select2-results__options {
                             data-bs-keyboard="false">
 
                             <div class="modal-dialog modal-xl modal-dialog-centered">
-                                <div class="modal-content border-0 shadow-lg"> 
+                                <div class="modal-content border-0 shadow-lg rounded-3"> 
                                     <form method="POST" enctype="multipart/form-data" id="importExcelForm">
                                         @csrf
 
@@ -311,7 +229,7 @@ body:has(.group-mapping-index) .select2-results__options {
                                             <!-- File Upload -->
                                             <div class="mb-3">
                                                 <label for="importFile" class="form-label">Select Course</label>
-                                               <select name="course_master_pk" id="course_master_pk_model" class="form-select shadow-sm " required>
+                                               <select name="course_master_pk" id="course_master_pk_model" class="form-select shadow-sm rounded-2" required>
                                                     <option value="">Select Course</option>
                                                    @foreach($courses ?? [] as $pk => $name)
                                                     <option value="{{ $pk }}"  {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -320,7 +238,7 @@ body:has(.group-mapping-index) .select2-results__options {
                                             </div>
                                             <div class="mb-3">
                                                 <label for="importFile" class="form-label">Select Excel File</label>
-                                                <input type="file" name="file" id="importFile" class="form-control"
+                                                <input type="file" name="file" id="importFile" class="form-control rounded-2"
                                                     accept=".xlsx, .xls, .csv" required>
                                                 <small class="text-muted">
                                                     Allowed: .xlsx, .xls, .csv | Max ~500 MB
@@ -351,7 +269,7 @@ body:has(.group-mapping-index) .select2-results__options {
                                             <table class="table table-striped table-hover table-sm align-middle">
                                                 <thead class="table-info">
                                                     <tr>
-                                                        <th style="width: 10%;">Row</th>
+                                                        <th class="w-25">Row</th>
                                                         <th>Errors</th>
                                                     </tr>
                                                 </thead>
@@ -372,7 +290,7 @@ body:has(.group-mapping-index) .select2-results__options {
                         <div class="modal fade" id="studentDetailsModal" tabindex="-1"
                             aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered modal-fullscreen-sm-down">
-                                <div class="modal-content border-0 shadow-lg rounded-4">
+                                <div class="modal-content border-0 shadow-lg rounded-3">
 
                                     <!-- Header -->
                                     <div class="modal-header border-0 pb-2">
@@ -389,10 +307,10 @@ body:has(.group-mapping-index) .select2-results__options {
                                         <!-- Search Section -->
                                         <div class="mb-3">
                                             <div class="input-group">
-                                                <span class="input-group-text bg-light border-end-0">
+                                                        <span class="input-group-text bg-light border-end-0 rounded-start-2">
                                                     <i class="material-icons material-symbols-rounded">search</i>
                                                 </span>
-                                                <input type="text" class="form-control border-start-0"
+                                                <input type="text" class="form-control border-start-0 rounded-end-2"
                                                     id="studentSearchInput"
                                                     placeholder="Search students by name, OT code, email, or contact number..."
                                                     autocomplete="off">
@@ -483,7 +401,7 @@ body:has(.group-mapping-index) .select2-results__options {
                         <div class="modal fade" id="editStudentModal" tabindex="-1"
                             aria-labelledby="editStudentModalLabel" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
-                                <div class="modal-content border-0 shadow-lg">
+                                <div class="modal-content border-0 shadow-lg rounded-3">
                                     <div class="modal-header border-bottom bg-light">
                                         <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="editStudentModalLabel">
                                             <i class="bi bi-pencil-square text-primary"></i>
@@ -499,17 +417,17 @@ body:has(.group-mapping-index) .select2-results__options {
                                             <input type="hidden" name="student_id" id="editStudentId">
                                             <div class="mb-3">
                                                 <label for="editStudentName" class="form-label">Display Name</label>
-                                                <input type="text" class="form-control" id="editStudentName"
+                                                <input type="text" class="form-control rounded-2" id="editStudentName"
                                                     name="display_name" required maxlength="255">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="editStudentEmail" class="form-label">Email</label>
-                                                <input type="email" class="form-control" id="editStudentEmail"
+                                                <input type="email" class="form-control rounded-2" id="editStudentEmail"
                                                     name="email" maxlength="255">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="editStudentContact" class="form-label">Contact No</label>
-                                                <input type="text" class="form-control" id="editStudentContact"
+                                                <input type="text" class="form-control rounded-2" id="editStudentContact"
                                                     name="contact_no" maxlength="20">
                                             </div>
                                         </div>
@@ -529,11 +447,11 @@ body:has(.group-mapping-index) .select2-results__options {
                         <hr class="my-4">
                         {{-- Table: controls above scroll area so they stay visible on mobile --}}
                         <div class="group-mapping-table-section">
-                            <p class="group-mapping-scroll-hint d-md-none text-muted small mb-2 text-center">
+                            <p class="d-md-none text-muted small mb-2 text-center rounded-2 p-2 bg-primary bg-opacity-10">
                                 <i class="bi bi-arrow-left-right me-1"></i> Swipe horizontally to see all columns
                             </p>
-                            <div class="group-mapping-table-wrapper table-responsive">
-                                {!! $dataTable->table(['class' => 'table text-nowrap']) !!}
+                            <div class="group-mapping-table-wrapper table-responsive overflow-x-auto">
+                                {!! $dataTable->table(['class' => 'table align-middle text-nowrap mb-0']) !!}
                             </div>
                         </div>
                     </div>

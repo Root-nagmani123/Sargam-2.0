@@ -69,7 +69,7 @@ class CourseGroupTypeController extends Controller
 
                 return '
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge ' . $badgeClass . ' text-uppercase fw-semibold" style="font-size: 0.65rem; padding: 0.35em 0.6em;">' . $badgeText . '</span>
+                    <span class="badge ' . $badgeClass . ' text-uppercase fw-semibold small px-2 py-1">' . $badgeText . '</span>
                     <div class="form-check form-switch mb-0">
                         <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
                             data-table="course_group_type_master"
@@ -80,24 +80,24 @@ class CourseGroupTypeController extends Controller
                 </div>';
             })
 
-            // Action Dropdown
+            // Action buttons (Edit and Delete as separate buttons)
             ->addColumn('action', function ($row) {
                 $disabled = $row->active_inactive == 1 ? 'disabled-link' : '';
                 $disabledAttr = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
 
                 return '
-                <div class="btn-group btn-group-sm" role="group" aria-label="Row actions">
+                <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
                     <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . e($row->type_name) . '"
-                       class="btn btn-outline-primary edit-btn rounded-start-2 d-inline-flex align-items-center gap-1 px-3"
+                       class="btn btn-sm btn-outline-primary edit-btn rounded-2 d-inline-flex align-items-center gap-1 px-3"
                        aria-label="Edit course group type">
-                        <i class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">edit</i>
+                        <i class="material-icons material-symbols-rounded fs-6">edit</i>
                         <span class="d-none d-lg-inline">Edit</span>
                     </a>
                     <a href="javascript:void(0)" data-id="' . $row->pk . '"
-                       class="btn btn-outline-danger delete-btn rounded-end-2 d-inline-flex align-items-center gap-1 px-3 ' . $disabled . '"
+                       class="btn btn-sm btn-outline-danger delete-btn rounded-2 d-inline-flex align-items-center gap-1 px-3 ' . $disabled . '"
                        ' . $disabledAttr . '
                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                        <i class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">delete</i>
+                        <i class="material-icons material-symbols-rounded fs-6">delete</i>
                         <span class="d-none d-lg-inline">Delete</span>
                     </a>
                 </div>';
