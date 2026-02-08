@@ -144,11 +144,11 @@ class IssueLogManagement extends Model
     }
 
     /**
-     * Get the user who logged this issue.
+     * Get the employee who logged this issue (the one who submitted the form).
      */
     public function logger()
     {
-        return $this->belongsTo(User::class, 'issue_logger', 'pk');
+        return $this->belongsTo(EmployeeMaster::class, 'issue_logger', 'pk');
     }
 
     /**
