@@ -76,15 +76,15 @@
                     <table class="table table-hover text-nowrap">
                         <thead class="table-light">
                             <tr>
-                                <th width="5%" style="background-color: #af2910; font-weight: 600;">#</th>
-                                <th width="15%" style="background-color: #af2910; font-weight: 600;">Building Name</th>
-                                <th width="10%" style="background-color: #af2910; font-weight: 600;">Floor Name</th>
-                                <th width="15%" style="background-color: #af2910; font-weight: 600;">Room Name</th>
-                                <th width="10%" style="background-color: #af2910; font-weight: 600;">Room Type</th>
-                                <th width="8%" style="background-color: #af2910; font-weight: 600;">Capacity</th>
-                                <th width="20%" style="background-color: #af2910; font-weight: 600;">Comment</th>
-                                <th width="8%" style="background-color: #af2910; font-weight: 600;">Status</th>
-                                <th width="9%" style="background-color: #af2910; font-weight: 600;">Actions</th>
+                                <th width="5%" style="background-color: #004a93; font-weight: 600;">#</th>
+                                <th width="15%" style="background-color: #004a93; font-weight: 600;">Building Name</th>
+                                <th width="10%" style="background-color: #004a93; font-weight: 600;">Floor Name</th>
+                                <th width="15%" style="background-color: #004a93; font-weight: 600;">Room Name</th>
+                                <th width="10%" style="background-color: #004a93; font-weight: 600;">Room Type</th>
+                                <th width="8%" style="background-color: #004a93; font-weight: 600;">Capacity</th>
+                                <th width="20%" style="background-color: #004a93; font-weight: 600;">Comment</th>
+                                <th width="8%" style="background-color: #004a93; font-weight: 600;">Status</th>
+                                <th width="9%" style="background-color: #004a93; font-weight: 600;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>

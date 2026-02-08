@@ -206,9 +206,8 @@ HTML;
             ->minifiedAjax() // This will use the current route for ajax
             // ->orderBy(1)
             ->selectStyleSingle()
-            ->responsive(true)
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'scrollX' => true,
                 'autoWidth' => false,
                 'ordering' => false,

@@ -40,12 +40,12 @@
         }
 
         .star-rating input[type="radio"]:checked~label {
-            color: #af2910;
+            color: #004a93;
         }
 
         .star-rating label:hover,
         .star-rating label:hover~label {
-            color: #af2910;
+            color: #004a93;
         }
 
         /* Star Rating Style */
@@ -64,14 +64,14 @@
             cursor: pointer;
             transition: color 0.2s ease-in-out;
             padding: 0 1px;
-            -webkit-text-stroke: 2px #af2910;
-            text-stroke: 2px #af2910;
+            -webkit-text-stroke: 2px #004a93;
+            text-stroke: 2px #004a93;
         }
 
         .star-rating input:not(:checked)~label {
             color: transparent;
-            -webkit-text-stroke: 2px #af2910;
-            text-stroke: 2px #af2910;
+            -webkit-text-stroke: 2px #004a93;
+            text-stroke: 2px #004a93;
         }
 
         .table td,
@@ -217,7 +217,7 @@
         }
 
         .rating-legend .stars {
-            color: #af2910;
+            color: #004a93;
             letter-spacing: 1px;
             font-size: 0.95rem;
         }

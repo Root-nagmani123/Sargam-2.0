@@ -5,7 +5,7 @@
 @section('setup_content')
     <style>
         :root {
-            --primary: #af2910;
+            --primary: #004a93;
             --secondary: #f4f6f9;
             --accent: #f2b705;
             --success: #198754;
@@ -63,7 +63,7 @@
         }
 
         .rating-header {
-            color: #af2910 !important;
+            color: #004a93 !important;
             font-weight: 600;
         }
 
@@ -554,42 +554,42 @@
                                                 <tbody class="align-middle text-dark">
                                                     <!-- Excellent -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">
+                                                        <th class="rating-header" style="color:#004a93 !important;">
                                                             Excellent</th>
                                                         <td>{{ $data['content_counts']['5'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['5'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Very Good -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">Very
+                                                        <th class="rating-header" style="color:#004a93 !important;">Very
                                                             Good</th>
                                                         <td>{{ $data['content_counts']['4'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['4'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Good -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">Good
+                                                        <th class="rating-header" style="color:#004a93 !important;">Good
                                                         </th>
                                                         <td>{{ $data['content_counts']['3'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['3'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Average -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">
+                                                        <th class="rating-header" style="color:#004a93 !important;">
                                                             Average</th>
                                                         <td>{{ $data['content_counts']['2'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['2'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Below Average -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">Below
+                                                        <th class="rating-header" style="color:#004a93 !important;">Below
                                                             Average</th>
                                                         <td>{{ $data['content_counts']['1'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['1'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Percentage -->
                                                     <tr class="fw-semibold">
-                                                        <th class="rating-header" style="color:#af2910 !important;">
+                                                        <th class="rating-header" style="color:#004a93 !important;">
                                                             Percentage</th>
                                                         <td class="percentage-cell">
                                                             {{ number_format($data['content_percentage'] ?? 0, 2) }}%</td>

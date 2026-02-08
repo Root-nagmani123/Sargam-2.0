@@ -4,22 +4,19 @@
 
 @section('setup_content')
 <div class="container-fluid district-index">
-
+<x-breadcrum title="District" />
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card">
+        <div class="card" style="border-left:4px solid #004a93;">
             <div class="card-body">
-                <div class="row district-header-row">
-                    <div class="col-6">
-                        <h4>District</h4>
-                    </div>
-                    <div class="col-6">
-                        <div class="d-flex justify-content-end align-items-end mb-3">
-                            <div class="d-flex align-items-center gap-2">
-
-                                <!-- Add New Button -->
-                                <a href="{{ route('master.district.create') }}"
-                                    class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
+                <div class="table-responsive">
+                    <div class="row district-header-row">
+                        <div class="col-12 col-md-6">
+                            <h1 class="h4 mb-0">District</h1>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex justify-content-md-end justify-content-start align-items-center gap-2 mt-2 mt-md-0">
+                                <a href="{{ route('master.district.create') }}" class="btn btn-primary d-flex align-items-center w-100 w-md-auto justify-content-center justify-content-md-start">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 20px; vertical-align: middle;">add</i>
                                     Add New District
@@ -31,41 +28,51 @@
                 </div>
                 <hr>
                 <div class="table-responsive">
-                    <table class="table" id="district-table">
+                    <table class="table table-striped table-hover align-middle" id="district-table">
+                        <caption class="visually-hidden">District list with status and actions</caption>
                         <thead>
                             <!-- start row -->
                             <tr>
                                 <th class="col">S.No.</th>
                                 <th class="col">District</th>
-                                <th class="col">Action</th>
                                 <th class="col">Status</th>
+                                <th class="col">Action</th>
                             </tr>
                             <!-- end row -->
                         </thead>
                         <tbody>
                             @foreach($districts as $key => $district)
-                            <tr class="odd">
+                            <tr>
                                 <td>{{ $districts->firstItem() + $key }}</td>
-                                <td class="sorting_1">
+                                <td>
                                     <div class="d-flex align-items-center gap-6">
                                         <h6 class="mb-0">{{ $district->district_name }}</h6>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="state_district_mapping" data-column="active_inactive"
+                                    <div class="form-check form-switch d-inline-flex align-items-center gap-2 m-0">
+                                        @php($toggleId = 'district_status_' . $district->pk)
+                                        <input
+                                            id="{{ $toggleId }}"
+                                            class="form-check-input status-toggle"
+                                            type="checkbox"
+                                            role="switch"
+                                            data-table="state_district_mapping"
+                                            data-column="active_inactive"
                                             data-id="{{ $district->pk }}"
-                                            {{ $district->active_inactive == 1 ? 'checked' : '' }}>
+                                            {{ $district->active_inactive == 1 ? 'checked' : '' }}
+                                            aria-label="Toggle status for {{ $district->district_name }}">
+                                        <label class="form-check-label visually-hidden" for="{{ $toggleId }}">
+                                            Status for {{ $district->district_name }}
+                                        </label>
                                     </div>
                                 </td>
 
-
-                                <td class="text-start">
+                                <td>
                                     <div class="dropdown">
                                         <a href="javascript:void(0)"
                                             id="actionMenu{{ $district->pk }}" data-bs-toggle="dropdown"
-                                            aria-expanded="false">
+                                            aria-expanded="false" aria-label="Actions for {{ $district->district_name }}">
                                             <span class="material-symbols-rounded fs-5">more_horiz</span>
                                         </a>
 
