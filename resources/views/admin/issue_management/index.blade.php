@@ -11,7 +11,7 @@
         overflow: hidden;
     }
     .issue-card .card-header {
-        background: linear-gradient(135deg, #af2910 0%, #f25d33 100%);
+        background: linear-gradient(135deg, #004a93 0%, #f25d33 100%);
         color: #fff;
         border: none;
         padding: 1rem 1.5rem;
@@ -66,11 +66,11 @@
         transition: color 0.2s, background 0.2s;
     }
     .nav-tabs-issue .nav-link:hover {
-        color: #af2910;
+        color: #004a93;
         background: rgba(175, 41, 16, 0.06);
     }
     .nav-tabs-issue .nav-link.active {
-        color: #af2910;
+        color: #004a93;
         background: rgba(175, 41, 16, 0.1);
     }
     .empty-state {

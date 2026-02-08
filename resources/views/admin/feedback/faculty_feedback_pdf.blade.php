@@ -6,7 +6,7 @@
     <style>
         /* Match the web view styling */
         :root {
-            --primary: #af2910;
+            --primary: #004a93;
             --secondary: #f4f6f9;
             --border: #d0d7de;
             --text-dark: #1f2937;

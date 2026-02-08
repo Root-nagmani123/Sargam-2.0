@@ -1036,6 +1036,164 @@
     }
 }
 
+/* Mobile view: FullCalendar - better small screen experience */
+@media (max-width: 767.98px) {
+    .fc .fc-toolbar-chunk .fc-button {
+        margin-left: 0.5rem !important;
+        margin-right: 0.5rem !important;
+    }
+    .fc .fc-toolbar-chunk .fc-button:first-child {
+        margin-left: 0 !important;
+    }
+    /* Toolbar: stack and wrap on narrow screens */
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+    }
+    .fc .fc-toolbar-title {
+        font-size: 1rem !important;
+        margin: 0.25rem 0;
+    }
+    .fc .fc-toolbar-chunk {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.35rem;
+    }
+    .fc .fc-toolbar-chunk .fc-button {
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.8rem !important;
+    }
+    /* Month view: more compact day cells */
+    .fc .fc-daygrid-day-frame {
+        min-height: 60px !important;
+    }
+    .fc .fc-daygrid-day-number {
+        font-size: 0.75rem !important;
+        padding: 0.25rem !important;
+    }
+    .fc .fc-daygrid-day-events {
+        min-height: 0;
+    }
+    /* List view: better mobile layout */
+    .fc .fc-list {
+        border-width: 1px;
+        font-size: 0.9rem;
+    }
+    .fc .fc-list-event:hover td {
+        background: rgba(0, 74, 147, 0.06);
+    }
+    .fc .fc-list-day-cushion {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem;
+    }
+    .fc .fc-list-event-dot {
+        width: 8px;
+        height: 8px;
+    }
+    .fc .fc-list-event-time {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.5rem;
+    }
+    .fc .fc-list-event-title {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.5rem;
+    }
+    /* Week view: narrower time column */
+    .fc .fc-timegrid-slot-label {
+        font-size: 0.7rem !important;
+    }
+    .fc .fc-timegrid-axis-cushion {
+        font-size: 0.7rem !important;
+    }
+    /* Calendar container: reduce padding on mobile */
+    .calendar-container .card-body {
+        padding: 0.75rem !important;
+    }
+}
+
+/* Extra small screens: further compact */
+@media (max-width: 575.98px) {
+    .fc .fc-toolbar-title {
+        font-size: 0.9rem !important;
+    }
+    .fc .fc-toolbar-chunk .fc-button {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+    .fc .fc-daygrid-day-frame {
+        min-height: 50px !important;
+    }
+    .fc .fc-list-day-cushion,
+    .fc .fc-list-event-time,
+    .fc .fc-list-event-title {
+        font-size: 0.8rem !important;
+    }
+}
+
+/* Mobile view: Add Event & Event Details modals - prevent cropping */
+@media (max-width: 767.98px) {
+    #eventModal .modal-dialog,
+    #eventDetails .modal-dialog {
+        margin: 0.5rem !important;
+        max-width: calc(100vw - 1rem) !important;
+        width: 100%;
+    }
+    #eventModal .modal-content,
+    #eventDetails .modal-content {
+        max-height: calc(100vh - 1rem);
+        display: flex;
+        flex-direction: column;
+    }
+    #eventModal .modal-body,
+    #eventDetails .modal-body {
+        max-height: 60vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-shrink: 1;
+    }
+    #eventModal .modal-header,
+    #eventModal .modal-footer,
+    #eventDetails .modal-header,
+    #eventDetails .modal-footer {
+        flex-shrink: 0;
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Mobile view: List of events - proper layout */
+@media (max-width: 767.98px) {
+    .timetable-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .timetable-container .table {
+        min-width: 400px;
+    }
+    .week-cards .row {
+        flex-direction: column !important;
+    }
+    .week-cards .row > * {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    .list-event-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    .list-event-card .meta {
+        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .list-event-card .meta.d-flex {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+
 /* Empty State Styling */
 .empty-state {
     padding: 3rem 2rem;
@@ -1580,12 +1738,13 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
     .week-controls .btn-group {
         margin-bottom: 0.75rem;
-        gap: 0.25rem;
+        gap: 0.5rem !important;
     }
 
     .week-controls .btn {
         font-size: 0.75rem;
         padding: 0.4rem 0.5rem;
+        margin: 0 0.15rem;
     }
 
     .week-badge .badge {

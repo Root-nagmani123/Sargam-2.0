@@ -4,93 +4,246 @@
 
 @section('setup_content')
 <style>
-.btn-group[role="group"] .btn {
-    transition: all 0.3s ease-in-out;
-    border-radius: 0;
-    /* Reset for pill-style container */
+/* Medical Exemption Index - Bootstrap 5.3 enhanced UI/UX */
+:root {
+    --me-primary: #004a93;
+    --me-primary-hover: #003d7a;
+    --me-primary-subtle: rgba(0, 74, 147, 0.08);
+    --me-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --me-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+    --me-radius: 0.5rem;
+    --me-radius-lg: 0.75rem;
+    --me-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Card - modern Bootstrap 5.3 style */
+.student-medical-exemption-index .datatables .card {
+    border-radius: var(--me-radius-lg);
+    box-shadow: var(--me-shadow);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-inline-start: 4px solid var(--me-primary);
+    transition: box-shadow var(--me-transition);
+}
+.student-medical-exemption-index .datatables .card:hover {
+    box-shadow: var(--me-shadow-lg);
+}
+.student-medical-exemption-index .datatables .card-body {
+    padding: 1.5rem 1.5rem 1.5rem 1.5rem;
+}
+
+/* Page title */
+.student-medical-exemption-index .datatables h4 {
+    color: var(--bs-body-color);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* Button group - Active/Archive */
+.btn-group[role="group"] .btn {
+    transition: all var(--me-transition);
+    border-radius: 0;
+}
 .btn-group[role="group"] .btn:first-child {
     border-top-left-radius: 50rem !important;
     border-bottom-left-radius: 50rem !important;
 }
-
 .btn-group[role="group"] .btn:last-child {
     border-top-right-radius: 50rem !important;
     border-bottom-right-radius: 50rem !important;
 }
-
-/* Hover + Active States */
 .btn-group .btn:hover {
     transform: translateY(-1px);
 }
-
 .btn-group .btn.active {
-    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
+    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 74, 147, 0.25);
 }
-
-/* Accessibility: Focus ring */
 .btn:focus-visible {
-    outline: 3px solid #0d6efd;
+    outline: 3px solid var(--me-primary);
     outline-offset: 2px;
 }
-
-/* Better contrast for GIGW compliance */
 .btn-outline-secondary {
     color: #333;
     border-color: #999;
 }
-
 .btn-outline-secondary:hover {
     background-color: #f8f9fa;
     border-color: #666;
 }
 
-/* Horizontal Scroll for Table */
-.datatables .table-responsive {
+/* Action buttons - Print, Export, Add */
+.student-medical-exemption-index .btn-outline-info,
+.student-medical-exemption-index .btn-outline-success {
+    border-radius: var(--me-radius);
+    font-weight: 500;
+    transition: all var(--me-transition);
+}
+.student-medical-exemption-index .btn-outline-info:hover,
+.student-medical-exemption-index .btn-outline-success:hover {
+    transform: translateY(-1px);
+}
+.student-medical-exemption-index .btn-primary {
+    border-radius: var(--me-radius);
+    font-weight: 600;
+    transition: all var(--me-transition);
+}
+.student-medical-exemption-index .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.3);
+}
+
+/* Filters section - grouped panel */
+.student-medical-exemption-index .filters-panel {
+    background: var(--me-primary-subtle);
+    border-radius: var(--me-radius);
+    padding: 1.25rem;
+    border: 1px solid rgba(0, 74, 147, 0.1);
+}
+.student-medical-exemption-index .form-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--bs-body-color);
+}
+.student-medical-exemption-index .form-control,
+.student-medical-exemption-index .form-select {
+    border-radius: var(--me-radius);
+    border-color: var(--bs-border-color);
+    transition: border-color var(--me-transition), box-shadow var(--me-transition);
+}
+.student-medical-exemption-index .form-control:focus,
+.student-medical-exemption-index .form-select:focus {
+    border-color: var(--me-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+.student-medical-exemption-index .input-group-text {
+    border-radius: var(--me-radius) 0 0 var(--me-radius);
+    background: var(--bs-body-bg);
+}
+.student-medical-exemption-index .input-group .form-control {
+    border-radius: 0 var(--me-radius) var(--me-radius) 0;
+}
+.student-medical-exemption-index #resetFilters {
+    border-radius: var(--me-radius);
+    font-weight: 600;
+}
+
+/* Table - single row per record, horizontal scroll on all screen sizes */
+.datatables .table-responsive,
+.student-medical-exemption-index .dataTables_scrollBody {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
 }
-
 .datatables #medicalExemptionTable {
     min-width: 100%;
-    width: max-content;
+    width: max-content !important;
+    table-layout: auto;
+    margin-bottom: 0;
 }
-
-.datatables #medicalExemptionTable th,
-.datatables #medicalExemptionTable td {
-    white-space: nowrap;
-    padding: 10px 12px;
+.datatables #medicalExemptionTable thead th,
+.datatables #medicalExemptionTable tbody td {
+    white-space: nowrap !important;
+}
+.datatables #medicalExemptionTable thead th {
+    background: linear-gradient(180deg, var(--me-primary) 0%, var(--me-primary-hover) 100%);
+    color: #fff !important;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.875rem 1rem;
+    border: none;
+    vertical-align: middle;
+}
+.datatables #medicalExemptionTable tbody td {
+    padding: 0.75rem 1rem;
     vertical-align: middle !important;
+    transition: background-color 0.15s ease;
 }
-/* Medical Speciality column - ensure vertical alignment on mobile */
+.datatables #medicalExemptionTable tbody tr:hover td {
+    background-color: var(--me-primary-subtle) !important;
+}
+/* Action column - 2 distinct Bootstrap 5 buttons */
+.datatables #medicalExemptionTable .action-btn-edit,
+.datatables #medicalExemptionTable .action-btn-delete {
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--me-radius);
+    font-weight: 500;
+    font-size: 0.8125rem;
+    transition: all var(--me-transition);
+    white-space: nowrap;
+}
+.datatables #medicalExemptionTable .action-btn-edit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.35);
+}
+.datatables #medicalExemptionTable .action-btn-delete:hover:not(.disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.35);
+}
+.datatables #medicalExemptionTable .action-btn-delete.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 .datatables #medicalExemptionTable th:nth-child(7),
 .datatables #medicalExemptionTable td:nth-child(7) {
     vertical-align: middle !important;
     line-height: 1.4;
 }
 
-/* Responsive - Tablet (768px - 991px) */
+/* DataTables wrapper - Bootstrap 5.3 consistency */
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_info,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_length select,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input {
+    font-size: 0.875rem;
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_length select,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input {
+    border-radius: var(--me-radius);
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--bs-border-color);
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input:focus {
+    border-color: var(--me-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate .page-link {
+    border-radius: var(--me-radius);
+    font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-group .btn:hover,
+    .student-medical-exemption-index .btn-primary:hover,
+    .student-medical-exemption-index .btn-outline-info:hover,
+    .student-medical-exemption-index .btn-outline-success:hover,
+    .datatables #medicalExemptionTable .action-btn-edit:hover,
+.datatables #medicalExemptionTable .action-btn-delete:hover { transform: none; }
+}
+
+/* Responsive - Tablet (768px - 991px) - keep single row */
 @media (max-width: 991.98px) {
     .datatables #medicalExemptionTable th,
     .datatables #medicalExemptionTable td {
         padding: 8px 10px;
         font-size: 0.9rem;
+        white-space: nowrap !important;
     }
 }
 
-/* Responsive - Small tablet / large phone (576px - 767px) */
+/* Responsive - Small tablet / large phone (576px - 767px) - keep single row */
 @media (max-width: 767.98px) {
-    .datatables .card-body {
+    .student-medical-exemption-index .datatables .card-body {
         padding: 1rem !important;
     }
-
+    .student-medical-exemption-index .filters-panel {
+        padding: 1rem;
+    }
     .datatables #medicalExemptionTable th,
     .datatables #medicalExemptionTable td {
         padding: 6px 8px;
         font-size: 0.85rem;
+        white-space: nowrap !important;
     }
-
     .btn-group[role="group"] .btn {
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
@@ -100,82 +253,77 @@
 
 /* Responsive - Phone (max 575px) */
 @media (max-width: 575.98px) {
-    .datatables .container-fluid {
+    .student-medical-exemption-index.container-fluid {
         padding-left: 0.75rem;
         padding-right: 0.75rem;
     }
-
-    .datatables .card-body {
+    .student-medical-exemption-index .datatables .card-body {
         padding: 0.75rem !important;
     }
-
-    .datatables .row.align-items-center.g-3 {
+    .student-medical-exemption-index .filters-panel {
+        padding: 0.75rem;
+    }
+    .student-medical-exemption-index .row.align-items-center.g-3 {
         gap: 0.75rem !important;
     }
-
-    .datatables .row.align-items-center.g-3 .col-lg-4:first-child h4 {
+    .student-medical-exemption-index .row.align-items-center.g-3 .col-lg-4:first-child h4 {
         font-size: 1.1rem !important;
     }
-
     .datatables .btn-group[role="group"] {
         width: 100%;
         justify-content: stretch;
     }
-
     .datatables .btn-group[role="group"] .btn {
         flex: 1;
         padding: 0.5rem 0.75rem !important;
         font-size: 0.8125rem;
     }
-
     .datatables .d-flex.justify-content-md-end .btn {
         flex: 1 1 auto;
         min-width: 0;
         justify-content: center;
     }
-
     .datatables .d-flex.justify-content-md-end .btn span.d-none.d-md-inline {
         display: none !important;
     }
-
     .datatables #medicalExemptionTable th,
     .datatables #medicalExemptionTable td {
         padding: 6px 8px;
         font-size: 0.8rem;
+        white-space: nowrap !important;
     }
-
-    .datatables .row.mb-3.align-items-end .col-md-3,
-    .datatables .row.mb-3.align-items-end .col-md-2 {
+    .student-medical-exemption-index .row.mb-3.align-items-end .col-md-3,
+    .student-medical-exemption-index .row.mb-3.align-items-end .col-md-2 {
         margin-bottom: 0.5rem;
     }
-
     .datatables #resetFilters {
         width: 100% !important;
     }
 }
 
-/* Reset button: auto width on desktop */
 @media (min-width: 768px) {
     .datatables #resetFilters {
         width: auto !important;
     }
 }
 
-/* Responsive - Very small phone (max 375px) */
+/* Responsive - Very small phone (max 375px) - keep single row */
 @media (max-width: 375px) {
-    .datatables .container-fluid {
+    .student-medical-exemption-index .container-fluid {
         padding-left: 0.5rem;
         padding-right: 0.5rem;
     }
-
-    .datatables .card-body {
+    .student-medical-exemption-index .datatables .card-body {
         padding: 0.5rem !important;
     }
-
+    .student-medical-exemption-index .filters-panel {
+        padding: 0.5rem;
+    }
     .datatables #medicalExemptionTable th,
     .datatables #medicalExemptionTable td {
         padding: 4px 6px;
         font-size: 0.75rem;
+        white-space: nowrap !important;
     }
 }
 
@@ -198,7 +346,7 @@
     }
 
     .table thead {
-        background-color: #af2910 !important;
+        background-color: #004a93 !important;
         color: white !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -244,14 +392,12 @@
     }
 
 }
-
-
 </style>
 <div class="container-fluid student-medical-exemption-index">
     <x-breadcrum title="Medical Exemption Form" />
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
+        <div class="card">
             <div class="card-body">
                 <div class="row align-items-center g-3 mb-3">
 
@@ -262,17 +408,15 @@
                         </h4>
                     </div>
 
-                     <!-- Active / Archive -->
+                    <!-- Active / Archive -->
                     <div class="col-12 col-lg-4 col-md-6 text-md-end text-start">
                         <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                             aria-label="Course Status Filter">
-                            <a href="javascript:void(0)"
-                                class="btn btn-success active px-4 fw-semibold"
+                            <a href="javascript:void(0)" class="btn btn-success active px-4 fw-semibold"
                                 id="filterActive" aria-pressed="true">
                                 <i class="bi bi-check-circle me-1"></i> Active
                             </a>
-                            <a href="javascript:void(0)"
-                                class="btn btn-outline-secondary px-4 fw-semibold"
+                            <a href="javascript:void(0)" class="btn btn-outline-secondary px-4 fw-semibold"
                                 id="filterArchive" aria-pressed="false">
                                 <i class="bi bi-archive me-1"></i> Archive
                             </a>
@@ -283,16 +427,15 @@
                     <div class="col-12 col-lg-4 col-md-6">
                         <div class="d-flex justify-content-md-end justify-content-start flex-wrap gap-2">
 
-                            <button type="button"
-        class="btn btn-outline-info d-flex align-items-center gap-1 px-3"
-        onclick="printTable()">
-    <i class="material-icons material-symbols-rounded"
-       style="font-size:22px;"
-       aria-hidden="true">print</i>
-    <span class="d-none d-md-inline">Print</span>
-</button>
+                            <button type="button" class="btn btn-outline-info d-flex align-items-center gap-1 px-3"
+                                onclick="printTable()">
+                                <i class="material-icons material-symbols-rounded" style="font-size:22px;"
+                                    aria-hidden="true">print</i>
+                                <span class="d-none d-md-inline">Print</span>
+                            </button>
 
-                            <a href="{{ route('student.medical.exemption.export') }}" class="btn btn-outline-success d-flex align-items-center gap-1 px-3">
+                            <a href="{{ route('student.medical.exemption.export') }}"
+                                class="btn btn-outline-success d-flex align-items-center gap-1 px-3">
                                 <i class="material-icons material-symbols-rounded" style="font-size:22px;"
                                     aria-hidden="true">download</i>
                                 <span class="d-none d-md-inline">Export</span>
@@ -312,10 +455,11 @@
                 </div>
 
 
-                <hr>
+                <hr class="my-4">
 
                 <!-- Filters Section -->
-                <div class="row mb-3 align-items-end g-2 g-sm-3">
+                <div class="filters-panel mb-4">
+                <div class="row align-items-end g-2 g-sm-3">
                     <!-- Search Filter -->
                     <div class="col-12 col-sm-6 col-md-3">
                         <label for="search" class="form-label fw-semibold">Search</label>
@@ -329,7 +473,7 @@
                         </div>
                     </div>
 
-                       <!-- Course Filter -->
+                    <!-- Course Filter -->
                     <div class="col-12 col-sm-6 col-md-3">
                         <label for="course_filter" class="form-label fw-semibold">Course</label>
                         <select name="course_filter" id="course_filter" class="form-select">
@@ -346,32 +490,29 @@
                     <!-- From Date Filter -->
                     <div class="col-12 col-sm-6 col-md-2">
                         <label for="from_date_filter" class="form-label fw-semibold">From Date</label>
-                        <input type="date" name="from_date_filter" id="from_date_filter" class="form-control"
-                            value="">
+                        <input type="date" name="from_date_filter" id="from_date_filter" class="form-control" value="">
                     </div>
 
                     <!-- To Date Filter -->
                     <div class="col-12 col-sm-6 col-md-2">
                         <label for="to_date_filter" class="form-label fw-semibold">To Date</label>
-                        <input type="date" name="to_date_filter" id="to_date_filter" class="form-control"
-                            value="">
+                        <input type="date" name="to_date_filter" id="to_date_filter" class="form-control" value="">
                     </div>
 
                     <!-- Reset Button -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-semibold d-block">&nbsp;</label>
-                        <a href="javascript:void(0)" id="resetFilters"
-                                class="btn btn-outline-danger">
-                                Reset
-                                </a>
+                        <a href="javascript:void(0)" id="resetFilters" class="btn btn-outline-danger">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                        </a>
                     </div>
+                </div>
                 </div>
 
                 <!-- Total Records Count Row -->
 
-
                 <div class="table-responsive">
-                    <table class="table" id="medicalExemptionTable">
+                    <table class="table text-nowrap" id="medicalExemptionTable">
                         <thead>
                             <tr>
                                 <th class="col">#</th>
@@ -384,11 +525,10 @@
                                 <th class="col">From-To</th>
                                 <th class="col">OPD Type</th>
                                 <th class="col">Document</th>
-                                <th class="col">Action</th>
                                 <th class="col">Status</th>
+                                <th class="col">Action</th>
                             </tr>
                         </thead>
-
                     </table>
                 </div>
             </div>
@@ -400,7 +540,7 @@
 
 @push('scripts')
 <script>
-$(document).ready(function () {
+$(document).ready(function() {
 
     // ✅ IMPORTANT: global variable (DataTable से पहले)
     let courseStatus = 'active';
@@ -409,59 +549,99 @@ $(document).ready(function () {
         processing: true,
         serverSide: true,
 
+        responsive: false,  /* Keep all columns visible, use horizontal scroll - no child rows/down arrow */
         scrollX: true,
         scrollCollapse: true,
         autoWidth: false,
 
         ajax: {
             url: "{{ route('student.medical.exemption.index') }}",
-            data: function (d) {
-                d.course_id     = $('#course_filter').val();
+            data: function(d) {
+                d.course_id = $('#course_filter').val();
                 d.custom_search = $('#search').val();
-                d.from_date     = $('#from_date_filter').val();
-                d.to_date       = $('#to_date_filter').val();
+                d.from_date = $('#from_date_filter').val();
+                d.to_date = $('#to_date_filter').val();
 
                 // ✅ status now properly passed
-                d.status        = courseStatus;
+                d.status = courseStatus;
             }
         },
 
-        columns: [
-            { data: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'student', name: 'student.display_name' },
-            { data: 'ot_code', name: 'student.generated_OT_code' },
-            { data: 'course', name: 'course.course_name' },
-            { data: 'assigned_by', name: 'employee.first_name' },
-            { data: 'category', name: 'category.exemp_category_name' },
-            { data: 'speciality', name: 'speciality.speciality_name' },
-            { data: 'from_to', orderable: false },
-            { data: 'opd_type', name: 'opd_category' },
-            { data: 'document', orderable: false, searchable: false },
-            { data: 'action', orderable: false, searchable: false },
-            { data: 'status', orderable: false, searchable: false }
+        columns: [{
+                data: 'DT_RowIndex',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'student',
+                name: 'student.display_name'
+            },
+            {
+                data: 'ot_code',
+                name: 'student.generated_OT_code'
+            },
+            {
+                data: 'course',
+                name: 'course.course_name'
+            },
+            {
+                data: 'assigned_by',
+                name: 'employee.first_name'
+            },
+            {
+                data: 'category',
+                name: 'category.exemp_category_name'
+            },
+            {
+                data: 'speciality',
+                name: 'speciality.speciality_name'
+            },
+            {
+                data: 'from_to',
+                orderable: false
+            },
+            {
+                data: 'opd_type',
+                name: 'opd_category'
+            },
+            {
+                data: 'document',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'status',
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'action',
+                orderable: false,
+                searchable: false
+            }
         ]
     });
 
     // Reload table when course filter changes
-    $('#course_filter').on('change', function () {
+    $('#course_filter').on('change', function() {
         table.ajax.reload(null, false);
     });
 
-    $('#from_date_filter, #to_date_filter').on('change', function () {
+    $('#from_date_filter, #to_date_filter').on('change', function() {
         table.ajax.reload(null, false);
     });
 
     // 🔍 Search with debounce
     let delayTimer;
-    $('#search').on('keyup', function () {
+    $('#search').on('keyup', function() {
         clearTimeout(delayTimer);
-        delayTimer = setTimeout(function () {
+        delayTimer = setTimeout(function() {
             table.ajax.reload(null, false);
         }, 400);
     });
 
     // 🔄 Reset filters
-    $('#resetFilters').on('click', function () {
+    $('#resetFilters').on('click', function() {
         $('#search').val('');
         $('#course_filter').val('').trigger('change');
         $('#from_date_filter').val('');
@@ -471,127 +651,125 @@ $(document).ready(function () {
     });
 
     // ✅ Active filter
-    $('#filterActive').on('click', function () {
+    $('#filterActive').on('click', function() {
 
         courseStatus = 'active';
 
         $(this).addClass('btn-success active')
-               .removeClass('btn-outline-secondary');
+            .removeClass('btn-outline-secondary');
 
         $('#filterArchive').removeClass('btn-success active')
-                           .addClass('btn-outline-secondary');
+            .addClass('btn-outline-secondary');
 
         table.ajax.reload(null, false);
     });
 
     // ✅ Archive filter
-    $('#filterArchive').on('click', function () {
+    $('#filterArchive').on('click', function() {
 
         courseStatus = 'archive';
 
         $(this).addClass('btn-success active')
-               .removeClass('btn-outline-secondary');
+            .removeClass('btn-outline-secondary');
 
         $('#filterActive').removeClass('btn-success active')
-                          .addClass('btn-outline-secondary');
+            .addClass('btn-outline-secondary');
 
         table.ajax.reload(null, false);
     });
 
 
-$(document).on('click', '.delete-btn', function () {
+    $(document).on('click', '.delete-btn', function() {
 
 
-    let deleteUrl = $(this).data('url');
+        let deleteUrl = $(this).data('url');
 
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "This record will be permanently deleted!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This record will be permanently deleted!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
 
-        if (result.isConfirmed) {
+            if (result.isConfirmed) {
 
-           /*
-            $.ajax({
-                url: deleteUrl,
-                type: 'DELETE',
-                data: {
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function (response) {
+                /*
+                 $.ajax({
+                     url: deleteUrl,
+                     type: 'DELETE',
+                     data: {
+                         _token: '{{ csrf_token() }}'
+                     },
+                     success: function (response) {
 
-                    Swal.fire(
-                        'Deleted!',
-                        response.message ?? 'Record deleted successfully.',
-                        'success'
-                    );
+                         Swal.fire(
+                             'Deleted!',
+                             response.message ?? 'Record deleted successfully.',
+                             'success'
+                         );
 
-                      table.ajax.reload(null, false);
-                },
-                error: function () {
-                    Swal.fire(
-                        'Error!',
-                        'Something went wrong.',
-                        'error'
-                    );
-                }
-            });*/
+                           table.ajax.reload(null, false);
+                     },
+                     error: function () {
+                         Swal.fire(
+                             'Error!',
+                             'Something went wrong.',
+                             'error'
+                         );
+                     }
+                 });*/
 
 
-            $.ajax({
-    url: deleteUrl,
-    type: 'DELETE',
-    data: {
-        _token: '{{ csrf_token() }}'
-    },
-    success: function (response) {
+                $.ajax({
+                    url: deleteUrl,
+                    type: 'DELETE',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
 
-       Swal.fire({
-            title: 'Deleted!',
-            text: response.message ?? 'Record deleted successfully.',
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: response.message ??
+                                'Record deleted successfully.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+
+
+                        table.ajax.reload(null, false);
+                    },
+                    error: function(xhr) {
+
+                        let message = 'Something went wrong.';
+
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+
+                        Swal.fire(
+                            'Not Allowed',
+                            message,
+                            'warning'
+                        );
+                    }
+                });
+
+
+
+            }
         });
-
-
-        table.ajax.reload(null, false);
-    },
-    error: function (xhr) {
-
-        let message = 'Something went wrong.';
-
-        if (xhr.responseJSON && xhr.responseJSON.message) {
-            message = xhr.responseJSON.message;
-        }
-
-        Swal.fire(
-            'Not Allowed',
-            message,
-            'warning'
-        );
-    }
-});
-
-
-
-        }
     });
-});
 
 });
-
-
 </script>
 
 <script>
-
-    // Print function - defined globally so it can be called from onclick
+// Print function - defined globally so it can be called from onclick
 function printTable() {
     // Create a new window for printing
     var printWindow = window.open('', '_blank');
@@ -662,7 +840,7 @@ function printTable() {
                     margin-top: 10px;
                 }
                 table thead {
-                    background-color: #af2910 !important;
+                    background-color: #004a93 !important;
                     color: white !important;
                 }
                 table th,
@@ -674,7 +852,7 @@ function printTable() {
                 }
                 table th {
                     font-weight: bold;
-                    background-color: #af2910;
+                    background-color: #004a93;
                     color: white;
                 }
                 table tbody tr:nth-child(even) {
@@ -724,8 +902,6 @@ function printTable() {
         printWindow.close();
     };
 }
-
-
 </script>
 
 

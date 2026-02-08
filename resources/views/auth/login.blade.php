@@ -339,6 +339,7 @@
         max-width: 440px;
         padding: 2rem;
         position: relative;
+        overflow: hidden;
         animation: cardFloat 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -951,10 +952,6 @@
                         </a>
                     </div>
                     <div class="header-right d-none d-lg-block">
-                        <a href="https://digitalindia.gov.in/" target="_blank" rel="noopener noreferrer" class="header-digital-india" aria-label="Digital India - Developed by NeGD">
-                            <img src="{{ asset('images/digital.png') }}" alt="Digital India" loading="lazy"
-                                onerror="this.src='https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/400px-Digital_India_logo.svg.png'">
-                        </a>
                         <nav class="header-utils" aria-label="Utility Navigation">
                             <a href="#login-form"><i class="bi bi-arrow-down-circle" aria-hidden="true"></i> Skip to Content</a>
                             <a href="#" id="accessibilityTrigger" role="button"><i class="bi bi-universal-access" aria-hidden="true"></i> Accessibility</a>
@@ -1065,7 +1062,7 @@
                         <i class="bi bi-translate" aria-hidden="true"></i>
                         आज का शब्द / Word of the Day
                     </h6>
-                    <p>अधिग्रहण-मोचन — De-requisition</p>
+                    <p>अर्हक अंक - Qualifying marks</p>
                 </div>
             </div>
         </main>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zxx" data-bs-theme="light">
+<html lang="en" data-bs-theme="light">
 
 <head>
     <!-- Set initial theme from localStorage before paint (avoids flash) -->
@@ -544,6 +544,7 @@
 
             @include('admin.layouts.sidebar')
             <div class="body-wrapper">
+                <main id="main-content" tabindex="-1" role="main">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
                     <!-- Home Tab -->
@@ -571,6 +572,7 @@
                         @yield('material_management_content')
                     </div>
                 </div>
+                </main>
             </div>
         </div>
     </div>

@@ -79,8 +79,6 @@
     </div>
     </header>
 
-<main id="main-content" tabindex="-1"></main>
-
     <div class="with-vertical">
         <nav class="navbar navbar-expand-lg p-0">
             <ul class="navbar-nav">
@@ -207,10 +205,10 @@
                 <!-- Right Side: Logout + Last Login -->
                 <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
 
-    <!-- Notifications -->
-    <div class="dropdown position-relative">
+    <!-- Notifications (visible on both desktop and mobile) -->
+    <div class="dropdown position-relative d-none d-lg-block">
         <button type="button"
-            class="btn btn-light rounded-circle p-2 position-relative shadow-sm notification-btn"
+            class="btn btn-light rounded-circle p-2 position-relative shadow-sm notification-btn "
             id="notificationDropdown"
             data-bs-toggle="dropdown"
             aria-expanded="false"
@@ -285,9 +283,6 @@
             </div>
         </ul>
     </div>
-
-    <!-- Divider -->
-    <div class="vr opacity-50"></div>
 
     <!-- Logout -->
     <form action="{{ route('logout') }}" method="POST" class="m-0">
@@ -556,9 +551,15 @@
 
 /* Main nav bar - white background */
 .with-vertical .navbar { background: #fff !important }
-.header-brand { gap: 8px !important; }
-.header-logo-emblem { height: 40px; }
-.header-logo { height: 32px; }
+.header-brand { gap: 10px !important; }
+.header-logo-emblem { height: 40px; object-fit: contain; }
+.header-logo { height: 32px; object-fit: contain; }
+/* Desktop: larger, more prominent logo */
+@media (min-width: 992px) {
+    .header-brand { gap: 12px !important; }
+    .header-logo-emblem { height: 52px !important; }
+    .header-logo { height: 44px !important; }
+}
 .header-app-name {
     font-size: 1.25rem;
     font-weight: 700;
@@ -642,6 +643,15 @@
             @media (max-width: 991.98px) {
                 body {
                     padding-bottom: 64px !important;
+                }
+
+                /* Mobile: Right-align logout and header actions */
+                .header-right-actions {
+                    width: 100%;
+                    justify-content: flex-end !important;
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
+                    padding: 0.5rem 0;
                 }
 
                 /* Hide sidebar by default on mobile */

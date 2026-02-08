@@ -22,12 +22,12 @@
         .header {
             text-align: center;
             margin-bottom: 10px;
-            border-bottom: 2px solid #af2910;
+            border-bottom: 2px solid #004a93;
             padding-bottom: 5px;
         }
 
         .title {
-            color: #af2910;
+            color: #004a93;
             font-size: 14px;
             font-weight: bold;
             margin-bottom: 3px;
@@ -66,7 +66,7 @@
 
         .filter-label {
             font-weight: bold;
-            color: #af2910;
+            color: #004a93;
             white-space: nowrap;
             width: 15%;
         }
@@ -79,12 +79,12 @@
         }
 
         .main-table th {
-            background-color: #af2910;
+            background-color: #004a93;
             color: white;
             font-weight: bold;
             padding: 4px 2px;
             text-align: center;
-            border: 1px solid #af2910;
+            border: 1px solid #004a93;
             vertical-align: middle;
         }
 

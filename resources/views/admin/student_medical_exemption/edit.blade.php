@@ -76,34 +76,10 @@
 </style>
 <div class="container-fluid student-medical-edit">
     <x-session_message />
-    <div class="card card-body py-3 student-medical-edit" style="border-left:4px solid #004a93;">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Edit Student Medical Exemption</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="index.html">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Student Medical Exemption
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </div>
+   <x-breadcrum title="Edit Student Medical Exemption" />
 
     <div class="card mt-3 student-medical-edit" style="border-left:4px solid #004a93;">
         <div class="card-body">
-            <h4 class="card-title mb-3">Update Medical Exemption</h4>
-            <hr>
             <form method="POST" action="{{ route('student.medical.exemption.update', encrypt($record->pk)) }}" enctype="multipart/form-data">
                 @csrf
 
@@ -248,8 +224,8 @@
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-end gap-2 gap-sm-3 form-actions">
-                    <button class="btn btn-success" type="submit">Update</button>
-                    <a href="{{ route('student.medical.exemption.index') }}" class="btn btn-secondary">Back</a>
+                    <button class="btn btn-primary" type="submit">Update</button>
+                    <a href="{{ route('student.medical.exemption.index') }}" class="btn btn-outline-secondary">Back</a>
                 </div>
             </form>
         </div>

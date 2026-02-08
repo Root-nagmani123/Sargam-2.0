@@ -37,7 +37,7 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #374151;
-    background-color: #af2910;
+    background-color: #004a93;
     border-bottom: 2px solid #e2e8f0;
     padding: 0.875rem 1rem;
     white-space: nowrap;
