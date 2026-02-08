@@ -889,7 +889,7 @@ class CalendarController extends Controller
                 abort(403, 'Invalid token');
             }
 
-            $user = User::where('user_name', $username)->firstOrFail();
+            $user = User::where('user_name', trim($username))->firstOrFail();
             Auth::login($user);
 
             $student_pk = auth()->user()->user_id;
