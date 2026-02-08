@@ -203,6 +203,142 @@
                 overflow-y: auto;
             }
         }
+
+        /* Comments Modal - Bootstrap 5.3 enhanced UI/UX */
+        #commentsModal .modal-dialog {
+            max-width: 640px;
+        }
+        #commentsModal .modal-content {
+            border: none;
+            border-radius: var(--admin-radius-lg, 0.75rem);
+            box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 74, 147, 0.08);
+        }
+        #commentsModal .modal-header {
+            background: linear-gradient(135deg, rgba(0, 74, 147, 0.06) 0%, rgba(0, 74, 147, 0.02) 100%);
+            border-bottom: 1px solid rgba(0, 74, 147, 0.12);
+            padding: 1rem 1.25rem;
+            border-radius: var(--admin-radius-lg, 0.75rem) var(--admin-radius-lg, 0.75rem) 0 0;
+        }
+        #commentsModal .modal-title {
+            font-weight: 600;
+            color: var(--admin-primary, #004a93);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #commentsModal .modal-title .comments-count-badge {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.25em 0.6em;
+            background: rgba(0, 74, 147, 0.12);
+            color: var(--admin-primary, #004a93);
+            border-radius: 9999px;
+        }
+        #commentsModal .modal-body {
+            padding: 1.25rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .comment-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            margin-bottom: 0.5rem;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .comment-item:last-child {
+            margin-bottom: 0;
+        }
+        .comment-item:hover {
+            background: #f1f5f9;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .comment-item .comment-icon {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 74, 147, 0.1);
+            color: var(--admin-primary, #004a93);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        .comment-item .comment-text {
+            flex: 1;
+            font-size: 0.9375rem;
+            line-height: 1.55;
+            color: #334155;
+        }
+        .comment-item .comment-index {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+            min-width: 1.5rem;
+        }
+        #commentsModal .comments-empty-state {
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+        }
+        #commentsModal .comments-empty-state .empty-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 74, 147, 0.08);
+            color: var(--admin-primary, #004a93);
+            border-radius: 50%;
+            font-size: 1.5rem;
+        }
+        #commentsModal .comments-empty-state p {
+            color: #64748b;
+            margin: 0;
+        }
+
+        /* Dark mode support for comments modal */
+        [data-bs-theme="dark"] .comment-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        [data-bs-theme="dark"] .comment-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        [data-bs-theme="dark"] .comment-item .comment-text {
+            color: rgba(255, 255, 255, 0.85);
+        }
+        [data-bs-theme="dark"] .comment-item .comment-index {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        [data-bs-theme="dark"] #commentsModal .modal-body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        [data-bs-theme="dark"] #commentsModal .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        [data-bs-theme="dark"] #commentsModal .modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
     </style>
 
     <div class="container-fluid">
@@ -356,12 +492,16 @@
         </div>
     </div>
 
-    <!-- Comments Modal -->
-    <div class="modal fade" id="commentsModal" tabindex="-1" aria-labelledby="commentsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+    <!-- Comments Modal - Bootstrap 5.3 enhanced -->
+    <div class="modal fade" id="commentsModal" tabindex="-1" aria-labelledby="commentsModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="commentsModalLabel">Feedback Comments</h5>
+                    <h5 class="modal-title" id="commentsModalLabel">
+                        <i class="bi bi-chat-square-text me-2"></i>
+                        Feedback Comments
+                        <span class="comments-count-badge ms-2" id="commentsCountBadge" style="display: none;"></span>
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -372,12 +512,15 @@
     </div>
 @endsection
 
+@section('css')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.min.css">
+@endsection
+
 @section('scripts')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"></script>
 
     <script>
         $(document).ready(function() {
@@ -750,20 +893,26 @@
                     const comments = $(this).data('comments');
                     const modalElement = document.getElementById('commentsModal');
                     if (modalElement) {
-                        $('#commentsContent').html(`
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="card-subtitle mb-2 text-muted">All Feedback Comments:</h6>
-                            <div style="max-height: 300px; overflow-y: auto;">
-                                ${comments.split(' | ').map(comment => `
-                                                                                <div class="border-bottom pb-2 mb-2">
-                                                                                    <p class="mb-1">${comment}</p>
-                                                                                </div>
-                                                                            `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                `);
+                        const commentList = comments ? comments.split(' | ').filter(c => c && c.trim()) : [];
+                        const countBadge = $('#commentsCountBadge');
+                        if (commentList.length > 0) {
+                            countBadge.text(commentList.length + ' ' + (commentList.length === 1 ? 'comment' : 'comments')).show();
+                            $('#commentsContent').html(commentList.map((comment, i) => `
+                                <div class="comment-item">
+                                    <span class="comment-icon"><i class="bi bi-chat-quote"></i></span>
+                                    <p class="comment-text mb-0">${escapeHtml(comment.trim())}</p>
+                                    <span class="comment-index">#${i + 1}</span>
+                                </div>
+                            `).join(''));
+                        } else {
+                            countBadge.hide();
+                            $('#commentsContent').html(`
+                                <div class="comments-empty-state">
+                                    <div class="empty-icon"><i class="bi bi-chat-dots"></i></div>
+                                    <p>No feedback comments available for this session.</p>
+                                </div>
+                            `);
+                        }
                         new bootstrap.Modal(modalElement).show();
                     }
                 });

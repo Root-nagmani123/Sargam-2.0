@@ -76,48 +76,13 @@
 </style>
 <div class="container-fluid student-medical-create">
     <x-session_message />
-    <div class="card card-body py-3 student-medical-create" style="border-left:4px solid #004a93;">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Add Student Medical Exemption</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="index.html">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Student Medical Exemption
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-breadcrum title="Add Student Medical Exemption" />
 
-    <div class="card mt-3 student-medical-create" style="border-left:4px solid #004a93;">
+    <div class="card mt-3 student-medical-create">
         <div class="card-body">
-            <h4 class="card-title mb-3">Student Medical Exemption</h4>
-            <hr>
             <form method="POST" action="{{ route('student.medical.exemption.store') }}" enctype="multipart/form-data">
                 @csrf
 
-                <div class="row g-2 g-md-3">
-                    <div class="col-12 col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
-                            <select name="employee_master_pk" class="form-control col-form-label" readonly required>
-                                @if(Auth::user())
-                                <option value="{{ Auth::user()->user_id }}" selected>{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</option>
-                                @endif
-                            </select>
-                        </div>
-                    </div>
                     <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Course <span class="text-danger">*</span></label>

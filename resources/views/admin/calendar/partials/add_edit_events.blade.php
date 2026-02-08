@@ -1,7 +1,7 @@
 <!-- Add/Edit Event Modal -->
  <style>
     :root {
-        --primary-gradient: linear-gradient(135deg, #af2910, #ff7e5f);
+        --primary-gradient: linear-gradient(135deg, #004a93, #ff7e5f);
         --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         --input-focus-glow: 0 0 0 3px rgba(13, 110, 253, 0.1);
@@ -402,6 +402,26 @@
     #eventModal .select2-container--default.select2-container--open,
     .modal-dialog .select2-container--default.select2-container--open {
         z-index: 1060 !important;
+    }
+
+    /* Mobile: Add Event modal - prevent cropping */
+    @media (max-width: 767.98px) {
+        #eventModal .modal-dialog {
+            margin: 0.5rem !important;
+            max-width: calc(100vw - 1rem) !important;
+        }
+        #eventModal .modal-body {
+            padding: 1rem !important;
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+        #eventModal .form-section {
+            padding: 1rem !important;
+        }
+        #eventModal .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
     }
 </style>
 

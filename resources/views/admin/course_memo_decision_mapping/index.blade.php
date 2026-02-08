@@ -122,7 +122,7 @@
                     <hr>
                     <div>
                         <table class="table w-100" id="memoDecisionTable">
-                            <thead style="background-color: #af2910;">
+                            <thead style="background-color: #004a93;">
                                 <tr>
                                     <th>S.No.</th>
                                     <th>Course Name</th>

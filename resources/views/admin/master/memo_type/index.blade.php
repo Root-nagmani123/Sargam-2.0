@@ -3,206 +3,36 @@
 @section('title', 'Memo Type Master')
 
 @section('setup_content')
-<style>
-/* Memo Type Master - responsive (mobile/tablet only, desktop unchanged) */
-@media (max-width: 991.98px) {
-    .memo-type-index .datatables .table-responsive {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-    }
-    .memo-type-index .datatables #memotypemaster-table {
-        min-width: 400px;
-    }
-    .memo-type-index .datatables #memotypemaster-table th,
-    .memo-type-index .datatables #memotypemaster-table td {
-        padding: 8px 10px;
-        font-size: 0.9rem;
-    }
-}
-@media (max-width: 767.98px) {
-    /* Card + table tightening */
-    .memo-type-index .datatables .card-body {
-        padding: 1rem !important;
-    }
-    .memo-type-index .datatables #memotypemaster-table th,
-    .memo-type-index .datatables #memotypemaster-table td {
-        padding: 6px 8px;
-        font-size: 0.85rem;
-    }
-
-    /* Header: title + Add button alignment on mobile/tablet */
-    .memo-type-index .memo-type-header-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .memo-type-index .memo-type-header-row .col-6 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-    .memo-type-index .memo-type-header-row .d-flex.justify-content-end {
-        justify-content: stretch !important;
-    }
-    .memo-type-index .memo-type-header-row .add-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    /* DataTables: Show entries + Search spacing for this page */
-    .memo-type-index .dataTables_length,
-    .memo-type-index .dataTables_filter {
-        margin-bottom: 0.5rem;
-        width: 100%;
-    }
-
-    /* SweetAlert form: stack label + field on small tablets/phones */
-    body:has(.memo-type-index) .swal2-container #memoTypeForm .row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    body:has(.memo-type-index) .swal2-container #memoTypeForm .col-auto {
-        flex: 0 0 auto;
-        margin-bottom: 0.25rem;
-    }
-}
-@media (max-width: 575.98px) {
-    .memo-type-index.container-fluid {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
-    }
-    .memo-type-index .datatables .card-body {
-        padding: 0.75rem !important;
-    }
-    .memo-type-index .datatables .table-responsive {
-        margin-left: -0.5rem;
-        margin-right: -0.5rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-    .memo-type-index .datatables #memotypemaster-table th,
-    .memo-type-index .datatables #memotypemaster-table td {
-        padding: 6px 8px;
-        font-size: 0.8125rem;
-    }
-
-    /* DataTables controls: stack label + field nicely */
-    .memo-type-index .dataTables_length label,
-    .memo-type-index .dataTables_filter label {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-        font-size: 0.8125rem;
-    }
-    .memo-type-index .dataTables_length select {
-        width: 100%;
-        max-width: 100%;
-        min-height: 38px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8125rem;
-    }
-    .memo-type-index .dataTables_filter input {
-        width: 100%;
-        max-width: 100%;
-        min-height: 38px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8125rem;
-    }
-
-    /* SweetAlert popup responsive (scoped to this page via :has) */
-    body:has(.memo-type-index) .swal2-container .swal2-popup {
-        margin: 0.5rem;
-        max-width: calc(100vw - 1rem);
-        width: calc(100vw - 1rem) !important;
-        padding: 1rem 0.75rem 0.75rem;
-    }
-    body:has(.memo-type-index) .swal2-container .swal2-title {
-        font-size: 1.05rem;
-        margin-bottom: 0.75rem;
-    }
-    body:has(.memo-type-index) .swal2-container .swal2-html-container {
-        padding-left: 0.25rem;
-        padding-right: 0.25rem;
-        margin: 0;
-    }
-
-    /* SweetAlert Add/Edit Memo form – clean mobile layout */
-    body:has(.memo-type-index) .swal2-container #memoTypeForm .row {
-        flex-direction: column;
-        align-items: stretch;
-        margin-bottom: 0.6rem;
-    }
-    body:has(.memo-type-index) .swal2-container #memoTypeForm .col-auto {
-        flex: 0 0 auto;
-        margin-bottom: 0.25rem;
-    }
-    body:has(.memo-type-index) .swal2-container #memoTypeForm label {
-        font-size: 0.875rem;
-        margin-bottom: 0;
-    }
-    body:has(.memo-type-index) .swal2-container #memoTypeForm input[type="text"],
-    body:has(.memo-type-index) .swal2-container #memoTypeForm input[type="file"],
-    body:has(.memo-type-index) .swal2-container #memoTypeForm select {
-        width: 100%;
-        max-width: 100%;
-        min-height: 42px;
-        font-size: 0.875rem;
-    }
-    body:has(.memo-type-index) .swal2-container #memoTypeForm small {
-        font-size: 0.75rem;
-    }
-
-    /* SweetAlert actions: buttons refined for phones */
-    body:has(.memo-type-index) .swal2-container .swal2-actions {
-        margin-top: 0.75rem;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    body:has(.memo-type-index) .swal2-container .swal2-actions .swal2-confirm,
-    body:has(.memo-type-index) .swal2-container .swal2-actions .swal2-cancel {
-        width: 100%;
-        min-height: 40px;
-        font-size: 0.9rem;
-    }
-}
-@media (max-width: 375px) {
-    .memo-type-index.container-fluid {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-    .memo-type-index .datatables .card-body {
-        padding: 0.5rem !important;
-    }
-    .memo-type-index .memo-type-header-row h4 {
-        font-size: 1.1rem;
-    }
-}
-</style>
-<div class="container-fluid memo-type-index">
+<div class="container-fluid px-3 px-md-4 px-lg-5 py-3 py-md-4 memo-type-index">
+    <x-breadcrum title="Memo Type Master" />
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row memo-type-header-row">
-                        <div class="col-6">
-                            <h4>Memo Type Master</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <button id="showMemoAlert" class="btn btn-primary add-btn">
-                                    Add Memo Type
-                                </button>
-                            </div>
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden border-start border-4 border-primary admin-card">
+            <div class="card-body p-4 p-lg-5">
+                <section class="row align-items-center mb-4 g-3 row-gap-2" role="region" aria-labelledby="memoTypeHeading">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <h1 id="memoTypeHeading" class="h4 fw-bold mb-2 mb-md-0 d-flex align-items-center gap-2">
+                            <span class="rounded-2 p-2 bg-primary bg-opacity-10">
+                                <i class="material-icons material-symbols-rounded text-primary fs-4">category</i>
+                            </span>
+                            <span>Memo Type Master</span>
+                        </h1>
+                        <p class="mb-0 small text-body-secondary mt-1">Manage memo type configurations</p>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-8">
+                        <div class="d-flex flex-wrap justify-content-md-end">
+                            <button id="showMemoAlert" type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold shadow-sm" aria-label="Add memo type">
+                                <i class="material-icons material-symbols-rounded fs-5">add</i>
+                                <span>Add Memo Type</span>
+                            </button>
                         </div>
                     </div>
-                    <hr>
-
-                    {!! $dataTable->table(['class' => 'table']) !!}
+                </section>
+                <div class="border-top pt-4 mt-2"></div>
+                <div class="table-responsive overflow-x-auto">
+                    {!! $dataTable->table(['class' => 'table table-striped table-hover align-middle mb-0 w-100']) !!}
                 </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
@@ -210,8 +40,28 @@
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
-
-
+<script>
+(function() {
+    // Ensure memo type table shows all data in single row (no responsive child rows)
+    $(function() {
+        var $t = $('#memotypemaster-table');
+        if ($.fn.DataTable && $t.length) {
+            var check = setInterval(function() {
+                if ($.fn.DataTable.isDataTable($t)) {
+                    clearInterval(check);
+                    try {
+                        var api = $t.DataTable();
+                        if (api.responsive && typeof api.responsive.disable === 'function') {
+                            api.responsive.disable();
+                        }
+                    } catch (e) {}
+                }
+            }, 50);
+            setTimeout(function() { clearInterval(check); }, 3000);
+        }
+    });
+})();
+</script>
 <script>
 document.getElementById('showMemoAlert').addEventListener('click', function () {
 
@@ -222,35 +72,35 @@ document.getElementById('showMemoAlert').addEventListener('click', function () {
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
                 <!-- Memo Type Name -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Memo Type Name <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
-                        <input type="text" name="memo_type_name" id="memo_type_name" class="form-control">
+                    <div class="col-12 col-sm">
+                        <input type="text" name="memo_type_name" id="memo_type_name" class="form-control form-control-sm">
                         <small class="text-danger d-none" id="memo_type_name_error">Required</small>
                     </div>
                 </div>
 
                 <!-- Upload Document -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Upload Document
                     </label>
-                    <div class="col">
+                    <div class="col-12 col-sm">
                         <input type="file" name="memo_doc_upload" id="memo_doc_upload"
-                               class="form-control" accept=".pdf,.doc,.docx">
+                               class="form-control form-control-sm" accept=".pdf,.doc,.docx">
                         <small class="text-danger d-none" id="memo_doc_upload_error"></small>
                     </div>
                 </div>
 
                 <!-- Status -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Status <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
-                        <select name="active_inactive" id="active_inactive" class="form-control">
+                    <div class="col-12 col-sm">
+                        <select name="active_inactive" id="active_inactive" class="form-select form-select-sm">
                             <option value="">Select</option>
                             <option value="1">Active</option>
                             <option value="2">Inactive</option>
@@ -345,7 +195,6 @@ $(document).on('click', '.editMemo', function () {
     const name    = $(this).data('name');
     const status  = $(this).data('status');
     const fileUrl = $(this).data('file');
-    const BASE_URL = "{{ url('/') }}";
 
     Swal.fire({
         title: '<strong>Edit Memo Type</strong>',
@@ -355,39 +204,35 @@ $(document).on('click', '.editMemo', function () {
                 <input type="hidden" name="pk" value="${pk}">
 
                 <!-- Memo Type Name -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Memo Type Name <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
+                    <div class="col-12 col-sm">
                         <input type="text" name="memo_type_name" id="memo_type_name"
-                               class="form-control" value="${name}">
+                               class="form-control form-control-sm" value="${name}">
                         <small class="text-danger d-none" id="memo_type_name_error">Required</small>
                     </div>
                 </div>
 
                 <!-- Upload Document -->
-                <div class="row mb-2">
-                <label class="col-auto fw-semibold">Replace Document</label>
-                <div class="col">
-                    <input type="file" name="memo_doc_upload" id="memo_doc_upload"
-                           class="form-control" accept=".pdf,.doc,.docx">
-                    
-                    <small class="text-danger d-none" id="memo_doc_upload_error"></small>
-                    ${fileUrl ? `<div class="mt-1">
-                                    <a href="${BASE_URL}/${fileUrl}" target="_blank" class="text-primary">
-                                        View Existing Document
-                                    </a>
-                                  </div>` : ''}
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">Replace Document</label>
+                    <div class="col-12 col-sm">
+                        <input type="file" name="memo_doc_upload" id="memo_doc_upload"
+                               class="form-control form-control-sm" accept=".pdf,.doc,.docx">
+                        <small class="text-danger d-none" id="memo_doc_upload_error"></small>
+                        ${fileUrl ? `<div class="mt-1"><a href="${fileUrl}" target="_blank" class="text-primary text-decoration-none">View Existing Document</a></div>` : ''}
+                    </div>
                 </div>
-        
+
                 <!-- Status -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Status <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
-                        <select name="active_inactive" id="active_inactive" class="form-control">
+                    <div class="col-12 col-sm">
+                        <select name="active_inactive" id="active_inactive" class="form-select form-select-sm">
                             <option value="">Select</option>
                             <option value="1" ${status == 1 ? 'selected' : ''}>Active</option>
                             <option value="2" ${status == 2 ? 'selected' : ''}>Inactive</option>

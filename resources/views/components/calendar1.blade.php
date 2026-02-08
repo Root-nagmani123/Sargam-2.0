@@ -3,7 +3,7 @@
 <style>
 :root {
     --primary-color: #004a93;
-    --secondary-color: #af2910;
+    --secondary-color: #004a93;
     --light-bg: #f8f9fa;
     --border-color: #dee2e6;
     --text-dark: #212529;
