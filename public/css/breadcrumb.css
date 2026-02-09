@@ -507,6 +507,205 @@
     }
 }
 
+/* ============================================
+   BREADCRUMB VARIANTS - Modern designs to choose from
+   Usage: <x-breadcrum title="Page" variant="minimal" />
+   Variants: glass (default) | minimal | pill | stepper | underline | compact
+   ============================================ */
+
+/* ---------- Design 1: MINIMAL - Flat, clean, no heavy decoration ---------- */
+.breadcrumb-variant-minimal .breadcrumb-card {
+    background: var(--bc-bg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 0.75rem;
+}
+.breadcrumb-variant-minimal .breadcrumb-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transform: none;
+}
+.breadcrumb-variant-minimal .breadcrumb-bg-pattern,
+.breadcrumb-variant-minimal .breadcrumb-bg-gradient,
+.breadcrumb-variant-minimal .breadcrumb-corner-glow { opacity: 0; }
+.breadcrumb-variant-minimal .breadcrumb-accent-bar {
+    width: 3px;
+    background: linear-gradient(180deg, var(--bc-primary) 0%, rgba(var(--bc-primary-rgb), 0.5) 100%);
+}
+.breadcrumb-variant-minimal .breadcrumb-item.active .breadcrumb-current {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: var(--bc-text);
+    font-weight: 600;
+    padding: 0.25rem 0;
+}
+.breadcrumb-variant-minimal .breadcrumb-item.active .breadcrumb-current {
+    color: var(--bc-primary);
+}
+
+/* ---------- Design 2: PILL - Rounded pill/chip style segments ---------- */
+.breadcrumb-variant-pill .breadcrumb-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.breadcrumb-variant-pill .breadcrumb-bg-pattern,
+.breadcrumb-variant-pill .breadcrumb-bg-gradient,
+.breadcrumb-variant-pill .breadcrumb-corner-glow { opacity: 0; }
+.breadcrumb-variant-pill .breadcrumb-accent-bar {
+    width: 4px;
+    border-radius: 4px;
+    background: var(--bc-primary);
+}
+.breadcrumb-variant-pill .breadcrumb-nav .breadcrumb-link {
+    padding: 0.375rem 0.875rem;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 50rem;
+    color: var(--bc-text);
+}
+.breadcrumb-variant-pill .breadcrumb-nav .breadcrumb-link:hover {
+    background: var(--bc-primary-soft);
+    border-color: rgba(var(--bc-primary-rgb), 0.2);
+}
+.breadcrumb-variant-pill .breadcrumb-home-wrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+}
+.breadcrumb-variant-pill .breadcrumb-trail .breadcrumb-item:not(:first-child)::before {
+    content: "/";
+    border: none;
+    transform: none;
+    color: var(--bc-text-muted);
+    font-weight: 400;
+    font-size: 0.8em;
+}
+.breadcrumb-variant-pill .breadcrumb-item.active .breadcrumb-current {
+    padding: 0.375rem 1rem;
+    background: var(--bc-primary);
+    color: white !important;
+    border-radius: 50rem;
+    border: none;
+    box-shadow: 0 2px 6px rgba(var(--bc-primary-rgb), 0.35);
+}
+
+/* ---------- Design 3: STEPPER - Step indicator with connecting line ---------- */
+.breadcrumb-variant-stepper .breadcrumb-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.breadcrumb-variant-stepper .breadcrumb-bg-pattern,
+.breadcrumb-variant-stepper .breadcrumb-bg-gradient,
+.breadcrumb-variant-stepper .breadcrumb-corner-glow { opacity: 0; }
+.breadcrumb-variant-stepper .breadcrumb-accent-bar {
+    width: 4px;
+    background: linear-gradient(180deg, var(--bc-primary) 0%, rgba(var(--bc-primary-rgb), 0.6) 100%);
+}
+.breadcrumb-variant-stepper .breadcrumb-trail {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+.breadcrumb-variant-stepper .breadcrumb-trail .breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+.breadcrumb-variant-stepper .breadcrumb-trail .breadcrumb-item:not(:first-child)::before {
+    content: "";
+    width: 24px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--bc-text-muted) 0%, var(--bc-text-muted) 100%);
+    margin: 0 0.5rem;
+    border: none;
+    transform: none;
+    opacity: 0.5;
+}
+.breadcrumb-variant-stepper .breadcrumb-nav .breadcrumb-link {
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+}
+.breadcrumb-variant-stepper .breadcrumb-item.active .breadcrumb-current {
+    padding: 0.35rem 0.875rem;
+    background: linear-gradient(135deg, var(--bc-primary) 0%, var(--bc-primary-dark) 100%);
+    color: white !important;
+    border-radius: 0.5rem;
+    border: none;
+    box-shadow: 0 2px 8px rgba(var(--bc-primary-rgb), 0.3);
+}
+
+/* ---------- Design 4: UNDERLINE - Minimal with bottom border accent ---------- */
+.breadcrumb-variant-underline .breadcrumb-card {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    border-bottom: 3px solid var(--bc-primary);
+    border-radius: 0;
+    padding-bottom: 0;
+}
+.breadcrumb-variant-underline .breadcrumb-bg-pattern,
+.breadcrumb-variant-underline .breadcrumb-bg-gradient,
+.breadcrumb-variant-underline .breadcrumb-corner-glow,
+.breadcrumb-variant-underline .breadcrumb-accent-bar { display: none; }
+.breadcrumb-variant-underline .breadcrumb-card-body {
+    padding-bottom: 1rem;
+}
+.breadcrumb-variant-underline .title-text {
+    border-bottom: 2px solid transparent;
+    padding-bottom: 0.25rem;
+    display: inline-block;
+}
+.breadcrumb-variant-underline .breadcrumb-item.active .breadcrumb-current {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0.25rem 0;
+    color: var(--bc-primary);
+    font-weight: 700;
+}
+
+/* ---------- Design 5: COMPACT - Smaller, tighter spacing ---------- */
+.breadcrumb-variant-compact .breadcrumb-wrapper { margin-bottom: 0.75rem !important; }
+.breadcrumb-variant-compact .breadcrumb-card {
+    border-radius: 0.625rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.breadcrumb-variant-compact .breadcrumb-card-body {
+    padding: 0.75rem 1rem !important;
+}
+.breadcrumb-variant-compact .breadcrumb-bg-pattern,
+.breadcrumb-variant-compact .breadcrumb-corner-glow { opacity: 0.2; }
+.breadcrumb-variant-compact .breadcrumb-accent-bar {
+    width: 3px;
+}
+.breadcrumb-variant-compact .btn-back {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0.375rem 0.75rem !important;
+}
+.breadcrumb-variant-compact .title-text {
+    font-size: 1.125rem !important;
+}
+.breadcrumb-variant-compact .breadcrumb-title-block {
+    padding-left: 12px;
+}
+.breadcrumb-variant-compact .breadcrumb-title-accent {
+    width: 3px;
+}
+.breadcrumb-variant-compact .breadcrumb-trail {
+    font-size: 0.8125rem;
+}
+.breadcrumb-variant-compact .breadcrumb-item.active .breadcrumb-current {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
+/* ---------- Design 0: GLASS (default) - Keep current glassmorphism ---------- */
+.breadcrumb-variant-glass .breadcrumb-card {
+    /* Already defined as default above */
+}
+
 /* Print */
 @media print {
     .breadcrumb-card {

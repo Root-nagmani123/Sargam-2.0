@@ -4,7 +4,8 @@
 
 @section('setup_content')
 <div class="container-fluid employee-group-index">
-<x-breadcrum title="Employee Group Master"></x-breadcrum>
+    <x-breadcrum title="Employee Group Master"></x-breadcrum>
+    <x-session_message />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -15,7 +16,7 @@
                         <h4>Employee Group Master</h4>
                     </div>
                     <div class="col-6">
-                        <div class="float-end gap-2">
+                        <div class="float-end d-flex gap-2">
                             <a href="{{route('master.employee.group.create')}}" class="btn btn-primary">+ Add Employee Group</a>
                         </div>
                     </div>

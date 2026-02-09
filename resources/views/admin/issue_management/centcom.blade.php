@@ -64,9 +64,9 @@
                                 <label class="form-label">Date To</label>
                                 <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-md-2 d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">Filter</button>
-                                <a href="{{ route('admin.issue-management.centcom') }}" class="btn btn-outline-secondary">Clear</a>
+                            <div class="col-md-2 d-flex gap-2 align-items-end">
+                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                <a href="{{ route('admin.issue-management.centcom') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
                             </div>
                         </div>
                     </form>

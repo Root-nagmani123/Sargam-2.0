@@ -4,6 +4,7 @@
 <div class="container-fluid idcard-index-page">
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
     <x-breadcrum title="Request Employee ID Card"></x-breadcrum>
+    <x-session_message />
 
     <!-- Tabs + Generate Button Row - Bootstrap 5.3 enhanced -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">

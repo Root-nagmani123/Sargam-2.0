@@ -3,7 +3,7 @@
 @section('title', 'Hostel Building Floor Room Mapping')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid building-floor-room-mapping-index">
 
     <x-breadcrum title="Hostel Building Floor Room Mapping" />
     <x-session_message />
@@ -13,15 +13,13 @@
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="row mb-3">
-                    <div class="col-6">
+                    <div class="col-12 col-md-6">
                         <h4>Hostel Building Floor Room Mapping</h4>
                     </div>
-                    <div class="col-6">
-                        <div class="float-end gap-2">
-                            <a href="{{route('hostel.building.floor.room.map.create')}}" class="btn btn-primary">+ Add
-                                Hostel Building Floor Room</a>
-                            <a href="{{ route('hostel.building.floor.room.map.export') }}"
-                                class="btn btn-secondary">Export All</a>
+                    <div class="col-12 col-md-6">
+                        <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-md-end">
+                            <a href="{{route('hostel.building.floor.room.map.create')}}" class="btn btn-primary w-100 w-md-auto">+ Add Hostel Building Floor Room</a>
+                            <a href="{{ route('hostel.building.floor.room.map.export') }}" class="btn btn-secondary w-100 w-md-auto">Export All</a>
                         </div>
                     </div>
                 </div>

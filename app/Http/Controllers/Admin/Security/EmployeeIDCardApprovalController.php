@@ -100,7 +100,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
 
         $user = Auth::user();
-        $employeePk = $user->user_id ?? null;
+        $employeePk = $user->user_id ?? $user->pk ?? null;
 
         $idcardRequest->approved_by_a1 = $employeePk;
         $idcardRequest->approved_by_a1_at = now();
@@ -128,7 +128,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
 
         $user = Auth::user();
-        $employeePk = $user->user_id ?? null;
+        $employeePk = $user->user_id ?? $user->pk ?? null;
 
         $idcardRequest->approved_by_a2 = $employeePk;
         $idcardRequest->approved_by_a2_at = now();
@@ -180,7 +180,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
 
         $user = Auth::user();
-        $employeePk = $user->user_id ?? null;
+        $employeePk = $user->user_id ?? $user->pk ?? null;
 
         $idcardRequest->rejection_reason = $validated['rejection_reason'];
         $idcardRequest->rejected_by = $employeePk;

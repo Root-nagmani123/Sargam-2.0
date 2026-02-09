@@ -2623,6 +2623,7 @@ class CalendarManager {
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
+            dateClick: (info) => this.handleDateSelect({ ...info, start: info.date }),
             eventDidMount: this.setEventAccessibility.bind(this),
             dayCellDidMount: this.setDayCellAccessibility.bind(this)
         });

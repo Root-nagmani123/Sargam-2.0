@@ -3,7 +3,7 @@
 @section('title', 'Hostel Building')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid building-master-index">
 
     <x-breadcrum title="Building Master" />
     <x-session_message />
@@ -14,11 +14,11 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
-                        <div class="col-6">
+                        <div class="col-12 col-md-6">
                             <h4>Building Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-md-end">
                                 <a href="{{route('master.hostel.building.create')}}" class="btn btn-primary">+ Add Building Master</a>
                                 <a href="{{ route('master.hostel.building.export') }}" class="btn btn-secondary">Export</a>
                             </div>

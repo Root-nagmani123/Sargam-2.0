@@ -5,7 +5,10 @@
 @section('setup_content')
 {{-- Minimal overrides: DataTables dropdown, avatar sizing, table header, responsive layout --}}
 <style>
-.table-responsive.table-programme { overflow: visible !important; }
+.table-responsive.table-programme {
+    /* Allow DataTables Responsive to manage layout; keep horizontal scroll only when really needed */
+    overflow-x: auto;
+}
 .table-programme .table td { overflow: visible !important; }
 .programme-index .dropdown-menu { z-index: 1050 !important; position: fixed !important; }
 #coursemaster-table thead th { background-color: var(--bs-primary); color: var(--bs-white); font-weight: 600; border: none; white-space: nowrap; }
@@ -17,15 +20,50 @@
 .spinner-border-lg { width: 3rem; height: 3rem; }
 @media (max-width: 767.98px) {
     .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:first-child { flex-direction: column; align-items: stretch; gap: 0.75rem; }
-    .programme-index #coursemaster-table_wrapper .row:first-child > [class*="col-"] { flex: 0 0 auto; max-width: 100%; }
-    .programme-index #coursemaster-table_wrapper .dataTables_length select { margin: 0; min-width: 70px; }
-    .programme-index #coursemaster-table_wrapper .dataTables_filter input { margin-left: 0 !important; width: 100%; }
+    .programme-index #coursemaster-table_wrapper .row:first-child > [class*="col-"] { flex: 0 0 auto; max-width: 100%; width: 100%; }
+    /* Show entries alignment */
+    .programme-index #coursemaster-table_wrapper .dataTables_length { text-align: left !important; width: 100%; margin-bottom: 0.5rem; }
+    .programme-index #coursemaster-table_wrapper .dataTables_length label { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; width: 100%; margin: 0; }
+    .programme-index #coursemaster-table_wrapper .dataTables_length select { margin: 0; min-width: 80px; flex: 0 0 auto; }
+    /* Search alignment */
+    .programme-index #coursemaster-table_wrapper .dataTables_filter { text-align: left !important; width: 100%; }
+    .programme-index #coursemaster-table_wrapper .dataTables_filter label { display: flex; align-items: center; gap: 0.5rem; width: 100%; margin: 0; }
+    .programme-index #coursemaster-table_wrapper .dataTables_filter input { margin-left: 0 !important; width: 100%; flex: 1 1 auto; }
     .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:last-child { flex-direction: column; gap: 0.75rem; }
     .programme-index .table-responsive.table-programme { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-    #coursemaster-table { min-width: 900px; table-layout: auto; }
+    /* Let DataTables Responsive decide how columns collapse on small screens */
+    #coursemaster-table { width: 100%; table-layout: auto; }
+    /* Mobile responsive buttons */
+    .programme-index .btn-group .btn { padding: 0.375rem 0.75rem !important; font-size: 0.875rem !important; }
+    .programme-index .btn-group .btn i { font-size: 0.875rem !important; margin-right: 0.25rem !important; }
+    .programme-index a.btn-primary { padding: 0.375rem 0.75rem !important; font-size: 0.875rem !important; }
+    .programme-index a.btn-primary iconify-icon { font-size: 1rem !important; }
+    .programme-index #resetFilters { padding: 0.375rem 0.75rem !important; font-size: 0.875rem !important; }
+    .programme-index #resetFilters i { font-size: 0.875rem !important; }
+    /* Full width buttons on mobile - single row */
+    .programme-index .d-flex.flex-wrap.gap-2.gap-md-3 { gap: 0.5rem !important; width: 100% !important; flex-wrap: nowrap !important; }
+    .programme-index .btn-group { flex: 1 1 0; min-width: 0; }
+    .programme-index a.btn-primary { flex: 1 1 0; white-space: nowrap; justify-content: center; min-width: 0; }
 }
 @media (max-width: 575.98px) {
     #viewCourseModal .modal-body .row.g-3 .col-md-6 { flex: 0 0 100%; max-width: 100%; }
+    /* Extra small mobile - better alignment for DataTables controls */
+    .programme-index #coursemaster-table_wrapper .dataTables_length label { flex-direction: column; align-items: flex-start; gap: 0.375rem; }
+    .programme-index #coursemaster-table_wrapper .dataTables_length select { width: 100%; max-width: 120px; }
+    .programme-index #coursemaster-table_wrapper .dataTables_filter label { flex-direction: column; align-items: flex-start; gap: 0.375rem; }
+    .programme-index #coursemaster-table_wrapper .dataTables_filter input { width: 100%; }
+    /* Extra small mobile - even smaller buttons to fit in single row */
+    .programme-index .btn-group .btn { padding: 0.25rem 0.5rem !important; font-size: 0.75rem !important; }
+    .programme-index .btn-group .btn i { font-size: 0.75rem !important; margin-right: 0.125rem !important; }
+    .programme-index a.btn-primary { padding: 0.25rem 0.5rem !important; font-size: 0.75rem !important; }
+    .programme-index a.btn-primary iconify-icon { font-size: 0.875rem !important; }
+    .programme-index #resetFilters { padding: 0.25rem 0.5rem !important; font-size: 0.75rem !important; }
+    .programme-index #resetFilters i { font-size: 0.75rem !important; }
+    /* Full width buttons on very small mobile - single row */
+    .programme-index .d-flex.flex-wrap.gap-2.gap-md-3 { gap: 0.5rem !important; width: 100% !important; flex-wrap: nowrap !important; }
+    .programme-index .btn-group { flex: 1 1 0; min-width: 0; }
+    .programme-index .btn-group .btn { flex: 1; }
+    .programme-index a.btn-primary { flex: 1 1 0; white-space: nowrap; justify-content: center; min-width: 0; }
 }
 </style>
 <div class="container-fluid px-3 px-md-4 px-lg-5 py-3 py-md-4 programme-index">
@@ -44,21 +82,21 @@
                         </h1>
                     </div>
                     <div class="col-12 col-md-8 col-lg-9">
-                        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
-                            <div class="btn-group shadow-sm rounded-pill" role="group" aria-label="Filter courses by status">
-                                <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
+                        <div class="d-flex flex-wrap flex-md-nowrap justify-content-md-end align-items-stretch align-items-md-center gap-2 gap-md-3 w-100">
+                            <div class="btn-group shadow-sm rounded-pill w-100 w-md-auto" role="group" aria-label="Filter courses by status">
+                                <button type="button" class="btn btn-success px-3 px-md-4 fw-semibold active" id="filterActive"
                                     aria-pressed="true" aria-current="true">
                                     <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
                                     <span>Active</span>
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" id="filterArchive"
+                                <button type="button" class="btn btn-outline-secondary px-3 px-md-4 fw-semibold" id="filterArchive"
                                     aria-pressed="false">
                                     <i class="bi bi-archive me-1" aria-hidden="true"></i>
                                     <span>Archived</span>
                                 </button>
                             </div>
                             <a href="{{ route('programme.create') }}"
-                                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 shadow-sm"
+                                class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 px-3 px-md-4 shadow-sm w-100 w-md-auto"
                                 aria-label="Add a new course">
                                 <iconify-icon icon="ep:circle-plus-filled" aria-hidden="true"></iconify-icon>
                                 <span class="fw-semibold">Add Course</span>
@@ -81,7 +119,7 @@
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-4">
-                        <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="resetFilters">
+                        <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 px-md-4" id="resetFilters">
                             <i class="bi bi-arrow-counterclockwise"></i>
                             <span>Reset Filters</span>
                         </button>

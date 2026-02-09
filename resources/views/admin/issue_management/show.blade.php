@@ -129,7 +129,7 @@
                                     <td>{{ $issue->assigned_to_contact ?? 'N/A' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Nodel Officer</th>
+                                    <th>Nodal Officer</th>
                                     <td>{{ $issue->nodal_officer->name ?? 'N/A' }}</td>
                                 </tr>
                                 @if($issue->clear_date)

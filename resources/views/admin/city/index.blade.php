@@ -3,8 +3,8 @@
 @section('title', 'City - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
-
+<div class="container-fluid city-index">
+    <x-session_message />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
