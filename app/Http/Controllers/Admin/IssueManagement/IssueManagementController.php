@@ -207,50 +207,65 @@ class IssueManagementController extends Controller
             \Log::warning('Employee master table not accessible: ' . $e->getMessage());
         }
 
+        $currentUserEmployeeId = Auth::user()->user_id ?? null;
+
         return view('admin.issue_management.create', compact(
             'categories',
             'priorities',
             'reproducibilities',
             'buildings',
             'hostels',
-            'employees'
+            'employees',
+            'currentUserEmployeeId'
         ));
     }
 
     /**
-     * Get nodal employees for a category
+     * Get nodal employees for a category (Level 1 only - selectable).
+     * Level 2 & 3 returned for display only.
      */
     public function getNodalEmployees($categoryId)
     {
         try {
-            $employees = DB::table('issue_category_master as a')
-                ->join('issue_category_employee_map as b', 'a.pk', '=', 'b.issue_category_master_pk')
+            $all = DB::table('issue_category_employee_map as b')
                 ->join('employee_master as d', 'b.employee_master_pk', '=', 'd.pk')
-                ->where('a.pk', $categoryId)
+                ->where('b.issue_category_master_pk', $categoryId)
                 ->select(
-                    'a.issue_category',
                     'b.priority',
+                    'b.days_notify',
                     'd.pk as employee_pk',
                     'd.first_name',
                     'd.middle_name',
                     'd.last_name',
                     DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
                 )
-                ->orderBy('priority', 'asc')
+                ->orderBy('b.priority', 'asc')
                 ->get();
 
-            if ($employees->isEmpty()) {
+            $level1 = $all->where('priority', 1)->values();
+            $level2 = $all->where('priority', 2)->first();
+            $level3 = $all->where('priority', 3)->first();
+
+            if ($level1->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No nodal employees found for this category',
-                    'data' => []
+                    'message' => 'No Level 1 nodal employees found for this category',
+                    'data' => [],
+                    'level1' => [],
+                    'level1_auto_select' => null,
+                    'level2' => null,
+                    'level3' => null,
                 ], 200);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Nodal employees fetched successfully',
-                'data' => $employees
+                'data' => $level1->toArray(),
+                'level1' => $level1->toArray(),
+                'level1_auto_select' => $level1->first()->employee_pk,
+                'level2' => $level2 ? ['employee_name' => $level2->employee_name, 'days_notify' => $level2->days_notify] : null,
+                'level3' => $level3 ? ['employee_name' => $level3->employee_name, 'days_notify' => $level3->days_notify] : null,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -272,6 +287,7 @@ class IssueManagementController extends Controller
                 'description' => 'required|string',
                 'issue_category_id' => 'required|integer',
                 'issue_sub_category_id' => 'required|integer',
+                'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
                 'sub_category_name' => 'required|string',
                 'created_by' => 'required|integer',
                 'nodal_employee_id' => 'nullable|integer',
@@ -285,6 +301,7 @@ class IssueManagementController extends Controller
 
             $data = array(
                 'issue_category_master_pk' => $request->issue_category_id,
+                'issue_priority_master_pk' => $request->issue_priority_id,
                 'location' => $request->location,
                 'description' => $request->description,
                 'created_by' => $request->created_by,
@@ -512,6 +529,7 @@ class IssueManagementController extends Controller
         $request->validate([
             'issue_category_id' => 'required|integer|exists:issue_category_master,pk',
             'issue_sub_category_id' => 'required|integer|exists:issue_sub_category_master,pk',
+            'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
             'created_by' => 'required|integer|exists:employee_master,pk',
             'mobile_number' => 'nullable|string',
             'nodal_employee_id' => 'required|integer|exists:employee_master,pk',
@@ -526,6 +544,7 @@ class IssueManagementController extends Controller
             // Update main issue record
             $issue->update([
                 'issue_category_master_pk' => $request->issue_category_id,
+                'issue_priority_master_pk' => $request->issue_priority_id,
                 'created_by' => $request->created_by,
                 'location' => $request->location,
                 'description' => $request->description,

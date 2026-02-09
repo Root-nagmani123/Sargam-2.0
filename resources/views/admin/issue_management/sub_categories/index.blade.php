@@ -37,6 +37,28 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     @endif
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    <form method="GET" class="mb-3 d-flex gap-2 flex-wrap align-items-end">
+                        <div class="flex-grow-1" style="min-width: 200px;">
+                            <label for="category_filter" class="form-label small">Filter by Category</label>
+                            <select name="category_id" id="category_filter" class="form-select">
+                                <option value="">All Categories</option>
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat->pk }}" {{ request('category_id') == $cat->pk ? 'selected' : '' }}>{{ $cat->issue_category }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                            <a href="{{ route('admin.issue-sub-categories.index') }}" class="btn btn-outline-secondary">Reset</a>
+                        </div>
+                    </form>
 
                     <div class="table-responsive datatables">
                         <table class="table">
@@ -45,18 +67,16 @@
                                     <th width="5%">ID</th>
                                     <th width="25%">Category</th>
                                     <th width="25%">Sub-Category Name</th>
-                                    <th width="30%">Description</th>
                                     <th width="10%">Status</th>
                                     <th width="15%">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($subCategories as $subCategory)
+                                @forelse($subCategories as $index => $subCategory)
                                 <tr>
-                                    <td>{{ $subCategory->pk }}</td>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $subCategory->category->issue_category ?? '-' }}</td>
                                     <td>{{ $subCategory->issue_sub_category }}</td>
-                                    <td>{{ $subCategory->description ?? '-' }}</td>
                                     <td>
                                         @if($subCategory->status == 1)
                                             <span class="badge bg-success">Active</span>
@@ -66,7 +86,7 @@
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-warning" 
-                                                onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_master_pk ?? 'null' }}, {{ json_encode($subCategory->issue_sub_category) }}, {{ json_encode($subCategory->description ?? '') }}, {{ $subCategory->status }})">
+                                                onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_master_pk ?? 'null' }}, {{ json_encode($subCategory->issue_sub_category) }}, {{ $subCategory->status }})">
                                             <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
                                         </button>
                                         <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}" 
@@ -130,14 +150,7 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control @error('description') is-invalid @enderror" 
-                                  id="description" name="description" rows="3"></textarea>
-                        @error('description')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    
                 </div>
                 <div class="modal-footer gap-2">
                     <button type="submit" class="btn bg-success-subtle text-success waves-effect text-start">
@@ -177,10 +190,7 @@
                         <label for="edit_issue_sub_category" class="form-label">Sub-Category Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_issue_sub_category" name="issue_sub_category" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="edit_description" class="form-label">Description</label>
-                        <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
-                    </div>
+                   
                     <div class="mb-3">
                         <label for="edit_status" class="form-label">Status</label>
                         <select class="form-select" id="edit_status" name="status" required>
@@ -206,10 +216,9 @@
 
 @section('scripts')
 <script>
-function editSubCategory(id, categoryId, name, description, status) {
+function editSubCategory(id, categoryId, name, status) {
     document.getElementById('edit_issue_category_fk').value = categoryId != null ? String(categoryId) : '';
     document.getElementById('edit_issue_sub_category').value = name;
-    document.getElementById('edit_description').value = description || '';
     document.getElementById('edit_status').value = status;
     
     const form = document.getElementById('editSubCategoryForm');
