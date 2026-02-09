@@ -41,7 +41,7 @@ class IssueLogStatus extends Model
      */
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by', 'pk');
+        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk')->select('pk', 'first_name', 'middle_name', 'last_name');
     }
 
     /**

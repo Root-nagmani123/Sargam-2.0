@@ -42,6 +42,9 @@
                 @endphp
 
                 @if($isAssigned)
+                <input type="hidden" name="issue_category_id" value="{{ $issue->issue_category_master_pk }}">
+                <input type="hidden" name="issue_sub_category_id" value="{{ $issue->subCategoryMappings->first()->issue_sub_category_master_pk ?? '' }}">
+                <input type="hidden" name="issue_priority_id" value="{{ $issue->issue_priority_master_pk ?? '' }}">
                 <div class="assignment-notice">
                     <i class="bi bi-exclamation-circle-fill"></i>
                     <div>
@@ -58,7 +61,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Complaint Category <span class="text-danger">*</span></label>
-                                <select name="issue_category_id" id="issue_category" class="form-select" {{ $isAssigned ? 'disabled' : '' }} required>
+                                <select name="issue_category_id" id="issue_category" class="form-select" {{ $isAssigned ? 'readonly' : '' }} required>
                                     <option value="">- select -</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->pk }}" {{ $issue->issue_category_master_pk == $category->pk ? 'selected' : '' }}>
@@ -85,6 +88,25 @@
                                     @endif
                                 </select>
                                 @error('issue_sub_category_id')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Priority <span class="text-danger">*</span></label>
+                                <select name="issue_priority_id" id="issue_priority" class="form-select" {{ $isAssigned ? 'readonly' : '' }} required>
+                                    <option value="">- Select -</option>
+                                    @foreach($priorities as $priority)
+                                        <option value="{{ $priority->pk }}" {{ $issue->issue_priority_master_pk == $priority->pk ? 'selected' : '' }}>
+                                            {{ $priority->priority }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('issue_priority_id')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -136,18 +158,11 @@
                                 @enderror
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Sub Category Name <span class="text-danger">*</span></label>
-                                <input type="text" name="sub_category_name" id="sub_category_name" 
+                        <input type="hidden" name="sub_category_name" id="sub_category_name" 
                                     class="form-control" placeholder="Sub category name will auto-fill" 
                                     readonly required 
                                     value="{{ $issue->subCategoryMappings->first()->sub_category_name ?? '' }}">
-                                @error('sub_category_name')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+
                     </div>
 
                     <div class="mb-3">
@@ -250,15 +265,22 @@
                     </div>
 
                     
-                    @if($issue->issue_status == 0)
-                    <div class="d-flex justify-content-end gap-2 pt-2">
-                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-secondary rounded">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Update Issue</button>
-                    </div>
+                   @if($issue->issue_status == 0)
+                        <div class="d-flex justify-content-end gap-2 pt-2">
+                            <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-secondary rounded">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Update Issue
+                            </button>
+                        </div>
                     @else
-                    <div class="alert alert-info mt-4">
-                        <i class="bi bi-info-circle"></i> This issue cannot be edited as its status is not "Open".
-                    </div>
+                        <div class="alert alert-info mt-4">
+                            <i class="bi bi-info-circle"></i>
+                            This issue cannot be edited as its status is not "Open".
+                        </div>
+                    @endif
+
                 </form>
             </div>
         </div>
@@ -302,14 +324,12 @@ $(document).ready(function() {
                 type: 'GET',
                 success: function(response) {
                     $('#nodal_employee').html('<option value="">- Select -</option>');
-                    
-                    // Handle both direct array and wrapped response object
-                    var employees = Array.isArray(response) ? response : (response.data || []);
-                    
+                    var employees = response.level1 || response.data || [];
+                    var autoSelect = response.level1_auto_select;
                     $.each(employees, function(key, value) {
                         var empPk = value.employee_pk || value.pk;
-                        var empName = value.employee_name || (value.first_name + ' ' + value.last_name);
-                        var selected = (currentNodalEmpPk && empPk == currentNodalEmpPk) ? 'selected' : '';
+                        var empName = value.employee_name || (value.first_name + ' ' + (value.middle_name ? value.middle_name + ' ' : '') + value.last_name);
+                        var selected = (currentNodalEmpPk && empPk == currentNodalEmpPk) ? 'selected' : (!currentNodalEmpPk && autoSelect && empPk == autoSelect) ? 'selected' : '';
                         $('#nodal_employee').append('<option value="'+ empPk +'" '+ selected +'>'+ empName +'</option>');
                     });
                 }
@@ -325,8 +345,9 @@ $(document).ready(function() {
 
     // Auto-fill mobile number
     $('#complainant').change(function() {
+        var selected = $(this).val();
         var mobile = $(this).find('option:selected').data('mobile');
-        $('#mobile_number').val(mobile || '');
+        $('#mobile_number').val(!selected ? '' : (mobile && mobile.trim() ? mobile : 'Mobile number is not available'));
     });
 
     // Location change - load buildings
@@ -470,9 +491,8 @@ $(document).ready(function() {
 
     // Auto-fill mobile number on page load
     var initialMobile = $('#complainant').find('option:selected').data('mobile');
-    if(initialMobile) {
-        $('#mobile_number').val(initialMobile);
-    }
+    var hasComplainant = $('#complainant').val();
+    $('#mobile_number').val(!hasComplainant ? '' : (initialMobile && initialMobile.trim() ? initialMobile : 'Mobile number is not available'));
 });
 </script>
 @endsection

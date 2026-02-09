@@ -37,6 +37,12 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     @endif
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
 
                     <div class="table-responsive datatables">
                         <table class="table">
@@ -51,9 +57,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($categories as $category)
+                                @forelse($categories as $index => $category )
                                 <tr>
-                                    <td>{{ $category->pk }}</td>
+                                    <td>{{ $index + 1 }}</td>
                                     <td>{{ $category->issue_category }}</td>
                                     <td>{{ $category->description ?? '-' }}</td>
                                     <td class="text-center">
