@@ -44,7 +44,7 @@
                             <i class="bi bi-arrow-up-circle"></i> Update Status
                         </button>
                         @endif
-                        @if($issue->created_by == Auth::id())
+                        @if($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id)
                             <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
                                 <i class="bi bi-pencil"></i> Edit Issue
                             </a>
@@ -209,13 +209,44 @@
                     </div>
                     @endif
 
-                    @if($issue->document)
+                    @php
+                        $docPaths = [];
+                        $d = $issue->document ?? '';
+                        $cimg = $issue->complaint_img ?? '';
+                        if (!empty($d)) {
+                            if (str_starts_with(trim($d), '[')) {
+                                $docPaths = json_decode($d, true) ?: [];
+                            } else {
+                                $docPaths = [$d];
+                            }
+                        }
+                        if (!empty($cimg)) {
+                            $decoded = is_string($cimg) ? json_decode($cimg, true) : $cimg;
+                            if (is_array($decoded)) {
+                                $docPaths = array_merge($docPaths, $decoded);
+                            }
+                        }
+                        $docPaths = array_values(array_filter($docPaths));
+                    @endphp
+                    @if(count($docPaths) > 0)
                     <div class="row mt-3">
                         <div class="col-12">
-                            <h5>Attached Document</h5>
-                            <a href="{{ Storage::url($issue->document) }}" target="_blank" class="btn btn-sm btn-info">
-                                <i class="material-icons">download</i> Download Document
-                            </a>
+                            <h5>Attachments</h5>
+                            <div class="d-flex flex-wrap gap-3 align-items-start">
+                                @foreach($docPaths as $path)
+                                @php
+                                    $url = (str_starts_with(trim($path), 'http://') || str_starts_with(trim($path), 'https://')) 
+                                        ? $path 
+                                        : asset('storage/' . ltrim($path, '/'));
+                                @endphp
+                                <div class="d-inline-block">
+                                    <a href="{{ $url }}" target="_blank" class="d-block text-decoration-none">
+                                        <img src="{{ $url }}" alt="Attachment" class="img-thumbnail" style="max-height: 120px; max-width: 180px; object-fit: cover;">
+                                    </a>
+                                    <small class="d-block text-muted text-center mt-1">Image</small>
+                                </div>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                     @endif
@@ -357,7 +388,7 @@
 
                     <div class="mb-3">
                         <label for="remark" class="form-label">Remarks</label>
-                        <textarea name="remark" id="remark" class="form-control" rows="3" placeholder="Add remarks (optional)">{{ $issue->remark }}</textarea>
+                        <textarea name="remark" id="remark" class="form-control" rows="3" placeholder="Add remarks (optional)"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
