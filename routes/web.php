@@ -94,6 +94,7 @@ Route::middleware(['auth'])->group(function () {
     // })->name('admin.dashboard');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
 

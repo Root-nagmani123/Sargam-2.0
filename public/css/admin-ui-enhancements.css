@@ -325,6 +325,119 @@
     .memo-type-index #memotypemaster-table { min-width: 420px; }
 }
 
+/* ========== SIDEBAR MOBILE RESPONSIVE ========== */
+@media (max-width: 991.98px) {
+    /* Hide scrollbars on mobile - scrollable but invisible */
+    .side-mini-panel,
+    .side-mini-panel .sidebar-nav,
+    .side-mini-panel .sidebarmenu .sidebar-nav,
+    .side-mini-panel .sidebar-nav .simplebar-content-wrapper,
+    .side-mini-panel .mini-nav .mini-nav-ul,
+    .side-mini-panel .mini-nav .mini-nav-ul .simplebar-content-wrapper {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .side-mini-panel::-webkit-scrollbar,
+    .side-mini-panel .sidebar-nav::-webkit-scrollbar,
+    .side-mini-panel .sidebarmenu .sidebar-nav::-webkit-scrollbar,
+    .side-mini-panel .sidebar-nav .simplebar-content-wrapper::-webkit-scrollbar,
+    .side-mini-panel .mini-nav .mini-nav-ul::-webkit-scrollbar,
+    .side-mini-panel .mini-nav .mini-nav-ul .simplebar-content-wrapper::-webkit-scrollbar {
+        display: none !important;
+    }
+    .side-mini-panel .simplebar-track {
+        display: none !important;
+    }
+
+    /* Ensure collapse triggers are touch-friendly and responsive on mobile */
+    .side-mini-panel [data-bs-toggle="collapse"] {
+        cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(0, 74, 147, 0.1);
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+    }
+
+    /* Main content area - hide scrollbar on mobile, keep scrollable */
+    .body-wrapper,
+    .page-wrapper,
+    .tab-content {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .body-wrapper::-webkit-scrollbar,
+    .page-wrapper::-webkit-scrollbar,
+    .tab-content::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    /* Horizontal layout on mobile: mini-nav left, menu right */
+    .side-mini-panel .iconbar > div,
+    .side-mini-panel .iconbar {
+        flex-direction: row !important;
+    }
+
+    /* Compact mini-nav on mobile - narrow strip on left */
+    #sidebar-setup .sidebar-google-style .mini-nav,
+    #sidebar-home .sidebar-google-style .mini-nav {
+        padding: 8px 0 !important;
+        width: 56px !important;
+        min-width: 56px !important;
+        flex: 0 0 56px !important;
+    }
+
+    /* Reposition sidebar-nav to align with compact mini-nav */
+    .side-mini-panel .sidebarmenu .sidebar-nav {
+        left: 56px !important;
+        top: 60px !important;
+        width: calc(100% - 56px) !important;
+        height: calc(100vh - 60px) !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+        padding: 8px 4px !important;
+        min-height: 48px !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap,
+    #sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+        width: 40px !important;
+        height: 28px !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
+        font-size: 20px !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .sidebar-google-label,
+    #sidebar-home .sidebar-google-style .sidebar-google-label {
+        font-size: 10px !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    /* Extra compact on small phones */
+    #sidebar-setup .sidebar-google-style .mini-nav,
+    #sidebar-home .sidebar-google-style .mini-nav {
+        width: 52px !important;
+        min-width: 52px !important;
+        flex: 0 0 52px !important;
+    }
+
+    .side-mini-panel .sidebarmenu .sidebar-nav {
+        left: 52px !important;
+        top: 125px !important;
+        width: calc(100% - 52px) !important;
+        height: calc(100vh - 56px) !important;
+    }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .admin-card,

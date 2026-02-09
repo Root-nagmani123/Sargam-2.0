@@ -204,17 +204,18 @@ HTML;
             ->setTableId('coursemaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax() // This will use the current route for ajax
-            // ->orderBy(1)
             ->selectStyleSingle()
             ->parameters([
-                'responsive' => false,
-                'scrollX' => true,
+                // Enable fully responsive DataTable with sorting, searching, length, and pagination
+                'responsive' => true,
+                'scrollX' => false,
                 'autoWidth' => false,
-                'ordering' => false,
+                'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [],
+                // Default sort by Course Name (second column, index 1)
+                'order' => [[1, 'asc']],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -235,13 +236,39 @@ HTML;
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->searchable(false)->orderable(false),
-            Column::make('course_name')->title('Course Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('couse_short_name')->title('Short Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('course_year')->title('Course Year')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('start_year')->title('Start Date')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('end_date')->title('End Date')->addClass('text-center')->orderable(false)->searchable(false),
-                Column::computed('status')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('action')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('course_name')
+                ->title('Course Name')
+                ->addClass('text-center')
+                ->orderable(true)
+                ->searchable(true),
+            Column::make('couse_short_name')
+                ->title('Short Name')
+                ->addClass('text-center')
+                ->orderable(true)
+                ->searchable(true),
+            Column::make('course_year')
+                ->title('Course Year')
+                ->addClass('text-center')
+                ->orderable(true)
+                ->searchable(true),
+            Column::make('start_year')
+                ->title('Start Date')
+                ->addClass('text-center')
+                ->orderable(true)
+                ->searchable(false),
+            Column::make('end_date')
+                ->title('End Date')
+                ->addClass('text-center')
+                ->orderable(true)
+                ->searchable(false),
+            Column::computed('status')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false),
+            Column::computed('action')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false),
         
         ];
     }

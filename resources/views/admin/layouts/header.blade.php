@@ -22,7 +22,7 @@
         str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
         str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
         str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-        str_starts_with($path, 'admin/master') || str_starts_with($path, 'password') ||
+        str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
         str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
     ) {
         $activeNavTab = '#tab-setup';
@@ -192,7 +192,7 @@
 
                             <!-- Search -->
                             <li class="nav-item" role="none">
-                                <button class="nav-link header-search-btn search-trigger"
+                                <button type="button" class="nav-link header-search-btn search-trigger"
                                     aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
                                     <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
                                 </button>
@@ -418,7 +418,7 @@
 
                     <!-- Search -->
                     <li class="nav-item" role="none">
-                        <button class="nav-link mobile-tab-link search-trigger"
+                        <button type="button" class="nav-link mobile-tab-link search-trigger"
                             aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
                             <span>Search</span>
@@ -654,7 +654,7 @@
                     padding: 0.5rem 0;
                 }
 
-                /* Hide sidebar by default on mobile */
+                /* Hide sidebar by default on mobile - responsive width */
                 .left-sidebar,
                 .side-mini-panel,
                 aside.side-mini-panel,
@@ -662,11 +662,11 @@
                     position: fixed !important;
                     top: 0 !important;
                     left: -100% !important;
-                    width: 350px !important;
+                    width: min(320px, 88vw) !important;
+                    max-width: 320px !important;
                     height: 100vh !important;
                     z-index: 1060 !important;
-                    background: #fff !important;
-                    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1) !important;
+                    background: transparent !important;
                     transition: left 0.3s ease-in-out !important;
                     display: block !important;
                     visibility: hidden !important;
@@ -674,10 +674,10 @@
                     overflow-y: auto !important;
                 }
 
-                /* Sidebar mini panel specific width */
+                /* Sidebar mini panel specific - compact when hidden */
                 .side-mini-panel {
-                    width: 70px !important;
-                    left: -70px !important;
+                    width: 64px !important;
+                    left: -64px !important;
                 }
 
                 /* Hide sidebar tab content by default on mobile */
@@ -710,13 +710,16 @@
                     visibility: visible !important;
                     opacity: 1 !important;
                     display: block !important;
+                    background: transparent !important;
+                    pointer-events: auto !important;
                 }
 
-                /* Expand side-mini-panel to full width on mobile when open - so child module (sidebar-nav) is visible */
+                /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
                 .side-mini-panel.show-sidebar,
                 aside.side-mini-panel.show-sidebar,
                 aside.side-mini-panel.with-vertical.show-sidebar {
-                    width: 350px !important;
+                    width: min(320px, 88vw) !important;
+                    max-width: 320px !important;
                 }
 
                 /* Show sidebar tab content when sidebar is open */
@@ -832,6 +835,23 @@
 
                 .mobile-tab-link.active i {
                     color: #1d4ed8 !important;
+                }
+            }
+
+            /* Very small phones - narrower sidebar */
+            @media (max-width: 375px) {
+                .left-sidebar,
+                .side-mini-panel,
+                aside.side-mini-panel,
+                aside.side-mini-panel.with-vertical {
+                    width: min(280px, 92vw) !important;
+                    max-width: 280px !important;
+                }
+                .side-mini-panel.show-sidebar,
+                aside.side-mini-panel.show-sidebar,
+                aside.side-mini-panel.with-vertical.show-sidebar {
+                    width: min(280px, 92vw) !important;
+                    max-width: 280px !important;
                 }
             }
 
@@ -1152,79 +1172,60 @@
                     });
                 }
                 
-                // Ensure collapse/expand functionality works on mobile
-                const collapseInitialized = new WeakSet();
-                
-                function initializeCollapseOnMobile() {
-                    if (window.innerWidth >= 992) return; // Only on mobile
+                // Mobile collapse: document-level delegation (capture phase)
+                let collapseHandledAt = 0;
+                function handleMobileCollapse(e) {
+                    if (window.innerWidth >= 992) return;
                     
-                    // Find all collapse elements in sidebar tab content (even when hidden)
+                    const trigger = e.target.closest('[data-bs-toggle="collapse"]');
+                    if (!trigger) return;
+                    
                     const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    if (!sidebarTabContent) return;
+                    if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
                     
-                    // Find collapse buttons in all sidebar panes
-                    const collapseButtons = sidebarTabContent.querySelectorAll('[data-bs-toggle="collapse"]');
+                    if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
                     
-                    collapseButtons.forEach(collapseBtn => {
-                        // Skip if already initialized
-                        if (collapseInitialized.has(collapseBtn)) return;
-                        collapseInitialized.add(collapseBtn);
-                        
-                        // Add click handler for mobile collapse - expand/collapse child menu only (do NOT close sidebar)
-                        collapseBtn.addEventListener('click', function(e) {
-                            const targetId = this.getAttribute('data-bs-target') || this.getAttribute('href');
-                            if (!targetId) return;
-                            
-                            const targetElement = document.querySelector(targetId);
-                            if (!targetElement) return;
-                            
-                            // On mobile: keep sidebar open - only expand/collapse the child submenu
-                            // (Previously incorrectly toggled sidebar visibility which closed the panel)
-                            
-                            // Don't prevent default - let Bootstrap handle collapse
-                            // But ensure Bootstrap collapse is initialized
-                            if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-                                let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
-                                if (!bsCollapse) {
-                                    bsCollapse = new bootstrap.Collapse(targetElement, {
-                                        toggle: false
-                                    });
+                    // Prevent double-fire from pointerup + click on touch devices
+                    const now = Date.now();
+                    if (now - collapseHandledAt < 400) return;
+                    collapseHandledAt = now;
+                    
+                    const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
+                    if (!targetId) return;
+                    
+                    const targetElement = document.getElementById(targetId);
+                    if (!targetElement) return;
+                    
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                        let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
+                        if (!bsCollapse) {
+                            bsCollapse = new bootstrap.Collapse(targetElement, { toggle: false });
+                        }
+                        bsCollapse.toggle();
+                        // Accordion: close other collapses in same sidebar-nav
+                        const parentNav = trigger.closest('.sidebar-nav');
+                        if (parentNav) {
+                            parentNav.querySelectorAll('.collapse').forEach(c => {
+                                if (c !== targetElement && c.classList.contains('show')) {
+                                    const other = bootstrap.Collapse.getInstance(c);
+                                    if (other) other.hide();
                                 }
-                            }
-                        }, { once: false });
-                    });
+                            });
+                        }
+                        // Rotate arrow icon
+                        const icon = trigger.querySelector('.material-icons');
+                        if (icon) {
+                            setTimeout(() => {
+                                icon.textContent = targetElement.classList.contains('show') ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+                            }, 350);
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
                 }
                 
-                // Initialize collapse on mobile immediately
-                if (window.innerWidth < 992) {
-                    setTimeout(initializeCollapseOnMobile, 100);
-                }
-                
-                // Re-initialize when sidebar becomes visible
-                const sidebar = getActiveSidebar();
-                if (sidebar) {
-                    const sidebarVisibilityObserver = new MutationObserver(function(mutations) {
-                        mutations.forEach(function(mutation) {
-                            if (mutation.attributeName === 'class') {
-                                if (sidebar.classList.contains('show-sidebar')) {
-                                    setTimeout(initializeCollapseOnMobile, 150);
-                                }
-                            }
-                        });
-                    });
-                    
-                    sidebarVisibilityObserver.observe(sidebar, {
-                        attributes: true,
-                        attributeFilter: ['class']
-                    });
-                }
-                
-                // Re-initialize when tabs change
-                document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                    tab.addEventListener('shown.bs.tab', function() {
-                        setTimeout(initializeCollapseOnMobile, 200);
-                    });
-                });
+                document.addEventListener('pointerup', handleMobileCollapse, true);
+                document.addEventListener('click', handleMobileCollapse, true);
              
 
                 // Time format is already set in PHP, no need to override
@@ -1278,15 +1279,20 @@
                     });
                 }
 
-                // Search trigger functionality
+                // Search trigger functionality - scroll to DataTables search or focus search input
                 const searchTriggers = document.querySelectorAll('.search-trigger');
                 if (searchTriggers.length) {
                     searchTriggers.forEach(trigger => {
-                        trigger.addEventListener('click', function() {
-                            // Open search modal or expand search bar
+                        trigger.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
                             this.setAttribute('aria-expanded', 'true');
-                            // Add your search functionality here
-                            console.log('Search triggered');
+                            // Find DataTables search input on current page
+                            const dtSearchInput = document.querySelector('.dataTables_filter input');
+                            if (dtSearchInput) {
+                                dtSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                dtSearchInput.focus();
+                            }
                         });
                     });
                 }
@@ -1409,33 +1415,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeBtn = document.getElementById('closeSearchBtn');
     const searchInput = document.getElementById('tableSearchInput');
 
-    // Open/close search
-    toggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        searchBox.classList.toggle('show');
-        if (searchBox.classList.contains('show')) {
-            searchInput.focus();
-        } else {
-            searchInput.value = '';
-        }
-    });
-
-    // Close via X button
-    closeBtn.addEventListener('click', () => {
-        searchBox.classList.remove('show');
-        searchInput.value = '';
-    });
-
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+    if (toggleBtn && searchBox) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            searchBox.classList.toggle('show');
+            if (searchBox.classList.contains('show') && searchInput) {
+                searchInput.focus();
+            } else if (searchInput) {
+                searchInput.value = '';
+            }
+        });
+    }
+    if (closeBtn && searchBox && searchInput) {
+        closeBtn.addEventListener('click', () => {
             searchBox.classList.remove('show');
-        }
-    });
-
-    // Close on ESC key
+            searchInput.value = '';
+        });
+    }
+    if (searchBox && toggleBtn) {
+        document.addEventListener('click', (e) => {
+            if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+                searchBox.classList.remove('show');
+            }
+        });
+    }
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && searchBox) {
             searchBox.classList.remove('show');
         }
     });

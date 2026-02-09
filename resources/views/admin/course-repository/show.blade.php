@@ -231,10 +231,31 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsDataURL(file);
         });
     }
+    // Create modal - drag and drop for category image (match index page behavior)
+    var createUploadZone = document.querySelector('#createModal .upload-zone-ref');
+    if (createUploadZone && el) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(ev) {
+            createUploadZone.addEventListener(ev, function(e) { e.preventDefault(); e.stopPropagation(); });
+        });
+        ['dragenter', 'dragover'].forEach(function(ev) {
+            createUploadZone.addEventListener(ev, function() { createUploadZone.classList.add('upload-dragover'); });
+        });
+        ['dragleave', 'drop'].forEach(function(ev) {
+            createUploadZone.addEventListener(ev, function() { createUploadZone.classList.remove('upload-dragover'); });
+        });
+        createUploadZone.addEventListener('drop', function(e) {
+            var files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                el.files = files;
+                el.dispatchEvent(new Event('change'));
+            }
+        });
+    }
 });
 </script>
 
-<div class="container-fluid">
+<div class="container-fluid course-repository-show-page">
+    <x-session_message />
     <!-- Breadcrumb Navigation -->
     <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -1040,20 +1061,22 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <label for="course_name_other" class="form-label">
                                             Course Name <span class="text-danger">*</span>
                                         </label>
-                                        <!-- Active/Archive Toggle for Other Category -->
-                                        <div class="btn-group w-100 mb-2" role="group"
+                                        <!-- Active/Archive Toggle for Other Category (same size as Course section) -->
+                                        <div class="btn-group w-100 mb-3" role="group"
                                             aria-label="Other Course Status Filter">
                                             <input type="radio" class="btn-check" name="course_status_other"
                                                 id="btnActiveCoursesOther" value="active" checked>
-                                            <label class="btn btn-outline-success btn-sm" for="btnActiveCoursesOther">
-                                                <i class="bi bi-check-circle me-1"></i>Active Courses
+                                            <label class="btn btn-outline-success" for="btnActiveCoursesOther">
+                                                <span class="material-icons material-symbols-rounded me-1"
+                                                    style="font-size: 16px;">check_circle</span>Active Courses
                                             </label>
 
                                             <input type="radio" class="btn-check" name="course_status_other"
                                                 id="btnArchivedCoursesOther" value="archived">
-                                            <label class="btn btn-outline-secondary btn-sm"
+                                            <label class="btn btn-outline-secondary"
                                                 for="btnArchivedCoursesOther">
-                                                <i class="bi bi-archive me-1"></i>Archived Courses
+                                                <span class="material-icons material-symbols-rounded me-1"
+                                                    style="font-size: 16px;">archive</span>Archived Courses
                                             </label>
                                         </div>
                                         <select class="form-select" id="course_name_other" name="course_name_other">
@@ -1307,8 +1330,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <label class="form-label">
                                         Upload Attachment <span class="text-danger">*</span>
                                     </label>
-                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
-                                        style="border-style: dashed !important; cursor: pointer;">
+                                    <div id="institutionalUploadZone" class="upload-area upload-zone-ref border rounded-3 text-center p-5 bg-light position-relative"
+                                        style="border-style: dashed !important; cursor: pointer; min-height: 140px;">
                                         <input type="file"
                                             class="file-input-institutional position-absolute w-100 h-100 opacity-0"
                                             name="attachments_institutional[]" accept="*/*" multiple
@@ -2940,6 +2963,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Sector (Institutional) - load ministries via AJAX when sector changes
+    const sectorSelectInstitutional = document.getElementById('sector_master_institutional');
+    const ministrySelectInstitutional = document.getElementById('ministry_master_institutional');
+    if (sectorSelectInstitutional && ministrySelectInstitutional) {
+        sectorSelectInstitutional.addEventListener('change', function() {
+            const sectorPk = this.value;
+            ministrySelectInstitutional.innerHTML = '<option value="">Select</option>';
+            if (!sectorPk) return;
+            fetch(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    const ministries = data.data || data || [];
+                    if (Array.isArray(ministries) && ministries.length > 0) {
+                        ministries.forEach(ministry => {
+                            const option = document.createElement('option');
+                            option.value = ministry.pk;
+                            option.textContent = ministry.ministry_name;
+                            ministrySelectInstitutional.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching ministries (Institutional):', error));
+        });
+    }
+
     // Active/Archived radio for Other category
     const courseStatusRadiosOther = document.querySelectorAll('input[name="course_status_other"]');
     if (courseStatusRadiosOther.length > 0 && courseSelectOther) {
@@ -4025,6 +4073,56 @@ document.addEventListener('DOMContentLoaded', function() {
         // Return false to absolutely prevent any default form submission
         return false;
     });
+
+    // Institutional upload - drag and drop support
+    const institutionalUploadZone = document.getElementById('institutionalUploadZone');
+    const institutionalFileInput = document.querySelector('.file-input-institutional');
+    if (institutionalUploadZone && institutionalFileInput) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+            institutionalUploadZone.addEventListener(event, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        ['dragenter', 'dragover'].forEach(event => {
+            institutionalUploadZone.addEventListener(event, () => {
+                institutionalUploadZone.classList.add('upload-dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(event => {
+            institutionalUploadZone.addEventListener(event, () => {
+                institutionalUploadZone.classList.remove('upload-dragover');
+            });
+        });
+        institutionalUploadZone.addEventListener('drop', e => {
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                const dt = new DataTransfer();
+                const existingFiles = institutionalFileInput.files || [];
+                for (let i = 0; i < existingFiles.length; i++) dt.items.add(existingFiles[i]);
+                for (let i = 0; i < files.length; i++) dt.items.add(files[i]);
+                institutionalFileInput.files = dt.files;
+                institutionalFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                updateInstitutionalSelectedFiles();
+            }
+        });
+        institutionalFileInput.addEventListener('change', updateInstitutionalSelectedFiles);
+    }
+    function updateInstitutionalSelectedFiles() {
+        const inp = document.querySelector('.file-input-institutional');
+        const zone = document.getElementById('institutionalUploadZone');
+        if (!inp || !zone) return;
+        const selectedDiv = zone.querySelector('.selected-files-institutional');
+        if (selectedDiv) {
+            if (inp.files && inp.files.length > 0) {
+                selectedDiv.style.display = 'block';
+                selectedDiv.innerHTML = Array.from(inp.files).map(f => f.name).join(', ');
+            } else {
+                selectedDiv.style.display = 'none';
+                selectedDiv.innerHTML = '';
+            }
+        }
+    }
 
     // Add new attachment row - Category Specific
     document.querySelectorAll('.addAttachmentRowBtn').forEach(btn => {
