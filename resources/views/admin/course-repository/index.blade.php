@@ -133,6 +133,7 @@
     }
 </style>
 <div class="container-fluid course-repository-index-page">
+    <x-session_message />
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <div class="card border-0 shadow-sm">

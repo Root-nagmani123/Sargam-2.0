@@ -19,7 +19,7 @@ class VehiclePassController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $employeePk = $user->user_id ?? null;
+        $employeePk = $user->user_id ?? $user->pk ?? null;
 
         $baseQuery = fn () => VehiclePassTWApply::with(['vehicleType', 'employee', 'approval'])
             ->where('veh_created_by', $employeePk)
@@ -37,7 +37,7 @@ class VehiclePassController extends Controller
     public function export(Request $request)
     {
         $user = Auth::user();
-        $employeePk = $user->user_id ?? null;
+        $employeePk = $user->user_id ?? $user->pk ?? null;
         $tab = $request->get('tab', 'active');
         $format = $request->get('format', 'xlsx');
 
@@ -111,7 +111,7 @@ class VehiclePassController extends Controller
         ]);
 
         $user = Auth::user();
-        $employeePk = $user->user_id ?? null;
+        $employeePk = $user->user_id ?? $user->pk ?? null;
 
         $applicantType = $validated['applicant_type'];
         $applicantName = $validated['applicant_name'] ?? null;

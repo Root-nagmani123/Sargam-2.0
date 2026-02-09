@@ -3,7 +3,8 @@
 @section('title', 'State - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid state-index">
+    <x-session_message />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">
