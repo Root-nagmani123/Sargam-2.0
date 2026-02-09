@@ -251,7 +251,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Attach Image (Optional)</label>
-                                <input type="file" name="complaint_img_url" class="form-control" accept=".jpg,.jpeg,.png" multiple>
+                                <input type="file" name="complaint_img_url[]" class="form-control" accept=".jpg,.jpeg,.png" multiple>
                                 <small class="text-muted">Max size: 5MB per file. Allowed: JPG, PNG</small>
                             </div>
                         </div>

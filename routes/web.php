@@ -894,6 +894,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+    Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
+    Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
     Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
     Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
     Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');

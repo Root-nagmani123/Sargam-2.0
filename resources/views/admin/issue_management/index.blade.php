@@ -131,6 +131,10 @@
                         </div>
                         <div class="row g-3">
                             <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label small fw-medium text-body-secondary">Search</label>
+                                <input type="text" name="search" class="form-control form-control-sm" placeholder="ID, description, category..." value="{{ request('search') }}">
+                            </div>
+                            <div class="col-12 col-md-2 col-lg-3">
                                 <label class="form-label small fw-medium text-body-secondary">Status</label>
                                 <select name="status" class="form-select form-select-sm">
                                     <option value="">All Status</option>
@@ -141,7 +145,7 @@
                                     <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6 col-lg-3">
+                            <div class="col-12 col-md-3 col-lg-3">
                                 <label class="form-label small fw-medium text-body-secondary">Category</label>
                                 <select name="category" class="form-select form-select-sm">
                                     <option value="">All Categories</option>
@@ -152,21 +156,40 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-3 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Date From</label>
                                 <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
                             </div>
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-3 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Date To</label>
                                 <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2">
+                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2 flex-wrap">
                                 <button type="submit" class="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2">
                                     <iconify-icon icon="solar:magnifer-bold"></iconify-icon>
                                     Apply
                                 </button>
-                                <a href="{{ route('admin.issue-management.index', ['tab' => $currentTab]) }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">
-                                    <iconify-icon icon="solar:refresh-bold"></iconify-icon>
+                                <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">
+                                    Clear Filters
+                                </a>
+                                @php
+                                    $exportParams = array_filter([
+                                        'search' => request('search'),
+                                        'status' => request('status'),
+                                        'category' => request('category'),
+                                        'priority' => request('priority'),
+                                        'date_from' => request('date_from'),
+                                        'date_to' => request('date_to'),
+                                        'tab' => $currentTab,
+                                    ]);
+                                @endphp
+                                <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Export to Excel">
+                                    <iconify-icon icon="solar:document-bold-duotone"></iconify-icon>
+                                    <span class="d-none d-md-inline">Excel</span>
+                                </a>
+                                <a href="{{ route('admin.issue-management.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm d-flex align-items-center gap-1" title="Export to PDF">
+                                    <iconify-icon icon="solar:document-text-bold-duotone"></iconify-icon>
+                                    <span class="d-none d-md-inline">PDF</span>
                                 </a>
                             </div>
                         </div>
