@@ -325,6 +325,9 @@ document.addEventListener('DOMContentLoaded', function () {
     $('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
 
     $('#saveFacultyForm').click(function (e) {
+        const $btn = $(this);
+        if ($btn.prop('disabled')) return;
+        $btn.prop('disabled', true);
 
         const formData = new FormData();
         // remove all error class
@@ -542,6 +545,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 } else {
                     toastr.error(response.message);
+                    $btn.prop('disabled', false);
                 }
             },
             error: function (error) {
@@ -576,6 +580,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     toastr.error('Something went wrong. Please try again.');
                 }
+                $btn.prop('disabled', false);
             },
             complete: function () {
                 hideLoader();

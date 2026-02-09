@@ -34,11 +34,11 @@ class IssueCategoryController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $userId = Auth::user()->user_id ?? Auth::id();
         IssueCategoryMaster::create([
             'issue_category' => $request->issue_category,
             'description' => $request->description,
-            'created_by' => Auth::id(),
-            'created_date' => now(),
+            'created_by' => $userId,
             'status' => 1,
         ]);
 
@@ -59,11 +59,12 @@ class IssueCategoryController extends Controller
             'status' => 'required|in:0,1',
         ]);
 
+        $userId = Auth::user()->user_id ?? Auth::id();
         $category->update([
             'issue_category' => $request->issue_category,
             'description' => $request->description,
             'status' => $request->status,
-            'modified_by' => Auth::id(),
+            'modified_by' => $userId,
             'modified_date' => now(),
         ]);
 
@@ -77,8 +78,11 @@ class IssueCategoryController extends Controller
     public function destroy($id)
     {
         $category = IssueCategoryMaster::findOrFail($id);
-        
-        // Check if category has associated issues
+
+        if ($category->status == 1) {
+            return back()->with('error', 'Cannot delete an active category. Please set it to Inactive first.');
+        }
+
         if ($category->issueLogs()->count() > 0) {
             return back()->with('error', 'Cannot delete category with associated issues.');
         }

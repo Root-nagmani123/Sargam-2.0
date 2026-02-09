@@ -119,30 +119,7 @@
                     $activeTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'active']));
                     $archiveTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'archive']));
                 @endphp
-                <ul class="nav nav-tabs nav-tabs-issue px-4 pt-3 gap-1" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ $currentTab === 'active' ? 'active' : '' }} d-inline-flex align-items-center gap-2"
-                           href="{{ $activeTabUrl }}"
-                           role="tab">
-                            <iconify-icon icon="solar:play-circle-bold"></iconify-icon>
-                            Active
-                            @if(isset($activeCount))
-                                <span class="badge bg-primary rounded-pill">{{ $activeCount }}</span>
-                            @endif
-                        </a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ $currentTab === 'archive' ? 'active' : '' }} d-inline-flex align-items-center gap-2"
-                           href="{{ $archiveTabUrl }}"
-                           role="tab">
-                            <iconify-icon icon="solar:archive-down-minimistic-bold"></iconify-icon>
-                            Archive
-                            @if(isset($archiveCount))
-                                <span class="badge bg-secondary rounded-pill">{{ $archiveCount }}</span>
-                            @endif
-                        </a>
-                    </li>
-                </ul>
+              
 
                 <!-- Filters -->
                 <div class="p-4 pb-0">
@@ -154,6 +131,10 @@
                         </div>
                         <div class="row g-3">
                             <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label small fw-medium text-body-secondary">Search</label>
+                                <input type="text" name="search" class="form-control form-control-sm" placeholder="ID, description, category..." value="{{ request('search') }}">
+                            </div>
+                            <div class="col-12 col-md-2 col-lg-3">
                                 <label class="form-label small fw-medium text-body-secondary">Status</label>
                                 <select name="status" class="form-select form-select-sm">
                                     <option value="">All Status</option>
@@ -164,7 +145,7 @@
                                     <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6 col-lg-3">
+                            <div class="col-12 col-md-3 col-lg-3">
                                 <label class="form-label small fw-medium text-body-secondary">Category</label>
                                 <select name="category" class="form-select form-select-sm">
                                     <option value="">All Categories</option>
@@ -175,21 +156,40 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-3 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Date From</label>
                                 <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
                             </div>
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-3 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Date To</label>
                                 <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2">
+                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2 flex-wrap">
                                 <button type="submit" class="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2">
                                     <iconify-icon icon="solar:magnifer-bold"></iconify-icon>
                                     Apply
                                 </button>
-                                <a href="{{ route('admin.issue-management.index', ['tab' => $currentTab]) }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">
-                                    <iconify-icon icon="solar:refresh-bold"></iconify-icon>
+                                <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">
+                                    Clear Filters
+                                </a>
+                                @php
+                                    $exportParams = array_filter([
+                                        'search' => request('search'),
+                                        'status' => request('status'),
+                                        'category' => request('category'),
+                                        'priority' => request('priority'),
+                                        'date_from' => request('date_from'),
+                                        'date_to' => request('date_to'),
+                                        'tab' => $currentTab,
+                                    ]);
+                                @endphp
+                                <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Export to Excel">
+                                    <iconify-icon icon="solar:document-bold-duotone"></iconify-icon>
+                                    <span class="d-none d-md-inline">Excel</span>
+                                </a>
+                                <a href="{{ route('admin.issue-management.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm d-flex align-items-center gap-1" title="Export to PDF">
+                                    <iconify-icon icon="solar:document-text-bold-duotone"></iconify-icon>
+                                    <span class="d-none d-md-inline">PDF</span>
                                 </a>
                             </div>
                         </div>
@@ -206,7 +206,7 @@
                                 <th>Category</th>
                                 <th>Description</th>
                                 <th>Priority</th>
-                                <th>Behalf</th>
+                               
                                 <th>Status</th>
                                 <th class="text-end pe-4">Actions</th>
                             </tr>
@@ -225,9 +225,7 @@
                                     @endphp
                                     <span class="badge badge-pill bg-{{ $priorityClass }} {{ $priorityClass == 'warning' ? 'text-dark' : '' }}">{{ $p }}</span>
                                 </td>
-                                <td>
-                                    <span class="badge badge-pill bg-{{ $issue->behalf == 0 ? 'primary' : 'secondary' }}">{{ $issue->behalf_label }}</span>
-                                </td>
+                               
                                 <td>
                                     @php
                                         $s = (int) $issue->issue_status;

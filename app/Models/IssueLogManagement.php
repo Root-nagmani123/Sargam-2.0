@@ -114,11 +114,12 @@ class IssueLogManagement extends Model
     }
 
     /**
-     * Get the status history for this issue.
+     * Get the status history for this issue (latest/last record first).
      */
     public function statusHistory()
     {
         return $this->hasMany(IssueLogStatus::class, 'issue_log_management_pk', 'pk')
+                    
                     ->orderBy('issue_date', 'desc');
     }
 

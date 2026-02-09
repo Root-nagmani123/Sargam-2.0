@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Http\Controllers\Controller;
+use App\Exports\IssueManagementExport;
 use App\Models\{
     IssueLogManagement,
     IssueCategoryMaster,
@@ -21,6 +22,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log};
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class IssueManagementController extends Controller
 {
@@ -45,13 +48,29 @@ class IssueManagementController extends Controller
                 $builder->where(function ($q) {
                     $q->where('employee_master_pk', Auth::user()->user_id)
                         ->orWhere('issue_logger', Auth::user()->user_id)
-                        ->orWhere('assigned_to', Auth::user()->user_id);
+                        ->orWhere('assigned_to', Auth::user()->user_id)
+                        ->orWhere('created_by', Auth::user()->user_id);
                 });
             }
         };
 
         $applyFilters = function ($builder) use ($request) {
-            // Status filter is applied in main query block (All Status vs specific)
+            // Search (ID, description, category name, sub-category)
+            if ($request->filled('search')) {
+                $term = trim($request->search);
+                $builder->where(function ($q) use ($term) {
+                    if (is_numeric($term)) {
+                        $q->orWhere('pk', $term);
+                    }
+                    $q->orWhere('description', 'like', "%{$term}%")
+                        ->orWhereHas('category', function ($cq) use ($term) {
+                            $cq->where('issue_category', 'like', "%{$term}%");
+                        })
+                        ->orWhereHas('subCategoryMappings.subCategory', function ($sq) use ($term) {
+                            $sq->where('issue_sub_category', 'like', "%{$term}%");
+                        });
+                });
+            }
 
             // Filter by category
             if ($request->has('category') && !empty($request->category)) {
@@ -63,12 +82,14 @@ class IssueManagementController extends Controller
                 $builder->where('issue_priority_master_pk', $request->priority);
             }
 
-            // Filter by date range
+            // Filter by date range (use Carbon for consistent timezone handling)
             if ($request->filled('date_from')) {
-                $builder->whereDate('created_date', '>=', $request->date_from);
+                $from = Carbon::parse($request->date_from)->startOfDay()->format('Y-m-d');
+                $builder->where('created_date', '>=', $from);
             }
             if ($request->filled('date_to')) {
-                $builder->whereDate('created_date', '<=', $request->date_to);
+                $to = Carbon::parse($request->date_to)->endOfDay()->format('Y-m-d');
+                $builder->where('created_date', '<=', $to);
             }
         };
 
@@ -76,14 +97,13 @@ class IssueManagementController extends Controller
         $query->orderBy('created_date', 'desc');
 
         // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
-        // When "All Status" is selected, show all statuses (0,1,2,3,6)
         $tab = $request->get('tab', 'active');
         if ($request->filled('status') && $request->status !== '') {
-            // Specific status selected - filter by that only
-            $query->where('issue_status', $request->status);
+            $query->where('issue_status', (int) $request->status);
+        } elseif ($tab === 'archive') {
+            $query->where('issue_status', 2);
         } else {
-            // All Status - show all issues
-            $query->whereIn('issue_status', [0, 1, 2, 3, 6]);
+            $query->whereIn('issue_status', [0, 1, 3, 6]);
         }
 
         $applyFilters($query);
@@ -110,6 +130,87 @@ class IssueManagementController extends Controller
     }
 
     /**
+     * Export issues to Excel.
+     */
+    public function exportExcel(Request $request)
+    {
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'category' => $request->get('category'),
+            'priority' => $request->get('priority'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'tab' => $request->get('tab', 'active'),
+        ];
+        $fileName = 'issues-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        return Excel::download(new IssueManagementExport($filters), $fileName);
+    }
+
+    /**
+     * Export issues to PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        $filters = [
+            'search' => $request->get('search'),
+            'status' => $request->get('status'),
+            'category' => $request->get('category'),
+            'priority' => $request->get('priority'),
+            'date_from' => $request->get('date_from'),
+            'date_to' => $request->get('date_to'),
+            'tab' => $request->get('tab', 'active'),
+        ];
+        $export = new IssueManagementExport($filters);
+        $issues = $export->collection();
+        $filterLabels = $this->getExportFilterLabels($filters);
+
+        $data = [
+            'issues' => $issues,
+            'filters' => $filterLabels,
+            'export_date' => now()->format('d-M-Y H:i'),
+        ];
+
+        $pdf = Pdf::loadView('admin.issue_management.export_pdf', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'dpi' => 96,
+            ]);
+
+        return $pdf->download('issues-export-' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Build filter labels for PDF header.
+     */
+    protected function getExportFilterLabels(array $filters): array
+    {
+        $labels = [];
+        if (!empty($filters['search'])) {
+            $labels['search'] = $filters['search'];
+        }
+        if (isset($filters['status']) && $filters['status'] !== '') {
+            $statusLabels = [0 => 'Reported', 1 => 'In Progress', 2 => 'Completed', 3 => 'Pending', 6 => 'Reopened'];
+            $labels['status'] = $statusLabels[(int) $filters['status']] ?? $filters['status'];
+        }
+        if (!empty($filters['category'])) {
+            $cat = IssueCategoryMaster::find($filters['category']);
+            $labels['category'] = $cat ? $cat->issue_category : $filters['category'];
+        }
+        if (!empty($filters['priority'])) {
+            $pri = IssuePriorityMaster::find($filters['priority']);
+            $labels['priority'] = $pri ? $pri->priority : $filters['priority'];
+        }
+        if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+            $labels['date_range'] = trim(($filters['date_from'] ?? '') . ' to ' . ($filters['date_to'] ?? ''));
+        }
+        $labels['tab'] = ($filters['tab'] ?? 'active') === 'archive' ? 'Archive' : 'Active';
+        return $labels;
+    }
+
+    /**
      * Display issues reported on behalf (CENTCOM).
      */
     public function centcom(Request $request)
@@ -124,8 +225,10 @@ class IssueManagementController extends Controller
                 'statusHistory'
             ])->orderBy('created_date', 'desc');
             $query->where(function ($q) {
-                $q->where('assigned_to', Auth::user()->user_id);
-                $q->orWhere('employee_master_pk', Auth::user()->user_id);
+                $q->where('assigned_to', Auth::user()->user_id)
+                    ->orWhere('employee_master_pk', Auth::user()->user_id)
+                    ->orWhere('issue_logger', Auth::user()->user_id)
+                    ->orWhere('created_by', Auth::user()->user_id);
             });
 
         // Filters (use filled() so "0" works correctly)
@@ -207,50 +310,65 @@ class IssueManagementController extends Controller
             \Log::warning('Employee master table not accessible: ' . $e->getMessage());
         }
 
+        $currentUserEmployeeId = Auth::user()->user_id ?? null;
+
         return view('admin.issue_management.create', compact(
             'categories',
             'priorities',
             'reproducibilities',
             'buildings',
             'hostels',
-            'employees'
+            'employees',
+            'currentUserEmployeeId'
         ));
     }
 
     /**
-     * Get nodal employees for a category
+     * Get nodal employees for a category (Level 1 only - selectable).
+     * Level 2 & 3 returned for display only.
      */
     public function getNodalEmployees($categoryId)
     {
         try {
-            $employees = DB::table('issue_category_master as a')
-                ->join('issue_category_employee_map as b', 'a.pk', '=', 'b.issue_category_master_pk')
+            $all = DB::table('issue_category_employee_map as b')
                 ->join('employee_master as d', 'b.employee_master_pk', '=', 'd.pk')
-                ->where('a.pk', $categoryId)
+                ->where('b.issue_category_master_pk', $categoryId)
                 ->select(
-                    'a.issue_category',
                     'b.priority',
+                    'b.days_notify',
                     'd.pk as employee_pk',
                     'd.first_name',
                     'd.middle_name',
                     'd.last_name',
                     DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
                 )
-                ->orderBy('priority', 'asc')
+                ->orderBy('b.priority', 'asc')
                 ->get();
 
-            if ($employees->isEmpty()) {
+            $level1 = $all->where('priority', 1)->values();
+            $level2 = $all->where('priority', 2)->first();
+            $level3 = $all->where('priority', 3)->first();
+
+            if ($level1->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No nodal employees found for this category',
-                    'data' => []
+                    'message' => 'No Level 1 nodal employees found for this category',
+                    'data' => [],
+                    'level1' => [],
+                    'level1_auto_select' => null,
+                    'level2' => null,
+                    'level3' => null,
                 ], 200);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Nodal employees fetched successfully',
-                'data' => $employees
+                'data' => $level1->toArray(),
+                'level1' => $level1->toArray(),
+                'level1_auto_select' => $level1->first()->employee_pk,
+                'level2' => $level2 ? ['employee_name' => $level2->employee_name, 'days_notify' => $level2->days_notify] : null,
+                'level3' => $level3 ? ['employee_name' => $level3->employee_name, 'days_notify' => $level3->days_notify] : null,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -272,6 +390,7 @@ class IssueManagementController extends Controller
                 'description' => 'required|string',
                 'issue_category_id' => 'required|integer',
                 'issue_sub_category_id' => 'required|integer',
+                'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
                 'sub_category_name' => 'required|string',
                 'created_by' => 'required|integer',
                 'nodal_employee_id' => 'nullable|integer',
@@ -280,11 +399,13 @@ class IssueManagementController extends Controller
                 'building_master_pk' => 'required|integer',
                 'floor_id' => 'nullable',
                 'room_name' => 'nullable|string',
-                'complaint_img_url.*' => 'nullable',
+                'complaint_img_url' => 'nullable|array',
+                'complaint_img_url.*' => 'nullable|file|image|mimes:jpeg,jpg,png|max:5120',
             ]);
 
             $data = array(
                 'issue_category_master_pk' => $request->issue_category_id,
+                'issue_priority_master_pk' => $request->issue_priority_id,
                 'location' => $request->location,
                 'description' => $request->description,
                 'created_by' => $request->created_by,
@@ -294,14 +415,22 @@ class IssueManagementController extends Controller
                 'created_date' => now()->setTimezone('Asia/Kolkata')->format('Y-m-d H:i:s'),
             );
 
-            // Handle complaint images
-            if ($request->hasFile('complaint_img_url')) {
-                $images = [];
-                foreach ($request->file('complaint_img_url') as $image) {
-                    $path = $image->store('complaints_img', 'public');
-                    $images[] = asset('storage/' . $path);
+            // Handle complaint images - store in document column (JSON array of paths)
+            $files = $request->file('complaint_img_url');
+            if (!empty($files)) {
+                $paths = [];
+                $files = is_array($files) ? $files : [$files];
+                foreach ($files as $image) {
+                    if ($image && $image->isValid()) {
+                        $path = $image->store('complaints_img', 'public');
+                        if ($path) {
+                            $paths[] = $path;
+                        }
+                    }
                 }
-                $data['complaint_img'] = json_encode($images);
+                if (!empty($paths)) {
+                    $data['document'] = count($paths) > 1 ? json_encode($paths) : $paths[0];
+                }
             }
 
             $id = DB::table('issue_log_management')->insertGetId($data);
@@ -384,11 +513,24 @@ class IssueManagementController extends Controller
             'creator',
             'logger'
         ])->findOrFail($id);
-        $department_id = $issue->nodal_officer->department_master_pk;
-        // Load all employees for assignment dropdown in modal
-        $query = DB::table('employee_master as e')
-         ->where('e.department_master_pk', $department_id)
 
+        if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+            $userId = Auth::user()->user_id;
+            $canView = $issue->created_by == $userId || $issue->issue_logger == $userId
+                || $issue->employee_master_pk == $userId || $issue->assigned_to == $userId;
+            if (!$canView) {
+                return redirect()->route('admin.issue-management.index')
+                    ->with('error', 'You do not have access to view this issue.');
+            }
+        }
+
+        $department_id = $issue->nodal_officer?->department_master_pk ?? null;
+        // Load all employees for assignment dropdown in modal
+        $query = DB::table('employee_master as e');
+        if ($department_id) {
+            $query->where('e.department_master_pk', $department_id);
+        }
+        $employees = $query
             ->select(
                 'e.pk as employee_pk',
                 'e.first_name as first_name',
@@ -398,10 +540,8 @@ class IssueManagementController extends Controller
 
                 'e.mobile'
             )
-            // ->where('e.first_name', '!=', null)
-            ->orderBy('first_name');
-        
-        $employees = $query->get();
+            ->orderBy('first_name')
+            ->get();
         // print_r($employees); exit;
 
         return view('admin.issue_management.show', compact('issue', 'employees'));
@@ -417,13 +557,13 @@ class IssueManagementController extends Controller
             'subCategoryMappings.subCategory',
             'buildingMapping',
             'hostelMapping',
-            'creator'
+            'creator' 
         ])->findOrFail($id);
         
-        // Check if logged-in user is the creator of this issue
-        if ($issue->created_by != Auth::user()->user_id) {
+        // Allow complainant (created_by) OR logger (issue_logger) to edit
+        if($issue->issue_logger != Auth::user()->user_id && $issue->created_by != Auth::user()->user_id){
             return redirect()->route('admin.issue-management.show', $issue->pk)
-                ->with('error', 'You can only edit issues you created.');
+                ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
         
         // print_r($issue->toArray()); exit;
@@ -502,16 +642,18 @@ class IssueManagementController extends Controller
     public function update(Request $request, $id)
     {
         $issue = IssueLogManagement::findOrFail($id);
+      
         
-        // Check if logged-in user is the creator of this issue
-        if ($issue->created_by != Auth::id()) {
+        // Allow complainant (created_by) OR logger (issue_logger) to update
+        if($issue->issue_logger != Auth::user()->user_id && $issue->created_by != Auth::user()->user_id){
             return redirect()->route('admin.issue-management.show', $issue->pk)
-                ->with('error', 'You can only edit issues you created.');
+                ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
 
         $request->validate([
             'issue_category_id' => 'required|integer|exists:issue_category_master,pk',
             'issue_sub_category_id' => 'required|integer|exists:issue_sub_category_master,pk',
+            'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
             'created_by' => 'required|integer|exists:employee_master,pk',
             'mobile_number' => 'nullable|string',
             'nodal_employee_id' => 'required|integer|exists:employee_master,pk',
@@ -526,6 +668,7 @@ class IssueManagementController extends Controller
             // Update main issue record
             $issue->update([
                 'issue_category_master_pk' => $request->issue_category_id,
+                'issue_priority_master_pk' => $request->issue_priority_id,
                 'created_by' => $request->created_by,
                 'location' => $request->location,
                 'description' => $request->description,
