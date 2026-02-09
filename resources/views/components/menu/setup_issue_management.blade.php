@@ -27,6 +27,7 @@
                                     <span class="hide-menu small small-sm-normal text-nowrap">Log New Issue</span>
                                 </a>
                             </li>
+                            @if(hasRole('Admin') || hasRole('SuperAdmin'))
                             <li class="sidebar-item mb-2">
                                 <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-categories.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Manage Categories</span>
@@ -37,6 +38,17 @@
                                     <span class="hide-menu small small-sm-normal text-nowrap">Manage Sub-Categories</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-priorities.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Manage Priorities</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-escalation-matrix.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Escalation Matrix</span>
+                                </a>
+                            </li>
+                            @endif
                         </ul>
                     </div>
                 </div>

@@ -42,6 +42,9 @@
                 @endphp
 
                 @if($isAssigned)
+                <input type="hidden" name="issue_category_id" value="{{ $issue->issue_category_master_pk }}">
+                <input type="hidden" name="issue_sub_category_id" value="{{ $issue->subCategoryMappings->first()->issue_sub_category_master_pk ?? '' }}">
+                <input type="hidden" name="issue_priority_id" value="{{ $issue->issue_priority_master_pk ?? '' }}">
                 <div class="assignment-notice">
                     <i class="bi bi-exclamation-circle-fill"></i>
                     <div>
@@ -85,6 +88,25 @@
                                     @endif
                                 </select>
                                 @error('issue_sub_category_id')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Priority <span class="text-danger">*</span></label>
+                                <select name="issue_priority_id" id="issue_priority" class="form-select" {{ $isAssigned ? 'disabled' : '' }} required>
+                                    <option value="">- Select -</option>
+                                    @foreach($priorities as $priority)
+                                        <option value="{{ $priority->pk }}" {{ $issue->issue_priority_master_pk == $priority->pk ? 'selected' : '' }}>
+                                            {{ $priority->priority }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('issue_priority_id')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -302,14 +324,12 @@ $(document).ready(function() {
                 type: 'GET',
                 success: function(response) {
                     $('#nodal_employee').html('<option value="">- Select -</option>');
-                    
-                    // Handle both direct array and wrapped response object
-                    var employees = Array.isArray(response) ? response : (response.data || []);
-                    
+                    var employees = response.level1 || response.data || [];
+                    var autoSelect = response.level1_auto_select;
                     $.each(employees, function(key, value) {
                         var empPk = value.employee_pk || value.pk;
-                        var empName = value.employee_name || (value.first_name + ' ' + value.last_name);
-                        var selected = (currentNodalEmpPk && empPk == currentNodalEmpPk) ? 'selected' : '';
+                        var empName = value.employee_name || (value.first_name + ' ' + (value.middle_name ? value.middle_name + ' ' : '') + value.last_name);
+                        var selected = (currentNodalEmpPk && empPk == currentNodalEmpPk) ? 'selected' : (!currentNodalEmpPk && autoSelect && empPk == autoSelect) ? 'selected' : '';
                         $('#nodal_employee').append('<option value="'+ empPk +'" '+ selected +'>'+ empName +'</option>');
                     });
                 }
