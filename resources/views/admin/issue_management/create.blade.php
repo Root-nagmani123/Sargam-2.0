@@ -169,15 +169,10 @@
                                 @enderror
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Sub Category Name <span class="text-danger">*</span></label>
-                                <input type="text" name="sub_category_name" id="sub_category_name" class="form-control" placeholder="Sub category name will auto-fill" readonly required>
-                                @error('sub_category_name')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+                        <input type="hidden" name="sub_category_name" id="sub_category_name" 
+                                    class="form-control" placeholder="Sub category name will auto-fill" 
+                                    readonly required 
+                                    value="">
                     </div>
                     <div id="escalation_levels_display" class="mb-3 d-none">
                         <label class="form-label">Escalation Hierarchy (Display Only)</label>
