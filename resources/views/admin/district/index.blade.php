@@ -5,6 +5,7 @@
 @section('setup_content')
 <div class="container-fluid district-index">
 <x-breadcrum title="District" />
+    <x-session_message />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">

@@ -3,6 +3,7 @@
 @section('setup_content')
 <div class="container-fluid family-idcard-index-page">
     <x-breadcrum title="Request Family ID Card"></x-breadcrum>
+    <x-session_message />
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <ul class="nav nav-pills family-idcard-tabs" role="tablist">

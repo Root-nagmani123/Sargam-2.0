@@ -2,16 +2,15 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{Country, State, District, City};
+use App\DataTables\CountryMasterDataTable;
 use Illuminate\Http\Request;
 
 
 class LocationController extends Controller
 {
-    public function countryIndex()
+    public function countryIndex(CountryMasterDataTable $dataTable)
     {
-        $countries = Country::paginate(10);
-
-        return view('admin.country.index', compact('countries'));
+        return $dataTable->render('admin.country.index');
     }
 
     public function countryCreate()

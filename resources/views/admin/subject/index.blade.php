@@ -6,6 +6,7 @@
 
 <div class="container-fluid subject-index">
     <x-breadcrum title="Subject"></x-breadcrum>
+    <x-session_message />
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
@@ -20,25 +21,6 @@
                 </div>
             </div>
             <hr>
-
-            <!-- Success/Error Messages -->
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="material-icons material-symbols-rounded me-2"
-                    style="font-size: 20px; vertical-align: middle;">check_circle</i>
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            @endif
-
-            @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="material-icons material-symbols-rounded me-2"
-                    style="font-size: 20px; vertical-align: middle;">error</i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            @endif
 
             <div id="zero_config_table">
 

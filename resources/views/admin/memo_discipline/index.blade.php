@@ -336,7 +336,7 @@
     border-radius: 4px;
 }
 </style>
-<div class="container-fluid">
+<div class="container-fluid memo-discipline-index">
     <x-breadcrum title="Discipline Memo" />
     <x-session_message />
 

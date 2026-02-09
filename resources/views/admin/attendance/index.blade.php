@@ -44,7 +44,7 @@ hr {
 </style>
 
 
-<div class="container-fluid">
+<div class="container-fluid attendance-index">
     <x-breadcrum title="Attendance" />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body py-4">

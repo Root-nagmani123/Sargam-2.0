@@ -1,10 +1,7 @@
-{{--
-    Premium Breadcrumb Component - Bootstrap 5.3+
-    - Glassmorphism, elevated design, refined interactions
-    - WCAG 2.1 compliant (ARIA, focus-visible, semantic HTML)
-    - Supports: title (required)
---}}
-<div class="breadcrumb-wrapper mb-4">
+{{-- Breadcrumb: variant = glass | minimal | pill | stepper | underline | compact --}}
+@props(['title' => 'Page', 'variant' => 'glass'])
+@php $variant = $variant ?? 'glass'; @endphp
+<div class="breadcrumb-wrapper breadcrumb-variant-{{ $variant }} mb-4" data-variant="{{ $variant }}">
     <div class="breadcrumb-card card border-0 mb-0 position-relative overflow-hidden">
         {{-- Decorative layers --}}
         <div class="breadcrumb-bg-pattern" aria-hidden="true"></div>
