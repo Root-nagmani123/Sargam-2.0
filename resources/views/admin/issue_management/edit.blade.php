@@ -158,18 +158,11 @@
                                 @enderror
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Sub Category Name <span class="text-danger">*</span></label>
-                                <input type="text" name="sub_category_name" id="sub_category_name" 
+                        <input type="hidden" name="sub_category_name" id="sub_category_name" 
                                     class="form-control" placeholder="Sub category name will auto-fill" 
                                     readonly required 
                                     value="{{ $issue->subCategoryMappings->first()->sub_category_name ?? '' }}">
-                                @error('sub_category_name')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+
                     </div>
 
                     <div class="mb-3">
