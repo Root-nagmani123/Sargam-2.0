@@ -395,12 +395,13 @@ class IssueManagementController extends Controller
             'subCategoryMappings.subCategory',
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
-            'statusHistory.creator',
+            'statusHistory.creator.first_name',
             'nodal_officer',
             // 'escalationHistory',
             'creator',
             'logger'
         ])->findOrFail($id);
+        // print_r($issue->toArray()); exit;
         $department_id = $issue->nodal_officer->department_master_pk;
         // Load all employees for assignment dropdown in modal
         $query = DB::table('employee_master as e')
@@ -434,11 +435,11 @@ class IssueManagementController extends Controller
             'subCategoryMappings.subCategory',
             'buildingMapping',
             'hostelMapping',
-            'creator'
+            'creator' 
         ])->findOrFail($id);
         
         // Check if logged-in user is the creator of this issue
-        if ($issue->created_by != Auth::user()->user_id) {
+        if($issue->issue_logger != Auth::user()->user_id || $issue->created_by != Auth::user()->user_id){
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created.');
         }
@@ -519,9 +520,11 @@ class IssueManagementController extends Controller
     public function update(Request $request, $id)
     {
         $issue = IssueLogManagement::findOrFail($id);
+      
         
         // Check if logged-in user is the creator of this issue
-        if ($issue->created_by != Auth::id()) {
+        if($issue->issue_logger != Auth::user()->user_id || $issue->created_by != Auth::user()->user_id){
+
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created.');
         }
