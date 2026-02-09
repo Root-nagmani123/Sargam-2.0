@@ -17,8 +17,8 @@
                         <select name="store" class="form-select">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store') == $store->id ? 'selected' : '' }}>
-                                    {{ $store->store_name }}
+                                <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>
+                                    {{ $store['store_name'] }}
                                 </option>
                             @endforeach
                         </select>

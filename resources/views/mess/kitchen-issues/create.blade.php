@@ -77,7 +77,7 @@
                         <select name="inve_store_master_pk" class="form-select" required>
                             <option value="">Select Store</option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ old('inve_store_master_pk') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                <option value="{{ $store['id'] }}" {{ old('inve_store_master_pk') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                             @endforeach
                         </select>
                     </div>
