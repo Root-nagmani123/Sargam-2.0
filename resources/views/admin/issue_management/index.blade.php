@@ -119,30 +119,7 @@
                     $activeTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'active']));
                     $archiveTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'archive']));
                 @endphp
-                <ul class="nav nav-tabs nav-tabs-issue px-4 pt-3 gap-1" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ $currentTab === 'active' ? 'active' : '' }} d-inline-flex align-items-center gap-2"
-                           href="{{ $activeTabUrl }}"
-                           role="tab">
-                            <iconify-icon icon="solar:play-circle-bold"></iconify-icon>
-                            Active
-                            @if(isset($activeCount))
-                                <span class="badge bg-primary rounded-pill">{{ $activeCount }}</span>
-                            @endif
-                        </a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ $currentTab === 'archive' ? 'active' : '' }} d-inline-flex align-items-center gap-2"
-                           href="{{ $archiveTabUrl }}"
-                           role="tab">
-                            <iconify-icon icon="solar:archive-down-minimistic-bold"></iconify-icon>
-                            Archive
-                            @if(isset($archiveCount))
-                                <span class="badge bg-secondary rounded-pill">{{ $archiveCount }}</span>
-                            @endif
-                        </a>
-                    </li>
-                </ul>
+              
 
                 <!-- Filters -->
                 <div class="p-4 pb-0">
@@ -206,7 +183,7 @@
                                 <th>Category</th>
                                 <th>Description</th>
                                 <th>Priority</th>
-                                <th>Behalf</th>
+                               
                                 <th>Status</th>
                                 <th class="text-end pe-4">Actions</th>
                             </tr>
@@ -225,9 +202,7 @@
                                     @endphp
                                     <span class="badge badge-pill bg-{{ $priorityClass }} {{ $priorityClass == 'warning' ? 'text-dark' : '' }}">{{ $p }}</span>
                                 </td>
-                                <td>
-                                    <span class="badge badge-pill bg-{{ $issue->behalf == 0 ? 'primary' : 'secondary' }}">{{ $issue->behalf_label }}</span>
-                                </td>
+                               
                                 <td>
                                     @php
                                         $s = (int) $issue->issue_status;
