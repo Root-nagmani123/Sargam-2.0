@@ -350,14 +350,16 @@ $(document).ready(function() {
     });
 
     // Auto-fill mobile number when complainant is selected
-    $('#complainant').change(function() {
+  $('#complainant').change(function() {
+        var selected = $(this).val();
         var mobile = $(this).find('option:selected').data('mobile');
-        $('#mobile_number').val(mobile || '');
+        $('#mobile_number').val(!selected ? '' : (mobile && mobile.trim() ? mobile : 'Mobile number is not available'));
+    
     });
     // Auto-fill mobile on page load if complainant is pre-selected (logged-in user)
     if ($('#complainant').val()) {
         var mobile = $('#complainant').find('option:selected').data('mobile');
-        $('#mobile_number').val(mobile || '');
+        $('#mobile_number').val(mobile && mobile.trim() ? mobile : 'Mobile number is not available');
     }
 
     // Show/hide location sections based on location type

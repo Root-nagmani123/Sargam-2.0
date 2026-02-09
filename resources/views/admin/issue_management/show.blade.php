@@ -74,10 +74,7 @@
                                     </td>
                                 </tr>
                                
-                                <tr>
-                                    <th>Reproducibility</th>
-                                    <td>{{ $issue->reproducibility->reproducibility_name ?? 'N/A' }}</td>
-                                </tr>
+                              
                                 <tr>
                                     <th>Status</th>
                                     <td>
@@ -86,23 +83,16 @@
                                         </span>
                                     </td>
                                 </tr>
-                                <tr>
-                                    <th>Behalf</th>
-                                    <td>
-                                        <span class="badge bg-{{ $issue->behalf == 0 ? 'primary' : 'secondary' }}">
-                                            {{ $issue->behalf_label }}
-                                        </span>
-                                    </td>
+                                 <tr>
+                                    <th width="40%">Created Date</th>
+                                    <td>{{ $issue->created_date->format('d-m-Y H:i:s') }}</td>
                                 </tr>
                             </table>
                         </div>
 
                         <div class="col-md-6">
                             <table class="table table-bordered">
-                                <tr>
-                                    <th width="40%">Created Date</th>
-                                    <td>{{ $issue->created_date->format('d-m-Y H:i:s') }}</td>
-                                </tr>
+                               
                                 <tr>
                                     <th>Created By</th>
                                     <td>{{ $issue->logger->name ?? 'N/A' }}</td>
@@ -153,35 +143,45 @@
                         </div>
                     </div>
 
-                    @if($issue->buildingMapping || $issue->hostelMapping)
                     <div class="row mt-3">
                         <div class="col-12">
                             <h5>Location Details</h5>
                             <div class="card bg-light">
                                 <div class="card-body">
                                     @if($issue->buildingMapping)
-                                        <strong>Building:</strong> {{ $issue->buildingMapping->building->building_name ?? 'N/A' }}<br>
-                                        <strong>Floor:</strong> {{ $issue->buildingMapping->floor_name ?? 'N/A' }}<br>
-                                        <strong>Room:</strong> {{ $issue->buildingMapping->room_name ?? 'N/A' }}
+                                        @php
+                                            $bldgName = $issue->buildingMapping->building->building_name ?? '';
+                                            $bldgFloor = $issue->buildingMapping->floor_name ?? '';
+                                            $bldgRoom = $issue->buildingMapping->room_name ?? '';
+                                        @endphp
+                                        <strong>Building:</strong> {{ trim($bldgName) ?: 'N/A' }}<br>
+                                        <strong>Floor:</strong> {{ trim($bldgFloor) ?: 'N/A' }}<br>
+                                        <strong>Room:</strong> {{ trim($bldgRoom) ?: 'N/A' }}<br>
                                     @elseif($issue->hostelMapping)
                                         @php
-                                            $hostelName = $issue->hostelMapping->hostelBuilding ? 
-                                                ($issue->hostelMapping->hostelBuilding->hostel_name ?? 
-                                                 $issue->hostelMapping->hostelBuilding->building_name ?? 'N/A') : 
-                                                (\DB::table('hostel_building_master')->where('pk', $issue->hostelMapping->hostel_building_master_pk)->first()->hostel_name ?? 'N/A');
+                                            $hostelName = 'N/A';
+                                            if ($issue->hostelMapping->hostelBuilding) {
+                                                $hostelName = trim($issue->hostelMapping->hostelBuilding->hostel_name ?? $issue->hostelMapping->hostelBuilding->building_name ?? '') ?: 'N/A';
+                                            } else {
+                                                $hostelRow = \DB::table('hostel_building_master')->where('pk', $issue->hostelMapping->hostel_building_master_pk)->first();
+                                                $hostelName = $hostelRow ? (trim($hostelRow->hostel_name ?? $hostelRow->building_name ?? '') ?: 'N/A') : 'N/A';
+                                            }
+                                            $hostelFloor = trim($issue->hostelMapping->floor_name ?? '') ?: 'N/A';
+                                            $hostelRoom = trim($issue->hostelMapping->room_name ?? '') ?: 'N/A';
                                         @endphp
                                         <strong>Hostel:</strong> {{ $hostelName }}<br>
-                                        <strong>Floor:</strong> {{ $issue->hostelMapping->floor_name ?? 'N/A' }}<br>
-                                        <strong>Room:</strong> {{ $issue->hostelMapping->room_name ?? 'N/A' }}
+                                        <strong>Floor:</strong> {{ $hostelFloor }}<br>
+                                        <strong>Room:</strong> {{ $hostelRoom }}<br>
+                                    @else
+                                        <strong>Hostel:</strong> N/A<br>
+                                        <strong>Floor:</strong> N/A<br>
+                                        <strong>Room:</strong> N/A<br>
                                     @endif
-                                    @if($issue->location)
-                                        <br><strong>Additional Location:</strong> {{ $issue->location }}
-                                    @endif
+                                    <strong>Additional Location:</strong> {{ trim($issue->location ?? '') ?: 'N/A' }}
                                 </div>
                             </div>
                         </div>
                     </div>
-                    @endif
 
                     @if($issue->remark)
                     <div class="row mt-3">
@@ -243,7 +243,7 @@
                                                     {{ $history->status_label }}
                                                 </span>
                                             </td>
-                                            <td>{{ $history->creator->name ?? 'System' }}</td>
+                                            <td>{{ $history->creator->first_name ?? 'System' }}</td>
                                             <td>{{ $history->remarks ?? '-' }}</td>
                                         </tr>
                                         @endforeach
