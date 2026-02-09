@@ -117,12 +117,29 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label class="form-label">Priority <span class="text-danger">*</span></label>
+                                <select name="issue_priority_id" id="issue_priority" class="form-select" required>
+                                    <option value="">- Select -</option>
+                                    @foreach($priorities as $priority)
+                                        <option value="{{ $priority->pk }}">{{ $priority->priority }}</option>
+                                    @endforeach
+                                </select>
+                                @error('issue_priority_id')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
                                 <label class="form-label">Complainant <span class="text-danger">*</span></label>
                                 <select name="created_by" id="complainant" class="form-select" required>
                                     <option value="">- Select -</option>
                                     @if(isset($employees))
                                         @foreach($employees as $employee)
-                                            <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}">{{ $employee->employee_name }}</option>
+                                            <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (isset($currentUserEmployeeId) && $currentUserEmployeeId == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
                                         @endforeach
                                     @endif
                                 </select>
@@ -142,10 +159,11 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Nodal Employee <span class="text-danger">*</span></label>
+                                <label class="form-label">Nodal Employee (Level 1) <span class="text-danger">*</span></label>
                                 <select name="nodal_employee_id" id="nodal_employee" class="form-select" required>
                                     <option value="">- Select Category First -</option>
                                 </select>
+                                <small class="text-muted">Auto-selected from escalation matrix</small>
                                 @error('nodal_employee_id')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -158,6 +176,15 @@
                                 @error('sub_category_name')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
+                            </div>
+                        </div>
+                    </div>
+                    <div id="escalation_levels_display" class="mb-3 d-none">
+                        <label class="form-label">Escalation Hierarchy (Display Only)</label>
+                        <div class="card bg-light">
+                            <div class="card-body py-2 px-3 small">
+                                <div><strong>Level 2:</strong> <span id="level2_display">—</span></div>
+                                <div class="mt-1"><strong>Level 3:</strong> <span id="level3_display">—</span></div>
                             </div>
                         </div>
                     </div>
@@ -278,29 +305,46 @@ $(document).ready(function() {
                 }
             });
             
-            // Load nodal employees for this category
+            // Load nodal employees (Level 1 only) - auto-select first; Level 2 & 3 for display only
             $.ajax({
                 url: '/admin/issue-management/nodal-employees/' + categoryId,
                 type: 'GET',
                 success: function(response) {
-                    if(response.success && response.data.length > 0) {
+                    if(response.success && response.level1 && response.level1.length > 0) {
                         $('#nodal_employee').html('<option value="">- Select -</option>');
-                        $.each(response.data, function(key, employee) {
-                            var fullName = employee.first_name + ' ' + (employee.middle_name ? employee.middle_name + ' ' : '') + employee.last_name;
-                            $('#nodal_employee').append('<option value="'+ employee.employee_pk +'">'+ fullName +'</option>');
+                        var autoSelect = response.level1_auto_select;
+                        $.each(response.level1, function(key, employee) {
+                            var fullName = employee.employee_name || (employee.first_name + ' ' + (employee.middle_name ? employee.middle_name + ' ' : '') + employee.last_name);
+                            var selected = (autoSelect && employee.employee_pk == autoSelect) ? 'selected' : '';
+                            $('#nodal_employee').append('<option value="'+ employee.employee_pk +'" '+ selected +'>'+ fullName +'</option>');
                         });
+                        // Level 2 & 3 - display only
+                        if(response.level2) {
+                            $('#level2_display').text(response.level2.employee_name + ' (' + response.level2.days_notify + ' days)');
+                        } else {
+                            $('#level2_display').text('—');
+                        }
+                        if(response.level3) {
+                            $('#level3_display').text(response.level3.employee_name + ' (' + response.level3.days_notify + ' days)');
+                        } else {
+                            $('#level3_display').text('—');
+                        }
+                        $('#escalation_levels_display').removeClass('d-none');
                     } else {
-                        $('#nodal_employee').html('<option value="">No nodal employees available</option>');
+                        $('#nodal_employee').html('<option value="">No Level 1 employees - configure Escalation Matrix</option>');
+                        $('#escalation_levels_display').addClass('d-none');
                     }
                 },
                 error: function() {
                     console.log('Error loading nodal employees');
                     $('#nodal_employee').html('<option value="">Error loading employees</option>');
+                    $('#escalation_levels_display').addClass('d-none');
                 }
             });
         } else {
             $('#sub_categories').html('<option value="">-- Select --</option>');
             $('#nodal_employee').html('<option value="">- Select Category First -</option>');
+            $('#escalation_levels_display').addClass('d-none');
         }
     });
 
@@ -315,6 +359,11 @@ $(document).ready(function() {
         var mobile = $(this).find('option:selected').data('mobile');
         $('#mobile_number').val(mobile || '');
     });
+    // Auto-fill mobile on page load if complainant is pre-selected (logged-in user)
+    if ($('#complainant').val()) {
+        var mobile = $('#complainant').find('option:selected').data('mobile');
+        $('#mobile_number').val(mobile || '');
+    }
 
     // Show/hide location sections based on location type
     $('input[name="location"]').change(function() {
@@ -411,11 +460,6 @@ $(document).ready(function() {
         }
     });
 
-    // Update nodal employee when complainant is selected
-    $('#complainant').change(function() {
-        var employeeName = $(this).find('option:selected').text();
-        $('#nodal_employee').val(employeeName);
-    });
 });
 </script>
 @endsection
