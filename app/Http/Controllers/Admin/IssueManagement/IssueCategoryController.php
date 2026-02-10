@@ -17,7 +17,8 @@ class IssueCategoryController extends Controller
      */
     public function index()
     {
-        $categories = IssueCategoryMaster::with('subCategories')
+        $categories = IssueCategoryMaster::active()
+            ->with('subCategories')
             ->orderBy('issue_category')
             ->paginate(20);
 
@@ -65,7 +66,6 @@ class IssueCategoryController extends Controller
             'description' => $request->description,
             'status' => $request->status,
             'modified_by' => $userId,
-            'modified_date' => now(),
         ]);
 
         return redirect()->route('admin.issue-categories.index')

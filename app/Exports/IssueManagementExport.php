@@ -35,6 +35,11 @@ class IssueManagementExport implements FromCollection, WithHeadings
             });
         }
 
+        // Raised by: "self" = raised by himself only
+        if (!empty($this->filters['raised_by']) && $this->filters['raised_by'] === 'self') {
+            $query->where('created_by', Auth::user()->user_id);
+        }
+
         // Search
         if (!empty($this->filters['search'])) {
             $term = trim($this->filters['search']);
