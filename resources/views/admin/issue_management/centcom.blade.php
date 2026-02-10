@@ -44,7 +44,7 @@
                                     <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4 col-4">
                                 <label class="form-label">Category</label>
                                 <select name="category" class="form-select">
                                     <option value="">All Categories</option>
