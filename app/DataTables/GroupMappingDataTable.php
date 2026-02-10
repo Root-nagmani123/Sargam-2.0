@@ -262,7 +262,7 @@ public function html(): HtmlBuilder
                 ->searchable(true)
                 ->orderable(false),
             Column::make('type_name')
-                ->title('Group Type')
+                ->title('Course group type name')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false),

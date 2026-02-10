@@ -28,7 +28,7 @@
                        </div>
                     </div>
                     <div class="col-12">
-                        <label for="content" class="form-label">Memo / Notice Content</label>
+                        <label for="content" class="form-label">Memo / Notice Content <span class="text-danger">*</span></label>
                         <textarea name="content" class="form-control" id="content" rows="3"></textarea>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('setup_content')
     <div class="card p-3">
-        <h4 class="mb-4">Peer Evaluation Submissions</h4>
+        <h4 class="mb-4 text-dark fw-bold">Peer Evaluation Submissions</h4>
 
         <!-- Group Selection -->
         <div class="card mb-4">
