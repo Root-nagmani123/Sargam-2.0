@@ -537,7 +537,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     toastr.options = {
                         timeOut: 50, // 1.5 seconds
                         onHidden: function () {
-                            window.location.href = routes.facultyIndexUrl;
+                            // Force redirect to faculty.index (relative path => same host always)
+                            var facultyIndexPathMeta = document.querySelector('meta[name="faculty-index-path"]');
+                            var facultyIndexPath = facultyIndexPathMeta ? facultyIndexPathMeta.getAttribute('content') : null;
+                            window.location.href = facultyIndexPath || routes.facultyIndexUrl;
                         }
                     };
 
