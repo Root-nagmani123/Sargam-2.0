@@ -3,7 +3,7 @@
 @section('content')
     <main class="container-fluid px-4 py-4" id="main-content" role="main">
         <!-- Action Bar - Bootstrap 5.3 -->
-        <div class="no-print mb-4">
+        <div class="mb-4 d-print-none">
             <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
                 <div class="card-body py-3 px-4">
                     <div class="row align-items-center g-3">
@@ -15,7 +15,7 @@
                                             <i class="bi bi-arrow-left-short fs-5"></i> Programs
                                         </a>
                                     </li>
-                                    <li class="breadcrumb-item active text-truncate fw-semibold" aria-current="page" style="max-width: 200px;">Course Details</li>
+                                    <li class="breadcrumb-item active text-truncate fw-semibold" aria-current="page">Course Details</li>
                                 </ol>
                             </nav>
                         </div>
@@ -40,8 +40,8 @@
         </div>
 
         <!-- Course Header Card - Bootstrap 5.3 -->
-        <div class="card border-0 shadow-sm mb-4 overflow-hidden programme-show-card rounded-3">
-            <div class="card-header programme-header-gradient text-white py-4 border-0">
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden rounded-3">
+            <div class="card-header bg-primary bg-gradient text-white py-4 border-0">
                 <div class="row align-items-center g-3">
                     <div class="col-md-8">
                         <h1 class="card-title h3 mb-2 fw-bold lh-sm text-white">{{ $course->course_name }}</h1>
@@ -181,7 +181,7 @@
                                                      onerror="this.src='{{ asset('images/user-placeholder.png') }}'"
                                                      class="rounded-circle border border-3 border-warning object-fit-cover programme-coordinator-img">
                                                 <span class="position-absolute bottom-0 end-0 badge bg-warning text-dark rounded-circle p-1 shadow-sm">
-                                                    <i class="bi bi-star-fill" style="font-size: 0.75rem;"></i>
+                                                    <i class="bi bi-star-fill small"></i>
                                                 </span>
                                             </div>
                                         </div>
@@ -359,173 +359,4 @@
             </p>
         </footer>
     </main>
-
-    <!-- Enhanced JavaScript for Better UX -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Accessibility: Focus management
-            const mainContent = document.getElementById('main-content');
-            if (mainContent && window.location.hash === '#main-content') {
-                mainContent.focus();
-            }
-
-            // Print optimization
-            const printBtn = document.querySelector('[onclick="window.print()"]');
-            if (printBtn) {
-                printBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const originalText = this.innerHTML;
-                    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing for print...';
-                    this.disabled = true;
-
-                    setTimeout(() => {
-                        window.print();
-                        this.innerHTML = originalText;
-                        this.disabled = false;
-                    }, 500);
-                });
-            }
-
-            // Image error handling
-            document.querySelectorAll('img').forEach(img => {
-                img.addEventListener('error', function() {
-                    this.src = '{{ asset("images/user-placeholder.png") }}';
-                    this.alt = 'Image not available';
-                });
-            });
-
-            // Smooth scroll to top
-            document.querySelectorAll('a[href="#main-content"]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    document.getElementById('main-content').scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                });
-            });
-        });
-
-        // GIGW Compliance: Keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const openDropdowns = document.querySelectorAll('.show');
-                openDropdowns.forEach(dropdown => {
-                    bootstrap.Dropdown.getInstance(dropdown)?.hide();
-                });
-            }
-        });
-    </script>
-
-    <!-- Print Styles -->
-    <style media="print">
-        body {
-            font-size: 12pt;
-            background: white !important;
-            color: black !important;
-        }
-        .no-print {
-            display: none !important;
-        }
-        .card {
-            border: 1px solid #ddd !important;
-            box-shadow: none !important;
-        }
-        .programme-header-gradient {
-            background: #004a93 !important;
-            -webkit-print-color-adjust: exact;
-            color-adjust: exact;
-        }
-        .badge {
-            border: 1px solid #ddd;
-        }
-        img {
-            max-width: 200px !important;
-        }
-        a {
-            color: black !important;
-            text-decoration: none !important;
-        }
-        footer {
-            border-top: 2px solid #ddd !important;
-            margin-top: 20px !important;
-        }
-    </style>
-
-    <!-- Enhanced Styles -->
-    <style>
-        :root {
-            --programme-primary: #004a93;
-            --programme-primary-light: #e8f4fc;
-        }
-
-        .programme-header-gradient {
-            background: linear-gradient(135deg, var(--programme-primary) 0%, #003366 100%);
-        }
-
-        .programme-coordinator-img {
-            width: 120px;
-            height: 120px;
-        }
-
-        .programme-assistant-img {
-            width: 88px;
-            height: 88px;
-        }
-
-        .programme-assistant-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-            border: 1px solid var(--bs-border-color-translucent);
-        }
-
-        .programme-assistant-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 74, 147, 0.08) !important;
-            border-color: rgba(0, 74, 147, 0.2) !important;
-        }
-
-        .programme-back-top {
-            transition: background-color 0.2s ease;
-        }
-
-        .programme-back-top:hover {
-            background-color: rgba(0, 74, 147, 0.08);
-        }
-
-        /* Accessibility: Focus styles */
-        a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
-            outline: 3px solid var(--programme-primary);
-            outline-offset: 2px;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .programme-show-card .card-header h1 {
-                font-size: 1.25rem;
-            }
-            .programme-coordinator-img {
-                width: 80px;
-                height: 80px;
-            }
-            .programme-assistant-img {
-                width: 72px;
-                height: 72px;
-            }
-        }
-
-        @media (prefers-contrast: high) {
-            .programme-show-card {
-                border: 2px solid #000 !important;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .programme-assistant-card {
-                transition: none;
-            }
-            .programme-assistant-card:hover {
-                transform: none;
-            }
-        }
-    </style>
 @endsection

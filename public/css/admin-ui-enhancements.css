@@ -64,19 +64,6 @@
     box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
 }
 
-/* Buttons */
-.btn-primary {
-    background: linear-gradient(135deg, var(--admin-primary) 0%, #0066cc 100%);
-    border: none;
-    transition: all var(--admin-transition);
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, var(--admin-primary-hover) 0%, #0052a3 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.3);
-}
-
 .btn-outline-primary:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 74, 147, 0.2);
@@ -455,4 +442,95 @@
     .idcard-upload-zone:hover {
         transform: none;
     }
+}
+
+/* ============================================
+   Timetable layout & programme view refinements
+   Centralised so Blade views use Bootstrap only
+   ============================================ */
+
+/* Govt header strip */
+.govt-header-top {
+    background-color: var(--admin-primary);
+}
+
+/* Timetable header logos - responsive */
+.header .header-logo-ashoka,
+.header .header-logo-lbsnaa {
+    object-fit: contain;
+}
+
+@media (min-width: 992px) {
+    .header .header-logo-ashoka,
+    .header .header-logo-lbsnaa {
+        height: 80px !important;
+        width: auto;
+        max-width: none;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .header .header-logo-ashoka,
+    .header .header-logo-lbsnaa {
+        height: 44px !important;
+        max-width: 90px;
+        width: auto;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .header .header-logo-ashoka,
+    .header .header-logo-lbsnaa {
+        height: 38px !important;
+        max-width: 75px;
+        width: auto;
+    }
+}
+
+/* Print: prevent sticky header/logo from overlapping content */
+@media print {
+    .header.sticky-top {
+        position: static !important;
+    }
+    .header {
+        break-inside: avoid;
+    }
+}
+
+/* Programme view: subtle image sizing & hover lift */
+.programme-coordinator-img {
+    width: 7.5rem;
+    height: 7.5rem;
+}
+
+.programme-assistant-img {
+    width: 5.5rem;
+    height: 5.5rem;
+}
+
+.programme-assistant-card {
+    border: 1px solid var(--bs-border-color-translucent);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.programme-assistant-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 74, 147, 0.08) !important;
+    border-color: rgba(0, 74, 147, 0.2) !important;
+}
+
+.programme-back-top {
+    transition: background-color 0.2s ease;
+}
+
+.programme-back-top:hover {
+    background-color: var(--admin-primary-subtle);
+}
+
+/* Accessible focus outline using Bootstrap primary */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid var(--admin-primary);
+    outline-offset: 2px;
 }
