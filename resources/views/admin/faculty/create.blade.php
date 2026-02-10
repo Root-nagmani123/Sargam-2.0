@@ -267,8 +267,15 @@ input.is-invalid {
                                         required="true"
                                         />-->
 
-                                <x-select name="district" label="District :" placeholder="District"
-                                    formLabelClass="form-label" :options="$district" />
+                                        <x-select
+                                        name="district"
+                                        label="District :"
+                                        placeholder="District"
+                                        formLabelClass="form-label"
+                                        :options="$district"
+                                         required="true"
+                                         labelRequired="true"
+                                        />
 
                             </div>
                         </div>
@@ -285,8 +292,41 @@ input.is-invalid {
                                         labelRequired="true"
                                         />-->
 
-                                <x-select name="city" label="City :" placeholder="City" formLabelClass="form-label"
-                                    :options="$city" />
+                                        <x-select
+                                        name="city"
+                                        label="City :"
+                                        placeholder="City"
+                                        formLabelClass="form-label"
+                                         required="true"
+                                         labelRequired="true"
+                                        :options="$city" />
+
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 d-none" id="otherCityContainer">
+                                <div class="mb-3">
+
+                                    <x-input
+                                        name="other_city"
+                                        label="Other City :"
+                                        placeholder="Other City"
+                                        formLabelClass="form-label"
+                                        value=""
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                <x-input
+                                    name="residence_address"
+                                    label="Residence Address :"
+                                    placeholder="Residence Address :"
+                                    formLabelClass="form-label"
+                                    />
+
+                                </div>
 
                             </div>
                         </div>
@@ -557,20 +597,12 @@ input.is-invalid {
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-        <div class="card-header bg-body-secondary border-0 py-3">
-            <h5 class="card-title mb-0 fw-semibold text-body d-flex align-items-center gap-2">
-                <span
-                    class="rounded-2 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
-                    <i class="material-icons menu-icon" style="font-size: 1.25rem;">category</i>
-                </span>
-                Sector &amp; Expertise
-            </h5>
-        </div>
-        <div class="card-body p-4">
-            <div class="row g-3">
-                <div class="col-12">
-                    <label for="sector" class="form-label fw-medium">Current Sector :</label>
+
+<div class="card">
+     <div class="card-body">
+          <div class="row">
+               <div class="col-12">
+                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
                     <div class="mb-3">
                         <div class="form-check form-check-inline">
                             <input class="form-check-input success" type="radio" name="current_sector"
