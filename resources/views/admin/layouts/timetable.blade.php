@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 100%;">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8" />
@@ -30,35 +30,10 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
-    <style>
-        /* Timetable header logos - responsive */
-        .header .header-logo-ashoka,
-        .header .header-logo-lbsnaa { object-fit: contain; }
-        /* Desktop: prominent logo sizing */
-        @media (min-width: 992px) {
-            .header .header-logo-ashoka,
-            .header .header-logo-lbsnaa { height: 80px !important; width: auto; max-width: none; }
-        }
-        /* Tablet */
-        @media (max-width: 991.98px) {
-            .header .header-logo-ashoka,
-            .header .header-logo-lbsnaa { height: 44px !important; max-width: 90px; width: auto; }
-        }
-        /* Mobile */
-        @media (max-width: 575.98px) {
-            .header .header-logo-ashoka,
-            .header .header-logo-lbsnaa { height: 38px !important; max-width: 75px; width: auto; }
-        }
-        /* Print: prevent sticky header/logo from overlapping course coordinator and content */
-        @media print {
-            .header.sticky-top { position: static !important; }
-            .header { break-inside: avoid; }
-        }
-    </style>
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column; background-color: #ffffff;">
+<body class="min-vh-100 d-flex flex-column bg-white">
     <!-- Top Blue Bar (Govt of India) -->
     <!-- Government Header Strips (GIGW: clear government identity + skip link) -->
     <div class="govt-header d-none d-lg-block" role="banner" aria-label="Government of India identity bar">
@@ -96,9 +71,6 @@
                                     <li><a class="dropdown-item" href="#">हिंदी</a></li>
                                 </ul>
                             </div>
-                            <button class="btn btn-sm btn-link text-white p-0" type="button" aria-label="Search">
-                                <i class="bi bi-search" aria-hidden="true"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -148,23 +120,21 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-auto text-white py-2" style="background-color: #004a93;" role="contentinfo">
+    <footer class="mt-auto text-white py-2 bg-primary" role="contentinfo">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-8">
-                    <p class="mb-0 text-white" style="font-size: 14px;">&copy; {{ date('Y') }} Lal Bahadur Shastri
+                    <p class="mb-0 text-white small">&copy; {{ date('Y') }} Lal Bahadur Shastri
                         National Academy
                         of Administration, Mussoorie, Uttarakhand</p>
                 </div>
                 <div class="col-md-4 text-md-end mt-2 mt-md-0">
                     <ul class="list-unstyled d-flex justify-content-md-end justify-content-start mb-0 gap-3" aria-label="Footer navigation">
                         <li class="me-3">
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                            <a href="#" class="text-white text-decoration-none small">Privacy Policy</a>
                         </li>
                         <li>
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                            <a href="#" class="text-white text-decoration-none small">Need Help</a>
                         </li>
                     </ul>
                 </div>
