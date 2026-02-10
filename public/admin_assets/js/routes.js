@@ -1,4 +1,9 @@
-let baseUrl = window.location.origin;
+// let baseUrl = window.location.origin;
+// NOTE: Use Laravel's base URL (supports sub-folder installs like /Sargam-2.0/public).
+// Falls back to window.location.origin if meta tag is missing.
+var baseUrlMeta = document.querySelector('meta[name="app-base-url"]');
+let baseUrl = (baseUrlMeta && baseUrlMeta.getAttribute('content')) ? baseUrlMeta.getAttribute('content') : window.location.origin;
+baseUrl = baseUrl.replace(/\/+$/, '');
 const routes = {
     'toggleStatus': baseUrl + '/admin/toggle-status',
     'groupMappingExcelUpload': baseUrl + '/group-mapping/import-group-mapping',
