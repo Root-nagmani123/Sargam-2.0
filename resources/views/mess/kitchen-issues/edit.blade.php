@@ -29,8 +29,8 @@
                         <select name="inve_store_master_pk" class="form-select" required>
                             <option value="">Select Store</option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ (old('inve_store_master_pk', $kitchenIssue->inve_store_master_pk) == $store->id) ? 'selected' : '' }}>
-                                    {{ $store->store_name }}
+                                <option value="{{ $store['id'] }}" {{ (old('inve_store_master_pk', $kitchenIssue->inve_store_master_pk) == $store['id']) ? 'selected' : '' }}>
+                                    {{ $store['store_name'] }}
                                 </option>
                             @endforeach
                         </select>
@@ -72,8 +72,8 @@
                         <select name="requested_store_id" class="form-select">
                             <option value="">Select Requested Store</option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ (old('requested_store_id', $kitchenIssue->requested_store_id) == $store->id) ? 'selected' : '' }}>
-                                    {{ $store->store_name }}
+                                <option value="{{ $store['id'] }}" {{ (old('requested_store_id', $kitchenIssue->requested_store_id) == $store['id']) ? 'selected' : '' }}>
+                                    {{ $store['store_name'] }}
                                 </option>
                             @endforeach
                         </select>
