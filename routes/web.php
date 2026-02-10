@@ -581,24 +581,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
         Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
         
-        // NEW: Reports
+        // NEW: Mess RBAC - Permission Management
+        // IMPORTANT: Custom routes MUST come BEFORE resource route
+        Route::get('permissions/users-by-role', [\App\Http\Controllers\Mess\MessPermissionController::class, 'getUsersByRole'])->name('permissions.getUsersByRole');
+        Route::get('permissions/check/{action}', [\App\Http\Controllers\Mess\MessPermissionController::class, 'checkPermission'])->name('permissions.check');
+        Route::resource('permissions', \App\Http\Controllers\Mess\MessPermissionController::class);
+        
+        // Reports
         Route::prefix('reports')->name('reports.')->group(function () {
-            Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsList'])->name('items-list');
-            Route::get('mess-summary', [\App\Http\Controllers\Mess\ReportController::class, 'messSummary'])->name('mess-summary');
-            Route::get('category-material', [\App\Http\Controllers\Mess\ReportController::class, 'categoryMaterial'])->name('category-material');
-            Route::get('pending-orders', [\App\Http\Controllers\Mess\ReportController::class, 'pendingOrders'])->name('pending-orders');
-            Route::get('payment-overdue', [\App\Http\Controllers\Mess\ReportController::class, 'paymentOverdue'])->name('payment-overdue');
-            Route::get('approved-inbound', [\App\Http\Controllers\Mess\ReportController::class, 'approvedInbound'])->name('approved-inbound');
-            Route::get('invoice-bill', [\App\Http\Controllers\Mess\ReportController::class, 'invoiceBill'])->name('invoice-bill');
-            Route::get('purchase-orders', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseOrdersReport'])->name('purchase-orders');
-            Route::get('ot-not-taking-food', [\App\Http\Controllers\Mess\ReportController::class, 'otNotTakingFood'])->name('ot-not-taking-food');
-            Route::get('sale-counter', [\App\Http\Controllers\Mess\ReportController::class, 'saleCounterReport'])->name('sale-counter');
-            Route::get('store-due', [\App\Http\Controllers\Mess\ReportController::class, 'storeDue'])->name('store-due');
-            Route::get('mess-bill', [\App\Http\Controllers\Mess\ReportController::class, 'messBillReport'])->name('mess-bill');
-            Route::get('mess-invoice', [\App\Http\Controllers\Mess\ReportController::class, 'messInvoiceReport'])->name('mess-invoice');
             Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
-            Route::get('client-invoice', [\App\Http\Controllers\Mess\ReportController::class, 'clientInvoice'])->name('client-invoice');
-            Route::get('stock-issue-detail', [\App\Http\Controllers\Mess\ReportController::class, 'stockIssueDetail'])->name('stock-issue-detail');
+            Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
+            Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
+            Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
         });
     });
 });
@@ -879,7 +873,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
     Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
-});
-
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
+});Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
     ->middleware('auth');
