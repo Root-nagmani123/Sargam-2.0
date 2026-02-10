@@ -4,19 +4,19 @@
 @section('setup_content')
 <div class="container-fluid">
     <div class="card p-3" style="border-left: 4px solid #004a93;">
-        <h4>All Peer Evaluation Groups</h4>
+        <h4 class="text-dark fw-bold mb-3">All Peer Evaluation Groups</h4>
 
         @if ($groups->isEmpty())
             <div class="alert alert-info">No evaluation groups available.</div>
         @else
             <div class="table-responsive mt-3">
                 <table class="table table-bordered">
-                    <thead>
+                    <thead class="table-primary">
                         <tr>
-                            <th>Group Name</th>
-                            <th>Course Name</th>
-                            <th>Event Name</th>
-                            <th>Action</th>
+                            <th class="text-dark fw-semibold">Group Name</th>
+                            <th class="text-dark fw-semibold">Course Name</th>
+                            <th class="text-dark fw-semibold">Event Name</th>
+                            <th class="text-dark fw-semibold">Action</th>
                         </tr>
                     </thead>
                     <tbody>

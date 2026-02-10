@@ -194,7 +194,7 @@
                         <thead>
                             <tr>
                                 <th class="col" style="width: 5rem;">S.No.</th>
-                                <th class="col">Name</th>
+                                <th class="col">Category name</th>
                                 <th class="col">Short Name</th>
                                 <th class="col" style="width: 8rem;">Status</th>
                                 <th class="col text-end" style="width: 12rem;">Actions</th>

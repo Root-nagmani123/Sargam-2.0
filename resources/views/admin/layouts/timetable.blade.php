@@ -49,6 +49,11 @@
             .header .header-logo-ashoka,
             .header .header-logo-lbsnaa { height: 38px !important; max-width: 75px; width: auto; }
         }
+        /* Print: prevent sticky header/logo from overlapping course coordinator and content */
+        @media print {
+            .header.sticky-top { position: static !important; }
+            .header { break-inside: avoid; }
+        }
     </style>
 </head>
 <x-session_message />

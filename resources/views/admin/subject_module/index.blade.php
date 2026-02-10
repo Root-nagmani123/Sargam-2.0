@@ -30,7 +30,7 @@
                                     <!-- start row -->
                                     <tr>
                                         <th class="col text-center">S.No.</th>
-                                        <th class="col text-center">Stream Name</th>
+                                        <th class="col text-center">Subject name</th>
                                         <th class="col text-center">Status</th>
                                         <th class="col text-center">Action</th>
                                     </tr>

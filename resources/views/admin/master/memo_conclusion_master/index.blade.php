@@ -130,10 +130,10 @@ document.getElementById('showConclusionAlert').addEventListener('click', functio
             <form id="conclusionForm">
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
-                <!-- Discussion Name -->
+                <!-- Conclusion name -->
                 <div class="row mb-2">
                     <label class="col-auto fw-semibold">
-                        Discussion Name <span class="text-danger">*</span>
+                        Conclusion name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
                         <input type="text" name="discussion_name" id="discussion_name" class="form-control">
@@ -267,10 +267,10 @@ $(document).on('click', '.editshowConclusionAlert', function() {
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="id" value="${pk}">
 
-                <!-- Discussion Name -->
+                <!-- Conclusion name -->
                 <div class="row mb-2">
                     <label class="col-auto fw-semibold">
-                        Discussion Name <span class="text-danger">*</span>
+                        Conclusion name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
                         <input type="text" name="discussion_name" id="discussion_name" class="form-control" value="${discussion_name}">
