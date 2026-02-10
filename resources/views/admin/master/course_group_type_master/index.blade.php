@@ -33,7 +33,7 @@
                         <thead>
                             <tr>
                                 <th>S.No.</th>
-                                <th>Type Name</th>
+                                <th>Course group type name</th>
                                 <th>Status</th>
                                 <th>Action</th>
                             </tr>

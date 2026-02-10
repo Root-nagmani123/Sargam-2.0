@@ -23,7 +23,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="discussion_name" class="form-label">Discussion Name<span style="color:red;">*</span></label>
+                            <label for="discussion_name" class="form-label">Conclusion name<span style="color:red;">*</span></label>
                             <input type="text" name="discussion_name" class="form-control memo-conclusion-input"
                                    value="{{ old('discussion_name', $conclusion->discussion_name ?? '') }}" required>
                             @error('discussion_name')

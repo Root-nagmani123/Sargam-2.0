@@ -126,7 +126,7 @@
                                 <tr>
                                     <th>S.No.</th>
                                     <th>Course Name</th>
-                                    <th>Memo Decision</th>
+                                    <th>Memo type</th>
                                     <th>Memo Conclusion</th>
                                     <th>Status</th>
                                     <th>Action</th>

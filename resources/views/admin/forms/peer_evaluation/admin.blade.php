@@ -257,7 +257,7 @@
 
         {{-- Manage Columns Section --}}
         <div class="mb-4">
-            <h5>Manage Evaluation Columns</h5>
+            <h5 class="text-dark fw-bold mb-3">Manage Evaluation Columns</h5>
             <div class="row mb-3">
                 <div class="col-md-3">
                     <label class="form-label">Course (Optional)</label>
@@ -285,7 +285,7 @@
 
             {{-- Columns List --}}
           <div class="mt-3">
-    <h6>Existing Columns:</h6>
+    <h6 class="text-dark fw-semibold mb-2">Existing Columns:</h6>
     <div class="table-responsive">
     <table class="table table-bordered align-middle" id="datatable-groups">
             <thead class="bg-primary text-white">
@@ -345,6 +345,11 @@
             </tbody>
         </table>
     </div>
+    @if ($groups->hasPages())
+        <div class="d-flex justify-content-center mt-3">
+            {{ $groups->onEachSide(1)->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
 </div>
 
         </div>
