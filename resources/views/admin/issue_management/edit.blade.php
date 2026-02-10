@@ -117,8 +117,8 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Complainant <span class="text-danger">*</span></label>
-                                <select name="created_by" id="complainant" class="form-select" required>
-                                    <option value="">- Select -</option>
+                                <select name="created_by" id="complainant" class="form-select select2-complainant" required>
+                                    <option value="">Search complainant by name...</option>
                                     @foreach($employees as $employee)
                                         <option value="{{ $employee->employee_pk }}" 
                                             data-mobile="{{ $employee->mobile }}"
@@ -127,6 +127,7 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                <small class="text-muted">Type to search when editing issue on behalf of others</small>
                                 @error('created_by')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -292,6 +293,15 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
+    // Complainant searchable dropdown (search by name when creating/editing issue on behalf of others)
+    if ($.fn.select2) {
+        $('#complainant').select2({
+            placeholder: 'Search complainant by name...',
+            allowClear: true,
+            width: '100%'
+        });
+    }
+
     // Character counter
     function updateCharCount() {
         var len = $('#description').val().length;
@@ -343,11 +353,19 @@ $(document).ready(function() {
         $('#sub_category_name').val(selectedText);
     });
 
+    // Helper to normalize mobile value (handles numbers / strings / null)
+    function getNormalizedMobile(mobile) {
+        if (mobile === null || mobile === undefined) return '';
+        var str = String(mobile).trim();
+        return str;
+    }
+
     // Auto-fill mobile number
     $('#complainant').change(function() {
         var selected = $(this).val();
         var mobile = $(this).find('option:selected').data('mobile');
-        $('#mobile_number').val(!selected ? '' : (mobile && mobile.trim() ? mobile : 'Mobile number is not available'));
+        var normalized = getNormalizedMobile(mobile);
+        $('#mobile_number').val(!selected ? '' : (normalized ? normalized : 'Mobile number is not available'));
     });
 
     // Location change - load buildings
@@ -492,7 +510,8 @@ $(document).ready(function() {
     // Auto-fill mobile number on page load
     var initialMobile = $('#complainant').find('option:selected').data('mobile');
     var hasComplainant = $('#complainant').val();
-    $('#mobile_number').val(!hasComplainant ? '' : (initialMobile && initialMobile.trim() ? initialMobile : 'Mobile number is not available'));
+    var normalizedInitial = getNormalizedMobile(initialMobile);
+    $('#mobile_number').val(!hasComplainant ? '' : (normalizedInitial ? normalizedInitial : 'Mobile number is not available'));
 });
 </script>
 @endsection
