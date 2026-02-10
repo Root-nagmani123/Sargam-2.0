@@ -354,7 +354,7 @@
                                     <option value="{{ $employee->employee_pk }}" 
                                         data-name="{{ $employee->employee_name }}"
                                         data-mobile="{{ $employee->mobile ?? '' }}">
-                                        {{ $employee->first_name }} {{ $employee->last_name }}
+                                        {{ $employee->employee_name }}
                                     </option>
                                 @endforeach
                             @else
