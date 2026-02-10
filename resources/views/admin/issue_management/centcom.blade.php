@@ -31,22 +31,30 @@
                 <hr>
                 <div class="card-body">
                     <!-- Filters -->
-                    <form method="GET" action="{{ route('admin.issue-management.centcom') }}" class="mb-4">
+                    <form method="GET" action="{{ route('admin.issue-management.centcom') }}" class="mb-4 p-3 rounded border bg-light">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <iconify-icon icon="solar:filter-bold-duotone" class="text-primary"></iconify-icon>
+                            <span class="fw-semibold small">Filters</span>
+                        </div>
                         <div class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">Status</label>
-                                <select name="status" class="form-select">
+                            <div class="col-12 col-md-6 col-lg-2">
+                                <label class="form-label small fw-medium">Search</label>
+                                <input type="text" name="search" class="form-control form-control-sm" placeholder="ID, description, category..." value="{{ request('search') }}">
+                            </div>
+                            <div class="col-12 col-md-4 col-lg-2">
+                                <label class="form-label small fw-medium">Status</label>
+                                <select name="status" class="form-select form-select-sm">
                                     <option value="">All Status</option>
-                                    <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Reported</option>
+                                    <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Reported</option>
                                     <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>In Progress</option>
                                     <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Completed</option>
                                     <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Pending</option>
                                     <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Category</label>
-                                <select name="category" class="form-select">
+                            <div class="col-12 col-md-4 col-lg-2">
+                                <label class="form-label small fw-medium">Category</label>
+                                <select name="category" class="form-select form-select-sm">
                                     <option value="">All Categories</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->pk }}" {{ request('category') == $category->pk ? 'selected' : '' }}>
@@ -55,18 +63,28 @@
                                     @endforeach
                                 </select>
                             </div>
-                           
-                            <div class="col-md-2">
-                                <label class="form-label">Date From</label>
-                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                            <div class="col-12 col-md-4 col-lg-2">
+                                <label class="form-label small fw-medium">Priority</label>
+                                <select name="priority" class="form-select form-select-sm">
+                                    <option value="">All Priorities</option>
+                                    @foreach($priorities as $p)
+                                        <option value="{{ $p->pk }}" {{ request('priority') == $p->pk ? 'selected' : '' }}>{{ $p->priority ?? 'N/A' }}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Date To</label>
-                                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                            <div class="col-12 col-md-4 col-lg-2">
+                                <label class="form-label small fw-medium">Date From</label>
+                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
                             </div>
-                            <div class="col-md-2 d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">Filter</button>
-                                <a href="{{ route('admin.issue-management.centcom') }}" class="btn btn-outline-secondary">Clear</a>
+                            <div class="col-12 col-md-4 col-lg-2">
+                                <label class="form-label small fw-medium">Date To</label>
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                            </div>
+                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <iconify-icon icon="solar:magnifer-bold"></iconify-icon> Filter
+                                </button>
+                                <a href="{{ route('admin.issue-management.centcom') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
                             </div>
                         </div>
                     </form>
