@@ -156,7 +156,7 @@ class MDODutyTypeMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('mdo_duty_type_name')->title('Duty Type Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('mdo_duty_type_name')->title('Duty type')->addClass('text-center')->orderable(false)->searchable(true),
             Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
         ];
