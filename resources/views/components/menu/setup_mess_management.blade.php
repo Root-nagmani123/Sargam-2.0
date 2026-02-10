@@ -141,73 +141,23 @@
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseReports">
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.items-list') }}">
-                    <span class="hide-menu small text-nowrap">List of Items</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.mess-summary') }}">
-                    <span class="hide-menu small text-nowrap">Mess/Store Summary</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.category-material') }}">
-                    <span class="hide-menu small text-nowrap">Category Wise Material</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.pending-orders') }}">
-                    <span class="hide-menu small text-nowrap">Pending Purchase Orders</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.payment-overdue') }}">
-                    <span class="hide-menu small text-nowrap">Payment Over Due</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.approved-inbound') }}">
-                    <span class="hide-menu small text-nowrap">Approved Inbound Transactions</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.purchase-orders') }}">
-                    <span class="hide-menu small text-nowrap">Purchase Orders Report</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.sale-counter') }}">
-                    <span class="hide-menu small text-nowrap">Sale Counter Report</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.store-due') }}">
-                    <span class="hide-menu small text-nowrap">Store/Mess Due Report</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.mess-bill') }}">
-                    <span class="hide-menu small text-nowrap">Mess Bill Report</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.mess-invoice') }}">
-                    <span class="hide-menu small text-nowrap">Mess Invoice Report</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.reports.stock-purchase-details') }}">
-                    <span class="hide-menu small text-nowrap">Stock Purchase Details</span>
+                    <span class="hide-menu small text-nowrap">Stock Purchase Details Report</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.client-invoice') }}">
-                    <span class="hide-menu small text-nowrap">Client Invoice Report</span>
+                <a class="sidebar-link" href="{{ route('admin.mess.reports.stock-summary') }}">
+                    <span class="hide-menu small text-nowrap">Stock Summary Report</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.reports.stock-issue-detail') }}">
-                    <span class="hide-menu small text-nowrap">Stock Issue Detail</span>
+                <a class="sidebar-link" href="{{ route('admin.mess.reports.category-wise-print-slip') }}">
+                    <span class="hide-menu small text-nowrap">Category-wise Print Slip</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.reports.stock-balance-till-date') }}">
+                    <span class="hide-menu small text-nowrap">Stock Balance as of Till Date</span>
                 </a>
             </li>
         </ul>
