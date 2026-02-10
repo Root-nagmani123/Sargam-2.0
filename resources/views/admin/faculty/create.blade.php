@@ -321,6 +321,8 @@ input.is-invalid {
                                         placeholder="District"
                                         formLabelClass="form-label"
                                         :options="$district"
+                                         required="true"
+                                         labelRequired="true"
                                         />
 
                                 </div>
@@ -343,6 +345,8 @@ input.is-invalid {
                                         label="City :"
                                         placeholder="City"
                                         formLabelClass="form-label"
+                                         required="true"
+                                         labelRequired="true"
                                         :options="$city" />
 
                                 </div>
@@ -740,7 +744,7 @@ input.is-invalid {
      <div class="card-body">
           <div class="row">
                <div class="col-12">
-                    <label for="sector" class="form-label">Current Sector :</label>
+                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
                     <div class="mb-3">
                          <div class="form-check form-check-inline">
 						 <input class="form-check-input success"
