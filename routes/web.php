@@ -62,7 +62,6 @@ Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
-Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
 // Protected Routes
@@ -517,7 +516,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
         Route::post('import', 'processImport')->name('process.import');
-        Route::post('import', 'processImport')->name('process.import');
     });
 
     Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
@@ -713,14 +711,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
-    Route::prefix('admin/setup/caste-category')->name('admin.setup.caste_category.')->controller(CasteCategoryController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-    });
 
     // Employee ID Card Request Routes
     Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
@@ -795,11 +785,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty_view', function () {
         return view('admin.feedback.faculty_view');
     })->name('admin.feedback.faculty_view.page');
-    })->name('admin.feedback.faculty_view.page');
 
     Route::get('/feedback_details', function () {
         return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details.page');
     })->name('admin.feedback.feedback_details.page');
 
     //  dashboard page route
