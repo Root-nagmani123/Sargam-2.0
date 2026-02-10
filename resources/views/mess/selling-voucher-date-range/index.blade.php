@@ -36,7 +36,7 @@
                         <select name="store" class="form-select form-select-sm">
                             <option value="">All</option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -110,10 +110,10 @@
                                 @if($loop->first)
                                     <button type="button" class="btn btn-sm btn-info btn-view-report" data-report-id="{{ $report->id }}" title="View">View</button>
                                     <button type="button" class="btn btn-sm btn-warning btn-edit-report" data-report-id="{{ $report->id }}" title="Edit">Edit</button>
-                                    <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
+                                    <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');" style="display: none;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                                     </form>
                                 @endif
                             </td>
@@ -281,7 +281,7 @@
                                     <select name="inve_store_master_pk" class="form-select" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
-                                            <option value="{{ $store->id }}" {{ old('inve_store_master_pk') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                            <option value="{{ $store['id'] }}" {{ old('inve_store_master_pk') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -321,7 +321,7 @@
                                                 <select name="items[0][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $s)
-                                                        <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}">{{ e($s['item_name'] ?? '—') }}</option>
+                                                        <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
@@ -604,7 +604,7 @@
                                     <select name="inve_store_master_pk" class="form-select edit-store-id" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
-                                            <option value="{{ $store->id }}">{{ $store->store_name }}</option>
+                                            <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -658,14 +658,65 @@
 
 <script>
 (function() {
-    const itemSubcategories = @json($itemSubcategories);
+    let itemSubcategories = @json($itemSubcategories);
+    let filteredItems = itemSubcategories;
     const baseUrl = "{{ url('admin/mess/selling-voucher-date-range') }}";
     let addRowIndex = 1;
     let editRowIndex = 0;
+    let currentStoreId = null;
+    let editCurrentStoreId = null;
+
+    function fetchStoreItems(storeId, callback) {
+        if (!storeId) {
+            filteredItems = itemSubcategories;
+            if (callback) callback();
+            return;
+        }
+        
+        fetch(baseUrl + '/store/' + storeId + '/items', {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            filteredItems = data;
+            if (callback) callback();
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Failed to load store items.');
+            filteredItems = [];
+        });
+    }
+
+    function updateAddItemDropdowns() {
+        const rows = document.querySelectorAll('#addModalItemsBody .dr-item-row');
+        rows.forEach(row => {
+            const select = row.querySelector('.dr-item-select');
+            if (!select) return;
+            
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Item</option>';
+            
+            filteredItems.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.item_name || '—';
+                option.setAttribute('data-unit', item.unit_measurement || '');
+                option.setAttribute('data-rate', item.standard_cost || 0);
+                option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.id == currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            updateAddRowUnit(row);
+        });
+    }
 
     function getAddRowHtml(index) {
-        const options = itemSubcategories.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
+        const options = filteredItems.map(s =>
+            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
         ).join('');
         return '<tr class="dr-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
@@ -684,7 +735,11 @@
         const sel = row.querySelector('.dr-item-select');
         const opt = sel && sel.options[sel.selectedIndex];
         const unitInp = row.querySelector('.dr-unit');
+        const rateInp = row.querySelector('.dr-rate');
+        const availInp = row.querySelector('.dr-avail');
         if (unitInp) unitInp.value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
+        if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
+        if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
     }
 
     function updateAddRowLeft(row) {
@@ -709,6 +764,28 @@
             if (totalInp && totalInp.value) sum += parseFloat(totalInp.value);
         });
         document.getElementById('addModalGrandTotal').textContent = '₹' + sum.toFixed(2);
+    }
+
+    // Store selection change in ADD modal
+    const addStoreSelect = document.querySelector('#addReportModal select[name="inve_store_master_pk"]');
+    if (addStoreSelect) {
+        addStoreSelect.addEventListener('change', function() {
+            const storeId = this.value;
+            currentStoreId = storeId;
+            
+            console.log('Store changed:', storeId); // Debug log
+            
+            if (!storeId) {
+                filteredItems = itemSubcategories;
+                updateAddItemDropdowns();
+                return;
+            }
+            
+            fetchStoreItems(storeId, function() {
+                console.log('Filtered items count:', filteredItems.length); // Debug log
+                updateAddItemDropdowns();
+            });
+        });
     }
 
     document.getElementById('addModalAddItemRow').addEventListener('click', function() {
@@ -1053,7 +1130,7 @@
     function getEditRowHtml(index, item) {
         item = item || {};
         const options = itemSubcategories.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '"' + (item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
+            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '"' + (item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
         ).join('');
         const avail = item.available_quantity != null ? item.available_quantity : '';
         const qty = item.quantity != null ? item.quantity : '';
@@ -1294,6 +1371,30 @@
                 .catch(err => { console.error(err); alert('Failed to load report for edit.'); });
         });
     });
+
+    // Reset add modal when opened
+    const addReportModal = document.getElementById('addReportModal');
+    if (addReportModal) {
+        addReportModal.addEventListener('show.bs.modal', function() {
+            const storeSelect = addReportModal.querySelector('select[name="inve_store_master_pk"]');
+            const preSelectedStore = storeSelect ? storeSelect.value : null;
+            
+            console.log('Modal opening, pre-selected store:', preSelectedStore); // Debug log
+            
+            // If there's a pre-selected store, fetch its items
+            if (preSelectedStore) {
+                currentStoreId = preSelectedStore;
+                fetchStoreItems(preSelectedStore, function() {
+                    console.log('Pre-fetched items for store:', preSelectedStore, 'Count:', filteredItems.length);
+                    updateAddItemDropdowns();
+                });
+            } else {
+                currentStoreId = null;
+                filteredItems = itemSubcategories;
+                if (storeSelect) storeSelect.value = '';
+            }
+        });
+    }
 
     // Open add modal on validation error
     @if(session('open_add_modal'))

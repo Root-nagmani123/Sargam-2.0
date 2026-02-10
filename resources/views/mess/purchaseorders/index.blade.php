@@ -44,7 +44,7 @@
                         <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                         </form>
                     </td>
                 </tr>
@@ -395,14 +395,18 @@
 
 <script>
 (function() {
-    const itemSubcategories = @json($itemSubcategories);
+    let itemSubcategories = @json($itemSubcategories);
+    let filteredItems = itemSubcategories;
     const editPoBaseUrl = "{{ url('admin/mess/purchaseorders') }}";
     let itemRowIndex = 1;
     let editItemRowIndex = 0;
+    let currentVendorId = null;
+    let editCurrentVendorId = null;
 
-    function getItemRowHtml(index, editItem) {
+    function getItemRowHtml(index, editItem, isEditModal) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
-        const options = itemSubcategories.map(s =>
+        const itemsToUse = isEditModal ? itemSubcategories : filteredItems;
+        const options = itemsToUse.map(s =>
             `<option value="${s.id}" data-unit="${(s.unit_measurement || '').replace(/"/g, '&quot;')}" data-code="${(s.item_code || '').replace(/"/g, '&quot;')}" ${s.id == selected ? 'selected' : ''}>${(s.item_name || '—').replace(/</g, '&lt;')}</option>`
         ).join('');
         const qty = editItem ? editItem.quantity : '';
@@ -412,7 +416,7 @@
         const code = editItem && editItem.item_code ? editItem.item_code.replace(/"/g, '&quot;') : '';
         const lineTotal = editItem ? editItem.total_price : '';
         return `
-        <tr class="po-item-row edit-po-item-row">
+        <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
             <td>
                 <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select" required>
                     <option value="">Select Item</option>
@@ -427,6 +431,56 @@
             <td><input type="text" class="form-control form-control-sm po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
             <td><button type="button" class="btn btn-sm btn-outline-danger po-remove-row" title="Remove">×</button></td>
         </tr>`;
+    }
+
+    function fetchVendorItems(vendorId, callback) {
+        if (!vendorId) {
+            filteredItems = itemSubcategories;
+            if (callback) callback();
+            return;
+        }
+        
+        fetch(`{{ url('admin/mess/purchaseorders/vendor') }}/${vendorId}/items`, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            filteredItems = data;
+            if (callback) callback();
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Failed to load vendor items.');
+            filteredItems = [];
+        });
+    }
+
+    function updateItemDropdowns(tbody, isEditModal) {
+        const rows = tbody.querySelectorAll('.po-item-row');
+        const itemsToUse = isEditModal ? itemSubcategories : filteredItems;
+        
+        rows.forEach(row => {
+            const select = row.querySelector('.po-item-select');
+            if (!select) return;
+            
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Item</option>';
+            
+            itemsToUse.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.item_name || '—';
+                option.setAttribute('data-unit', item.unit_measurement || '');
+                option.setAttribute('data-code', item.item_code || '');
+                if (item.id == currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            // Update unit and code after dropdown refresh
+            updateUnitAndCode(row);
+        });
     }
 
     function updateUnitAndCode(row) {
@@ -465,9 +519,30 @@
         });
     }
 
+    // Vendor selection change in CREATE modal
+    const createVendorSelect = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
+    if (createVendorSelect) {
+        createVendorSelect.addEventListener('change', function() {
+            const vendorId = this.value;
+            currentVendorId = vendorId;
+            
+            if (!vendorId) {
+                filteredItems = itemSubcategories;
+                const tbody = document.getElementById('poItemsBody');
+                updateItemDropdowns(tbody, false);
+                return;
+            }
+            
+            fetchVendorItems(vendorId, function() {
+                const tbody = document.getElementById('poItemsBody');
+                updateItemDropdowns(tbody, false);
+            });
+        });
+    }
+
     document.getElementById('addPoItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('poItemsBody');
-        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(itemRowIndex, null));
+        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(itemRowIndex, null, false));
         itemRowIndex++;
         updateRemoveButtons();
     });
@@ -563,6 +638,24 @@
         return div.innerHTML;
     }
 
+    // Vendor selection change in EDIT modal
+    const editVendorSelect = document.querySelector('#editPurchaseOrderModal select[name="vendor_id"]');
+    if (editVendorSelect) {
+        editVendorSelect.addEventListener('change', function() {
+            const vendorId = this.value;
+            editCurrentVendorId = vendorId;
+            
+            if (!vendorId) {
+                const tbody = document.getElementById('editPoItemsBody');
+                updateItemDropdowns(tbody, true);
+                return;
+            }
+            
+            // For edit modal, we don't filter items - show all items
+            // This allows editing existing POs without restriction
+        });
+    }
+
     // Edit button: fetch PO and open modal
     document.querySelectorAll('.btn-edit-po').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -580,14 +673,15 @@
                     document.getElementById('editPaymentCode').value = po.payment_code || '';
                     document.getElementById('editContactNumber').value = po.contact_number || '';
                     document.getElementById('editDeliveryAddress').value = po.delivery_address || '';
+                    editCurrentVendorId = po.vendor_id;
                     const tbody = document.getElementById('editPoItemsBody');
                     tbody.innerHTML = '';
                     if (items.length === 0) {
-                        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null));
+                        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, true));
                         editItemRowIndex = 1;
                     } else {
                         items.forEach((item, i) => {
-                            tbody.insertAdjacentHTML('beforeend', getItemRowHtml(i, item));
+                            tbody.insertAdjacentHTML('beforeend', getItemRowHtml(i, item, true));
                         });
                         editItemRowIndex = items.length;
                     }
@@ -601,7 +695,7 @@
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('editPoItemsBody');
-        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editItemRowIndex, null));
+        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editItemRowIndex, null, true));
         editItemRowIndex++;
         updateEditRemoveButtons();
     });
@@ -640,6 +734,22 @@
                     e.preventDefault();
                     addBtn.click();
                 }
+            }
+        });
+    }
+
+    // Reset create modal when opened
+    if (createPOModal) {
+        createPOModal.addEventListener('show.bs.modal', function() {
+            // Reset vendor selection
+            currentVendorId = null;
+            filteredItems = itemSubcategories;
+            
+            // Reset form
+            const form = document.getElementById('createPOForm');
+            if (form) {
+                const vendorSelect = form.querySelector('select[name="vendor_id"]');
+                if (vendorSelect) vendorSelect.value = '';
             }
         });
     }

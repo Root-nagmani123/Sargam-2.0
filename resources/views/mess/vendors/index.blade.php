@@ -58,7 +58,7 @@
                                               onsubmit="return confirm('Are you sure you want to delete this vendor?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                                         </form>
                                     </div>
                                 </td>
