@@ -52,9 +52,15 @@
                                     <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                                 </select>
                             </div>
+<<<<<<< HEAD
                             <div class="col-12 col-md-4 col-lg-2">
                                 <label class="form-label small fw-medium">Category</label>
                                 <select name="category" class="form-select form-select-sm">
+=======
+                            <div class="col-md-4 col-4">
+                                <label class="form-label">Category</label>
+                                <select name="category" class="form-select">
+>>>>>>> 71b9db9e (ui chnages)
                                     <option value="">All Categories</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->pk }}" {{ request('category') == $category->pk ? 'selected' : '' }}>
