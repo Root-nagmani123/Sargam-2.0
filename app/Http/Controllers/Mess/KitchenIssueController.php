@@ -7,6 +7,7 @@ use App\Models\KitchenIssueMaster;
 use App\Models\KitchenIssueItem;
 use App\Models\KitchenIssuePaymentDetail;
 use App\Models\Mess\Store;
+use App\Models\Mess\SubStore;
 use App\Models\Mess\Inventory;
 use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\ClientType;
@@ -60,13 +61,34 @@ class KitchenIssueController extends Controller
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
-        $stores = Store::active()->get();
+        // Get active stores and sub-stores
+        $stores = Store::active()->get()->map(function ($store) {
+            return [
+                'id' => $store->id,
+                'store_name' => $store->store_name,
+                'type' => 'store'
+            ];
+        });
+        
+        $subStores = SubStore::active()->get()->map(function ($subStore) {
+            return [
+                'id' => 'sub_' . $subStore->id,
+                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
+                'type' => 'sub_store',
+                'original_id' => $subStore->id
+            ];
+        });
+        
+        // Combine stores and sub-stores
+        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
+        
         $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
             return [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
                 'item_code' => $s->item_code ?? '—',
                 'unit_measurement' => $s->unit_measurement ?? '—',
+                'standard_cost' => $s->standard_cost ?? 0,
             ];
         });
         $clientTypes = ClientType::clientTypes();
@@ -114,12 +136,19 @@ class KitchenIssueController extends Controller
             'student_master_course__map.student_master_pk'
         )
         ->where('student_master_course__map.course_master_pk', $course_pk)
-        ->select('student_master.pk', 'student_master.display_name')
+        ->select('student_master.pk', 'student_master.display_name', 'student_master.generated_OT_code')
         ->orderBy('student_master.display_name')
         ->get();
 
         return response()->json([
-            'students' => $students->map(fn($s) => ['pk' => $s->pk, 'display_name' => $s->display_name ?? '—'])->filter(fn($s) => $s['display_name'] !== '—')->values(),
+            'students' => $students->map(function($s) {
+                $displayName = $s->display_name ?? '—';
+                // Append OT code in brackets if available
+                if (!empty($s->generated_OT_code)) {
+                    $displayName .= ' (' . $s->generated_OT_code . ')';
+                }
+                return ['pk' => $s->pk, 'display_name' => $displayName];
+            })->filter(fn($s) => $s['display_name'] !== '—')->values(),
         ]);
     }
 
@@ -128,13 +157,34 @@ class KitchenIssueController extends Controller
      */
     public function create()
     {
-        $stores = Store::active()->get();
+        // Get active stores and sub-stores
+        $stores = Store::active()->get()->map(function ($store) {
+            return [
+                'id' => $store->id,
+                'store_name' => $store->store_name,
+                'type' => 'store'
+            ];
+        });
+        
+        $subStores = SubStore::active()->get()->map(function ($subStore) {
+            return [
+                'id' => 'sub_' . $subStore->id,
+                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
+                'type' => 'sub_store',
+                'original_id' => $subStore->id
+            ];
+        });
+        
+        // Combine stores and sub-stores
+        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
+        
         $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()->map(function ($s) {
             return [
                 'id' => $s->id,
                 'item_name' => $s->item_name ?? $s->name ?? '—',
                 'item_code' => $s->item_code ?? '—',
                 'unit_measurement' => $s->unit_measurement ?? '—',
+                'standard_cost' => $s->standard_cost ?? 0,
             ];
         });
         $clientTypes = ClientType::clientTypes();
@@ -346,7 +396,27 @@ class KitchenIssueController extends Controller
             return response()->json(['voucher' => $voucher, 'items' => $items]);
         }
 
-        $stores = Store::active()->get();
+        // Get active stores and sub-stores
+        $stores = Store::active()->get()->map(function ($store) {
+            return [
+                'id' => $store->id,
+                'store_name' => $store->store_name,
+                'type' => 'store'
+            ];
+        });
+        
+        $subStores = SubStore::active()->get()->map(function ($subStore) {
+            return [
+                'id' => 'sub_' . $subStore->id,
+                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
+                'type' => 'sub_store',
+                'original_id' => $subStore->id
+            ];
+        });
+        
+        // Combine stores and sub-stores
+        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
+        
         $items = Inventory::all();
         return view('mess.kitchen-issues.edit', compact('kitchenIssue', 'stores', 'items'));
     }
@@ -604,5 +674,77 @@ class KitchenIssueController extends Controller
         $stores = Store::all();
 
         return view('mess.kitchen-issues.bill-report', compact('kitchenIssues', 'stores'));
+    }
+
+    /**
+     * Get items available in a specific store (main store or sub-store)
+     */
+    public function getStoreItems($storeIdentifier)
+    {
+        $items = collect();
+        
+        // Check if it's a sub-store (prefixed with 'sub_')
+        if (strpos($storeIdentifier, 'sub_') === 0) {
+            // Sub-store: get items from store allocations
+            $subStoreId = (int) str_replace('sub_', '', $storeIdentifier);
+            
+            // Get items with their allocated quantities
+            $allocatedItems = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->where('sa.sub_store_id', $subStoreId)
+                ->select('sai.item_subcategory_id', DB::raw('SUM(sai.quantity) as total_quantity'))
+                ->groupBy('sai.item_subcategory_id')
+                ->get()
+                ->keyBy('item_subcategory_id');
+            
+            if ($allocatedItems->isNotEmpty()) {
+                $itemIds = $allocatedItems->keys();
+                $items = ItemSubcategory::whereIn('id', $itemIds)
+                    ->active()
+                    ->get()
+                    ->map(function ($s) use ($allocatedItems) {
+                        $allocated = $allocatedItems->get($s->id);
+                        return [
+                            'id' => $s->id,
+                            'item_name' => $s->item_name ?? $s->name ?? '—',
+                            'unit_measurement' => $s->unit_measurement ?? '—',
+                            'standard_cost' => $s->standard_cost ?? 0,
+                            'available_quantity' => $allocated ? (float) $allocated->total_quantity : 0,
+                        ];
+                    });
+            }
+        } else {
+            // Main store: get items from purchase orders
+            $storeId = (int) $storeIdentifier;
+            
+            // Get items with their purchased quantities
+            $purchasedItems = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->where('po.store_id', $storeId)
+                ->where('po.status', 'approved')
+                ->select('poi.item_subcategory_id', DB::raw('SUM(poi.quantity) as total_quantity'))
+                ->groupBy('poi.item_subcategory_id')
+                ->get()
+                ->keyBy('item_subcategory_id');
+            
+            if ($purchasedItems->isNotEmpty()) {
+                $itemIds = $purchasedItems->keys();
+                $items = ItemSubcategory::whereIn('id', $itemIds)
+                    ->active()
+                    ->get()
+                    ->map(function ($s) use ($purchasedItems) {
+                        $purchased = $purchasedItems->get($s->id);
+                        return [
+                            'id' => $s->id,
+                            'item_name' => $s->item_name ?? $s->name ?? '—',
+                            'unit_measurement' => $s->unit_measurement ?? '—',
+                            'standard_cost' => $s->standard_cost ?? 0,
+                            'available_quantity' => $purchased ? (float) $purchased->total_quantity : 0,
+                        ];
+                    });
+            }
+        }
+        
+        return response()->json($items->values());
     }
 }

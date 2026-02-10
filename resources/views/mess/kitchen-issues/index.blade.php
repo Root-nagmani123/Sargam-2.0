@@ -36,7 +36,7 @@
                         <select name="store" class="form-select form-select-sm">
                             <option value="">All</option>
                             @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -117,7 +117,7 @@
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                                 </form>
                             </td>
                         </tr>
@@ -152,7 +152,7 @@
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                                 </form>
                             </td>
                         </tr>
@@ -288,7 +288,7 @@
                                     <select name="store_id" class="form-select" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
-                                            <option value="{{ $store->id }}" {{ old('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
+                                            <option value="{{ $store['id'] }}" {{ old('store_id') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -329,7 +329,7 @@
                                                 <select name="items[0][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $s)
-                                                        <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}">{{ e($s['item_name'] ?? '—') }}</option>
+                                                        <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
@@ -458,7 +458,7 @@
                                     <select name="store_id" class="form-select edit-store" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
-                                            <option value="{{ $store->id }}">{{ $store->store_name }}</option>
+                                            <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -665,16 +665,68 @@ document.addEventListener('DOMContentLoaded', function() {
         return: returnButtons.length
     });
     
-    const itemSubcategories = @json($itemSubcategories);
+    let itemSubcategories = @json($itemSubcategories);
+    let filteredItems = itemSubcategories;
     const editSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     const viewSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     const returnSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     let rowIndex = 1;
     let editRowIndex = 0;
+    let currentStoreId = null;
+    let editCurrentStoreId = null;
+
+    function fetchStoreItems(storeId, callback) {
+        if (!storeId) {
+            filteredItems = itemSubcategories;
+            if (callback) callback();
+            return;
+        }
+        
+        fetch(editSvBaseUrl + '/store/' + storeId + '/items', {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            filteredItems = data;
+            if (callback) callback();
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Failed to load store items.');
+            filteredItems = [];
+        });
+    }
+
+    function updateAddItemDropdowns() {
+        const rows = document.querySelectorAll('#modalItemsBody .sv-item-row');
+        console.log('Updating dropdowns, found rows:', rows.length); // Debug log
+        rows.forEach(row => {
+            const select = row.querySelector('.sv-item-select');
+            if (!select) return;
+            
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Item</option>';
+            
+            filteredItems.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.item_name || '—';
+                option.setAttribute('data-unit', item.unit_measurement || '');
+                option.setAttribute('data-rate', item.standard_cost || 0);
+                option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.id == currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            updateUnit(row);
+        });
+    }
 
     function getRowHtml(index) {
-        const options = itemSubcategories.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
+        const options = filteredItems.map(s =>
+            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
         ).join('');
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
@@ -692,7 +744,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const sel = row.querySelector('.sv-item-select');
         const opt = sel && sel.options[sel.selectedIndex];
         const unitInp = row.querySelector('.sv-unit');
+        const rateInp = row.querySelector('.sv-rate');
+        const availInp = row.querySelector('.sv-avail');
         if (unitInp) unitInp.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
+        if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
+        if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
     }
 
     function calcRow(row) {
@@ -720,6 +776,28 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.forEach(row => {
             const btn = row.querySelector('.sv-remove-row');
             if (btn) btn.disabled = rows.length <= 1;
+        });
+    }
+
+    // Store selection change in ADD modal
+    const addModalStoreSelect = document.querySelector('#addSellingVoucherModal select[name="store_id"]');
+    if (addModalStoreSelect) {
+        addModalStoreSelect.addEventListener('change', function() {
+            const storeId = this.value;
+            currentStoreId = storeId;
+            
+            console.log('Store changed:', storeId); // Debug log
+            
+            if (!storeId) {
+                filteredItems = itemSubcategories;
+                updateAddItemDropdowns();
+                return;
+            }
+            
+            fetchStoreItems(storeId, function() {
+                console.log('Filtered items count:', filteredItems.length); // Debug log
+                updateAddItemDropdowns();
+            });
         });
     }
 
@@ -1090,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getEditRowHtml(index, item) {
         const options = itemSubcategories.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '"' + (item && item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
+            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '"' + (item && item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
         ).join('');
         const qty = item ? item.quantity : '';
         const avail = item ? item.available_quantity : 0;
@@ -1358,6 +1436,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateEditGrandTotal();
                     updateEditRemoveButtons();
                 }
+            }
+        });
+    }
+
+    // Reset add selling voucher modal when opened
+    const addSellingVoucherModal = document.getElementById('addSellingVoucherModal');
+    if (addSellingVoucherModal) {
+        addSellingVoucherModal.addEventListener('show.bs.modal', function() {
+            const storeSelect = addSellingVoucherModal.querySelector('select[name="store_id"]');
+            const preSelectedStore = storeSelect ? storeSelect.value : null;
+            
+            console.log('Modal opening, pre-selected store:', preSelectedStore); // Debug log
+            
+            // If there's a pre-selected store, fetch its items
+            if (preSelectedStore) {
+                currentStoreId = preSelectedStore;
+                fetchStoreItems(preSelectedStore, function() {
+                    console.log('Pre-fetched items for store:', preSelectedStore, 'Count:', filteredItems.length);
+                    updateAddItemDropdowns();
+                });
+            } else {
+                currentStoreId = null;
+                filteredItems = itemSubcategories;
+                if (storeSelect) storeSelect.value = '';
             }
         });
     }
