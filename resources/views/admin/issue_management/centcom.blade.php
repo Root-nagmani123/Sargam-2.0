@@ -32,10 +32,10 @@
                 <div class="card-body">
                     <!-- Filters -->
                     <form method="GET" action="{{ route('admin.issue-management.centcom') }}" class="mb-4">
-                        <div class="row g-3">
+                        <div class="row g-2 align-items-end">
                             <div class="col-md-3">
-                                <label class="form-label">Status</label>
-                                <select name="status" class="form-select">
+                                <label class="form-label small mb-0">Status</label>
+                                <select name="status" class="form-select form-select-sm">
                                     <option value="">All Status</option>
                                     <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Reported</option>
                                     <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>In Progress</option>
@@ -45,8 +45,8 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Category</label>
-                                <select name="category" class="form-select">
+                                <label class="form-label small mb-0">Category</label>
+                                <select name="category" class="form-select form-select-sm">
                                     <option value="">All Categories</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->pk }}" {{ request('category') == $category->pk ? 'selected' : '' }}>
@@ -57,16 +57,16 @@
                             </div>
                            
                             <div class="col-md-2">
-                                <label class="form-label">Date From</label>
-                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                                <label class="form-label small mb-0">Date From</label>
+                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Date To</label>
-                                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                                <label class="form-label small mb-0">Date To</label>
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-md-2 d-flex gap-2 align-items-end">
-                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                                <a href="{{ route('admin.issue-management.centcom') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                            <div class="col-md-2 d-flex gap-1">
+                                <button type="submit" class="btn btn-primary btn-sm py-1 px-2" style="font-size: 0.8125rem;">Filter</button>
+                                <a href="{{ route('admin.issue-management.centcom') }}" class="btn btn-outline-secondary btn-sm py-1 px-2" style="font-size: 0.8125rem;">Clear</a>
                             </div>
                         </div>
                     </form>

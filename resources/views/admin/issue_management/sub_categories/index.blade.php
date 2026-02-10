@@ -85,20 +85,13 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-warning" 
-                                                onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_master_pk ?? 'null' }}, {{ json_encode($subCategory->issue_sub_category) }}, {{ $subCategory->status }})">
-                                            <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                        </button>
-                                        <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}" 
-                                              method="POST" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this sub-category?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> Delete
+                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                            <button type="button" class="btn btn-sm btn-warning" 
+                                                    onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_master_pk ?? 'null' }}, {{ json_encode($subCategory->issue_sub_category) }}, {{ $subCategory->status }})">
+                                                <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
                                             </button>
                                             <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}" 
-                                                  method="POST" class="d-inline m-0" 
+                                                  method="POST" class="d-inline" 
                                                   onsubmit="return confirm('Are you sure you want to delete this sub-category?');">
                                                 @csrf
                                                 @method('DELETE')
