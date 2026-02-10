@@ -22,7 +22,7 @@
             <div class="card-body">
                 <div class="row mb-2">
                     <div class="col-6">
-                        <h4 class="mb-0">Issue Sub-Categories</h4>
+                        <h4 class="mb-0">Issue Sub-Categorie</h4>
                     </div>
                     <div class="col-6 text-end">
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSubCategoryModal">
