@@ -64,7 +64,6 @@ Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
-Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
 // Protected Routes
@@ -798,11 +797,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty_view', function () {
         return view('admin.feedback.faculty_view');
     })->name('admin.feedback.faculty_view.page');
-    })->name('admin.feedback.faculty_view.page');
 
     Route::get('/feedback_details', function () {
         return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details.page');
     })->name('admin.feedback.feedback_details.page');
 
     //  dashboard page route
