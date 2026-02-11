@@ -38,7 +38,7 @@
                                                 </a>
                                             </li>
 
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
+                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
@@ -58,7 +58,7 @@
                                                     <span class="mini-nav-title sidebar-google-label">Users</span>
                                                 </a>
                                             </li>
-                                            @if(! hasRole('Training-MCTP'))
+                                            @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
