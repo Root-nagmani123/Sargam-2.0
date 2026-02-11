@@ -87,7 +87,7 @@ class User extends Authenticatable
         return $this->hasMany(ActionLog::class, 'action_by');
     }
 
-  public function roles()
+    public function roles()
 {
     return $this->belongsToMany(
         UserRoleMaster::class,
@@ -97,4 +97,33 @@ class User extends Authenticatable
     );
 }
 
+    /**
+     * Employees and faculty for complaint section (complainant / assignment dropdowns).
+     * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
+     * Excludes students: user_credentials.user_category != 'S'.
+     *
+     * @param int|null $departmentId Optional: filter by employee department_master_pk
+     * @return \Illuminate\Support\Collection { employee_pk, employee_name, mobile, designation_name? }
+     */
+    public static function getEmployeesAndFacultyForComplaint($departmentId = null)
+    {
+        $query = DB::table('user_credentials as uc')
+            ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
+            ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
+            ->where('uc.user_category', '!=', 'S')
+            ->select(
+                'e.pk as employee_pk',
+                DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
+                DB::raw("COALESCE(e.mobile, '') as mobile"),
+                'd.designation_name'
+            )
+            ->orderBy('e.first_name')
+            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name');
+
+        if ($departmentId) {
+            $query->where('e.department_master_pk', $departmentId);
+        }
+
+        return $query->get();
+    }
 }

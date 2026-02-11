@@ -130,11 +130,18 @@
                             <span class="fw-semibold small text-body-secondary">Filters</span>
                         </div>
                         <div class="row g-3">
-                            <div class="col-12 col-md-6 col-lg-3">
+                            <div class="col-12 col-md-6 col-lg-2">
+                                <label class="form-label small fw-medium text-body-secondary">Show</label>
+                                <select name="raised_by" class="form-select form-select-sm">
+                                    <option value="all" {{ request('raised_by', 'all') == 'all' ? 'selected' : '' }}>All issues (raised by me or others)</option>
+                                    <option value="self" {{ request('raised_by') == 'self' ? 'selected' : '' }}>Raised by me only</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Search</label>
                                 <input type="text" name="search" class="form-control form-control-sm" placeholder="ID, description, category..." value="{{ request('search') }}">
                             </div>
-                            <div class="col-12 col-md-2 col-lg-3">
+                            <div class="col-12 col-md-2 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Status</label>
                                 <select name="status" class="form-select form-select-sm">
                                     <option value="">All Status</option>
@@ -181,6 +188,7 @@
                                         'date_from' => request('date_from'),
                                         'date_to' => request('date_to'),
                                         'tab' => $currentTab,
+                                        'raised_by' => request('raised_by'),
                                     ]);
                                 @endphp
                                 <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Export to Excel">

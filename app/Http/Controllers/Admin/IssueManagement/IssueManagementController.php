@@ -16,7 +16,8 @@ use App\Models\{
     IssueLogStatus,
     BuildingMaster,
     HostelBuildingMaster,
-    EmployeeMaster
+    EmployeeMaster,
+    User
 };
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -51,6 +52,13 @@ class IssueManagementController extends Controller
                         ->orWhere('assigned_to', Auth::user()->user_id)
                         ->orWhere('created_by', Auth::user()->user_id);
                 });
+            }
+        };
+
+        // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
+        $applyRaisedBy = function ($builder) use ($request) {
+            if ($request->get('raised_by') === 'self') {
+                $builder->where('created_by', Auth::user()->user_id);
             }
         };
 
@@ -94,6 +102,7 @@ class IssueManagementController extends Controller
         };
 
         $applyUserScope($query);
+        $applyRaisedBy($query);
         $query->orderBy('created_date', 'desc');
 
         // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
@@ -118,11 +127,13 @@ class IssueManagementController extends Controller
 
         $activeCountQuery = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6]);
         $applyUserScope($activeCountQuery);
+        $applyRaisedBy($activeCountQuery);
         $applyFilters($activeCountQuery);
         $activeCount = $activeCountQuery->count();
 
         $archiveCountQuery = (clone $baseQuery)->where('issue_status', 2);
         $applyUserScope($archiveCountQuery);
+        $applyRaisedBy($archiveCountQuery);
         $applyFilters($archiveCountQuery);
         $archiveCount = $archiveCountQuery->count();
 
@@ -142,6 +153,7 @@ class IssueManagementController extends Controller
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
             'tab' => $request->get('tab', 'active'),
+            'raised_by' => $request->get('raised_by'),
         ];
         $fileName = 'issues-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
         return Excel::download(new IssueManagementExport($filters), $fileName);
@@ -160,6 +172,7 @@ class IssueManagementController extends Controller
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
             'tab' => $request->get('tab', 'active'),
+            'raised_by' => $request->get('raised_by'),
         ];
         $export = new IssueManagementExport($filters);
         $issues = $export->collection();
@@ -231,24 +244,42 @@ class IssueManagementController extends Controller
                     ->orWhere('created_by', Auth::user()->user_id);
             });
 
-        // Filters (use filled() so "0" works correctly)
-        if ($request->filled('status')) {
+        // Search (ID, description, category name, sub-category)
+        if ($request->filled('search')) {
+            $term = trim($request->search);
+            $query->where(function ($q) use ($term) {
+                if (is_numeric($term)) {
+                    $q->orWhere('pk', $term);
+                }
+                $q->orWhere('description', 'like', "%{$term}%")
+                    ->orWhereHas('category', fn ($cq) => $cq->where('issue_category', 'like', "%{$term}%"))
+                    ->orWhereHas('subCategoryMappings.subCategory', fn ($sq) => $sq->where('issue_sub_category', 'like', "%{$term}%"));
+            });
+        }
+
+        // Status (use has + !== '' so "0" works)
+        if ($request->has('status') && $request->status !== '') {
             $query->where('issue_status', (int) $request->status);
         }
 
-        if ($request->filled('category')) {
+        // Category
+        if ($request->has('category') && $request->category !== '') {
             $query->where('issue_category_master_pk', (int) $request->category);
         }
 
-        if ($request->filled('priority')) {
+        // Priority
+        if ($request->has('priority') && $request->priority !== '') {
             $query->where('issue_priority_master_pk', (int) $request->priority);
         }
 
+        // Date range (Carbon for consistent timezone)
         if ($request->filled('date_from')) {
-            $query->whereDate('created_date', '>=', $request->date_from);
+            $from = Carbon::parse($request->date_from)->startOfDay()->format('Y-m-d');
+            $query->where('created_date', '>=', $from);
         }
         if ($request->filled('date_to')) {
-            $query->whereDate('created_date', '<=', $request->date_to);
+            $to = Carbon::parse($request->date_to)->endOfDay()->format('Y-m-d');
+            $query->where('created_date', '<=', $to);
         }
 
         $issues = $query->paginate(20);
@@ -291,23 +322,11 @@ class IssueManagementController extends Controller
         }
 
         try {
-          
-               $query = DB::table('employee_master as e')
-        ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
-        ->select(
-            'e.pk as employee_pk',
-            DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
-            DB::raw("COALESCE(e.mobile, '') as mobile"),  // Treat null and empty as the same
-            // Treat null and empty as the same
-            'd.designation_name'
-        )
-        ->orderBy('first_name')
-        ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name', 'e.mobile', 'd.designation_name');
-
-    $employees = $query->get();
-            
+            // Complaint section: employees + faculty only (user_credentials.user_category != 'S'), user_id = employee_master.pk
+            $employees = User::getEmployeesAndFacultyForComplaint();
         } catch (\Exception $e) {
-            \Log::warning('Employee master table not accessible: ' . $e->getMessage());
+            \Log::warning('Employees/faculty for complaint not accessible: ' . $e->getMessage());
+            $employees = collect([]);
         }
 
         $currentUserEmployeeId = Auth::user()->user_id ?? null;
@@ -385,6 +404,37 @@ class IssueManagementController extends Controller
     public function store(Request $request)
     {
         try {
+            // Validate attachment files first (so unsupported files always show an error)
+            $allowedExtensions = ['jpg', 'jpeg', 'png'];
+            $maxSizeKb = 5120; // 5MB
+            if ($request->hasFile('complaint_img_url')) {
+                $files = $request->file('complaint_img_url');
+                if (!is_array($files)) {
+                    $files = [$files];
+                }
+                foreach ($files as $index => $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    if (!$file->isValid()) {
+                        throw ValidationException::withMessages([
+                            'complaint_img_url' => ['One or more file uploads failed. Please try again or use a different file.'],
+                        ]);
+                    }
+                    $ext = strtolower($file->getClientOriginalExtension());
+                    if (!in_array($ext, $allowedExtensions)) {
+                        throw ValidationException::withMessages([
+                            'complaint_img_url' => ['Unsupported file type. Only JPG and PNG images are allowed. File "' . $file->getClientOriginalName() . '" is not allowed.'],
+                        ]);
+                    }
+                    if ($file->getSize() > $maxSizeKb * 1024) {
+                        throw ValidationException::withMessages([
+                            'complaint_img_url' => ['Each attachment must not exceed 5MB. File "' . $file->getClientOriginalName() . '" is too large.'],
+                        ]);
+                    }
+                }
+            }
+
             // Validate input data - same as ApiController
             $validated = $request->validate([
                 'description' => 'required|string',
@@ -401,6 +451,10 @@ class IssueManagementController extends Controller
                 'room_name' => 'nullable|string',
                 'complaint_img_url' => 'nullable|array',
                 'complaint_img_url.*' => 'nullable|file|image|mimes:jpeg,jpg,png|max:5120',
+            ], [
+                'complaint_img_url.*.image' => 'Each attachment must be an image. Only JPG and PNG are allowed.',
+                'complaint_img_url.*.mimes' => 'Each attachment must be a JPG or PNG file. Unsupported file type uploaded.',
+                'complaint_img_url.*.max' => 'Each attachment must not exceed 5MB.',
             ]);
 
             $data = array(
@@ -525,24 +579,8 @@ class IssueManagementController extends Controller
         }
 
         $department_id = $issue->nodal_officer?->department_master_pk ?? null;
-        // Load all employees for assignment dropdown in modal
-        $query = DB::table('employee_master as e');
-        if ($department_id) {
-            $query->where('e.department_master_pk', $department_id);
-        }
-        $employees = $query
-            ->select(
-                'e.pk as employee_pk',
-                'e.first_name as first_name',
-                'e.last_name as last_name',
-                // DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
-            DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
-
-                'e.mobile'
-            )
-            ->orderBy('first_name')
-            ->get();
-        // print_r($employees); exit;
+        // Complaint section: employees + faculty only (user_credentials.user_category != 'S'), optional department filter
+        $employees = User::getEmployeesAndFacultyForComplaint($department_id);
 
         return view('admin.issue_management.show', compact('issue', 'employees'));
     }
@@ -572,16 +610,8 @@ class IssueManagementController extends Controller
         $priorities = IssuePriorityMaster::active()->ordered()->get();
         $reproducibilities = IssueReproducibilityMaster::active()->get();
         
-        // Load all employees for complainant dropdown
-        $query = DB::table('employee_master as e')
-            ->select(
-                'e.pk as employee_pk',
-                DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
-                'e.mobile'
-            )
-            ->orderBy('employee_name');
-        
-        $employees = $query->get();
+        // Complaint section: employees + faculty only (user_credentials.user_category != 'S')
+        $employees = User::getEmployeesAndFacultyForComplaint();
         
         // Determine current building, floor, and room
         $currentBuilding = null;
