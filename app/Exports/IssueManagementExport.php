@@ -65,11 +65,13 @@ class IssueManagementExport implements FromCollection, WithHeadings
 
         // Date range
         if (!empty($this->filters['date_from'])) {
-            $from = Carbon::parse($this->filters['date_from'])->startOfDay()->format('Y-m-d');
+            // Use full datetime so the day's range is applied correctly
+            $from = Carbon::parse($this->filters['date_from'])->startOfDay()->toDateTimeString();
             $query->where('created_date', '>=', $from);
         }
         if (!empty($this->filters['date_to'])) {
-            $to = Carbon::parse($this->filters['date_to'])->endOfDay()->format('Y-m-d');
+            // Use full datetime so the "to" date includes the entire day (23:59:59)
+            $to = Carbon::parse($this->filters['date_to'])->endOfDay()->toDateTimeString();
             $query->where('created_date', '<=', $to);
         }
 

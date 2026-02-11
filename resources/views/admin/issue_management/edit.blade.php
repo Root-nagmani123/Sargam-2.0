@@ -205,7 +205,7 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label class="form-label">Building/Hostel <span class="text-danger">*</span></label>
+                                    <label class="form-label">Building/Hostel</label>
                                     <select name="building_select" id="building_select" class="form-select">
                                         <option value="">-- Select --</option>
                                         @php
@@ -375,6 +375,11 @@ $(document).ready(function() {
         var currentFloor = '{{ $currentFloor ?? "" }}';
         var currentRoom = '{{ $currentRoom ?? "" }}';
         
+        // Reset dependent selects whenever location changes
+        $('#building_select').html('<option value="">-- Select --</option>').val('');
+        $('#floor_select').html('<option value="">Select Floor Name</option>').val('');
+        $('#room_select').html('<option value="">Select Room</option>').val('');
+
         // Convert to integer for proper comparison
         var buildingIdToMatch = currentBuildingId ? parseInt(currentBuildingId) : null;
         console.log("Loading buildings for type:", type, "with current building ID:", buildingIdToMatch);
@@ -421,6 +426,7 @@ $(document).ready(function() {
                 data: { building_id: buildingId, type: locationType },
                 success: function(response) {
                     $('#floor_select').html('<option value="">Select Floor Name</option>');
+                    $('#room_select').html('<option value="">Select Room</option>');
                     
                     // Handle both wrapped and direct array responses
                     var floors = Array.isArray(response) ? response : (response.data || []);
@@ -443,6 +449,10 @@ $(document).ready(function() {
                     }
                 }
             });
+        } else {
+            // If building cleared, clear dependent fields
+            $('#floor_select').html('<option value="">Select Floor Name</option>').val('');
+            $('#room_select').html('<option value="">Select Room</option>').val('');
         }
     });
 
@@ -480,6 +490,9 @@ $(document).ready(function() {
                     }
                 }
             });
+        } else {
+            // If floor cleared, clear rooms
+            $('#room_select').html('<option value="">Select Room</option>').val('');
         }
     });
 
