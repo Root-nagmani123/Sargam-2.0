@@ -5,12 +5,13 @@
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
 @endphp
 <div class="container-fluid">
-    <div class="card">
+    <x-breadcrum title="Item Category Master"  />
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Item Category Master</h4>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
-                    Add Item Category
+                <button type="button" class="btn btn-primary px-4 py-2 rounded-1 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
+                    <iconify-icon icon="ep:circle-plus-filled"></iconify-icon> Add Item Category
                 </button>
             </div>
 
@@ -22,28 +23,28 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table align-middle">
+                    <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Category Name</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Category Type</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Item Category Description</th>
-                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
+                            <th class="col">#</th>
+                            <th class="col">Category Name</th>
+                            <th class="col">Category Type</th>
+                            <th class="col">Item Category Description</th>
+                            <th class="col">Status</th>
+                            <th class="col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($itemcategories as $itemcategory)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td><div class="fw-semibold">{{ $itemcategory->category_name }}</div></td>
+                                <td>{{ $itemcategory->category_name }}</td>
                                 <td>
                                     {{ $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? '')) }}
                                 </td>
                                 <td>{{ $itemcategory->description ?? '-' }}</td>
                                 <td>
-                                    <span class="badge bg-{{ $itemcategory->status_badge_class }}">
+                                    <span class="badge text-white bg-{{ $itemcategory->status_badge_class }}">
                                         {{ $itemcategory->status_label }}
                                     </span>
                                 </td>
@@ -195,8 +196,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-
-<style>
-.table thead th { background-color: #af2910 !important; color: #fff !important; }
-</style>
 @endsection

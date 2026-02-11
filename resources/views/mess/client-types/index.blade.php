@@ -5,6 +5,7 @@
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
 @endphp
 <div class="container-fluid">
+    <x-breadcrum title="Client Types Master"  />
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -22,24 +23,24 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table align-middle">
+                    <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Client Types</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Client Name</th>
-                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
+                            <th class="col">#</th>
+                            <th class="col">Client Types</th>
+                            <th class="col">Client Name</th>
+                            <th class="col">Status</th>
+                            <th class="col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($clientTypes as $clientType)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td><div class="fw-semibold">{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</div></td>
-                                <td><div class="fw-semibold">{{ $clientType->client_name }}</div></td>
+                                <td>{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</td>
+                                <td>{{ $clientType->client_name }}</td>
                                 <td>
-                                    <span class="badge bg-{{ $clientType->status_badge_class }}">
+                                    <span class="badge text-white bg-{{ $clientType->status_badge_class }}">
                                         {{ $clientType->status_label }}
                                     </span>
                                 </td>
@@ -180,8 +181,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-
-<style>
-.table thead th { background-color: #af2910 !important; color: #fff !important; }
-</style>
 @endsection

@@ -7,7 +7,9 @@
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
     <!-- Bootstrap 5.3.8 (latest v5) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
+    <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
+<link rel="stylesheet" href="{{asset('css/custom.css')}}">
+<link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
     <!-- Favicon icon-->
     <link rel="shortcut icon" type="image/ico" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
     <!-- jQuery -->
@@ -38,7 +40,7 @@
     <!-- Government Header Strips (GIGW: clear government identity + skip link) -->
     <div class="govt-header d-none d-lg-block" role="banner" aria-label="Government of India identity bar">
         <!-- Dark Blue Strip -->
-        <div class="govt-header-top bg-primary text-white py-2">
+        <div class="govt-header-top text-white py-2" style="background-color: #004a93 !important;">
             <div class="container-fluid">
                 <div class="row align-items-center">
                     <div class="col-md-6">
@@ -120,7 +122,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-auto text-white py-2 bg-primary" role="contentinfo">
+    <footer class="mt-auto text-white py-2" style="background-color: #004a93 !important;" role="contentinfo">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-8">

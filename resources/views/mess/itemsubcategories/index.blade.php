@@ -2,6 +2,7 @@
 @section('title', 'Item Sub Category Master')
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Item Sub Category Master"  />
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -19,25 +20,25 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table align-middle">
+                    <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Category Name</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Item Name</th>
-                            <th style="width: 140px; background-color: #af2910; color: #fff; border-color: #af2910;">Item Code</th>
-                            <th style="width: 140px; background-color: #af2910; color: #fff; border-color: #af2910;">Unit Measurement</th>
-                            <th style="width: 140px; background-color: #af2910; color: #fff; border-color: #af2910;">Standard Cost</th>
-                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
+                            <th class="col">#</th>
+                            <th class="col">Category Name</th>
+                            <th class="col">Item Name</th>
+                            <th class="col">Item Code</th>
+                            <th class="col">Unit Measurement</th>
+                            <th class="col">Standard Cost</th>
+                            <th class="col">Status</th>
+                            <th class="col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($itemsubcategories as $itemsubcategory)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td><div class="fw-semibold">{{ $itemsubcategory->category->category_name ?? '-' }}</div></td>
-                                <td><div class="fw-semibold">{{ $itemsubcategory->item_name }}</div></td>
+                                <td>{{ $itemsubcategory->category->category_name ?? '-' }}</td>
+                                <td>{{ $itemsubcategory->item_name }}</td>
                                 <td>{{ $itemsubcategory->item_code ?? '-' }}</td>
                                 <td>{{ $itemsubcategory->unit_measurement ?? '-' }}</td>
                                 <td>
@@ -48,7 +49,7 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ $itemsubcategory->status_badge_class }}">
+                                    <span class="badge text-white bg-{{ $itemsubcategory->status_badge_class }}">
                                         {{ $itemsubcategory->status_label }}
                                     </span>
                                 </td>
@@ -233,8 +234,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-
-<style>
-.table thead th { background-color: #af2910 !important; color: #fff !important; }
-</style>
 @endsection
