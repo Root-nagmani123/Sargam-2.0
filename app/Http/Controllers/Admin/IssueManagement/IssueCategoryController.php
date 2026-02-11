@@ -17,8 +17,7 @@ class IssueCategoryController extends Controller
      */
     public function index()
     {
-        $categories = IssueCategoryMaster::active()
-            ->with('subCategories')
+        $categories = IssueCategoryMaster::with('subCategories')
             ->orderBy('issue_category')
             ->paginate(20);
 
