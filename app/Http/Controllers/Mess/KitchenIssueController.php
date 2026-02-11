@@ -57,11 +57,9 @@ class KitchenIssueController extends Controller
             $query->whereBetween('issue_date', [$request->start_date, $request->end_date]);
         }
 
-        // Load all filtered records for client-side DataTable (sorting, search, pagination)
         $kitchenIssues = $query->orderBy('issue_date', 'desc')
             ->orderBy('pk', 'desc')
-            ->limit(5000)
-            ->get();
+            ->paginate(20);
 
         $otCourses = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) {

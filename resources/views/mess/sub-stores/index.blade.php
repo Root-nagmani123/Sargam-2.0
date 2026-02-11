@@ -2,7 +2,6 @@
 @section('title', 'Sub Store Master')
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Sub Store Master"  />
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -20,22 +19,22 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <th class="col">#</th>
-                            <th class="col">Sub Store Name</th>
-                            <th class="col">Status</th>
-                            <th class="col">Action</th>
+                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
+                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Sub Store Name</th>
+                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
+                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($subStores as $subStore)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $subStore->sub_store_name }}</td>
+                                <td><div class="fw-semibold">{{ $subStore->sub_store_name }}</div></td>
                                 <td>
-                                    <span class="badge text-white bg-{{ $subStore->status_badge_class }}">
+                                    <span class="badge bg-{{ $subStore->status_badge_class }}">
                                         {{ $subStore->status_label }}
                                     </span>
                                 </td>
@@ -155,4 +154,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+
+<style>
+.table thead th { background-color: #af2910 !important; color: #fff !important; }
+</style>
 @endsection
