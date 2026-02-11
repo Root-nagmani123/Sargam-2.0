@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid">
-     @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
+     @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
     @endif
