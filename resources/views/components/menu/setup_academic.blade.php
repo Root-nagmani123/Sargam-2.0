@@ -18,7 +18,7 @@
 @include('components.profile')
                             <!-- Main Container with Improved Layout -->
 
-                            @if (hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP'))
+                            @if (hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))
 
 
                                 <li class="nav-section" role="listitem">
@@ -73,7 +73,7 @@
 
 
 
-                                @if (!hasRole('Training-MCTP'))
+                                @if (!hasRole('Training-MCTP') && ! hasRole('IST'))
                                     <li class="sidebar-item"
                                         style="background: #4077ad;
                             border-radius: 30px 0px 0px 30px;
@@ -94,7 +94,7 @@
                                                 href="{{ route('student.medical.exemption.index') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">Student Medical Exemption (Doctor)</span>
                                             </a></li>
-                                        @if (hasRole('Training-MCTP'))
+                                        @if (hasRole('Training-MCTP') || hasRole('IST'))
                                             <li class="sidebar-item"><a class="sidebar-link"
                                                     href="{{ route('mdo-escrot-exemption.index') }}">
                                                     <span class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator Duty</span>

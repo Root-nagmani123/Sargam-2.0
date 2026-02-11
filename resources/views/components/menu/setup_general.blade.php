@@ -12,7 +12,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
+                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -40,7 +40,7 @@
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Attendance</span>
                                 </a></li>
-                            @if(hasRole('Training-MCTP'))
+                            @if(hasRole('Training-MCTP') || hasRole('IST'))
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('mdo-escrot-exemption.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator Duty</span>
@@ -48,7 +48,7 @@
                             @endif
                             
                               
-                                @if(! hasRole('Training-MCTP'))
+                                @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('send.notice.management.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Send Direct Notice</span>
@@ -68,7 +68,7 @@
                                 </a></li>
                                 @endif
                             {{-- USER Feedback --}}
-                              @if(! hasRole('Training-MCTP'))
+                              @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
