@@ -2246,7 +2246,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     <!-- Main Content Area -->
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
+         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
         <section
     class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
     role="region"
@@ -2297,7 +2297,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         </fieldset>
 
         <!-- Primary Actions -->
-        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP'))
+        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
         <div class="d-flex align-items-center gap-2">
             <button
                 type="button"
@@ -3014,7 +3014,7 @@ class CalendarManager {
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))) return;
+        if (!@json(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))) return;
 
         this.resetEventForm();
         this.setFormDate(info.start);

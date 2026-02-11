@@ -135,14 +135,15 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Complainant <span class="text-danger">*</span></label>
-                                <select name="created_by" id="complainant" class="form-select" required>
-                                    <option value="">- Select -</option>
+                                <select name="created_by" id="complainant" class="form-select select2-complainant" required>
+                                    <option value="">Search complainant by name...</option>
                                     @if(isset($employees))
                                         @foreach($employees as $employee)
                                             <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (isset($currentUserEmployeeId) && $currentUserEmployeeId == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
                                         @endforeach
                                     @endif
                                 </select>
+                                <small class="text-muted">Type to search when creating issue on behalf of others</small>
                                 @error('created_by')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -251,8 +252,11 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Attach Image (Optional)</label>
-                                <input type="file" name="complaint_img_url[]" class="form-control" accept=".jpg,.jpeg,.png" multiple>
-                                <small class="text-muted">Max size: 5MB per file. Allowed: JPG, PNG</small>
+                                <input type="file" name="complaint_img_url[]" class="form-control {{ $errors->has('complaint_img_url') ? 'is-invalid' : '' }}" accept=".jpg,.jpeg,.png" multiple>
+                                <small class="text-muted">Max size: 5MB per file. Allowed: JPG, PNG only.</small>
+                                @error('complaint_img_url')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>
@@ -272,6 +276,15 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
+    // Complainant searchable dropdown (search by name when creating issue on behalf of others)
+    if ($.fn.select2) {
+        $('#complainant').select2({
+            placeholder: 'Search complainant by name...',
+            allowClear: true,
+            width: '100%'
+        });
+    }
+
     // Character counter for description (max 1000)
     function updateCharCount() {
         var len = $('#description').val().length;
@@ -349,17 +362,26 @@ $(document).ready(function() {
         $('#sub_category_name').val(selectedText);
     });
 
+    // Helper to normalize mobile value (handles numbers / strings / null)
+    function getNormalizedMobile(mobile) {
+        if (mobile === null || mobile === undefined) return '';
+        var str = String(mobile).trim();
+        return str;
+    }
+
     // Auto-fill mobile number when complainant is selected
-  $('#complainant').change(function() {
+    $('#complainant').change(function() {
         var selected = $(this).val();
         var mobile = $(this).find('option:selected').data('mobile');
-        $('#mobile_number').val(!selected ? '' : (mobile && mobile.trim() ? mobile : 'Mobile number is not available'));
-    
+        var normalized = getNormalizedMobile(mobile);
+        $('#mobile_number').val(!selected ? '' : (normalized ? normalized : 'Mobile number is not available'));
     });
+
     // Auto-fill mobile on page load if complainant is pre-selected (logged-in user)
     if ($('#complainant').val()) {
         var mobile = $('#complainant').find('option:selected').data('mobile');
-        $('#mobile_number').val(mobile && mobile.trim() ? mobile : 'Mobile number is not available');
+        var normalized = getNormalizedMobile(mobile);
+        $('#mobile_number').val(normalized ? normalized : 'Mobile number is not available');
     }
 
     // Show/hide location sections based on location type
