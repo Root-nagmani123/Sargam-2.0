@@ -17792,7 +17792,7 @@
     --bs-success: #36c76c;
     --bs-info: #46caeb;
     --bs-warning: #f8c20a;
-    --bs-danger: #004a93;
+    --bs-danger: #af2910;
     --bs-light: #eff4fa;
     --bs-dark: #0a2540;
     --bs-muted: #526b7a;
@@ -17822,7 +17822,7 @@
     --bs-success-text-emphasis: shade-color(#36c76c, 60%);
     --bs-info-text-emphasis: shade-color(#46caeb, 60%);
     --bs-warning-text-emphasis: shade-color(#f8c20a, 60%);
-    --bs-danger-text-emphasis: shade-color(#004a93, 60%);
+    --bs-danger-text-emphasis: shade-color(#af2910, 60%);
     --bs-light-text-emphasis: #f6f7f9;
     --bs-dark-text-emphasis: #29343d;
     --bs-primary-bg-subtle: #b3d5f7;
@@ -21832,8 +21832,8 @@ fieldset:disabled .btn {
 
 .btn-danger {
     --bs-btn-color: #fff;
-    --bs-btn-bg: #004a93;
-    --bs-btn-border-color: #004a93;
+    --bs-btn-bg: #af2910;
+    --bs-btn-border-color: #af2910;
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: #d9577c;
     --bs-btn-hover-border-color: #cc5275;
@@ -21843,8 +21843,8 @@ fieldset:disabled .btn {
     --bs-btn-active-border-color: #bf4d6e;
     --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
     --bs-btn-disabled-color: #fff;
-    --bs-btn-disabled-bg: #004a93;
-    --bs-btn-disabled-border-color: #004a93;
+    --bs-btn-disabled-bg: #af2910;
+    --bs-btn-disabled-border-color: #af2910;
 }
 
 .btn-light {
