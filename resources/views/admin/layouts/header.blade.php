@@ -208,7 +208,7 @@
     <!-- Notifications (visible on both desktop and mobile) -->
     <div class="dropdown position-relative d-none d-lg-block">
         <button type="button"
-            class="btn btn-light rounded-circle p-2 position-relative shadow-sm notification-btn "
+            class="btn btn-light rounded-1 p-2 position-relative notification-btn "
             id="notificationDropdown"
             data-bs-toggle="dropdown"
             aria-expanded="false"
@@ -288,7 +288,7 @@
     <form action="{{ route('logout') }}" method="POST" class="m-0">
         @csrf
         <button type="submit"
-            class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 rounded-pill shadow-sm"
+            class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
             aria-label="Sign out">
             <i class="material-icons material-symbols-rounded fs-6">logout</i>
             <span class="small fw-medium">Logout</span>
