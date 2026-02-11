@@ -909,44 +909,39 @@ public function store_memo_notice(Request $request)
         'submission_type' => 'required|in:1,2',
     ]);
 
-    // ✅ Fetch all required student info in one query
+    // ✅ Fetch one course_student_attendance row per selected student for THIS topic only
+    // (Filter by topic_id so we don't get multiple attendance rows per student → one notice per student)
     $students = DB::table('course_student_attendance as a')
         ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
         ->whereIn('a.Student_master_pk', $validated['selected_student_list'])
+        ->where('a.timetable_pk', $validated['topic_id'])
         ->select('a.pk as course_attendance_pk', 's.pk as student_pk')
         ->get()
-        ->keyBy('course_attendance_pk'); // So we can access by course attendance PK
+        ->unique('student_pk')
+        ->values();
 
     $data = [];
-    // print_r($students);
-    // print_r($validated['selected_student_list']);die;
+    foreach ($students as $row) {
+        $data[] = [
+            'course_master_pk'           => $validated['course_master_pk'],
+            'student_pk'                 => $row->student_pk,
+            'date_'                      => $validated['date_memo_notice'],
+            'subject_master_pk'          => $validated['subject_master_id'],
+            'subject_topic'              => $validated['topic_id'],
+            'venue_id'                   => $validated['venue_id'],
+            'class_session_master_pk'    => $validated['class_session_master_pk'],
+            'faculty_master_pk'          => $validated['faculty_master_pk'],
+            'course_student_attendance_pk' => $row->course_attendance_pk,
+            'message'                    => $validated['Remark'],
+            'notice_memo'                => $validated['submission_type'],
+        ];
+    }
 
-    foreach ($students as $studentId) {
-    // $studentId is actually the course_student_attendance.pk
-    // if (isset($students[$studentId])) {
-        // $student = $students[$studentId];
-    // print_r($studentId);die;
+    if (empty($data)) {
+        return redirect()->back()->with('error', 'No matching attendance record found for the selected topic and students. Please ensure students are from the selected topic.');
+    }
 
-
-            $data[] = [
-                'course_master_pk'           => $validated['course_master_pk'],
-                'student_pk'                 => $studentId->student_pk,
-                'date_'                      => $validated['date_memo_notice'],
-                'subject_master_pk'          => $validated['subject_master_id'],
-                'subject_topic'              => $validated['topic_id'],
-                'venue_id'                   => $validated['venue_id'],
-                'class_session_master_pk'    => $validated['class_session_master_pk'],
-                'faculty_master_pk'          => $validated['faculty_master_pk'],
-                'course_student_attendance_pk' => $studentId->course_attendance_pk,
-                'message'                    => $validated['Remark'],
-                'notice_memo'                => $validated['submission_type'],
-            ];
-
-        }
-    // }
-    // print_r($data);die;
-
-    // ✅ Bulk insert
+    // ✅ Bulk insert (one notice per student)
     $inserted = DB::table('student_notice_status')->insert($data);
 
     if ($inserted) {
