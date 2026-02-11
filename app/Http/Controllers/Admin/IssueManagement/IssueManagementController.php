@@ -92,11 +92,13 @@ class IssueManagementController extends Controller
 
             // Filter by date range (use Carbon for consistent timezone handling)
             if ($request->filled('date_from')) {
-                $from = Carbon::parse($request->date_from)->startOfDay()->format('Y-m-d');
+                // Use full datetime so the day's range is applied correctly
+                $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
                 $builder->where('created_date', '>=', $from);
             }
             if ($request->filled('date_to')) {
-                $to = Carbon::parse($request->date_to)->endOfDay()->format('Y-m-d');
+                // Use full datetime so the "to" date includes the entire day (23:59:59)
+                $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
                 $builder->where('created_date', '<=', $to);
             }
         };
@@ -274,11 +276,11 @@ class IssueManagementController extends Controller
 
         // Date range (Carbon for consistent timezone)
         if ($request->filled('date_from')) {
-            $from = Carbon::parse($request->date_from)->startOfDay()->format('Y-m-d');
+            $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
             $query->where('created_date', '>=', $from);
         }
         if ($request->filled('date_to')) {
-            $to = Carbon::parse($request->date_to)->endOfDay()->format('Y-m-d');
+            $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
             $query->where('created_date', '<=', $to);
         }
 
@@ -688,8 +690,11 @@ class IssueManagementController extends Controller
             'mobile_number' => 'nullable|string',
             'nodal_employee_id' => 'required|integer|exists:employee_master,pk',
             'location' => 'required|in:H,R,O',
-            'building_select' => 'required|integer',
-            'floor_select' => 'required|integer',
+            // Building details can be empty for legacy/partial records
+            'building_select' => 'nullable|integer',
+            // Some legacy records store floor as a label/string; allow either
+            'floor_select' => 'nullable',
+            'room_select' => 'nullable|string',
             'description' => 'required|string|max:1000',
         ]);
 
@@ -711,29 +716,28 @@ class IssueManagementController extends Controller
             IssueLogSubCategoryMap::where('issue_log_management_pk', $issue->pk)->delete();
             IssueLogSubCategoryMap::create([
                 'issue_log_management_pk' => $issue->pk,
+                'issue_category_master_pk' => $request->issue_category_id,
                 'issue_sub_category_master_pk' => $request->issue_sub_category_id,
                 'sub_category_name' => $request->input('sub_category_name', ''),
             ]);
 
             // Update building/floor/room mapping based on location
-            if ($request->location == 'H') {
-                // Hostel location
+            // If building is not provided, clear mappings and keep update successful.
+            $buildingPk = $request->input('building_select');
+            $floorVal = $request->input('floor_select', '');
+            $roomVal = $request->input('room_select', '');
+
+            if (empty($buildingPk)) {
                 IssueLogHostelMap::where('issue_log_management_pk', $issue->pk)->delete();
-                IssueLogHostelMap::create([
-                    'issue_log_management_pk' => $issue->pk,
-                    'hostel_building_master_pk' => $request->building_select,
-                    'floor_name' => $request->floor_select,
-                    'room_name' => $request->input('room_select', ''),
-                ]);
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
-            } elseif ($request->location == 'R') {
-                // Residential location
+            } elseif ($request->location == 'H' || $request->location == 'R') {
+                // Hostel / Residential location (same mapping table)
                 IssueLogHostelMap::where('issue_log_management_pk', $issue->pk)->delete();
                 IssueLogHostelMap::create([
                     'issue_log_management_pk' => $issue->pk,
-                    'hostel_building_master_pk' => $request->building_select,
-                    'floor_name' => $request->floor_select,
-                    'room_name' => $request->input('room_select', ''),
+                    'hostel_building_master_pk' => (int) $buildingPk,
+                    'floor_name' => $floorVal ?: '',
+                    'room_name' => $roomVal ?: '',
                 ]);
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
             } elseif ($request->location == 'O') {
@@ -741,9 +745,9 @@ class IssueManagementController extends Controller
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
                 IssueLogBuildingMap::create([
                     'issue_log_management_pk' => $issue->pk,
-                    'building_master_pk' => $request->building_select,
-                    'floor_name' => $request->floor_select,
-                    'room_name' => $request->input('room_select', ''),
+                    'building_master_pk' => (int) $buildingPk,
+                    'floor_name' => $floorVal ?: '',
+                    'room_name' => $roomVal ?: '',
                 ]);
                 IssueLogHostelMap::where('issue_log_management_pk', $issue->pk)->delete();
             }

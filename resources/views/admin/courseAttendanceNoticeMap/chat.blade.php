@@ -130,7 +130,7 @@
 
                         <div class="text-end">
                             <button type="submit" class="btn btn-primary">Send</button>
-                            <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">Back</a>
+                            <a href="{{ url('admin/memo-notice-management') }}" class="btn btn-outline-secondary">Back</a>
                         </div>
                     </form>
                 </div>
