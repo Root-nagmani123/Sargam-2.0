@@ -37,7 +37,74 @@ class IssueManagementController extends Controller
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
             'statusHistory'
+<<<<<<< HEAD
         ])->orderBy('created_date', 'desc');
+=======
+        ]);
+
+        $applyUserScope = function ($builder) {
+            if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+                $builder->where(function ($q) {
+                    $q->where('employee_master_pk', Auth::user()->user_id)
+                        ->orWhere('issue_logger', Auth::user()->user_id)
+                        ->orWhere('assigned_to', Auth::user()->user_id)
+                        ->orWhere('created_by', Auth::user()->user_id);
+                });
+            }
+        };
+
+        // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
+        $applyRaisedBy = function ($builder) use ($request) {
+            if ($request->get('raised_by') === 'self') {
+                $builder->where('created_by', Auth::user()->user_id);
+            }
+        };
+
+        $applyFilters = function ($builder) use ($request) {
+            // Search (ID, description, category name, sub-category)
+            if ($request->filled('search')) {
+                $term = trim($request->search);
+                $builder->where(function ($q) use ($term) {
+                    if (is_numeric($term)) {
+                        $q->orWhere('pk', $term);
+                    }
+                    $q->orWhere('description', 'like', "%{$term}%")
+                        ->orWhereHas('category', function ($cq) use ($term) {
+                            $cq->where('issue_category', 'like', "%{$term}%");
+                        })
+                        ->orWhereHas('subCategoryMappings.subCategory', function ($sq) use ($term) {
+                            $sq->where('issue_sub_category', 'like', "%{$term}%");
+                        });
+                });
+            }
+
+            // Filter by category
+            if ($request->has('category') && !empty($request->category)) {
+                $builder->where('issue_category_master_pk', $request->category);
+            }
+
+            // Filter by priority
+            if ($request->has('priority') && !empty($request->priority)) {
+                $builder->where('issue_priority_master_pk', $request->priority);
+            }
+
+            // Filter by date range (use Carbon for consistent timezone handling)
+            if ($request->filled('date_from')) {
+                // Use full datetime so the day's range is applied correctly
+                $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+                $builder->where('created_date', '>=', $from);
+            }
+            if ($request->filled('date_to')) {
+                // Use full datetime so the "to" date includes the entire day (23:59:59)
+                $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+                $builder->where('created_date', '<=', $to);
+            }
+        };
+
+        $applyUserScope($query);
+        $applyRaisedBy($query);
+        $query->orderBy('created_date', 'desc');
+>>>>>>> e684ec96 (memo notice bug solve)
 
         // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
         $tab = $request->get('tab', 'active');
@@ -104,7 +171,26 @@ class IssueManagementController extends Controller
         }
 
         if ($request->has('category') && $request->category !== '') {
+<<<<<<< HEAD
             $query->where('issue_category_master_pk', $request->category);
+=======
+            $query->where('issue_category_master_pk', (int) $request->category);
+        }
+
+        // Priority
+        if ($request->has('priority') && $request->priority !== '') {
+            $query->where('issue_priority_master_pk', (int) $request->priority);
+        }
+
+        // Date range (Carbon for consistent timezone)
+        if ($request->filled('date_from')) {
+            $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+            $query->where('created_date', '>=', $from);
+        }
+        if ($request->filled('date_to')) {
+            $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+            $query->where('created_date', '<=', $to);
+>>>>>>> e684ec96 (memo notice bug solve)
         }
 
         $issues = $query->paginate(20);
@@ -463,8 +549,11 @@ class IssueManagementController extends Controller
             'mobile_number' => 'nullable|string',
             'nodal_employee_id' => 'required|integer|exists:employee_master,pk',
             'location' => 'required|in:H,R,O',
-            'building_select' => 'required|integer',
-            'floor_select' => 'required|integer',
+            // Building details can be empty for legacy/partial records
+            'building_select' => 'nullable|integer',
+            // Some legacy records store floor as a label/string; allow either
+            'floor_select' => 'nullable',
+            'room_select' => 'nullable|string',
             'description' => 'required|string|max:1000',
         ]);
 
@@ -485,29 +574,28 @@ class IssueManagementController extends Controller
             IssueLogSubCategoryMap::where('issue_log_management_pk', $issue->pk)->delete();
             IssueLogSubCategoryMap::create([
                 'issue_log_management_pk' => $issue->pk,
+                'issue_category_master_pk' => $request->issue_category_id,
                 'issue_sub_category_master_pk' => $request->issue_sub_category_id,
                 'sub_category_name' => $request->input('sub_category_name', ''),
             ]);
 
             // Update building/floor/room mapping based on location
-            if ($request->location == 'H') {
-                // Hostel location
+            // If building is not provided, clear mappings and keep update successful.
+            $buildingPk = $request->input('building_select');
+            $floorVal = $request->input('floor_select', '');
+            $roomVal = $request->input('room_select', '');
+
+            if (empty($buildingPk)) {
                 IssueLogHostelMap::where('issue_log_management_pk', $issue->pk)->delete();
-                IssueLogHostelMap::create([
-                    'issue_log_management_pk' => $issue->pk,
-                    'hostel_building_master_pk' => $request->building_select,
-                    'floor_name' => $request->floor_select,
-                    'room_name' => $request->input('room_select', ''),
-                ]);
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
-            } elseif ($request->location == 'R') {
-                // Residential location
+            } elseif ($request->location == 'H' || $request->location == 'R') {
+                // Hostel / Residential location (same mapping table)
                 IssueLogHostelMap::where('issue_log_management_pk', $issue->pk)->delete();
                 IssueLogHostelMap::create([
                     'issue_log_management_pk' => $issue->pk,
-                    'hostel_building_master_pk' => $request->building_select,
-                    'floor_name' => $request->floor_select,
-                    'room_name' => $request->input('room_select', ''),
+                    'hostel_building_master_pk' => (int) $buildingPk,
+                    'floor_name' => $floorVal ?: '',
+                    'room_name' => $roomVal ?: '',
                 ]);
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
             } elseif ($request->location == 'O') {
@@ -515,9 +603,9 @@ class IssueManagementController extends Controller
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
                 IssueLogBuildingMap::create([
                     'issue_log_management_pk' => $issue->pk,
-                    'building_master_pk' => $request->building_select,
-                    'floor_name' => $request->floor_select,
-                    'room_name' => $request->input('room_select', ''),
+                    'building_master_pk' => (int) $buildingPk,
+                    'floor_name' => $floorVal ?: '',
+                    'room_name' => $roomVal ?: '',
                 ]);
                 IssueLogHostelMap::where('issue_log_management_pk', $issue->pk)->delete();
             }

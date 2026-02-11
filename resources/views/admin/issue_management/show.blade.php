@@ -121,7 +121,7 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th>Contact</th>
+                                    <th>Assigned Person Contact Number</th>
                                     <td>{{ $issue->assigned_to_contact ?? 'N/A' }}</td>
                                 </tr>
                                 @if($issue->clear_date)
