@@ -252,8 +252,9 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Attach Image (Optional)</label>
-                                <input type="file" name="complaint_img_url[]" class="form-control {{ $errors->has('complaint_img_url') ? 'is-invalid' : '' }}" accept=".jpg,.jpeg,.png" multiple>
+                                <input type="file" name="complaint_img_url[]" id="complaint_img_url" class="form-control {{ $errors->has('complaint_img_url') ? 'is-invalid' : '' }}" accept=".jpg,.jpeg,.png" multiple>
                                 <small class="text-muted">Max size: 5MB per file. Allowed: JPG, PNG only.</small>
+                                <div id="attachment_validation_error" class="text-danger small mt-1" style="display: none;"></div>
                                 @error('complaint_img_url')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -263,7 +264,7 @@
 
                     <div class="d-flex justify-content-end gap-2 pt-2">
                         <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary rounded">Cancel</a>
-                        <button type="submit" class="btn btn-submit-complaint">Log Issue</button>
+                        <button type="submit" class="btn btn-submit-complaint" id="btn_log_issue">Log Issue</button>
                     </div>
                 </form>
             </div>
@@ -477,6 +478,44 @@ $(document).ready(function() {
         } else {
             $('#room_select').html('<option value="">Select Room</option>');
         }
+    });
+
+    // Client-side attachment validation so form is not submitted and filled details are not cleared
+    var allowedExtensions = ['jpg', 'jpeg', 'png'];
+    var maxSizeBytes = 5 * 1024 * 1024; // 5MB
+
+    $('form').on('submit', function(e) {
+        var errEl = $('#attachment_validation_error');
+        errEl.hide().text('');
+        $('#complaint_img_url').removeClass('is-invalid');
+
+        var input = document.getElementById('complaint_img_url');
+        var files = input && input.files ? input.files : [];
+        if (files.length === 0) return true; // no attachments, allow submit
+
+        for (var i = 0; i < files.length; i++) {
+            var f = files[i];
+            var ext = (f.name.split('.').pop() || '').toLowerCase();
+            if (allowedExtensions.indexOf(ext) === -1) {
+                e.preventDefault();
+                errEl.text('Only JPG and PNG images are allowed. File "' + f.name + '" is not allowed.').show();
+                $('#complaint_img_url').addClass('is-invalid');
+                return false;
+            }
+            if (f.size > maxSizeBytes) {
+                e.preventDefault();
+                errEl.text('Each file must not exceed 5MB. File "' + f.name + '" is too large.').show();
+                $('#complaint_img_url').addClass('is-invalid');
+                return false;
+            }
+        }
+        return true;
+    });
+
+    // Clear attachment error when user changes file selection
+    $('#complaint_img_url').on('change', function() {
+        $('#attachment_validation_error').hide().text('');
+        $(this).removeClass('is-invalid');
     });
 
 });
