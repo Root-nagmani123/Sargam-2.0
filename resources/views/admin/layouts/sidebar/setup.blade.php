@@ -186,7 +186,7 @@
 <style>
 /* Google-style sidebar - light gray, icon above text, oval selected state */
 #sidebar-setup .sidebar-google-style.side-mini-panel {
-    width: 80px;
+    width: 90px;
 }
 #sidebar-setup .sidebar-google-style .mini-nav {
     background: #F0F0F0 !important;
@@ -204,7 +204,6 @@
     list-style: none;
     display: flex !important;
     justify-content: center !important;
-    width: 100%;
 }
 #sidebar-setup .sidebar-google-style .mini-nav ul.mini-nav-ul {
     padding-inline-start: 0 !important;

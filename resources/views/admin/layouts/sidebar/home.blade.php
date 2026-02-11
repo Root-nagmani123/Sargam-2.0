@@ -72,7 +72,7 @@
 <style>
 /* Google-style sidebar - home */
 #sidebar-home .sidebar-google-style.side-mini-panel {
-    width: 80px;
+    width: 90px;
 }
 #sidebar-home .sidebar-google-style .mini-nav {
     background: #F0F0F0 !important;

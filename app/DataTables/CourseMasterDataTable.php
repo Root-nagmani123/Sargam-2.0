@@ -59,67 +59,40 @@ class CourseMasterDataTable extends DataTable
         <!-- View -->
         <a
             href="{$viewUrl}"
-            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+            class="text-primary d-inline-block"
             aria-label="View course"
         >
             <span class="material-icons material-symbols-rounded"
                   style="font-size:18px;"
-                  aria-hidden="true">
-                visibility
-            </span>
-            <span class="d-none d-lg-inline">View</span>
+                  aria-hidden="true">visibility</span>
         </a>
 
         <!-- Edit -->
         <a
             href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+            class="text-primary d-inline-block"
             aria-label="Edit course"
         >
             <span class="material-icons material-symbols-rounded"
                   style="font-size:18px;"
-                  aria-hidden="true">
-                edit
-            </span>
-            <span class="d-none d-lg-inline">Edit</span>
+                  aria-hidden="true">edit</span>
         </a>
 
-        <!-- Delete -->
-        <?php if ($isActive): ?>
-            <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active course"
-            >
-                <span class="material-icons material-symbols-rounded"
-                      style="font-size:18px;"
-                      aria-hidden="true">
-                    delete
-                </span>
-                <span class="d-none d-lg-inline">Delete</span>
-            </button>
-        <?php else: ?>
             <form action="{$deleteUrl}" method="POST" class="d-inline">
                 <input type="hidden" name="_token" value="{$csrf}">
                 <input type="hidden" name="_method" value="DELETE">
 
                 <button
                     type="submit"
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                    class="border-0 bg-transparent p-0 text-primary d-inline-block"
                     aria-label="Delete course"
                     onclick="return confirm('Are you sure you want to delete this course?');"
                 >
                     <span class="material-icons material-symbols-rounded"
                           style="font-size:18px;"
-                          aria-hidden="true">
-                        delete
-                    </span>
-                    <span class="d-none d-lg-inline">Delete</span>
+                          aria-hidden="true">delete</span>
                 </button>
             </form>
-        <?php endif; ?>
 
     </div>
 </td>
@@ -206,9 +179,9 @@ HTML;
             ->minifiedAjax() // This will use the current route for ajax
             ->selectStyleSingle()
             ->parameters([
-                // Enable fully responsive DataTable with sorting, searching, length, and pagination
-                'responsive' => true,
-                'scrollX' => false,
+                // Disable responsive child row (no expand arrow); full table shown with horizontal scroll via .table-responsive
+                'responsive' => false,
+                'scrollX' => true,
                 'autoWidth' => false,
                 'ordering' => true,
                 'searching' => true,
