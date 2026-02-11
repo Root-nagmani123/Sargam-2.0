@@ -2,31 +2,28 @@
 @section('title', 'Purchase Orders')
 @section('setup_content')
 <div class="container-fluid">
-@if(session('success'))
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Purchase Orders</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+            Create Purchase Order
+        </button>
+    </div>
+    @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
-    <x-breadcrum title="Purchase Orders"  />
-<div class="card">
-    <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Purchase Orders</h4>
-        <button type="button" class="btn btn-primary px-4 py-2 rounded-1 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-            <iconify-icon icon="ep:circle-plus-filled"></iconify-icon> Create Purchase Order
-        </button>
-    </div>
     <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
+        <table class="table table-bordered table-hover align-middle">
+            <thead style="background-color: #af2910;">
                 <tr>
-                    <th class="col">#</th>
-                    <th class="col">Order Number</th>
-                    <th class="col">Vendor Name</th>
-                    <th class="col">Store Name</th>
-                    <th class="col">Status</th>
-                    <th class="col">Action</th>
+                    <th style="color: #fff; border-color: #af2910; width: 60px;">S.No</th>
+                    <th style="color: #fff; border-color: #af2910;">Order Number</th>
+                    <th style="color: #fff; border-color: #af2910;">Vendor Name</th>
+                    <th style="color: #fff; border-color: #af2910;">Store Name</th>
+                    <th style="color: #fff; border-color: #af2910;">Status</th>
+                    <th style="color: #fff; border-color: #af2910; min-width: 180px;">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,8 +52,6 @@
             </tbody>
         </table>
     </div>
-    </div>
-</div>
 </div>
 
 {{-- Create Purchase Order Modal --}}

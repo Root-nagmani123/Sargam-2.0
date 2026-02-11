@@ -1,73 +1,82 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
 @section('setup_content')
-<div class="container-fluid selling-voucher-index">
-    <x-breadcrum title="Selling Voucher"  />
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-4">
-            {{-- Filters - Bootstrap 5.3 collapsible, modern form --}}
-            <div class="card border-0 bg-light bg-opacity-50 rounded-3 mb-4">
-                <div class="card-body py-3">
-                    <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                        <div class="row g-3 align-items-end">
-                            <div class="col-12 col-sm-6 col-md-2">
-                                <label class="form-label small fw-semibold text-body-secondary">Status</label>
-                                <select name="status" class="form-select form-select-sm">
-                                    <option value="">All</option>
-                                    <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
-                                    <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
-                                    <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-sm-6 col-md-2">
-                                <label class="form-label small fw-semibold text-body-secondary">Store</label>
-                                <select name="store" class="form-select form-select-sm">
-                                    <option value="">All</option>
-                                    @foreach($stores as $store)
-                                        <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-12 col-sm-6 col-md-2">
-                                <label class="form-label small fw-semibold text-body-secondary">Start Date</label>
-                                <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
-                            </div>
-                            <div class="col-12 col-sm-6 col-md-2">
-                                <label class="form-label small fw-semibold text-body-secondary">End Date</label>
-                                <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
-                            </div>
-                            <div class="col-12 col-md-4 d-flex flex-wrap gap-2 align-items-center">
-                                <button type="submit" class="btn btn-primary btn-sm px-3">
-                                    <i class="bi bi-funnel me-1"></i>Filter
-                                </button>
-                                <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm px-3">Reset</a>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Selling Voucher</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">ADD Selling Voucher</button>
+    </div>
 
-            <div class="table-responsive">
-                <table class="table align-middle text-nowrap" id="sellingVoucherTable">
-                    <thead>
-                        <tr>
-                            <th class="col">#</th>
-                            <th class="col">Item Name</th>
-                            <th class="col">Item Quantity</th>
-                            <th class="col">Return Quantity</th>
-                            <th class="col">Transfer From Store</th>
-                            <th class="col">Client Type</th>
-                            <th class="col">Client Name</th>
-                            <th class="col">Name</th>
-                            <th class="col">Payment Type</th>
-                            <th class="col">Request Date</th>
-                            <th class="col">Status</th>
-                            <th class="col">Return Item</th>
-                            <th class="col">Action</th>
-                        </tr>
-                    </thead>
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <label class="form-label small">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
+                            <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
+                            <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Store</label>
+                        <select name="store" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            @foreach($stores as $store)
+                                <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Start Date</label>
+                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">End Date</label>
+                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead style="background-color: #af2910;">
+                <tr>
+                    <th style="color: #fff; width: 50px;">Serial No.</th>
+                    <th style="color: #fff;">Item Name</th>
+                    <th style="color: #fff;">Item Quantity</th>
+                    <th style="color: #fff;">Return Quantity</th>
+                    <th style="color: #fff;">Transfer From Store</th>
+                    <th style="color: #fff;">Client Type</th>
+                    <th style="color: #fff;">Client Name</th>
+                    <th style="color: #fff;">Name</th>
+                    <th style="color: #fff;">Payment Type</th>
+                    <th style="color: #fff;">Request Date</th>
+                    <th style="color: #fff;">Status</th>
+                    <th style="color: #fff;">Return Item</th>
+                    <th style="color: #fff; min-width: 120px;">Action</th>
+                </tr>
+            </thead>
             <tbody>
-                @php $serial = 1; @endphp
+                @php $serial = $kitchenIssues->firstItem() ?: 0; @endphp
                 @forelse($kitchenIssues as $voucher)
                     @forelse($voucher->items as $item)
                         <tr>
@@ -91,26 +100,24 @@
                             <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
                             <td>
-                                @if($voucher->status == 0)<span class="badge text-bg-warning">Pending</span>
-                                @elseif($voucher->status == 2)<span class="badge text-bg-success">Approved</span>
-                                @elseif($voucher->status == 4)<span class="badge text-bg-primary">Completed</span>
-                                @else<span class="badge text-bg-secondary">{{ $voucher->status }}</span>@endif
+                                @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
+                                @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
+                                @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
+                                @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
                             </td>
                             <td>
                                 @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge text-bg-info">Returned</span>
+                                    <span class="badge bg-info">Returned</span>
                                 @endif
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return"><i class="bi bi-arrow-return-left me-1"></i>Return</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-primary btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View"><i class="bi bi-eye"></i></button>
-                                    <button type="button" class="btn btn-outline-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit"><i class="bi bi-pencil"></i></button>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger d-none" title="Delete">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                                 </form>
                             </td>
                         </tr>
@@ -135,52 +142,48 @@
                             <td>{{ $voucher->client_name ?? '—' }}</td>
                             <td>—</td>
                             <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td><span class="badge text-bg-secondary">{{ $voucher->status }}</span></td>
+                            <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return"><i class="bi bi-arrow-return-left me-1"></i>Return</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-primary btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View"><i class="bi bi-eye"></i></button>
-                                    <button type="button" class="btn btn-outline-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit"><i class="bi bi-pencil"></i></button>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger d-none" title="Delete">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                                 </form>
                             </td>
                         </tr>
                     @endforelse
                 @empty
                     <tr>
-                        <td colspan="13" class="text-center py-5 text-body-secondary">
-                            <i class="bi bi-inbox display-6 d-block mb-2 opacity-50"></i>
-                            No selling vouchers found.
-                        </td>
+                        <td colspan="13" class="text-center py-4">No selling vouchers found.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-        </div>
+
+    <div class="d-flex justify-content-center mt-3">
+        {{ $kitchenIssues->links() }}
     </div>
 </div>
 
-{{-- Add Selling Voucher Modal - Bootstrap 5.3 enhanced --}}
+{{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
 #addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; border-radius: 0.75rem; border: none; box-shadow: 0 0.5rem 2rem rgba(0,0,0,0.15); }
+#addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
-#addSellingVoucherModal .card { border-radius: 0.5rem; border: 1px solid rgba(0,0,0,0.06); }
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content rounded-3">
+        <div class="modal-content">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm">
                 @csrf
-                <div class="modal-header border-bottom bg-light py-3">
-                    <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addSellingVoucherModalLabel"><i class="bi bi-plus-circle text-primary"></i> Add Selling Voucher</h5>
+                <div class="modal-header border-bottom bg-light">
+                    <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -301,12 +304,14 @@
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="modalAddItemRow"><i class="bi bi-plus-lg me-1"></i> Add Item</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="modalAddItemRow">
+                                + Add Item
+                            </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-bordered mb-0" id="svItemsTable">
-                                    <thead>
+                                    <thead style="background-color: #af2910;">
                                         <tr>
                                             <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
                                             <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
@@ -348,29 +353,29 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light py-3">
+                <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Save Selling Voucher</button>
+                    <button type="submit" class="btn btn-primary">Save Selling Voucher</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- Edit Selling Voucher Modal - Bootstrap 5.3 --}}
+{{-- Edit Selling Voucher Modal --}}
 <style>
 #editSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#editSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; border-radius: 0.75rem; border: none; box-shadow: 0 0.5rem 2rem rgba(0,0,0,0.15); }
+#editSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #editSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
 </style>
 <div class="modal fade" id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content rounded-3">
+        <div class="modal-content">
             <form id="editSellingVoucherForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light py-3">
-                    <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="editSellingVoucherModalLabel"><i class="bi bi-pencil-square text-warning"></i> Edit Selling Voucher</h5>
+                <div class="modal-header border-bottom bg-light">
+                    <h5 class="modal-title fw-semibold" id="editSellingVoucherModalLabel">Edit Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -467,7 +472,7 @@
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="editModalAddItemRow"><i class="bi bi-plus-lg me-1"></i> Add Item</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="editModalAddItemRow">+ Add Item</button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -496,20 +501,20 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light py-3">
+                <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Update Selling Voucher</button>
+                    <button type="submit" class="btn btn-primary">Update Selling Voucher</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- View Selling Voucher Modal - Bootstrap 5.3 + high contrast --}}
+{{-- View Selling Voucher Modal - ensure all text is visible (high contrast) --}}
 <style>
 #viewSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#viewSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; border-radius: 0.75rem; border: none; box-shadow: 0 0.5rem 2rem rgba(0,0,0,0.15); }
-#viewSellingVoucherModal .modal-header { background: #f8f9fa !important; color: #212529 !important; padding: 0.75rem 1rem; }
+#viewSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
+#viewSellingVoucherModal .modal-header { background: #f8f9fa !important; color: #212529 !important; }
 #viewSellingVoucherModal .modal-title { color: #212529 !important; }
 #viewSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); background: #fff; color: #212529 !important; }
 #viewSellingVoucherModal .modal-body *, #viewSellingVoucherModal .modal-body p, #viewSellingVoucherModal .modal-body span { color: inherit; }
@@ -530,9 +535,9 @@
 </style>
 <div class="modal fade" id="viewSellingVoucherModal" tabindex="-1" aria-labelledby="viewSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content rounded-3">
-            <div class="modal-header border-bottom bg-light py-3">
-                <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="viewSellingVoucherModalLabel" style="color: #212529;"><i class="bi bi-eye text-primary"></i> View Selling Voucher</h5>
+        <div class="modal-content">
+            <div class="modal-header border-bottom bg-light">
+                <h5 class="modal-title fw-semibold" id="viewSellingVoucherModalLabel" style="color: #212529;">View Selling Voucher</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -591,22 +596,22 @@
                     <span class="ms-3" id="viewUpdatedAtWrap" style="display:none;">Last Updated: <span id="viewUpdatedAt" style="color: #212529;"></span></span>
                 </div>
             </div>
-            <div class="modal-footer border-top bg-light py-3">
+            <div class="modal-footer border-top">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
-{{-- Return Item Modal (Transfer To) - Bootstrap 5.3 --}}
+{{-- Return Item Modal (Transfer To) --}}
 <div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content rounded-3 shadow-lg">
+        <div class="modal-content">
             <form id="returnItemForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light py-3">
-                    <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="returnItemModalLabel"><i class="bi bi-arrow-return-left text-info"></i> Transfer To</h5>
+                <div class="modal-header border-bottom bg-light">
+                    <h5 class="modal-title fw-semibold" id="returnItemModalLabel">Transfer To</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -636,9 +641,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light py-3">
+                <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Update</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
                 </div>
             </form>
         </div>
@@ -649,40 +654,17 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
-
-    // Initialize DataTables (Bootstrap 5) – sorting, search, count, pagination
-    if (window.jQuery && $.fn.DataTable) {
-        var sellingVoucherTable = $('#sellingVoucherTable').DataTable({
-            order: [[9, 'desc']],
-            pageLength: 20,
-            lengthMenu: [[10, 25, 50, 100, 200, -1], [10, 25, 50, 100, 200, 'All']],
-            language: {
-                search: 'Search:',
-                lengthMenu: 'Show _MENU_ entries',
-                info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-                infoEmpty: 'Showing 0 to 0 of 0 entries',
-                infoFiltered: '(filtered from _MAX_ total entries)',
-                paginate: {
-                    first: 'First',
-                    last: 'Last',
-                    next: 'Next',
-                    previous: 'Previous'
-                },
-                zeroRecords: 'No selling vouchers found.'
-            },
-            scrollX: true,
-            responsive: false,
-            columnDefs: [
-                { orderable: false, targets: [0, 11, 12] }
-            ],
-            drawCallback: function() {
-                if (window.adjustAllDataTables && typeof adjustAllDataTables === 'function') {
-                    setTimeout(adjustAllDataTables, 50);
-                }
-            }
-        });
-    }
-
+    
+    // Debug: Check if buttons exist
+    const viewButtons = document.querySelectorAll('.btn-view-sv');
+    const editButtons = document.querySelectorAll('.btn-edit-sv');
+    const returnButtons = document.querySelectorAll('.btn-return-sv');
+    console.log('Found buttons:', {
+        view: viewButtons.length,
+        edit: editButtons.length,
+        return: returnButtons.length
+    });
+    
     let itemSubcategories = @json($itemSubcategories);
     let filteredItems = itemSubcategories;
     const editSvBaseUrl = "{{ url('admin/mess/material-management') }}";
@@ -1224,12 +1206,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // View button handler (delegated – works with DataTables redraws and icon clicks)
+    // View button handler
     document.addEventListener('click', function(e) {
-        var btn = e.target && e.target.closest ? e.target.closest('.btn-view-sv') : null;
-        if (btn) {
+        if (e.target && e.target.classList.contains('btn-view-sv')) {
             e.preventDefault();
-            const voucherId = btn.getAttribute('data-voucher-id');
+            const voucherId = e.target.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found');
                 return;
@@ -1287,12 +1268,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Return button handler (delegated – works with DataTables redraws and icon clicks)
+    // Return button handler
     document.addEventListener('click', function(e) {
-        var btn = e.target && e.target.closest ? e.target.closest('.btn-return-sv') : null;
-        if (btn) {
+        if (e.target && e.target.classList.contains('btn-return-sv')) {
             e.preventDefault();
-            const voucherId = btn.getAttribute('data-voucher-id');
+            const voucherId = e.target.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for return');
                 return;
@@ -1331,12 +1311,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Edit button handler (delegated – works with DataTables redraws and icon clicks)
+    // Edit button handler
     document.addEventListener('click', function(e) {
-        var btn = e.target && e.target.closest ? e.target.closest('.btn-edit-sv') : null;
-        if (btn) {
+        if (e.target && e.target.classList.contains('btn-edit-sv')) {
             e.preventDefault();
-            const voucherId = btn.getAttribute('data-voucher-id');
+            const voucherId = e.target.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for edit');
                 return;
