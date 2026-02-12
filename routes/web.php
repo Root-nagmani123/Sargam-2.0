@@ -617,31 +617,31 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
-    // Employee ID Card Request Routes
+    // Employee ID Card Request Routes (mapped to security_parm_id_apply)
     Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
-        Route::get('/show/{employeeIDCardRequest}', 'show')->name('show');
-        Route::get('/edit/{employeeIDCardRequest}', 'edit')->name('edit');
-        Route::put('/update/{employeeIDCardRequest}', 'update')->name('update');
-        Route::patch('/amend-dup-ext/{employeeIDCardRequest}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
-        Route::delete('/delete/{employeeIDCardRequest}', 'destroy')->name('destroy');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::patch('/amend-dup-ext/{id}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
         Route::post('/restore/{id}', 'restore')->name('restore');
         Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
     });
 
-    // Family ID Card Request Routes
+    // Family ID Card Request Routes (mapped to security_family_id_apply)
     Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/export', 'export')->name('export');
-        Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
-        Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
-        Route::put('/update/{familyIDCardRequest}', 'update')->name('update');
-        Route::delete('/delete/{familyIDCardRequest}', 'destroy')->name('destroy');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
         Route::post('/restore/{id}', 'restore')->name('restore');
         Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
     });
