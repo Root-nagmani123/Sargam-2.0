@@ -87,10 +87,13 @@
                     $paymentTypeMap = [0 => 'Cash', 1 => 'My Self', 2 => 'Online', 5 => 'My Self'];
                 @endphp
                 @forelse($bills as $index => $bill)
+                    @php
+                        $billId = $bill->id ?? $bill->pk ?? 0;
+                    @endphp
                     <tr class="{{ $index % 2 === 0 ? 'table-light' : '' }}">
                         <td>{{ $bills->firstItem() + $index }}</td>
                         <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
-                        <td>{{ $bill->id }}</td>
+                        <td>{{ $billId }}</td>
                         <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : ($bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>
                         <td>{{ $bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—') }}</td>
                         <td>{{ number_format($bill->total_amount ?? $bill->items->sum('amount'), 2) }}</td>
@@ -105,7 +108,7 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $bill->id) }}" target="_blank" class="text-primary text-decoration-none small">
+                            <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $billId) }}" target="_blank" class="text-primary text-decoration-none small">
                                 Print Reciept
                             </a>
                         </td>
@@ -411,6 +414,12 @@
                 }
                 
                 if (confirm('Mark payment as completed and send notification to ' + buyerName + '?')) {
+                    // Disable button and show loading state
+                    e.target.style.pointerEvents = 'none';
+                    e.target.style.opacity = '0.6';
+                    var originalText = e.target.textContent;
+                    e.target.textContent = 'Processing...';
+                    
                     var csrfTokenElement = document.querySelector('meta[name="csrf-token"]') || document.querySelector('input[name="_token"]');
                     var csrfToken = '';
                     
@@ -434,14 +443,32 @@
                     })
                     .then(function(data) {
                         if (data.success) {
-                            alert('✓ Success! ' + data.message + '\n\nUser: ' + buyerName + '\nBill ID: ' + data.bill_id);
-                            loadModalBills(); // Reload the table to remove paid bill
+                            // Close the modal immediately
+                            var modalElement = document.getElementById('addProcessMessBillsModal');
+                            var modalInstance = bootstrap.Modal.getInstance(modalElement);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                            
+                            // Show success message
+                            alert('✓ Success! Payment completed.\n\n' + data.message + '\n\nUser: ' + buyerName + '\nBill ID: ' + data.bill_id);
+                            
+                            // Reload the main page to reflect updated "Paid" status
+                            window.location.reload();
                         } else {
+                            // Re-enable button on error
+                            e.target.style.pointerEvents = '';
+                            e.target.style.opacity = '';
+                            e.target.textContent = originalText;
                             alert('Error: ' + (data.message || 'Failed to process payment'));
                         }
                     })
                     .catch(function(error) {
                         console.error('Error:', error);
+                        // Re-enable button on error
+                        e.target.style.pointerEvents = '';
+                        e.target.style.opacity = '';
+                        e.target.textContent = originalText;
                         alert('Error: Failed to process payment. Please try again.');
                     });
                 }
