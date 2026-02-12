@@ -198,13 +198,229 @@
         font-style: italic;
     }
 
-    @media (max-width: 768px) {
+    /* Responsive - Tablet (max 991px) */
+    @media (max-width: 991.98px) {
+        .guest-faculty-card .card-body {
+            padding: 1rem !important;
+        }
+
         .table-responsive {
-            overflow-x: auto;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
         }
 
         #guess_faculty {
             min-width: 1000px;
+        }
+
+        #guess_faculty thead th,
+        #guess_faculty tbody td {
+            padding: 0.75rem 0.6rem;
+            font-size: 0.875rem;
+        }
+
+        .faculty-name {
+            font-size: 0.9rem;
+        }
+
+        .email-link {
+            font-size: 0.85rem;
+        }
+
+        .btn-view-feedback {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    /* Responsive - Small tablet / large phone (max 767px) */
+    @media (max-width: 767.98px) {
+        .guest-faculty-card .card-header {
+            padding: 1rem 1.25rem;
+        }
+
+        .guest-faculty-card .card-header .card-header-icon {
+            font-size: 1.25rem;
+        }
+
+        .guest-faculty-card .card-header span:last-child {
+            font-size: 1rem;
+        }
+
+        .guest-faculty-card .card-body {
+            padding: 0.875rem !important;
+        }
+
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -0.875rem;
+            padding: 0 0.875rem;
+        }
+
+        #guess_faculty {
+            min-width: 1000px;
+        }
+
+        #guess_faculty thead th {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        #guess_faculty tbody td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .faculty-name {
+            font-size: 0.875rem;
+        }
+
+        .email-link {
+            font-size: 0.8rem;
+        }
+
+        .badge-guest,
+        .badge-sector-gov,
+        .badge-sector-private,
+        .badge-sector-other {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+        }
+
+        .session-count-badge {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+        }
+
+        .feedback-score {
+            font-size: 0.8rem;
+            gap: 0.375rem;
+        }
+
+        .feedback-label {
+            min-width: 70px;
+            font-size: 0.8rem;
+        }
+
+        .feedback-value {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.4rem;
+        }
+
+        .btn-view-feedback {
+            padding: 0.375rem 0.625rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-view-feedback .material-symbols-rounded {
+            font-size: 1rem;
+        }
+
+        /* Stack DataTables controls on mobile */
+        #guess_faculty_wrapper .dataTables_wrapper .row:first-child,
+        #guess_faculty_wrapper .dataTables_wrapper .dt-row:first-child {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        #guess_faculty_wrapper .dataTables_length,
+        #guess_faculty_wrapper .dataTables_filter {
+            text-align: left !important;
+            margin-bottom: 0;
+            display: block;
+            width: 100%;
+        }
+
+        #guess_faculty_wrapper .dataTables_length label,
+        #guess_faculty_wrapper .dataTables_filter label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+            flex-wrap: wrap;
+            font-size: 0.875rem;
+        }
+
+        #guess_faculty_wrapper .dataTables_length select {
+            margin: 0;
+            min-width: 80px;
+            max-width: 100%;
+            min-height: 38px;
+            padding: 0.375rem 2rem 0.375rem 0.5rem;
+        }
+
+        #guess_faculty_wrapper .dataTables_filter input {
+            margin-left: 0 !important;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            min-height: 38px;
+            padding: 0.375rem 0.75rem;
+        }
+
+        /* Stack DataTables info and pagination on mobile */
+        #guess_faculty_wrapper .dataTables_wrapper .row:last-child,
+        #guess_faculty_wrapper .dataTables_wrapper .dt-row:last-child {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        #guess_faculty_wrapper .dataTables_info {
+            text-align: center !important;
+            margin-bottom: 0;
+        }
+
+        #guess_faculty_wrapper .dataTables_paginate {
+            text-align: center !important;
+            margin-top: 0;
+        }
+    }
+
+    /* Responsive - Small phone (max 576px) */
+    @media (max-width: 575.98px) {
+        .guest-faculty-card .card-header {
+            padding: 0.875rem 1rem;
+        }
+
+        .guest-faculty-card .card-body {
+            padding: 0.75rem !important;
+        }
+
+        .table-responsive {
+            margin: 0 -0.75rem;
+            padding: 0 0.75rem;
+        }
+
+        #guess_faculty {
+            min-width: 1000px;
+        }
+
+        #guess_faculty thead th {
+            padding: 0.625rem 0.4rem;
+            font-size: 0.7rem;
+        }
+
+        #guess_faculty tbody td {
+            padding: 0.625rem 0.4rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-view-feedback {
+            padding: 0.3rem 0.5rem;
+            font-size: 0.7rem;
+        }
+
+        .btn-view-feedback .material-symbols-rounded {
+            font-size: 0.9rem;
         }
     }
 </style>
@@ -216,10 +432,10 @@
             <span class="material-symbols-rounded card-header-icon">badge</span>
             <span>Guest Faculty</span>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body">
             <div class="datatables">
                 <div class="table-responsive">
-                    <table class="table align-middle" id="guess_faculty">
+                    <table class="table align-middle text-nowrap" id="guess_faculty">
                         <thead>
                             <tr>
                                 <th scope="col">Sl. No.</th>
@@ -348,6 +564,7 @@ $(document).ready(function() {
             }
         },
         responsive: true,
+        autoWidth: false,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         drawCallback: function() {
             // Add any custom styling after table draw
