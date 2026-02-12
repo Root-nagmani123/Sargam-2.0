@@ -45,7 +45,8 @@ class IssueEscalationMatrixController extends Controller
     }
 
     /**
-     * Store or update escalation matrix for a category (3 levels).
+     * Store escalation matrix for a category (3 levels).
+     * Use only for categories that do not have hierarchy yet. For existing hierarchy, use update().
      */
     public function store(Request $request)
     {
@@ -61,9 +62,18 @@ class IssueEscalationMatrixController extends Controller
 
         $categoryId = $request->issue_category_master_pk;
 
+        // POST (Add): do not allow insert if category already has hierarchy — ask to use Edit
+        // PUT (Update): allow; we will delete existing and re-insert below
+        if ($request->isMethod('post') && IssueCategoryEmployeeMap::where('issue_category_master_pk', $categoryId)->exists()) {
+            $category = IssueCategoryMaster::find($categoryId);
+            $categoryName = $category ? $category->issue_category : $categoryId;
+            return redirect()->route('admin.issue-escalation-matrix.index')
+                ->with('error', 'This category ("' . $categoryName . '") already has escalation hierarchy configured. Please use Edit to update.');
+        }
+
         DB::beginTransaction();
         try {
-            // Delete existing mappings for this category
+            // Update path or fresh insert: remove existing mappings so we can insert 3 levels
             IssueCategoryEmployeeMap::where('issue_category_master_pk', $categoryId)->delete();
 
             // Insert 3 levels
