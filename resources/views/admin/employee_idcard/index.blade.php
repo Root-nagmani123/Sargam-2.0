@@ -5,22 +5,23 @@
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
     <x-breadcrum title="Request Employee ID Card"></x-breadcrum>
 
+    @php $showArchiveTab = request()->has('archive_page'); @endphp
     <!-- Tabs + Generate Button Row - Bootstrap 5.3 enhanced -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <ul class="nav nav-pills nav-fill gap-2 idcard-index-tabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-pill px-4 py-2" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
+                <button class="nav-link {{ $showArchiveTab ? '' : 'active' }} rounded-1 px-4 py-2" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="{{ $showArchiveTab ? 'false' : 'true' }}">
                     Active
-                    @if($activeRequests->total() > 0)
-                        <span class="badge text-bg-light text-primary ms-1">{{ $activeRequests->total() }}</span>
+                    @if(($activeTotal ?? 0) > 0)
+                        <span class="badge text-bg-light text-primary ms-1">{{ $activeTotal }}</span>
                     @endif
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill px-4 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
+                <button class="nav-link {{ $showArchiveTab ? 'active' : '' }} rounded-1 px-4 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="{{ $showArchiveTab ? 'true' : 'false' }}">
                     Archive
-                    @if($archivedRequests->total() > 0)
-                        <span class="badge text-bg-secondary ms-1">{{ $archivedRequests->total() }}</span>
+                    @if(($archivedTotal ?? 0) > 0)
+                        <span class="badge text-bg-secondary ms-1">{{ $archivedTotal }}</span>
                     @endif
                 </button>
             </li>
@@ -104,7 +105,7 @@
     <div class="card border-0 shadow idcard-index-card overflow-hidden">
         <div class="card-body p-0">
             <div class="tab-content">
-                <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
+                <div class="tab-pane fade {{ $showArchiveTab ? '' : 'show active' }}" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle idcard-index-table">
                             <thead class="table-dark">
@@ -128,13 +129,9 @@
                                     <tr data-request-id="{{ $request->id }}">
                                         <td class="fw-medium">{{ $activeRequests->firstItem() + $index }}</td>
                                         <td>
-                                            @if($request->photo)
-                                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
-                                                </a>
-                                            @else
-                                                <span class="text-muted">--</span>
-                                            @endif
+                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
+                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
+                                            </a>
                                         </td>
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td>{{ $request->name }}</td>
@@ -216,7 +213,7 @@
 
                     <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light flex-wrap gap-2">
                         <div class="small text-muted">
-                            Showing <strong>{{ $activeRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $activeRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $activeRequests->total() }}</strong> active requests
+                            Showing <strong>{{ $activeRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $activeRequests->lastItem() ?? 0 }}</strong> active requests (this page)
                         </div>
                         <nav aria-label="Active requests pagination">
                             {{ $activeRequests->links('pagination::bootstrap-5') }}
@@ -246,13 +243,9 @@
                                     <tr data-request-id="{{ $request->id }}">
                                         <td class="fw-medium">{{ $duplicationRequests->firstItem() + $index }}</td>
                                         <td>
-                                            @if($request->photo)
-                                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
-                                                </a>
-                                            @else
-                                                <span class="text-muted">--</span>
-                                            @endif
+                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
+                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
+                                            </a>
                                         </td>
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td>{{ $request->name }}</td>
@@ -314,10 +307,10 @@
 
                     <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
                         <div class="small text-muted">
-                            Showing <strong>{{ $duplicationRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $duplicationRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $duplicationRequests->total() }}</strong> duplication requests
+                            Showing <strong>{{ $duplicationRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $duplicationRequests->lastItem() ?? 0 }}</strong> duplication requests (this page)
                         </div>
                         <nav>
-                            {{ $duplicationRequests->links('pagination::bootstrap-5', ['pageName' => 'duplication_page']) }}
+                            {{ $duplicationRequests->links('pagination::bootstrap-5', ['pageName' => 'page']) }}
                         </nav>
                     </div>
                 </div>
@@ -344,13 +337,9 @@
                                     <tr data-request-id="{{ $request->id }}">
                                         <td class="fw-medium">{{ $extensionRequests->firstItem() + $index }}</td>
                                         <td>
-                                            @if($request->photo)
-                                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
-                                                </a>
-                                            @else
-                                                <span class="text-muted">--</span>
-                                            @endif
+                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
+                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
+                                            </a>
                                         </td>
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td>{{ $request->name }}</td>
@@ -409,15 +398,15 @@
 
                     <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
                         <div class="small text-muted">
-                            Showing <strong>{{ $extensionRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $extensionRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $extensionRequests->total() }}</strong> extension requests
+                            Showing <strong>{{ $extensionRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $extensionRequests->lastItem() ?? 0 }}</strong> extension requests (this page)
                         </div>
                         <nav>
-                            {{ $extensionRequests->links('pagination::bootstrap-5', ['pageName' => 'extension_page']) }}
+                            {{ $extensionRequests->links('pagination::bootstrap-5', ['pageName' => 'page']) }}
                         </nav>
                     </div>
                 </div>
 
-                <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
+                <div class="tab-pane fade {{ $showArchiveTab ? 'show active' : '' }}" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle idcard-index-table">
                             <thead>
@@ -436,13 +425,9 @@
                                     <tr data-request-id="{{ $request->id }}">
                                         <td class="fw-medium">{{ $archivedRequests->firstItem() + $index }}</td>
                                         <td>
-                                            @if($request->photo)
-                                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
-                                                </a>
-                                            @else
-                                                <span class="text-muted">--</span>
-                                            @endif
+                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
+                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
+                                            </a>
                                         </td>
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td>{{ $request->name }}</td>
@@ -505,7 +490,7 @@
 
                     <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light flex-wrap gap-2">
                         <div class="small text-muted">
-                            Showing <strong>{{ $archivedRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $archivedRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $archivedRequests->total() }}</strong> archived requests
+                            Showing <strong>{{ $archivedRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $archivedRequests->lastItem() ?? 0 }}</strong> archived requests (this page)
                         </div>
                         <nav aria-label="Archived requests pagination">
                             {{ $archivedRequests->links('pagination::bootstrap-5', ['pageName' => 'archive_page']) }}
@@ -798,20 +783,30 @@ a.amend-dup-ext-btn:hover { opacity: 0.85; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Ensure Active tab is active by default on page load
+    // If URL has archive_page (pagination on Archive tab), keep Archive tab active; otherwise Active
     const activeTab = document.getElementById('active-tab');
     const archiveTab = document.getElementById('archive-tab');
     const activePanel = document.getElementById('active-panel');
     const archivePanel = document.getElementById('archive-panel');
+    const urlParams = new URLSearchParams(window.location.search);
+    const isArchivePage = urlParams.has('archive_page');
     if (activeTab && archiveTab && activePanel && archivePanel) {
-        activeTab.classList.add('active');
-        activeTab.setAttribute('aria-selected', 'true');
-        archiveTab.classList.remove('active');
-        archiveTab.setAttribute('aria-selected', 'false');
-        activePanel.classList.add('show', 'active');
-        archivePanel.classList.remove('show', 'active');
-        // Clear URL hash that might switch to Archive
-        if (window.location.hash === '#archive-panel') {
+        if (isArchivePage) {
+            archiveTab.classList.add('active');
+            archiveTab.setAttribute('aria-selected', 'true');
+            activeTab.classList.remove('active');
+            activeTab.setAttribute('aria-selected', 'false');
+            archivePanel.classList.add('show', 'active');
+            activePanel.classList.remove('show', 'active');
+        } else {
+            activeTab.classList.add('active');
+            activeTab.setAttribute('aria-selected', 'true');
+            archiveTab.classList.remove('active');
+            archiveTab.setAttribute('aria-selected', 'false');
+            activePanel.classList.add('show', 'active');
+            archivePanel.classList.remove('show', 'active');
+        }
+        if (window.location.hash === '#archive-panel' && !isArchivePage) {
             history.replaceState(null, null, window.location.pathname + window.location.search);
         }
     }
@@ -831,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modalViewFullLink').href = btn.dataset.showUrl || '#';
         const amendForm = document.getElementById('amendDupExtForm');
         const requestId = btn.dataset.requestId;
-        amendForm.action = '{{ route("admin.employee_idcard.amendDuplicationExtension", ["employeeIDCardRequest" => "__ID__"]) }}'.replace('__ID__', requestId);
+        amendForm.action = '{{ route("admin.employee_idcard.amendDuplicationExtension", ["id" => "__ID__"]) }}'.replace('__ID__', requestId);
         document.getElementById('amend_duplication_reason').value = btn.dataset.duplication || '';
         document.getElementById('amend_id_card_number').value = btn.dataset.idNumber || '';
         document.getElementById('amend_id_card_valid_from').value = btn.dataset.validFrom || '';
