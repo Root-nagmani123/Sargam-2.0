@@ -4,53 +4,102 @@ namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
 use App\Models\Mess\SellingVoucherDateRangeReport;
+use App\Models\KitchenIssueMaster;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Process Mess Bills (Employee) - displays employee mess bills under Billing & Finance.
- * Uses Selling Voucher Date Range reports filtered by employee client type.
+ * Shows both Regular Selling Voucher (from kitchen_issue_master) and Selling Voucher with Date Range (from sv_date_range_reports) filtered by employee client type.
  */
 class ProcessMessBillsEmployeeController extends Controller
 {
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 10);
-
-        $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->where('client_type_slug', 'employee');
-
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
+        $search = $request->search;
+
+        // Query 1: Selling Voucher with Date Range (sv_date_range_reports)
+        $dateRangeQuery = SellingVoucherDateRangeReport::query()
+            ->select([
+                'id',
+                'client_name',
+                'issue_date',
+                'client_type_slug',
+                'client_type_pk',
+                'total_amount',
+                'payment_type',
+                'status',
+                'store_id',
+                DB::raw("'date_range' as source_type")
+            ])
+            ->where('client_type_slug', 'employee');
 
         if ($dateFrom) {
-            $query->where(function ($q) use ($dateFrom) {
+            $dateRangeQuery->where(function ($q) use ($dateFrom) {
                 $q->where('issue_date', '>=', $dateFrom)
                   ->orWhere('date_from', '>=', $dateFrom);
             });
         }
         if ($dateTo) {
-            $query->where(function ($q) use ($dateTo) {
+            $dateRangeQuery->where(function ($q) use ($dateTo) {
                 $q->where('issue_date', '<=', $dateTo)
                   ->orWhere('date_to', '<=', $dateTo);
             });
         }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('client_name', 'like', "%{$search}%")
-                  ->orWhere('id', 'like', "%{$search}%")
-                  ->orWhereHas('clientTypeCategory', function ($q2) use ($search) {
-                      $q2->where('client_name', 'like', "%{$search}%")
-                         ->orWhere('client_type', 'like', "%{$search}%");
-                  });
-            });
+
+        // Query 2: Regular Selling Voucher (kitchen_issue_master)
+        $kitchenIssueQuery = KitchenIssueMaster::query()
+            ->select([
+                'pk as id',
+                'client_name',
+                'issue_date',
+                DB::raw("'employee' as client_type_slug"),
+                'client_type_pk',
+                DB::raw('NULL as total_amount'),
+                'payment_type',
+                'status',
+                'store_id',
+                DB::raw("'kitchen_issue' as source_type")
+            ])
+            ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+
+        if ($dateFrom) {
+            $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
 
-        $bills = $query->orderBy('issue_date', 'desc')
+        // Union both queries
+        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
+
+        // Wrap in subquery for pagination and search
+        $bills = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
+            ->mergeBindings($unionQuery->getQuery())
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($query) use ($search) {
+                    $query->where('client_name', 'like', "%{$search}%")
+                          ->orWhere('id', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('issue_date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate($perPage)
             ->withQueryString();
+
+        // Load relationships for each bill
+        $bills->getCollection()->transform(function ($bill) {
+            if ($bill->source_type === 'date_range') {
+                return SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])->find($bill->id);
+            } else {
+                return KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
+            }
+        });
 
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
@@ -60,9 +109,19 @@ class ProcessMessBillsEmployeeController extends Controller
 
     public function printReceipt($id)
     {
+        // Try to find in Selling Voucher with Date Range first
         $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
             ->where('client_type_slug', 'employee')
-            ->findOrFail($id);
+            ->find($id);
+
+        // If not found, try Kitchen Issue Master (Regular Selling Voucher)
+        if (!$bill) {
+            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+                ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('pk', $id)
+                ->firstOrFail();
+        }
 
         return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill'));
     }
@@ -76,38 +135,58 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
 
-        $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
+        // Query 1: Selling Voucher with Date Range
+        $dateRangeQuery = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
             ->where('client_type_slug', 'employee')
             ->where('status', '!=', 2); // Only unpaid bills
 
         if ($dateFrom) {
-            $query->where(function ($q) use ($dateFrom) {
+            $dateRangeQuery->where(function ($q) use ($dateFrom) {
                 $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
             });
         }
         if ($dateTo) {
-            $query->where(function ($q) use ($dateTo) {
+            $dateRangeQuery->where(function ($q) use ($dateTo) {
                 $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
             });
         }
 
-        $bills = $query->orderBy('issue_date', 'desc')->orderBy('id', 'desc')->get();
+        // Query 2: Regular Selling Voucher (Kitchen Issue)
+        $kitchenIssueQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+            ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('status', '!=', 2); // Only unpaid bills
+
+        if ($dateFrom) {
+            $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
+        }
+
+        // Get both types
+        $dateRangeBills = $dateRangeQuery->get();
+        $kitchenIssueBills = $kitchenIssueQuery->get();
+
+        // Merge and sort
+        $allBills = $dateRangeBills->concat($kitchenIssueBills)->sortByDesc('issue_date');
 
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
-        $rows = $bills->map(function ($bill, $index) use ($paymentTypeMap) {
+        $rows = $allBills->map(function ($bill, $index) use ($paymentTypeMap) {
+            $id = $bill->id ?? $bill->pk;
             $total = $bill->total_amount ?? $bill->items->sum('amount');
             return [
-                'id' => $bill->id,
+                'id' => $id,
                 'sno' => $index + 1,
                 'buyer_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
-                'invoice_no' => $bill->id,
+                'invoice_no' => $id,
                 'payment_type' => $paymentTypeMap[$bill->payment_type ?? 1] ?? '—',
                 'total' => number_format($total, 2),
                 'paid_amount' => '0',
-                'bill_no' => $bill->id,
+                'bill_no' => $id,
             ];
-        });
+        })->values();
 
         return response()->json(['bills' => $rows]);
     }
@@ -117,18 +196,29 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function generateInvoice(Request $request, $id)
     {
+        // Try to find in Selling Voucher with Date Range first
         $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
             ->where('client_type_slug', 'employee')
-            ->findOrFail($id);
+            ->find($id);
+
+        // If not found, try Kitchen Issue Master (Regular Selling Voucher)
+        if (!$bill) {
+            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+                ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('pk', $id)
+                ->firstOrFail();
+        }
 
         // TODO: Add your notification logic here
         // Example: Send email or SMS to the user
         // Notification::send($user, new InvoiceGeneratedNotification($bill));
 
+        $billId = $bill->id ?? $bill->pk;
         return response()->json([
             'success' => true,
             'message' => 'Invoice generated and notification sent successfully!',
-            'bill_id' => $bill->id,
+            'bill_id' => $billId,
             'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
         ]);
     }
@@ -138,9 +228,22 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function generatePayment(Request $request, $id)
     {
+        // Try to find in Selling Voucher with Date Range first
         $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
             ->where('client_type_slug', 'employee')
-            ->findOrFail($id);
+            ->find($id);
+
+        $isKitchenIssue = false;
+
+        // If not found, try Kitchen Issue Master (Regular Selling Voucher)
+        if (!$bill) {
+            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+                ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('pk', $id)
+                ->firstOrFail();
+            $isKitchenIssue = true;
+        }
 
         // Check if already paid
         if ($bill->status == 2) {
@@ -159,10 +262,11 @@ class ProcessMessBillsEmployeeController extends Controller
         // Mail::to($bill->client_email)->send(new PaymentCompletedMail($bill));
         // Notification::send($user, new PaymentCompletedNotification($bill));
 
+        $billId = $isKitchenIssue ? $bill->pk : $bill->id;
         return response()->json([
             'success' => true,
             'message' => 'Payment completed successfully! Notification sent to user.',
-            'bill_id' => $bill->id,
+            'bill_id' => $billId,
             'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
         ]);
     }

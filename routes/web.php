@@ -536,8 +536,6 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
         Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
         Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
-        Route::resource('mealmappings', \App\Http\Controllers\Mess\MealMappingController::class)->only(['index', 'create', 'store']);
-        Route::resource('permissionsettings', \App\Http\Controllers\Mess\PermissionSettingController::class)->only(['index', 'create', 'store']);
         Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'store']);
         Route::get('storeallocations/{id}/edit', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'edit'])->name('storeallocations.edit');
         Route::put('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'update'])->name('storeallocations.update');
@@ -564,6 +562,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
         Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
         Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
+        Route::get('purchaseorders/vendor/{vendorId}/items', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'getVendorItems'])->name('purchaseorders.vendor.items');
         
         // Material Management (formerly Kitchen Issue)
         Route::get('material-management/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
@@ -614,6 +613,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
+            Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
         });
     });
 });
@@ -899,9 +899,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
     Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
     Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
-    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');
-
-    // Sub-Category Management
+    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
     Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
