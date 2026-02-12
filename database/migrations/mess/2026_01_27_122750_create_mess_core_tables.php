@@ -220,20 +220,6 @@ return new class extends Migration
             $table->index('payment_status');
         });
 
-        // Meal Mappings Table
-        Schema::create('mess_meal_mappings', function (Blueprint $table) {
-            $table->id();
-            $table->string('meal_type'); // breakfast, lunch, dinner, snacks
-            $table->unsignedBigInteger('inventory_id');
-            $table->decimal('standard_quantity', 10, 2);
-            $table->integer('persons')->default(1);
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-            
-            $table->index('meal_type');
-            $table->index('inventory_id');
-        });
-
         // Store Allocations Table
         Schema::create('mess_store_allocations', function (Blueprint $table) {
             $table->id();
@@ -246,18 +232,6 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('store_id');
         });
-
-        // Permission Settings Table
-        Schema::create('mess_permission_settings', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->string('permission_type');
-            $table->string('permission_value');
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-            
-            $table->index('user_id');
-        });
     }
 
     /**
@@ -267,9 +241,7 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('mess_permission_settings');
         Schema::dropIfExists('mess_store_allocations');
-        Schema::dropIfExists('mess_meal_mappings');
         Schema::dropIfExists('mess_invoices');
         Schema::dropIfExists('mess_inbound_transaction_items');
         Schema::dropIfExists('mess_inbound_transactions');
