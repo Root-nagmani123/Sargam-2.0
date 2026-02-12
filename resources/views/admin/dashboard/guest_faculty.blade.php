@@ -60,10 +60,10 @@
             <span class="material-symbols-rounded card-header-icon">badge</span>
             <span>Guest Faculty</span>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body">
             <div class="datatables">
                 <div class="table-responsive">
-                    <table class="table align-middle" id="guess_faculty">
+                    <table class="table align-middle text-nowrap" id="guess_faculty">
                         <thead>
                             <tr>
                                 <th scope="col">Sl. No.</th>
@@ -103,8 +103,31 @@
 <script src="{{ asset('js/jquery-3.7.1.min.js') }}"></script>
 
 <script>
-$(document).ready(function (){
-    $('#guess_faculty').DataTable();
+$(document).ready(function() {
+    $('#guess_faculty').DataTable({
+        order: [[2, 'asc']], // Sort by Faculty Name by default
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            infoEmpty: "Showing 0 to 0 of 0 entries",
+            infoFiltered: "(filtered from _MAX_ total entries)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        responsive: true,
+        autoWidth: false,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        drawCallback: function() {
+            // Add any custom styling after table draw
+        }
+    });
 });
 </script>
 @endpush
