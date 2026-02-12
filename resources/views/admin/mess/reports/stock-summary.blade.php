@@ -1,169 +1,253 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
-<div class="card" style="border-left: 4px solid #004a93;">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <iconify-icon icon="solar:clipboard-list-bold" class="me-2"></iconify-icon>
-            Stock Summary Report
-        </h5>
+<div class="container-fluid">
+    <!-- Filters Section (Hide on Print) -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h4>Stock Summary Report</h4>
     </div>
-    <div class="card-body">
-        <!-- Summary Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card bg-primary text-white">
-                    <div class="card-body">
-                        <h6 class="card-title">Total Items</h6>
-                        <h3 class="mb-0">{{ $items->count() }}</h3>
+
+    <div class="card mb-3 no-print">
+        <div class="card-body">
+            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="from_date" class="form-control" 
+                               value="{{ $fromDate }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="to_date" class="form-control" 
+                               value="{{ $toDate }}" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Store Type</label>
+                        <select name="store_type" id="store_type" class="form-select">
+                            <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
+                            <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
+                        <label class="form-label">Main Store</label>
+                        <select name="store_id" class="form-select">
+                            <option value="">All Main Stores</option>
+                            @foreach($stores as $store)
+                                <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
+                                    {{ $store->store_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
+                        <label class="form-label">Sub Store</label>
+                        <select name="store_id" class="form-select">
+                            <option value="">All Sub Stores</option>
+                            @foreach($subStores as $subStore)
+                                <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>
+                                    {{ $subStore->sub_store_name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
-                        <h6 class="card-title">Total Stock Value</h6>
-                        <h3 class="mb-0">₹{{ number_format($totalValue, 2) }}</h3>
-                    </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-filter"></i> Generate Report
+                    </button>
+                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-secondary">
+                        <i class="ti ti-refresh"></i> Reset
+                    </a>
+                    <button type="button" class="btn btn-success" onclick="window.print()">
+                        <i class="ti ti-printer"></i> Print
+                    </button>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-warning text-white">
-                    <div class="card-body">
-                        <h6 class="card-title">Low Stock Items</h6>
-                        <h3 class="mb-0">{{ $lowStockCount }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-danger text-white">
-                    <div class="card-body">
-                        <h6 class="card-title">Out of Stock</h6>
-                        <h3 class="mb-0">{{ $outOfStockCount }}</h3>
-                    </div>
-                </div>
-            </div>
+            </form>
         </div>
+    </div>
 
-        <!-- Filters -->
-        <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" class="mb-4">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Store</label>
-                    <select name="store_id" class="form-select">
-                        <option value="">All Stores</option>
-                        @foreach($stores as $store)
-                            <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>
-                                {{ $store->store_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Category</label>
-                    <select name="category_id" class="form-select">
-                        <option value="">All Categories</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                                {{ $category->category_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Sub-Category</label>
-                    <select name="subcategory_id" class="form-select">
-                        <option value="">All Sub-Categories</option>
-                        @foreach($subcategories as $subcategory)
-                            <option value="{{ $subcategory->id }}" {{ request('subcategory_id') == $subcategory->id ? 'selected' : '' }}>
-                                {{ $subcategory->subcategory_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Stock Status</label>
-                    <select name="stock_status" class="form-select">
-                        <option value="">All</option>
-                        <option value="low" {{ request('stock_status') == 'low' ? 'selected' : '' }}>Low Stock</option>
-                        <option value="out" {{ request('stock_status') == 'out' ? 'selected' : '' }}>Out of Stock</option>
-                    </select>
-                </div>
-            </div>
-            <div class="mt-3">
-                <button type="submit" class="btn btn-primary">
-                    <iconify-icon icon="solar:filter-bold"></iconify-icon> Apply Filters
-                </button>
-                <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-secondary">
-                    <iconify-icon icon="solar:restart-bold"></iconify-icon> Reset
-                </a>
-                <button type="button" class="btn btn-success" onclick="window.print()">
-                    <iconify-icon icon="solar:printer-bold"></iconify-icon> Print
-                </button>
-            </div>
-        </form>
+    <!-- Report Header (Print Only) -->
+    <div class="report-header text-center mb-4">
+        <h4 class="fw-bold">Stock Summary Report</h4>
+        <p class="mb-1">Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}</p>
+        <p class="text-primary mb-0">
+            <strong>Store:</strong> {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
+        </p>
+    </div>
 
-        <!-- Data Table -->
-        <div class="table-responsive">
-            <table class="table table-hover table-sm">
-                <thead class="table-light">
+    <!-- Report Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead>
+                <tr style="background-color: #cbd5e0;">
+                    <th rowspan="2" class="text-center align-middle" style="width: 60px;">SR.<br>No</th>
+                    <th rowspan="2" class="text-center align-middle" style="min-width: 150px;">Item Name</th>
+                    <th colspan="3" class="text-center" style="background-color: #bfdbfe;">Opening</th>
+                    <th colspan="3" class="text-center" style="background-color: #fde68a;">Purchase</th>
+                    <th colspan="3" class="text-center" style="background-color: #fed7aa;">Sale</th>
+                    <th colspan="3" class="text-center" style="background-color: #bbf7d0;">Closing</th>
+                </tr>
+                <tr style="background-color: #cbd5e0;">
+                    <!-- Opening -->
+                    <th class="text-center" style="background-color: #bfdbfe;">Qty</th>
+                    <th class="text-center" style="background-color: #bfdbfe;">Rate</th>
+                    <th class="text-center" style="background-color: #bfdbfe;">Amount</th>
+                    <!-- Purchase -->
+                    <th class="text-center" style="background-color: #fde68a;">Qty</th>
+                    <th class="text-center" style="background-color: #fde68a;">Rate</th>
+                    <th class="text-center" style="background-color: #fde68a;">Amount</th>
+                    <!-- Sale -->
+                    <th class="text-center" style="background-color: #fed7aa;">Qty</th>
+                    <th class="text-center" style="background-color: #fed7aa;">Rate</th>
+                    <th class="text-center" style="background-color: #fed7aa;">Amount</th>
+                    <!-- Closing -->
+                    <th class="text-center" style="background-color: #bbf7d0;">Qty</th>
+                    <th class="text-center" style="background-color: #bbf7d0;">Rate</th>
+                    <th class="text-center" style="background-color: #bbf7d0;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($reportData as $index => $item)
                     <tr>
-                        <th>Item Code</th>
-                        <th>Item Name</th>
-                        <th>Store</th>
-                        <th>Category</th>
-                        <th>Sub-Category</th>
-                        <th class="text-end">Current Stock</th>
-                        <th class="text-end">Min Stock</th>
-                        <th>Unit</th>
-                        <th class="text-end">Unit Price</th>
-                        <th class="text-end">Stock Value</th>
-                        <th>Status</th>
+                        <td class="text-center">{{ $index + 1 }}</td>
+                        <td>{{ $item['item_name'] }}</td>
+                        <!-- Opening -->
+                        <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['opening_rate'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['opening_amount'], 2) }}</td>
+                        <!-- Purchase -->
+                        <td class="text-end">{{ number_format($item['purchase_qty'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['purchase_rate'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['purchase_amount'], 2) }}</td>
+                        <!-- Sale -->
+                        <td class="text-end">{{ number_format($item['sale_qty'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['sale_rate'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['sale_amount'], 2) }}</td>
+                        <!-- Closing -->
+                        <td class="text-end">{{ number_format($item['closing_qty'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['closing_rate'], 2) }}</td>
+                        <td class="text-end">{{ number_format($item['closing_amount'], 2) }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @forelse($items as $item)
-                        @php
-                            $stockValue = ($item->current_stock ?? 0) * ($item->unit_price ?? 0);
-                            $isLowStock = ($item->current_stock ?? 0) < ($item->minimum_stock ?? 0);
-                            $isOutOfStock = ($item->current_stock ?? 0) <= 0;
-                        @endphp
-                        <tr class="{{ $isOutOfStock ? 'table-danger' : ($isLowStock ? 'table-warning' : '') }}">
-                            <td>{{ $item->item_code ?? 'N/A' }}</td>
-                            <td>{{ $item->item_name }}</td>
-                            <td>{{ $item->store->store_name ?? 'N/A' }}</td>
-                            <td>{{ $item->category->category_name ?? 'N/A' }}</td>
-                            <td>{{ $item->subcategory->subcategory_name ?? 'N/A' }}</td>
-                            <td class="text-end">{{ number_format($item->current_stock ?? 0, 2) }}</td>
-                            <td class="text-end">{{ number_format($item->minimum_stock ?? 0, 2) }}</td>
-                            <td>{{ $item->unit ?? 'N/A' }}</td>
-                            <td class="text-end">₹{{ number_format($item->unit_price ?? 0, 2) }}</td>
-                            <td class="text-end">₹{{ number_format($stockValue, 2) }}</td>
-                            <td>
-                                @if($isOutOfStock)
-                                    <span class="badge bg-danger">Out of Stock</span>
-                                @elseif($isLowStock)
-                                    <span class="badge bg-warning">Low Stock</span>
-                                @else
-                                    <span class="badge bg-success">In Stock</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="11" class="text-center text-muted py-4">No items found</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                @empty
+                    <tr>
+                        <td colspan="14" class="text-center text-muted py-4">
+                            No stock movement found for the selected period
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>
 
 <style>
     @media print {
-        .btn, form, .row.mb-4 { display: none !important; }
-        .card { border: none !important; }
+        .no-print { 
+            display: none !important; 
+        }
+        .report-header { 
+            display: block !important;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        body { 
+            font-size: 12px; 
+        }
+        table { 
+            font-size: 11px;
+            page-break-inside: auto;
+        }
+        table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        table thead {
+            display: table-header-group;
+        }
+        th, td { 
+            padding: 6px !important; 
+        }
+        @page {
+            margin: 1cm;
+            size: A4 landscape;
+        }
+    }
+    
+    @media screen {
+        .report-header {
+            display: none;
+        }
+    }
+    
+    .report-header h4 {
+        margin-bottom: 10px;
+        color: #000;
+        font-weight: bold;
+    }
+    
+    .report-header p {
+        color: #333;
+        font-size: 14px;
+    }
+
+    /* Table styling for better visibility */
+    .table th {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .table td {
+        white-space: nowrap;
+    }
+
+    /* Error highlighting */
+    .table-danger {
+        background-color: #f8d7da !important;
+    }
+
+    .table-danger:hover {
+        background-color: #f5c2c7 !important;
+    }
+
+    .text-danger {
+        color: #dc3545 !important;
+    }
+
+    .fw-bold {
+        font-weight: 700 !important;
+    }
+
+    /* Alert styling */
+    .alert-danger {
+        border-left: 4px solid #dc3545;
+    }
+
+    @media print {
+        .table-danger {
+            background-color: #ffcccc !important;
+            border: 2px solid #ff0000 !important;
+        }
     }
 </style>
+
+<script>
+    // Store Type Selection Handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const storeTypeSelect = document.getElementById('store_type');
+        const mainStoreDiv = document.getElementById('main_store_div');
+        const subStoreDiv = document.getElementById('sub_store_div');
+
+        if (storeTypeSelect) {
+            storeTypeSelect.addEventListener('change', function() {
+                if (this.value === 'main') {
+                    mainStoreDiv.style.display = 'block';
+                    subStoreDiv.style.display = 'none';
+                } else {
+                    mainStoreDiv.style.display = 'none';
+                    subStoreDiv.style.display = 'block';
+                }
+            });
+        }
+    });
+</script>
 @endsection

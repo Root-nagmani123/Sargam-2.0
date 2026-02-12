@@ -10,7 +10,7 @@
     <!-- Filters Section -->
     <div class="card mb-3 no-print">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="filterForm">
+            <form method="GET" action="{{ route('admin.mess.reports.selling-voucher-print-slip') }}" id="filterForm">
                 <div class="row g-3">
                     <div class="col-md-2">
                         <label class="form-label">From Date</label>
@@ -58,7 +58,7 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="ti ti-filter"></i> Apply Filters
                     </button>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.mess.reports.selling-voucher-print-slip') }}" class="btn btn-secondary">
                         <i class="ti ti-refresh"></i> Reset
                     </a>
                     <button type="button" class="btn btn-success" onclick="window.print()">
@@ -72,7 +72,7 @@
     <!-- Report Heading (Print Only) -->
     <div class="report-header text-center mb-4">
         <h3 class="fw-bold mb-0">Office Mess, LBS Mussoorie</h3>
-        <h5 class="mt-2 mb-3">Print Slip – Category Wise</h5>
+        <h5 class="mt-2 mb-3">Selling Voucher Print Slip - Category Wise</h5>
         @if(request('from_date') || request('to_date'))
             <p class="mb-1">
                 <strong>Period:</strong> 
@@ -97,7 +97,7 @@
                         @elseif(request('employee_ot_filter') == 'ot')
                             OT
                         @else
-                            Other
+                            All
                         @endif
                     @elseif(request('client_type_slug'))
                         {{ ucfirst(request('client_type_slug')) }}

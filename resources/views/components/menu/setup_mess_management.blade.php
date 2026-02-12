@@ -178,18 +178,8 @@
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseOtherModules">
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.mealmappings.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Meal Mappings</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.storeallocations.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Mess Store Allocation</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.permissionsettings.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Permissions</span>
                 </a>
             </li>
         </ul>
