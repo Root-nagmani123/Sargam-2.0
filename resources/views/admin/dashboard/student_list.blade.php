@@ -154,7 +154,7 @@
         // Initialize DataTable if there are students
         @if($students->isNotEmpty())
             dataTable = $('#studentListTable').DataTable({
-                "pageLength": 25,
+                "pageLength": 10,
                 "order": [[0, "asc"]],
                 "language": {
                     "search": "_INPUT_",
