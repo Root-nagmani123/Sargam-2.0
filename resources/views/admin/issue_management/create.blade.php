@@ -2,269 +2,178 @@
 
 @section('title', 'Log New Issue - Sargam | Lal Bahadur')
 
-@section('css')
-<style>
-.form-control, .form-select {
-    background-color: #fff !important;
-    color: #212529 !important;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-}
-.form-control:focus, .form-select:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
-}
-.complaint-card {
-    border: none;
-    border-radius: 0.75rem;
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.08);
-    overflow: hidden;
-}
-.complaint-card .card-body {
-    padding: 1.75rem 2rem;
-}
-.complaint-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-}
-.complaint-header .back-link {
-    color: #004a93;
-    text-decoration: none;
-    font-size: 1.25rem;
-    line-height: 1;
-    padding: 0.25rem;
-    border-radius: 0.375rem;
-    transition: background-color 0.2s, color 0.2s;
-}
-.complaint-header .back-link:hover {
-    color: #003366;
-    background-color: rgba(0, 74, 147, 0.08);
-}
-.complaint-header .page-title {
-    font-weight: 600;
-    color: #1a365d;
-    font-size: 1.35rem;
-    margin: 0;
-}
-.form-label {
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 0.375rem;
-}
-.form-select, .form-control {
-    padding: 0.5rem 0.75rem;
-}
-.btn-submit-complaint {
-    background-color: #004a93;
-    border-color: #004a93;
-    color: #fff;
-    padding: 0.5rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-}
-.btn-submit-complaint:hover {
-    background-color: #003366;
-    border-color: #003366;
-    color: #fff;
-}
-.char-counter {
-    font-size: 0.8125rem;
-    color: #6b7280;
-    margin-top: 0.25rem;
-}
-</style>
-@endsection
-
 @section('setup_content')
-<div class="container-fluid py-3">
+<div class="container-fluid py-4">
     <x-breadcrum title="Log New Issue" />
     <div class="datatables">
-        <div class="card complaint-card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
+        <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3 overflow-hidden">
+            <div class="card-body p-4 p-md-5">
                 <form action="{{ route('admin.issue-management.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
 
-                    <div class="row g-3">
+                    <div class="row g-3 g-md-4">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Complaint Category <span class="text-danger">*</span></label>
-                                <select name="issue_category_id" id="issue_category" class="form-select" required>
-                                    <option value="">- select -</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
+                            <label class="form-label fw-semibold text-body-secondary">Complaint Category <span class="text-danger">*</span></label>
+                            <select name="issue_category_id" id="issue_category" class="form-select" required>
+                                <option value="">— Select category —</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
+                                @endforeach
+                            </select>
+                            @error('issue_category_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-body-secondary">Complaint Sub-Category <span class="text-danger">*</span></label>
+                            <select name="issue_sub_category_id" id="sub_categories" class="form-select" required>
+                                <option value="">— Select sub-category —</option>
+                            </select>
+                            @error('issue_sub_category_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="row g-3 g-md-4 mt-0">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-body-secondary">Priority <span class="text-danger">*</span></label>
+                            <select name="issue_priority_id" id="issue_priority" class="form-select" required>
+                                <option value="">— Select priority —</option>
+                                @foreach($priorities as $priority)
+                                    <option value="{{ $priority->pk }}">{{ $priority->priority }}</option>
+                                @endforeach
+                            </select>
+                            @error('issue_priority_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="row g-3 g-md-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-body-secondary">Complainant <span class="text-danger">*</span></label>
+                            <select name="created_by" id="complainant" class="form-select" required>
+                                <option value="">Search complainant by name...</option>
+                                @if(isset($employees))
+                                    @foreach($employees as $employee)
+                                        <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (isset($currentUserEmployeeId) && $currentUserEmployeeId == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
                                     @endforeach
-                                </select>
-                                @error('issue_category_id')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
+                                @endif
+                            </select>
+                            <div class="form-text text-muted">Type to search when creating issue on behalf of others.</div>
+                            @error('created_by')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Complaint Sub-Category <span class="text-danger">*</span></label>
-                                <select name="issue_sub_category_id" id="sub_categories" class="form-select" required>
-                                    <option value="">-- Select --</option>
-                                </select>
-                                @error('issue_sub_category_id')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
+                            <label class="form-label fw-semibold text-body-secondary">Mobile Number</label>
+                            <input type="text" class="form-control bg-light" placeholder="Auto-filled" readonly id="mobile_number" name="mobile_number" aria-readonly="true">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 g-md-4 mt-0">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-body-secondary">Nodal Employee (Level 1) <span class="text-danger">*</span></label>
+                            <select name="nodal_employee_id" id="nodal_employee" class="form-select" required>
+                                <option value="">— Select category first —</option>
+                            </select>
+                            <div class="form-text text-muted">Auto-selected from escalation matrix.</div>
+                            @error('nodal_employee_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <input type="hidden" name="sub_category_name" id="sub_category_name" required value="">
+                    </div>
+
+                    <div id="escalation_levels_display" class="mb-0 d-none">
+                        <label class="form-label fw-semibold text-body-secondary">Escalation Hierarchy (read-only)</label>
+                        <div class="card bg-body-secondary border-0 rounded-3">
+                            <div class="card-body py-3 px-4 small">
+                                <div class="mb-1"><strong>Level 2:</strong> <span id="level2_display">—</span></div>
+                                <div><strong>Level 3:</strong> <span id="level3_display">—</span></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Priority <span class="text-danger">*</span></label>
-                                <select name="issue_priority_id" id="issue_priority" class="form-select" required>
-                                    <option value="">- Select -</option>
-                                    @foreach($priorities as $priority)
-                                        <option value="{{ $priority->pk }}">{{ $priority->priority }}</option>
-                                    @endforeach
-                                </select>
-                                @error('issue_priority_id')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Complainant <span class="text-danger">*</span></label>
-                                <select name="created_by" id="complainant" class="form-select select2-complainant" required>
-                                    <option value="">Search complainant by name...</option>
-                                    @if(isset($employees))
-                                        @foreach($employees as $employee)
-                                            <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (isset($currentUserEmployeeId) && $currentUserEmployeeId == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
-                                        @endforeach
-                                    @endif
-                                </select>
-                                <small class="text-muted">Type to search when creating issue on behalf of others</small>
-                                @error('created_by')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Mobile Number</label>
-                                <input type="text" class="form-control" placeholder="Auto-filled" readonly id="mobile_number" name="mobile_number">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Nodal Employee (Level 1) <span class="text-danger">*</span></label>
-                                <select name="nodal_employee_id" id="nodal_employee" class="form-select" required>
-                                    <option value="">- Select Category First -</option>
-                                </select>
-                                <small class="text-muted">Auto-selected from escalation matrix</small>
-                                @error('nodal_employee_id')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                        <input type="hidden" name="sub_category_name" id="sub_category_name" 
-                                    class="form-control" placeholder="Sub category name will auto-fill" 
-                                    readonly required 
-                                    value="">
-                    </div>
-                    <div id="escalation_levels_display" class="mb-3 d-none">
-                        <label class="form-label">Escalation Hierarchy (Display Only)</label>
-                        <div class="card bg-light">
-                            <div class="card-body py-2 px-3 small">
-                                <div><strong>Level 2:</strong> <span id="level2_display">—</span></div>
-                                <div class="mt-1"><strong>Level 3:</strong> <span id="level3_display">—</span></div>
-                            </div>
-                        </div>
-                    </div>
+                    <hr class="my-4">
 
                     <div class="mb-3">
-                        <label class="form-label">Detail Description <span class="text-danger">*</span></label>
-                        <textarea name="description" id="description" class="form-control" rows="5" maxlength="1000" placeholder="Enter Detailed Description" required>{{ old('description') }}</textarea>
-                        <div class="char-counter"><span id="char-count">0</span>/1000 Character</div>
+                        <label class="form-label fw-semibold text-body-secondary">Detail Description <span class="text-danger">*</span></label>
+                        <textarea name="description" id="description" class="form-control" rows="5" maxlength="1000" placeholder="Enter detailed description of the issue…" required>{{ old('description') }}</textarea>
+                        <div class="form-text text-muted"><span id="char-count">0</span>/1000 characters</div>
                         @error('description')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Location <span class="text-danger">*</span></label>
-                        <div>
-                            <div class="form-check form-check-inline">
+                        <label class="form-label fw-semibold text-body-secondary d-block">Location <span class="text-danger">*</span></label>
+                        <div class="d-flex flex-wrap gap-3 pt-1">
+                            <div class="form-check">
                                 <input class="form-check-input" type="radio" name="location" id="loc_hostel" value="H" required {{ old('location') == 'H' ? 'checked' : '' }}>
                                 <label class="form-check-label" for="loc_hostel">Hostel</label>
                             </div>
-                            <div class="form-check form-check-inline">
+                            <div class="form-check">
                                 <input class="form-check-input" type="radio" name="location" id="loc_other" value="O" {{ old('location') == 'O' ? 'checked' : '' }}>
                                 <label class="form-check-label" for="loc_other">Others</label>
                             </div>
-                            <div class="form-check form-check-inline">
+                            <div class="form-check">
                                 <input class="form-check-input" type="radio" name="location" id="loc_residential" value="R" {{ old('location') == 'R' ? 'checked' : '' }}>
                                 <label class="form-check-label" for="loc_residential">Residential</label>
                             </div>
                         </div>
                         @error('location')
-                            <div class="text-danger small mt-1">{{ $message }}</div>
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div id="building_section" class="d-none">
-                        <h6 class="mt-3 mb-3">Building Details</h6>
-                        <div class="row g-3">
+                    <div id="building_section" class="d-none rounded-3 bg-body-secondary border p-4 mb-3">
+                        <h6 class="fw-semibold text-body-secondary mb-3">Building details</h6>
+                        <div class="row g-3 g-md-4">
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Building/Hostel <span class="text-danger">*</span></label>
-                                    <select name="building_master_pk" id="building_select" class="form-select">
-                                        <option value="">-- Select --</option>
-                                        @foreach($buildings as $building)
-                                            <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                                <label class="form-label fw-semibold text-body-secondary">Building / Hostel <span class="text-danger">*</span></label>
+                                <select name="building_master_pk" id="building_select" class="form-select">
+                                    <option value="">— Select —</option>
+                                    @foreach($buildings as $building)
+                                        <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Floor Name/Type :</label>
-                                    <select id="floor_select" class="form-select" name="floor_id">
-                                        <option value="">Select Floor Name</option>
-                                    </select>
-                                </div>
+                                <label class="form-label fw-semibold text-body-secondary">Floor</label>
+                                <select id="floor_select" class="form-select" name="floor_id">
+                                    <option value="">— Select floor —</option>
+                                </select>
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Room No/House No. :</label>
-                                    <select name="room_name" id="room_select" class="form-select">
-                                        <option value="">Select Room</option>
-                                    </select>
-                                </div>
+                                <label class="form-label fw-semibold text-body-secondary">Room / House no.</label>
+                                <select name="room_name" id="room_select" class="form-select">
+                                    <option value="">— Select room —</option>
+                                </select>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row g-3 mt-3">
+                    <hr class="my-4">
+
+                    <div class="row g-3 g-md-4">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Attach Image (Optional)</label>
-                                <input type="file" name="complaint_img_url[]" id="complaint_img_url" class="form-control {{ $errors->has('complaint_img_url') ? 'is-invalid' : '' }}" accept=".jpg,.jpeg,.png" multiple>
-                                <small class="text-muted">Max size: 5MB per file. Allowed: JPG, PNG only.</small>
-                                <div id="attachment_validation_error" class="text-danger small mt-1" style="display: none;"></div>
-                                @error('complaint_img_url')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <label class="form-label fw-semibold text-body-secondary">Attach image (optional)</label>
+                            <input type="file" name="complaint_img_url[]" id="complaint_img_url" class="form-control {{ $errors->has('complaint_img_url') ? 'is-invalid' : '' }}" accept=".jpg,.jpeg,.png" multiple>
+                            <div class="form-text text-muted">Max 5MB per file. JPG and PNG only.</div>
+                            <div id="attachment_validation_error" class="text-danger small mt-1 d-none"></div>
+                            @error('complaint_img_url')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 pt-2">
-                        <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary rounded">Cancel</a>
-                        <button type="submit" class="btn btn-submit-complaint" id="btn_log_issue">Log Issue</button>
+                    <div class="d-flex flex-wrap justify-content-end gap-2 pt-3 mt-2">
+                        <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4" id="btn_log_issue">Log Issue</button>
                     </div>
                 </form>
             </div>
@@ -283,6 +192,12 @@ $(document).ready(function() {
             placeholder: 'Search complainant by name...',
             allowClear: true,
             width: '100%'
+        });
+        // Focus search field when complainant dropdown is opened so user can type immediately
+        $('#complainant').on('select2:open', function() {
+            setTimeout(function() {
+                $('.select2-container--open .select2-search__field').focus();
+            }, 0);
         });
     }
 
@@ -486,7 +401,7 @@ $(document).ready(function() {
 
     $('form').on('submit', function(e) {
         var errEl = $('#attachment_validation_error');
-        errEl.hide().text('');
+        errEl.addClass('d-none').text('');
         $('#complaint_img_url').removeClass('is-invalid');
 
         var input = document.getElementById('complaint_img_url');
@@ -498,13 +413,13 @@ $(document).ready(function() {
             var ext = (f.name.split('.').pop() || '').toLowerCase();
             if (allowedExtensions.indexOf(ext) === -1) {
                 e.preventDefault();
-                errEl.text('Only JPG and PNG images are allowed. File "' + f.name + '" is not allowed.').show();
+                errEl.text('Only JPG and PNG images are allowed. File "' + f.name + '" is not allowed.').removeClass('d-none');
                 $('#complaint_img_url').addClass('is-invalid');
                 return false;
             }
             if (f.size > maxSizeBytes) {
                 e.preventDefault();
-                errEl.text('Each file must not exceed 5MB. File "' + f.name + '" is too large.').show();
+                errEl.text('Each file must not exceed 5MB. File "' + f.name + '" is too large.').removeClass('d-none');
                 $('#complaint_img_url').addClass('is-invalid');
                 return false;
             }
@@ -514,7 +429,7 @@ $(document).ready(function() {
 
     // Clear attachment error when user changes file selection
     $('#complaint_img_url').on('change', function() {
-        $('#attachment_validation_error').hide().text('');
+        $('#attachment_validation_error').addClass('d-none').text('');
         $(this).removeClass('is-invalid');
     });
 

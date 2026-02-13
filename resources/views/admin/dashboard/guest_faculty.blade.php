@@ -8,11 +8,12 @@
         border: none;
         box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.08);
         border-radius: 0.75rem;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .guest-faculty-card .card-header {
         background: linear-gradient(135deg, #0b4f8a 0%, #0d6efd 100%);
+        border-radius: 0.75rem 0.75rem 0 0;
         color: #fff;
         border: none;
         padding: 1.25rem 1.5rem;
@@ -31,8 +32,24 @@
         letter-spacing: 0.3px;
     }
 
+    .guest-faculty-card .card-body .datatables,
+    .guest-faculty-card .card-body .dataTables_wrapper {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .guest-faculty-card .card-body .table-responsive {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
     #guess_faculty {
         margin-bottom: 0;
+        min-width: 1000px;
     }
 
     #guess_faculty thead th {
@@ -454,7 +471,7 @@
                             <tr>
                                 <td>{{ $index + 1 }}</td>
                                 <td>
-                                    <span class="badge rounded-pill badge-guest bg-success-subtle text-success">Guest</span>
+                                    <span class="badge rounded-1 badge-guest bg-success-subtle text-success">Guest</span>
                                 </td>
                                 <td>
                                     <span class="faculty-name">{{ $faculty->full_name }}</span>
@@ -472,11 +489,11 @@
                                 <td>{{ $faculty->mobile_no ?? 'N/A' }}</td>
                                 <td>
                                     @if($faculty->faculty_sector == 1)
-                                        <span class="badge rounded-pill badge-sector-gov">Government</span>
+                                        <span class="badge rounded-1 badge-sector-gov">Government</span>
                                     @elseif($faculty->faculty_sector == 2)
-                                        <span class="badge rounded-pill badge-sector-private">Private</span>
+                                        <span class="badge rounded-1 badge-sector-private">Private</span>
                                     @else
-                                        <span class="badge rounded-pill badge-sector-other">Other</span>
+                                        <span class="badge rounded-1 badge-sector-other">Other</span>
                                     @endif
                                 </td>
                                 <td>
@@ -548,7 +565,7 @@
 $(document).ready(function() {
     $('#guess_faculty').DataTable({
         order: [[2, 'asc']], // Sort by Faculty Name by default
-        pageLength: 25,
+        pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         language: {
             search: "Search:",
@@ -563,7 +580,7 @@ $(document).ready(function() {
                 previous: "Previous"
             }
         },
-        responsive: true,
+        responsive: false,
         autoWidth: false,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         drawCallback: function() {
