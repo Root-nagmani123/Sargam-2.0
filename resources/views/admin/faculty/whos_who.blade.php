@@ -158,7 +158,7 @@
         <div class="card-header bg-primary text-white p-4">
             <div class="row align-items-center g-3">
                 <div class="col-md-4">
-                    <h3 class="h4 mb-0 fw-bold" id="profileName">Aakash Garg</h3>
+                    <h3 class="h4 mb-0 fw-bold text-white" id="profileName">Aakash Garg</h3>
                 </div>
                 <div class="col-md-4 text-center">
                     <div class="fs-5 fw-semibold" id="profileRoll">Roll 5</div>
