@@ -35,7 +35,7 @@
                     <td>{{ ++$sn }}</td>
                     <td>{{ $allocation->subStore->sub_store_name ?? 'N/A' }}</td>
                     <td>{{ $item->itemSubcategory->item_name ?? 'N/A' }}</td>
-                    <td>{{ optional($item->itemSubcategory->category)->category_name ?? 'N/A' }}</td>
+                    <td>{{ $item->itemSubcategory?->category?->category_name ?? 'N/A' }}</td>
                     <td>{{ $item->quantity }}</td>
                     <td>{{ $allocation->allocation_date ? $allocation->allocation_date->format('d-m-Y') : '—' }}</td>
                     <td>
