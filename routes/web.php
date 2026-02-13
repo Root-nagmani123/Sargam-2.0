@@ -766,12 +766,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
 
 
-
-
-
-
-
-
     // Report walal route
 
     Route::get('/faculty_view', function () {
