@@ -145,6 +145,105 @@
 
 @section('scripts')
 <script>
+(function() {
+    var escalationEmployees = @json($employees);
+
+    function optionHtml(emp) {
+        return '<option value="' + emp.employee_pk + '">' + (emp.employee_name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>';
+    }
+
+    function rebuildLevel2Add(excludePk) {
+        var sel = document.getElementById('level2_employee');
+        if (!sel) return;
+        var current = sel.value;
+        sel.innerHTML = '<option value="">- Select -</option>';
+        escalationEmployees.forEach(function(emp) {
+            if (String(emp.employee_pk) !== String(excludePk)) {
+                sel.insertAdjacentHTML('beforeend', optionHtml(emp));
+            }
+        });
+        sel.value = '';
+    }
+
+    function rebuildLevel3Add(excludePk1, excludePk2) {
+        var sel = document.getElementById('level3_employee');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">- Select -</option>';
+        escalationEmployees.forEach(function(emp) {
+            var pk = String(emp.employee_pk);
+            if (pk !== String(excludePk1) && pk !== String(excludePk2)) {
+                sel.insertAdjacentHTML('beforeend', optionHtml(emp));
+            }
+        });
+        sel.value = '';
+    }
+
+    function rebuildLevel2Edit(excludePk) {
+        var sel = document.getElementById('edit_level2_employee');
+        if (!sel) return;
+        var current = sel.value;
+        sel.innerHTML = '<option value="">- Select -</option>';
+        escalationEmployees.forEach(function(emp) {
+            if (String(emp.employee_pk) !== String(excludePk)) {
+                sel.insertAdjacentHTML('beforeend', optionHtml(emp));
+            }
+        });
+        if (current && String(excludePk) !== current) sel.value = current;
+    }
+
+    function rebuildLevel3Edit(excludePk1, excludePk2) {
+        var sel = document.getElementById('edit_level3_employee');
+        if (!sel) return;
+        var current = sel.value;
+        sel.innerHTML = '<option value="">- Select -</option>';
+        escalationEmployees.forEach(function(emp) {
+            var pk = String(emp.employee_pk);
+            if (pk !== String(excludePk1) && pk !== String(excludePk2)) {
+                sel.insertAdjacentHTML('beforeend', optionHtml(emp));
+            }
+        });
+        if (current && current !== String(excludePk1) && current !== String(excludePk2)) sel.value = current;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var level1Add = document.getElementById('level1_employee');
+        var level2Add = document.getElementById('level2_employee');
+        var level3Add = document.getElementById('level3_employee');
+        if (level1Add) {
+            level1Add.addEventListener('change', function() {
+                var pk = this.value;
+                rebuildLevel2Add(pk);
+                rebuildLevel3Add(pk, null);
+            });
+        }
+        if (level2Add) {
+            level2Add.addEventListener('change', function() {
+                var pk1 = level1Add && level1Add.value ? level1Add.value : null;
+                var pk2 = this.value;
+                rebuildLevel3Add(pk1, pk2);
+            });
+        }
+
+        var level1Edit = document.getElementById('edit_level1_employee');
+        var level2Edit = document.getElementById('edit_level2_employee');
+        var level3Edit = document.getElementById('edit_level3_employee');
+        if (level1Edit) {
+            level1Edit.addEventListener('change', function() {
+                var pk = this.value;
+                rebuildLevel2Edit(pk);
+                rebuildLevel3Edit(pk, level2Edit && level2Edit.value ? level2Edit.value : null);
+            });
+        }
+        if (level2Edit) {
+            level2Edit.addEventListener('change', function() {
+                var pk1 = level1Edit && level1Edit.value ? level1Edit.value : null;
+                var pk2 = this.value;
+                rebuildLevel3Edit(pk1, pk2);
+            });
+        }
+    });
+})();
+
 function editMatrix(categoryId, categoryName, emp1, days1, emp2, days2, emp3, days3) {
     document.getElementById('edit_category_pk').value = categoryId;
     document.getElementById('edit_category_name').value = categoryName;
@@ -156,6 +255,23 @@ function editMatrix(categoryId, categoryName, emp1, days1, emp2, days2, emp3, da
     document.getElementById('edit_level3_days').value = days3 || 0;
 
     document.getElementById('editMatrixForm').action = "{{ url('admin/issue-escalation-matrix') }}/" + categoryId;
+
+    var escalationEmployees = @json($employees);
+    function opt(emp) { return '<option value="' + emp.employee_pk + '">' + (emp.employee_name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>'; }
+    var L1 = document.getElementById('edit_level1_employee');
+    var L2 = document.getElementById('edit_level2_employee');
+    var L3 = document.getElementById('edit_level3_employee');
+    var v1 = L1 && L1.value ? L1.value : '';
+    var v2 = L2 && L2.value ? L2.value : '';
+    L2.innerHTML = '<option value="">- Select -</option>';
+    escalationEmployees.forEach(function(e) { if (String(e.employee_pk) !== v1) L2.insertAdjacentHTML('beforeend', opt(e)); });
+    L2.value = v2;
+    L3.innerHTML = '<option value="">- Select -</option>';
+    escalationEmployees.forEach(function(e) {
+        var p = String(e.employee_pk);
+        if (p !== v1 && p !== v2) L3.insertAdjacentHTML('beforeend', opt(e));
+    });
+    L3.value = (emp3 != null && String(emp3) !== v1 && String(emp3) !== v2) ? String(emp3) : '';
 
     new bootstrap.Modal(document.getElementById('editMatrixModal')).show();
 }
