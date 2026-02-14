@@ -112,19 +112,9 @@
                 </a>
             </div>
             <div class="card-body p-0">
-                <!-- Active / Archive Tabs -->
-                @php
-                    $currentTab = request('tab', 'active');
-                    $queryParams = request()->except('tab', 'page');
-                    $activeTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'active']));
-                    $archiveTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'archive']));
-                @endphp
-              
-
                 <!-- Filters -->
                 <div class="p-4 pb-0">
                     <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4">
-                        <input type="hidden" name="tab" value="{{ $currentTab }}">
                         <div class="d-flex align-items-center gap-2 mb-3">
                             <iconify-icon icon="solar:filter-bold-duotone" class="text-primary"></iconify-icon>
                             <span class="fw-semibold small text-body-secondary">Filters</span>
@@ -187,7 +177,6 @@
                                         'priority' => request('priority'),
                                         'date_from' => request('date_from'),
                                         'date_to' => request('date_to'),
-                                        'tab' => $currentTab,
                                         'raised_by' => request('raised_by'),
                                     ]);
                                 @endphp
@@ -261,19 +250,9 @@
                                         <div class="empty-state-icon">
                                             <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1"></iconify-icon>
                                         </div>
-                                        <h6 class="text-body-secondary mb-1">No {{ $currentTab === 'archive' ? 'archived' : 'active' }} issues</h6>
-                                        <p class="small text-body-secondary mb-0">
-                                            @if($currentTab === 'archive')
-                                                Completed issues will appear here.
-                                            @else
-                                                Try adjusting your filters or log a new issue.
-                                            @endif
-                                        </p>
-                                        @if($currentTab === 'active')
+                                        <h6 class="text-body-secondary mb-1">No issues</h6>
+                                        <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
                                         <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm mt-3">Log New Issue</a>
-                                        @else
-                                        <a href="{{ route('admin.issue-management.index', ['tab' => 'active']) }}" class="btn btn-outline-primary btn-sm mt-3">View Active Issues</a>
-                                        @endif
                                     </div>
                                 </td>
                             </tr>

@@ -75,14 +75,9 @@ class IssueManagementExport implements FromCollection, WithHeadings
             $query->where('created_date', '<=', $to);
         }
 
-        // Status / tab
-        $tab = $this->filters['tab'] ?? 'active';
+        // Status: only filter when user selects a status; otherwise export all complaints
         if (isset($this->filters['status']) && $this->filters['status'] !== '') {
             $query->where('issue_status', (int) $this->filters['status']);
-        } elseif ($tab === 'archive') {
-            $query->where('issue_status', 2);
-        } else {
-            $query->whereIn('issue_status', [0, 1, 3, 6]);
         }
 
         $issues = $query->orderBy('created_date', 'desc')->get();
