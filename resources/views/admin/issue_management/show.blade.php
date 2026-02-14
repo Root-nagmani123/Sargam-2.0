@@ -39,12 +39,25 @@
                         <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back to List
                         </a>
-                        @if($issue->employee_master_pk == Auth::user()->user_id ||$issue->assigned_to == Auth::user()->user_id)
+                        @php
+                            $isNodalOrAssigned = $issue->employee_master_pk == Auth::user()->user_id || $issue->assigned_to == Auth::user()->user_id;
+                            $isComplainant = $issue->created_by == Auth::user()->user_id;
+                            $isCompleted = (int) $issue->issue_status === 2;
+                            $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted);
+                        @endphp
+                        @if($canUpdateStatus)
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
-                            <i class="bi bi-arrow-up-circle"></i> Update Status
+                            @if($isComplainant && $isCompleted)
+                                <i class="bi bi-arrow-repeat"></i> Reopen Issue
+                            @else
+                                <i class="bi bi-arrow-up-circle"></i> Update Status
+                            @endif
                         </button>
                         @endif
-                        @if($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id)
+                        @if($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id && $issue->issue_status === 2)
+                             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal"> <i class="bi bi-arrow-repeat"></i> Reopen Issue
+                             </button>
+                            @else
                             <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
                                 <i class="bi bi-pencil"></i> Edit Issue
                             </a>
@@ -307,12 +320,18 @@
                 </div>
                 <div class="modal-body">
                     @php
-                        // Get all statuses that have been used in history
                         $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
-                        // Check if issue is already assigned
                         $isAssigned = !empty($issue->assigned_to);
+                        $canOnlyReopen = $isComplainant && $isCompleted;
                     @endphp
 
+                    @if($canOnlyReopen)
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Reopen:</strong> As the complainant, you can reopen this completed issue. Add a remark (optional) and submit.
+                    </div>
+                    <input type="hidden" name="issue_status" value="6">
+                    @else
                     <!-- Assignment Status Notice -->
                     @if($isAssigned)
                     <div class="alert alert-info mb-3">
@@ -385,6 +404,7 @@
                         </div>
                     </div>
                     @endif
+                    @endif
 
                     <div class="mb-3">
                         <label for="remark" class="form-label">Remarks</label>
@@ -393,7 +413,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Status</button>
+                    <button type="submit" class="btn btn-primary">{{ $canOnlyReopen ? 'Reopen Issue' : 'Update Status' }}</button>
                 </div>
             </form>
         </div>
