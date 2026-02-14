@@ -45,17 +45,15 @@
                 <input type="hidden" name="issue_category_id" value="{{ $issue->issue_category_master_pk }}">
                 <input type="hidden" name="issue_sub_category_id" value="{{ $issue->subCategoryMappings->first()->issue_sub_category_master_pk ?? '' }}">
                 <input type="hidden" name="issue_priority_id" value="{{ $issue->issue_priority_master_pk ?? '' }}">
-                <div class="assignment-notice">
-                    <i class="bi bi-exclamation-circle-fill"></i>
-                    <div>
-                        <strong>Issue Assigned:</strong> This issue has been assigned. You can only update the status and add remarks. Other details are locked for editing.
-                    </div>
-                </div>
+                
                 @endif
 
                 <form action="{{ route('admin.issue-management.update', $issue->pk) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
+                    @if(request('embed'))
+                    <input type="hidden" name="from_modal" value="1">
+                    @endif
 
                     <div class="row g-3">
                         <div class="col-md-6">

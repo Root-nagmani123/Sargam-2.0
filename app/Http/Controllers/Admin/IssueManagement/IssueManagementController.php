@@ -107,39 +107,19 @@ class IssueManagementController extends Controller
         $applyRaisedBy($query);
         $query->orderBy('created_date', 'desc');
 
-        // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
-        $tab = $request->get('tab', 'active');
+        // Single list: all complaints. Status filter only when user selects from dropdown.
         if ($request->filled('status') && $request->status !== '') {
             $query->where('issue_status', (int) $request->status);
-        } elseif ($tab === 'archive') {
-            $query->where('issue_status', 2);
-        } else {
-            $query->whereIn('issue_status', [0, 1, 3, 6]);
         }
 
         $applyFilters($query);
 
         $issues = $query->paginate(20);
-        // print_r($issues); exit;
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        $baseQuery = IssueLogManagement::query();
-
-        $activeCountQuery = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6]);
-        $applyUserScope($activeCountQuery);
-        $applyRaisedBy($activeCountQuery);
-        $applyFilters($activeCountQuery);
-        $activeCount = $activeCountQuery->count();
-
-        $archiveCountQuery = (clone $baseQuery)->where('issue_status', 2);
-        $applyUserScope($archiveCountQuery);
-        $applyRaisedBy($archiveCountQuery);
-        $applyFilters($archiveCountQuery);
-        $archiveCount = $archiveCountQuery->count();
-
-        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities', 'tab', 'activeCount', 'archiveCount'));
+        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities'));
     }
 
     /**
@@ -154,7 +134,6 @@ class IssueManagementController extends Controller
             'priority' => $request->get('priority'),
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
-            'tab' => $request->get('tab', 'active'),
             'raised_by' => $request->get('raised_by'),
         ];
         $fileName = 'issues-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
@@ -173,7 +152,6 @@ class IssueManagementController extends Controller
             'priority' => $request->get('priority'),
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
-            'tab' => $request->get('tab', 'active'),
             'raised_by' => $request->get('raised_by'),
         ];
         $export = new IssueManagementExport($filters);
@@ -221,7 +199,6 @@ class IssueManagementController extends Controller
         if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
             $labels['date_range'] = trim(($filters['date_from'] ?? '') . ' to ' . ($filters['date_to'] ?? ''));
         }
-        $labels['tab'] = ($filters['tab'] ?? 'active') === 'archive' ? 'Archive' : 'Active';
         return $labels;
     }
 
@@ -754,8 +731,12 @@ class IssueManagementController extends Controller
 
             DB::commit();
 
-            return redirect()->route('admin.issue-management.show', $issue->pk)
-                ->with('success', 'Issue updated successfully.');
+            $showUrl = route('admin.issue-management.show', $issue->pk);
+            if ($request->filled('from_modal')) {
+                session()->flash('success', 'Issue updated successfully.');
+                return response()->view('admin.issue_management.close_modal_redirect', ['url' => $showUrl]);
+            }
+            return redirect()->to($showUrl)->with('success', 'Issue updated successfully.');
         } catch (\Exception $e) {
             DB::rollback();
             return back()->withInput()
@@ -1076,20 +1057,32 @@ class IssueManagementController extends Controller
     public function status_update(Request $request, $id)
     {
         $issue = IssueLogManagement::findOrFail($id);
-        
-        // Check if issue is already assigned
+        $userId = Auth::user()->user_id ?? null;
+
+        $isNodalOrAssigned = ($issue->employee_master_pk == $userId) || ($issue->assigned_to == $userId);
+        $isComplainant = ($issue->created_by == $userId);
+        $isCompleted = (int) $issue->issue_status === 2;
+        $requestedStatus = (int) $request->issue_status;
+
+        // Complainant can only reopen (status 2 -> 6); nodal/assigned can update status as before
+        if ($isComplainant && !$isNodalOrAssigned) {
+            if (!$isCompleted || $requestedStatus !== 6) {
+                return redirect()->route('admin.issue-management.show', $issue->pk)
+                    ->with('error', 'As the complainant, you can only reopen this issue when it is completed.');
+            }
+        } elseif (!$isNodalOrAssigned && !$isComplainant) {
+            return redirect()->back()->with('error', 'You are not allowed to update this issue status.');
+        }
+
         $isAssigned = !empty($issue->assigned_to);
 
-        // Validate request - assign_to_type only required if not already assigned
         $rules = [
             'issue_status' => 'required|in:0,1,2,3,6',
             'remark' => 'nullable|string|max:500',
         ];
-        
         if (!$isAssigned) {
             $rules['assign_to_type'] = 'required';
         }
-        
         $request->validate($rules);
 
         DB::beginTransaction();
