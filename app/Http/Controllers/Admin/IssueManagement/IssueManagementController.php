@@ -37,9 +37,6 @@ class IssueManagementController extends Controller
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
             'statusHistory'
-<<<<<<< HEAD
-        ])->orderBy('created_date', 'desc');
-=======
         ]);
 
         $applyUserScope = function ($builder) {
@@ -103,8 +100,8 @@ class IssueManagementController extends Controller
 
         $applyUserScope($query);
         $applyRaisedBy($query);
+        $applyFilters($query);
         $query->orderBy('created_date', 'desc');
->>>>>>> e684ec96 (memo notice bug solve)
 
         // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
         $tab = $request->get('tab', 'active');
@@ -171,9 +168,6 @@ class IssueManagementController extends Controller
         }
 
         if ($request->has('category') && $request->category !== '') {
-<<<<<<< HEAD
-            $query->where('issue_category_master_pk', $request->category);
-=======
             $query->where('issue_category_master_pk', (int) $request->category);
         }
 
@@ -190,7 +184,6 @@ class IssueManagementController extends Controller
         if ($request->filled('date_to')) {
             $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
             $query->where('created_date', '<=', $to);
->>>>>>> e684ec96 (memo notice bug solve)
         }
 
         $issues = $query->paginate(20);
