@@ -54,7 +54,7 @@
                             @endif
                         </button>
                         @endif
-                        @if($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id && $issue->issue_status === 2)
+                        @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
                              <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal"> <i class="bi bi-arrow-repeat"></i> Reopen Issue
                              </button>
                             @else
@@ -185,6 +185,10 @@
                                         <strong>Hostel:</strong> {{ $hostelName }}<br>
                                         <strong>Floor:</strong> {{ $hostelFloor }}<br>
                                         <strong>Room:</strong> {{ $hostelRoom }}<br>
+                                    @elseif(!empty($locationFallback))
+                                        <strong>{{ $locationFallback['type'] === 'building' ? 'Building' : ($locationFallback['type'] === 'residential' ? 'Residential' : 'Hostel') }}:</strong> {{ $locationFallback['name'] }}<br>
+                                        <strong>Floor:</strong> {{ $locationFallback['floor'] }}<br>
+                                        <strong>Room:</strong> {{ $locationFallback['room'] }}<br>
                                     @else
                                         <strong>Hostel:</strong> N/A<br>
                                         <strong>Floor:</strong> N/A<br>
@@ -325,7 +329,7 @@
                         $canOnlyReopen = $isComplainant && $isCompleted;
                     @endphp
 
-                    @if($canOnlyReopen)
+                    @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
                     <div class="alert alert-info mb-3">
                         <i class="bi bi-info-circle"></i>
                         <strong>Reopen:</strong> As the complainant, you can reopen this completed issue. Add a remark (optional) and submit.
