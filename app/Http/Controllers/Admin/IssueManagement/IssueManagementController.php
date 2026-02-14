@@ -561,7 +561,41 @@ class IssueManagementController extends Controller
         // Complaint section: employees + faculty only (user_credentials.user_category != 'S'), optional department filter
         $employees = User::getEmployeesAndFacultyForComplaint($department_id);
 
-        return view('admin.issue_management.show', compact('issue', 'employees'));
+        // Fallback: load location mapping from DB if not loaded via relationship (e.g. issues lodged via API or on behalf)
+        $locationFallback = null;
+        if (!$issue->buildingMapping && !$issue->hostelMapping) {
+            if ($issue->location === 'H' || $issue->location === 'R') {
+                $row = DB::table('issue_log_hostel_map as m')
+                    ->leftJoin('hostel_building_master as h', 'm.hostel_building_master_pk', '=', 'h.pk')
+                    ->where('m.issue_log_management_pk', $issue->pk)
+                    ->select('m.hostel_building_master_pk', 'm.floor_name', 'm.room_name', 'h.hostel_name', 'h.building_name')
+                    ->first();
+                if ($row) {
+                    $locationFallback = [
+                        'type' => $issue->location === 'H' ? 'hostel' : 'residential',
+                        'name' => trim($row->hostel_name ?? $row->building_name ?? '') ?: 'N/A',
+                        'floor' => trim($row->floor_name ?? '') ?: 'N/A',
+                        'room' => trim($row->room_name ?? '') ?: 'N/A',
+                    ];
+                }
+            } elseif ($issue->location === 'O') {
+                $row = DB::table('issue_log_building_map as m')
+                    ->leftJoin('building_master as b', 'm.building_master_pk', '=', 'b.pk')
+                    ->where('m.issue_log_management_pk', $issue->pk)
+                    ->select('m.building_master_pk', 'm.floor_name', 'm.room_name', 'b.building_name')
+                    ->first();
+                if ($row) {
+                    $locationFallback = [
+                        'type' => 'building',
+                        'name' => trim($row->building_name ?? '') ?: 'N/A',
+                        'floor' => trim($row->floor_name ?? '') ?: 'N/A',
+                        'room' => trim($row->room_name ?? '') ?: 'N/A',
+                    ];
+                }
+            }
+        }
+
+        return view('admin.issue_management.show', compact('issue', 'employees', 'locationFallback'));
     }
 
     /**
@@ -1061,16 +1095,18 @@ class IssueManagementController extends Controller
 
         $isNodalOrAssigned = ($issue->employee_master_pk == $userId) || ($issue->assigned_to == $userId);
         $isComplainant = ($issue->created_by == $userId);
+        $isLogger = ($issue->issue_logger == $userId);
         $isCompleted = (int) $issue->issue_status === 2;
         $requestedStatus = (int) $request->issue_status;
+        $isReopenOnly = $isCompleted && $requestedStatus === 6;
 
-        // Complainant can only reopen (status 2 -> 6); nodal/assigned can update status as before
-        if ($isComplainant && !$isNodalOrAssigned) {
-            if (!$isCompleted || $requestedStatus !== 6) {
+        // Complainant or Issue Logger can only reopen (status 2 -> 6); nodal/assigned can update status as before
+        if (($isComplainant || $isLogger) && !$isNodalOrAssigned) {
+            if (!$isReopenOnly) {
                 return redirect()->route('admin.issue-management.show', $issue->pk)
-                    ->with('error', 'As the complainant, you can only reopen this issue when it is completed.');
+                    ->with('error', 'As the complainant or issue logger, you can only reopen this issue when it is completed.');
             }
-        } elseif (!$isNodalOrAssigned && !$isComplainant) {
+        } elseif (!$isNodalOrAssigned) {
             return redirect()->back()->with('error', 'You are not allowed to update this issue status.');
         }
 
@@ -1080,7 +1116,8 @@ class IssueManagementController extends Controller
             'issue_status' => 'required|in:0,1,2,3,6',
             'remark' => 'nullable|string|max:500',
         ];
-        if (!$isAssigned) {
+        // Reopen-only (complainant/logger) does not send assignment; skip assign_to_type when only reopening
+        if (!$isAssigned && !(($isComplainant || $isLogger) && $isReopenOnly)) {
             $rules['assign_to_type'] = 'required';
         }
         $request->validate($rules);
@@ -1092,7 +1129,11 @@ class IssueManagementController extends Controller
 
             // Handle assignment based on type (only if not already assigned)
             if (!$isAssigned) {
-                if ($request->assign_to_type === 'other') {
+                // Reopen-only by complainant/logger: do not change assignment
+                if (($isComplainant || $isLogger) && $isReopenOnly) {
+                    $assignedTo = $issue->assigned_to;
+                    $assignedToContact = $issue->assigned_to_contact;
+                } elseif ($request->assign_to_type === 'other') {
                     // Validate other fields if "other" is selected
                     $request->validate([
                         'other_name' => 'required|string|max:255',
