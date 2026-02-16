@@ -9,5 +9,5 @@ class Stream extends Model
     protected $primaryKey = 'pk';
     public $timestamps = false;
 
-    protected $fillable = ['stream_name'];
+    protected $fillable = ['stream_name', 'active_inactive'];
 }

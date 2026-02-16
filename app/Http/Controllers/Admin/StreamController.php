@@ -29,7 +29,8 @@ class StreamController extends Controller
 
     foreach ($request->stream_name as $name) {
         Stream::create([
-            'stream_name' => $name
+            'stream_name' => $name,
+            'active_inactive' => 1,
         ]);
     }
 

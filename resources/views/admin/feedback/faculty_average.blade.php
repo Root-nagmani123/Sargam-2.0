@@ -228,16 +228,17 @@
                             <fieldset class="mb-3">
                                 <legend class="fs-6 fw-semibold">Course Status</legend>
                                 <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="course_type" value="current"
+                                        id="current" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="current">Current Courses</label>
+                                </div>
+                                <div class="form-check">
                                     <input class="form-check-input" type="radio" name="course_type" value="archived"
                                         id="archived" {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="archived">Archived Courses</label>
                                 </div>
 
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="course_type" value="current"
-                                        id="current" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="current">Current Courses</label>
-                                </div>
+                                
                             </fieldset>
 
                             <div class="mb-3">

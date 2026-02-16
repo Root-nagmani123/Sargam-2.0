@@ -5,18 +5,33 @@
 @section('setup_content')
 <style>
 /* Course Memo Decision Mapping - responsive (mobile/tablet only, desktop unchanged) */
+.course-memo-decision-mapping-index .datatables .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+.course-memo-decision-mapping-index .datatables #memoDecisionTable {
+    width: 100% !important;
+    margin: 0;
+}
+
+/* Hide DataTables responsive child row controls */
+.course-memo-decision-mapping-index .datatables .dtr-control,
+.course-memo-decision-mapping-index .datatables .dtr-details,
+.course-memo-decision-mapping-index .datatables .dtr-expandable {
+    display: none !important;
+}
+
 @media (max-width: 991.98px) {
-    .course-memo-decision-mapping-index .datatables .table-responsive {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-    }
     .course-memo-decision-mapping-index .datatables #memoDecisionTable {
-        min-width: 500px;
+        min-width: 800px;
     }
     .course-memo-decision-mapping-index .datatables #memoDecisionTable th,
     .course-memo-decision-mapping-index .datatables #memoDecisionTable td {
         padding: 8px 10px;
         font-size: 0.9rem;
+        white-space: nowrap;
     }
 }
 @media (max-width: 767.98px) {
@@ -104,37 +119,37 @@
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
+                <div class="row course-memo-header-row align-items-center mb-3">
+                    <div class="col-6">
+                        <h4>Course Memo Decision Mapping</h4>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex justify-content-end align-items-center gap-2 course-memo-header-actions">
+                            <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
+                                Mapping</a> -->
+                            <button type="button" id="showConclusionAlert" class="btn btn-primary">
+                                +Add New Mapping
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <hr>
                 <div class="table-responsive">
-                    <div class="row course-memo-header-row align-items-center">
-                        <div class="col-6">
-                            <h4>Course Memo Decision Mapping</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2 course-memo-header-actions">
-                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
-                                    Mapping</a> -->
-                                <button type="button" id="showConclusionAlert" class="btn btn-primary">
-                                    +Add New Mapping
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div>
-                        <table class="table w-100" id="memoDecisionTable">
-                            <thead style="background-color: #004a93;">
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>Course Name</th>
-                                    <th>Memo type</th>
-                                    <th>Memo Conclusion</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                        </table>
-
-                    </div>
+                    <table class="table w-100 text-nowrap align-middle mb-0" id="memoDecisionTable">
+                        <thead style="background-color: #004a93;" class="text-white">
+                            <tr>
+                                <th class="text-nowrap">S.No.</th>
+                                <th class="text-nowrap">Course Name</th>
+                                <th class="text-nowrap">Memo type</th>
+                                <th class="text-nowrap">Memo Conclusion</th>
+                                <th class="text-nowrap">Status</th>
+                                <th class="text-nowrap">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- DataTable will populate this -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -142,137 +157,173 @@
 </div>
 <!-- Bootstrap Modal -->
 <div class="modal fade" id="conclusionModal" tabindex="-1" aria-labelledby="conclusionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="conclusionModalLabel">Add Memo Conclusion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 text-white" id="conclusionModalLabel">
+                    Add Memo Conclusion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <form id="conclusionForm">
-                    <div class="row">
+                    <div class="row g-3">
                         <!-- Course Dropdown -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Select Course <span style="color:red;">*</span></label>
-                            <select name="course_master_pk" id="course_master_pk" class="form-select" required>
-                                <option value="">-- Select Course --</option>
+                        <div class="col-md-6">
+                            <label for="course_master_pk" class="form-label mb-2">
+                                Select Course 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select name="course_master_pk" id="course_master_pk" class="form-control" required>
+                                <option value="" disabled selected>-- Select Course --</option>
                                 @foreach($CourseMaster as $course)
                                 <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                                 @endforeach
                             </select>
+                            <div class="invalid-feedback">Please select a course.</div>
                         </div>
 
                         <!-- Memo Dropdown -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Select Memo <span style="color:red;">*</span></label>
-                            <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select" required>
-                                <option value="">-- Select Memo --</option>
+                        <div class="col-md-6">
+                            <label for="memo_type_master_pk" class="form-label mb-2">
+                                Select Memo 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-control" required>
+                                <option value="" disabled selected>-- Select Memo --</option>
                                 @foreach($MemoTypeMaster as $memo)
                                 <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
                                 @endforeach
                             </select>
+                            <div class="invalid-feedback">Please select a memo type.</div>
                         </div>
 
                         <!-- Memo Conclusion Dropdown -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Select Memo Conclusion <span style="color:red;">*</span></label>
-                            <select name="memo_conclusion_master_pk" id="memo_conclusion_master_pk" class="form-select" required>
-                                <option value="">-- Select Memo Conclusion --</option>
+                        <div class="col-md-6">
+                            <label for="memo_conclusion_master_pk" class="form-label mb-2">
+                                Select Memo Conclusion 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select name="memo_conclusion_master_pk" id="memo_conclusion_master_pk" class="form-control" required>
+                                <option value="" disabled selected>-- Select Memo Conclusion --</option>
                                 @foreach($MemoConclusionMaster as $memo)
                                 <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
                                 @endforeach
                             </select>
+                            <div class="invalid-feedback">Please select a memo conclusion.</div>
                         </div>
 
                         <!-- Status -->
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Status <span style="color:red;">*</span></label>
-                            <select name="active_inactive" id="active_inactive" class="form-select" required>
-                                <option value="1">Active</option>
+                        <div class="col-md-6">
+                            <label for="active_inactive" class="form-label mb-2">
+                                Status 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select name="active_inactive" id="active_inactive" class="form-control" required>
+                                <option value="1" selected>Active</option>
                                 <option value="2">Inactive</option>
                             </select>
+                            <div class="invalid-feedback">Please select a status.</div>
                         </div>
-
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" id="submitConclusionForm" class="btn btn-primary">Submit</button>
+            <div class="modal-footer bg-light border-top d-flex justify-content-end gap-2 p-3">
+                <button type="button" class="btn btn-secondary btn-lg px-4" data-bs-dismiss="modal">
+                    Close
+                </button>
+                <button type="button" id="submitConclusionForm" class="btn btn-primary btn-lg px-4">
+                    Submit
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 
-<div class="modal fade" id="editconclusionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title" id="editConclusionLabel">Edit Memo Conclusion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="editconclusionModal" tabindex="-1" aria-labelledby="editConclusionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 text-white" id="editConclusionLabel">       
+                    Edit Memo Conclusion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <form id="edit_conclusionForm">
-
                     <!-- ✅ Hidden ID -->
                     <input type="hidden" id="edit_id" name="edit_id">
 
-                    <div class="row">
-
+                    <div class="row g-3">
                         <!-- Course -->
-                        <div class="col-md-6 mb-3">
-                            <label>Select Course *</label>
-                            <select id="edit_course_master_pk" class="form-select">
-                                <option value="">-- Select Course --</option>
+                        <div class="col-md-6">
+                            <label for="edit_course_master_pk" class="form-label mb-2">
+                                Select Course 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select id="edit_course_master_pk" name="edit_course_master_pk" class="form-control">
+                                <option value="" disabled>-- Select Course --</option>
                                 @foreach($CourseMaster as $course)
                                 <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                                 @endforeach
                             </select>
+                            <div class="invalid-feedback">Please select a course.</div>
                         </div>
 
                         <!-- Memo -->
-                        <div class="col-md-6 mb-3">
-                            <label>Select Memo *</label>
-                            <select id="edit_memo_type_master_pk" class="form-select">
-                                <option value="">-- Select Memo --</option>
+                        <div class="col-md-6">
+                            <label for="edit_memo_type_master_pk" class="form-label mb-2">
+                                Select Memo 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select id="edit_memo_type_master_pk" name="edit_memo_type_master_pk" class="form-control">
+                                <option value="" disabled>-- Select Memo --</option>
                                 @foreach($MemoTypeMaster as $memo)
                                 <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
                                 @endforeach
                             </select>
+                            <div class="invalid-feedback">Please select a memo type.</div>
                         </div>
 
                         <!-- Memo Conclusion -->
-                        <div class="col-md-6 mb-3">
-                            <label>Select Memo Conclusion *</label>
-                            <select id="edit_memo_conclusion_master_pk" class="form-select">
-                                <option value="">-- Select Memo Conclusion --</option>
+                        <div class="col-md-6">
+                            <label for="edit_memo_conclusion_master_pk" class="form-label mb-2">
+                                Select Memo Conclusion 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select id="edit_memo_conclusion_master_pk" name="edit_memo_conclusion_master_pk" class="form-control">
+                                <option value="" disabled>-- Select Memo Conclusion --</option>
                                 @foreach($MemoConclusionMaster as $memo)
                                 <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
                                 @endforeach
                             </select>
+                            <div class="invalid-feedback">Please select a memo conclusion.</div>
                         </div>
 
                         <!-- Status -->
-                        <div class="col-md-6 mb-3">
-                            <label>Status *</label>
-                            <select id="edit_active_inactive" class="form-select">
+                        <div class="col-md-6">
+                            <label for="edit_active_inactive" class="form-label mb-2">
+                                Status 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select id="edit_active_inactive" name="edit_active_inactive" class="form-control">
                                 <option value="1">Active</option>
                                 <option value="2">Inactive</option>
                             </select>
+                            <div class="invalid-feedback">Please select a status.</div>
                         </div>
-
                     </div>
                 </form>
             </div>
 
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button class="btn btn-primary" id="edit_submitConclusionForm">Update</button>
+            <div class="modal-footer bg-light border-top d-flex justify-content-end gap-2 p-3">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close
+                </button>
+                <button type="button" class="btn btn-primary px-4" id="edit_submitConclusionForm">Update
+                </button>
             </div>
-
         </div>
     </div>
 </div>
@@ -285,41 +336,53 @@
             processing: true,
             serverSide: true,
             ajax: "{{ route('course.memo.decision.index') }}",
+            responsive: false,
+            scrollX: true,
+            autoWidth: false,
             order: [[0, 'desc']],
             columns: [{
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
                     orderable: false,
-                    searchable: false
+                    searchable: false,
+                    width: '5%'
                 },
                 {
                     data: 'course_name',
-                    name: 'course.course_name'
+                    name: 'course.course_name',
+                    width: '20%'
                 },
                 {
                     data: 'memo_decision',
-                    name: 'memo.memo_type_name'
+                    name: 'memo.memo_type_name',
+                    width: '20%'
                 },
                 {
                     data: 'memo_conclusion',
-                    name: 'memoConclusion.discussion_name'
+                    name: 'memoConclusion.discussion_name',
+                    width: '25%'
                 },
                 {
                     data: 'status',
                     name: 'status',
                     orderable: false,
-                    searchable: false
+                    searchable: false,
+                    width: '10%'
                 },
                 {
                     data: 'action',
                     name: 'action',
                     orderable: false,
-                    searchable: false
+                    searchable: false,
+                    width: '20%'
                 }
             ],
             order: [
                 [1, 'asc']
-            ]
+            ],
+            language: {
+                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
+            }
         });
     });
 </script>

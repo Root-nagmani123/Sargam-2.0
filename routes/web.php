@@ -814,6 +814,8 @@ Route::middleware(['auth'])->group(function () {
     // Who's Who Routes
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
+    Route::get('/faculty/whos-who/cadres', [WhosWhoController::class, 'getCadres'])->name('admin.faculty.whos-who.cadres');
+    Route::get('/faculty/whos-who/counsellor-groups', [WhosWhoController::class, 'getCounsellorGroups'])->name('admin.faculty.whos-who.counsellor-groups');
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
