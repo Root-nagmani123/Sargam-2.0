@@ -2,7 +2,7 @@
 @props(['title' => 'Page', 'variant' => 'glass'])
 @php $variant = $variant ?? 'glass'; @endphp
 <div class="breadcrumb-wrapper breadcrumb-variant-{{ $variant }} mb-4" data-variant="{{ $variant }}">
-    <div class="breadcrumb-card card border-0 mb-0 position-relative overflow-hidden">
+    <div class="breadcrumb-card card position-relative overflow-hidden">
         {{-- Decorative layers --}}
         <div class="breadcrumb-bg-pattern" aria-hidden="true"></div>
         <div class="breadcrumb-bg-gradient" aria-hidden="true"></div>

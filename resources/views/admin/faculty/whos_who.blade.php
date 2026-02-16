@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', "Who's Who - Sargam | Lal Bahadur Shastri National Academy of Administration")
+@section('title', "Who's Who")
 
 @section('setup_content')
 
@@ -11,13 +11,20 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
             <div class="row g-3 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label for="courseTypeFilter" class="form-label fw-semibold">Course Status</label>
+                    <select class="form-select" id="courseTypeFilter">
+                        <option value="active" selected>Active</option>
+                        <option value="archive">Archive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label for="nameFilter" class="form-label fw-semibold">Name</label>
                     <input type="text" class="form-control" id="nameFilter" placeholder="Enter name to search">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
-                    <select class="form-select" id="courseFilter">
+                    <select class="form-select" id="courseFilter" data-loaded-type="active">
                         <option value="">All Courses</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
@@ -25,21 +32,15 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="categoryFilter" class="form-label fw-semibold">Category</label>
-                    <select class="form-select" id="categoryFilter">
-                        <option value="">All Categories</option>
-                        <option value="ABCD">ABCD</option>
-                        <option value="EFGH">EFGH</option>
-                        <option value="IJKL">IJKL</option>
+                    <label for="cadreFilter" class="form-label fw-semibold">Cadre</label>
+                    <select class="form-select" id="cadreFilter">
+                        <option value="">All Cadres</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="statusFilter" class="form-label fw-semibold">Status</label>
-                    <select class="form-select" id="statusFilter">
-                        <option value="">All Status</option>
-                        <option value="ABCD">ABCD</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
+                    <label for="counsellorFilter" class="form-label fw-semibold">Counsellor</label>
+                    <select class="form-select" id="counsellorFilter">
+                        <option value="">All Counsellors</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -312,8 +313,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const nameFilter = document.getElementById('nameFilter');
     const courseFilter = document.getElementById('courseFilter');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const statusFilter = document.getElementById('statusFilter');
+    const courseTypeFilter = document.getElementById('courseTypeFilter');
+    const cadreFilter = document.getElementById('cadreFilter');
+    const counsellorFilter = document.getElementById('counsellorFilter');
     const sortBy = document.getElementById('sortBy');
     const perPageSelect = document.getElementById('perPage');
     const resetFilters = document.getElementById('resetFilters');
@@ -521,12 +523,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Pagination info is now shown in the card header, not here
     }
 
+    // Get selected course type (active or archive)
+    function getCourseType() {
+        return courseTypeFilter ? courseTypeFilter.value : 'active';
+    }
+
     // Function to fetch students from API
     async function fetchStudents(page = 1) {
         const name = nameFilter.value.trim();
         const courseId = courseFilter.value;
-        const category = categoryFilter.value;
-        const status = statusFilter.value;
+        const courseType = getCourseType();
+        const cadreId = cadreFilter.value;
+        const groupId = counsellorFilter.value;
         const sortValue = sortBy.value || 'name_asc';
 
         // Show loading state
@@ -537,6 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const params = new URLSearchParams();
+            params.append('course_type', courseType);
             if (name) params.append('name', name);
             if (courseId && courseId !== '' && courseId !== null) {
                 params.append('course_id', courseId);
@@ -544,8 +553,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.log('No course filter applied - showing all students');
             }
-            if (category && category !== '') params.append('category', category);
-            if (status && status !== '') params.append('status', status);
+            if (cadreId && cadreId !== '') params.append('cadre_id', cadreId);
+            if (groupId && groupId !== '') params.append('group_id', groupId);
             params.append('page', page);
             params.append('per_page', perPage);
             params.append('sort_by', sortValue);
@@ -614,36 +623,105 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to reset filters
     function resetAllFilters() {
         nameFilter.value = '';
-        courseFilter.value = '';
-        categoryFilter.value = '';
-        statusFilter.value = '';
-        sortBy.value = 'name_asc';
-        perPageSelect.value = '10';
-        perPage = 10;
-        currentPage = 1;
-        currentSort = 'name_asc';
-        filterProfiles(1);
+        courseTypeFilter.value = 'active';
+        loadCourses(true).then(() => {
+            loadCadres();
+            loadCounsellorGroups();
+            cadreFilter.value = '';
+            counsellorFilter.value = '';
+            sortBy.value = 'name_asc';
+            perPageSelect.value = '10';
+            perPage = 10;
+            currentPage = 1;
+            currentSort = 'name_asc';
+            filterProfiles(1);
+            loadStaticInfo();
+        }).catch(() => {
+            loadCadres();
+            loadCounsellorGroups();
+            cadreFilter.value = '';
+            counsellorFilter.value = '';
+            sortBy.value = 'name_asc';
+            perPageSelect.value = '10';
+            perPage = 10;
+            currentPage = 1;
+            currentSort = 'name_asc';
+            filterProfiles(1);
+        });
     }
 
     // Function to load courses dynamically (can be replaced with API call)
-    // Function to load courses dynamically from API (only if not already loaded)
-    async function loadCourses() {
+    // Load cadres based on course type and course
+    async function loadCadres() {
+        try {
+            const courseType = getCourseType();
+            const courseId = courseFilter.value || '';
+            const params = new URLSearchParams({ course_type: courseType });
+            if (courseId) params.append('course_id', courseId);
+            const response = await fetch('{{ route("admin.faculty.whos-who.cadres") }}?' + params);
+            const data = await response.json();
+            if (data.success && data.cadres) {
+                const currentVal = cadreFilter.value;
+                cadreFilter.innerHTML = '<option value="">All Cadres</option>';
+                data.cadres.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.pk;
+                    opt.textContent = c.cadre_name;
+                    cadreFilter.appendChild(opt);
+                });
+                if (currentVal && [...cadreFilter.options].some(o => o.value === currentVal)) {
+                    cadreFilter.value = currentVal;
+                }
+            }
+        } catch (e) {
+            console.error('Error loading cadres:', e);
+        }
+    }
+
+    // Load counsellor groups based on course type and course
+    async function loadCounsellorGroups() {
+        try {
+            const courseType = getCourseType();
+            const courseId = courseFilter.value || '';
+            const params = new URLSearchParams({ course_type: courseType });
+            if (courseId) params.append('course_id', courseId);
+            const response = await fetch('{{ route("admin.faculty.whos-who.counsellor-groups") }}?' + params);
+            const data = await response.json();
+            if (data.success && data.groups) {
+                const currentVal = counsellorFilter.value;
+                counsellorFilter.innerHTML = '<option value="">All Counsellors</option>';
+                data.groups.forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g.group_pk;
+                    opt.textContent = (g.counsellor_type_name ? g.counsellor_type_name + ' - ' : '') + g.group_name;
+                    counsellorFilter.appendChild(opt);
+                });
+                if (currentVal && [...counsellorFilter.options].some(o => o.value === currentVal)) {
+                    counsellorFilter.value = currentVal;
+                }
+            }
+        } catch (e) {
+            console.error('Error loading counsellor groups:', e);
+        }
+    }
+
+    // Function to load courses dynamically from API based on course type (active/archive)
+    async function loadCourses(forceReload = false) {
         try {
             const courseSelect = document.getElementById('courseFilter');
+            const courseType = getCourseType();
             
-            // Check if courses are already loaded (more than just "All Courses")
-            if (courseSelect.options.length > 1) {
-                console.log('Courses already loaded, skipping reload');
+            // Check if courses are already loaded for this type (unless force reload)
+            if (!forceReload && courseSelect.options.length > 1 && courseSelect.dataset.loadedType === courseType) {
+                console.log('Courses already loaded for', courseType, ', skipping reload');
                 return Promise.resolve();
             }
             
-            const response = await fetch('{{ route("admin.faculty.whos-who.courses") }}');
+            const response = await fetch('{{ route("admin.faculty.whos-who.courses") }}?course_type=' + courseType);
             const data = await response.json();
             
             if (data.success && data.courses) {
-                // Keep "All Courses" option
-                const allCoursesOption = courseSelect.querySelector('option[value=""]');
-                const currentValue = courseSelect.value; // Save current selection
+                const currentValue = courseSelect.value;
                 
                 // Clear and rebuild options
                 courseSelect.innerHTML = '';
@@ -662,12 +740,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     courseSelect.appendChild(option);
                 });
                 
-                // Restore previous selection if it exists
-                if (currentValue) {
+                // Store loaded type for cache check
+                courseSelect.dataset.loadedType = courseType;
+                
+                // Reset to "All Courses" when type changes (handled by caller for forceReload)
+                if (forceReload) {
+                    courseSelect.value = '';
+                } else if (currentValue) {
                     courseSelect.value = currentValue;
                 }
                 
-                console.log('Courses loaded:', data.courses.length);
+                console.log('Courses loaded for', courseType + ':', data.courses.length);
             }
             return Promise.resolve();
         } catch (error) {
@@ -706,30 +789,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Event listeners
     nameFilter.addEventListener('input', debounceNameInput);
+
+    // Course Status dropdown - reload courses and fetch students when course type changes
+    courseTypeFilter.addEventListener('change', function() {
+        const courseType = this.value;
+        console.log('Course type changed to:', courseType);
+        currentPage = 1;
+        loadCourses(true).then(() => {
+            loadCadres();
+            loadCounsellorGroups();
+            filterProfiles(1);
+            loadStaticInfo();
+        }).catch(() => {
+            loadCadres();
+            loadCounsellorGroups();
+            filterProfiles(1);
+            loadStaticInfo();
+        });
+    });
     
-    // Course filter - immediately fetch students when course changes
+    // Course filter - reload cadre/counsellor options and fetch students when course changes
     courseFilter.addEventListener('change', function() {
         const selectedCourseId = courseFilter.value;
         const selectedCourseName = courseFilter.options[courseFilter.selectedIndex]?.text || '';
         console.log('Course changed:', selectedCourseId, selectedCourseName);
-        
-        // Reset to first page when course changes
         currentPage = 1;
-        
-        // Clear name filter when course changes to show all students in that course
-        // nameFilter.value = ''; // Uncomment if you want to clear name filter on course change
-        
-        // Immediately fetch students for the selected course
+        loadCadres();
+        loadCounsellorGroups();
         filterProfiles(1);
         loadStaticInfo();
     });
     
-    categoryFilter.addEventListener('change', function() {
+    cadreFilter.addEventListener('change', function() {
         currentPage = 1;
         filterProfiles(1);
     });
     
-    statusFilter.addEventListener('change', function() {
+    counsellorFilter.addEventListener('change', function() {
         currentPage = 1;
         filterProfiles(1);
     });
@@ -740,22 +836,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     resetFilters.addEventListener('click', resetAllFilters);
 
-    // Initial load - courses are already loaded from backend, just fetch students
-    // Only reload courses if dropdown is empty
-    if (courseFilter.options.length <= 1) {
-        loadCourses().then(() => {
-            // Fetch students after courses are loaded
-            filterProfiles(1);
-            loadStaticInfo();
-        }).catch(() => {
-            // Even if courses fail to load, try to fetch students
-            filterProfiles(1);
-            loadStaticInfo();
-        });
-    } else {
-        // Courses already loaded, just fetch students
+    // Initial load - courses are already loaded from backend
+    function doInitialLoad() {
+        loadCadres();
+        loadCounsellorGroups();
         filterProfiles(1);
         loadStaticInfo();
+    }
+    if (courseFilter.options.length <= 1) {
+        loadCourses().then(doInitialLoad).catch(doInitialLoad);
+    } else {
+        doInitialLoad();
     }
 });
 </script>

@@ -60,25 +60,19 @@ class MDODutyTypeMasterDataTable extends DataTable
                         <a href="javascript:void(0)"
                         data-id="' . $row->pk . '"
                         data-mdo_duty_type_name="' . $row->mdo_duty_type_name . '"
-                         data-id="' . $row->pk . '"
                         data-active_inactive="' . $row->active_inactive . '"
-                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-                        aria-label="Edit course group type">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">edit</i>
-
-                            <span class="d-none d-md-inline">Edit</span>
+                        class="d-inline-flex align-items-center gap-1 text-primary"
+                        aria-label="Edit MDO Duty Type">
+                            <i class="material-icons material-symbols-rounded small" aria-hidden="true">edit</i>
                         </a>
 
                         <!-- Delete Action -->
                         <a href="javascript:void(0)"
                         data-id="' . $row->pk . '"
-                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">delete</i>
-                            <span class="d-none d-md-inline">Delete</span>
+                        class="d-inline-flex align-items-center gap-1 text-primary ' . $disabled . '"
+                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '"
+                        aria-label="Delete MDO Duty Type">
+                            <i class="material-icons material-symbols-rounded small" aria-hidden="true">delete</i>
                         </a>
                     </div>
                 ';

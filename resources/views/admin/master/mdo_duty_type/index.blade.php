@@ -3,196 +3,6 @@
 @section('title', 'MDO Duty Type')
 
 @section('setup_content')
-<style>
-/* MDO Duty Type - responsive (mobile/tablet only, desktop unchanged) */
-
-/* Responsive - Tablet (max 991px) */
-@media (max-width: 991.98px) {
-    .mdo-duty-type-index .datatables .card {
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
-        border-left: 4px solid #004a93;
-    }
-
-    .mdo-duty-type-index .datatables .card-body {
-        padding: 1.25rem !important;
-    }
-
-    .mdo-duty-type-index .datatables .table-responsive {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .mdo-duty-type-index .datatables #mdodutytypemaster-table {
-        min-width: 480px;
-    }
-
-    .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
-    .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
-        padding: 0.6rem 0.75rem;
-        font-size: 0.9rem;
-        vertical-align: middle;
-    }
-}
-
-/* Responsive - Small tablet / large phone (max 767px) */
-@media (max-width: 767.98px) {
-    .mdo-duty-type-index .datatables .card-body {
-        padding: 1rem !important;
-    }
-
-    .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
-    .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
-        padding: 0.5rem 0.6rem;
-        font-size: 0.85rem;
-    }
-
-    /* Stack "Show entries" and "Search" controls on smaller screens */
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_wrapper .row:first-child,
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_wrapper .dt-row:first-child {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    }
-
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length,
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter {
-        text-align: left !important;
-        margin-bottom: 0;
-        display: block;
-        width: 100%;
-    }
-
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length label,
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 0;
-        flex-wrap: wrap;
-        font-size: 0.9rem;
-    }
-
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_length select {
-        margin: 0;
-        min-width: 80px;
-        max-width: 100%;
-        min-height: 36px;
-        padding: 0.35rem 1.75rem 0.35rem 0.5rem;
-    }
-
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_filter input {
-        margin-left: 0 !important;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        min-height: 36px;
-        padding: 0.375rem 0.75rem;
-    }
-
-    /* Make action buttons stack vertically to avoid horizontal scroll */
-    .mdo-duty-type-index .mdo-duty-actions {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.35rem;
-    }
-
-    .mdo-duty-type-index .mdo-duty-actions .btn {
-        width: 100%;
-        justify-content: flex-start;
-    }
-}
-
-/* Responsive - Phone (max 575px) */
-@media (max-width: 575.98px) {
-    .mdo-duty-type-index.container-fluid {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
-    }
-
-    .mdo-duty-type-index .mdo-duty-type-header-row {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .mdo-duty-type-index .mdo-duty-type-header-row .col-6 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-
-    /* Align header title and "Add MDO Duty Type" button cleanly on mobile */
-    .mdo-duty-type-index .mdo-duty-type-header-row .d-flex.justify-content-end {
-        justify-content: flex-start !important;
-    }
-
-    .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
-        width: 100%;
-        justify-content: flex-start;
-    }
-
-    .mdo-duty-type-index .datatables .card-body {
-        padding: 0.75rem !important;
-    }
-
-    .mdo-duty-type-index .datatables .table-responsive {
-        margin-left: -0.5rem;
-        margin-right: -0.5rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-
-    .mdo-duty-type-index .datatables #mdodutytypemaster-table th,
-    .mdo-duty-type-index .datatables #mdodutytypemaster-table td {
-        padding: 0.45rem 0.5rem;
-        font-size: 0.8rem;
-    }
-
-    /* DataTables info + pagination: stack nicely */
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_info,
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_paginate {
-        float: none !important;
-        text-align: center;
-        width: 100%;
-        margin-top: 0.5rem;
-    }
-
-    .mdo-duty-type-index #mdodutytypemaster-table_wrapper .dataTables_paginate .pagination {
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-    }
-
-    .mdo-duty-type-index #dutyTypeModal .modal-dialog {
-        margin: 0.5rem;
-        max-width: calc(100% - 1rem);
-    }
-}
-
-/* Responsive - Very small phone (max 375px) */
-@media (max-width: 375px) {
-    .mdo-duty-type-index.container-fluid {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-
-    .mdo-duty-type-index .datatables .card-body {
-        padding: 0.6rem !important;
-    }
-
-    .mdo-duty-type-index .mdo-duty-type-header-row h4 {
-        font-size: 1rem;
-    }
-
-    .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
-        font-size: 0.85rem;
-        padding: 0.4rem 0.75rem;
-    }
-}
-</style>
 <div class="container-fluid mdo-duty-type-index">
     <x-breadcrum title="MDO Duty Type"></x-breadcrum>
     <div class="datatables">
@@ -208,8 +18,8 @@
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-center gap-2">
                                 <!-- Add Group Mapping -->
-                                <a href="javascript:void(0)" 
-                                    class="btn btn-primary add-btn d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
+                                <a href="{{ route('master.mdo_duty_type.create') }}" 
+                                    class="btn btn-primary add-btn d-flex align-items-center">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">add</i>
                                     Add MDO Duty Type
@@ -234,8 +44,19 @@
 {!! $dataTable->scripts() !!}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const createBtn = document.getElementById('openCreateDutyType');
-        const editLinks = document.querySelectorAll('.openEditDutyType');
+        // Handle Add button click
+        $(document).on('click', '.add-btn', function(e) {
+            e.preventDefault();
+            const url = $(this).attr('href');
+            openModalWithUrl(url, 'Create MDO Duty Type');
+        });
+
+        // Handle Edit links
+        $(document).on('click', '.openEditDutyType', function(e) {
+            e.preventDefault();
+            const url = $(this).attr('href');
+            openModalWithUrl(url, 'Edit MDO Duty Type');
+        });
 
         function openModalWithUrl(url, title) {
             const modalEl = document.getElementById('dutyTypeModal');
@@ -261,103 +82,71 @@
             bsModal.show();
         }
 
-        if (createBtn) {
-            createBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Create MDO Duty Type');
-            });
-        }
+        // Handle AJAX form submit inside modal
+        $(document).on('submit', '#dutyTypeForm', function(e) {
+            e.preventDefault();
+            const form = $(this);
+            const submitBtn = form.find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
 
-        editLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-            });
-
-            // Handle AJAX form submit inside modal
-            document.getElementById('dutyTypeModal')?.addEventListener('submit', function(e) {
-                const form = e.target;
-                if (form && form.tagName === 'FORM') {
-                    e.preventDefault();
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) submitBtn.disabled = true;
-
-                    fetch(form.action, {
-                            method: form.method || 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: new FormData(form)
-                        })
-                        .then(async (res) => {
-                            if (res.ok) {
-                                // Try to parse JSON; fallback to text
-                                const ct = res.headers.get('content-type') || '';
-                                if (ct.includes('application/json')) {
-                                    const data = await res.json();
-                                    if (data.success || data.status === true) {
-                                        // Update table without full reload
-                                        updateTableAfterSave(data);
-                                        bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                                        return;
-                                    }
-                                }
-                                // Non-JSON success fallback
-                                updateTableAfterSave(null);
-                                bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                            } else if (res.status === 422) {
-                                // Validation errors: re-render returned HTML into modal
-                                const html = await res.text();
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.innerHTML = html;
-                            } else {
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Save failed. Please try again.</div>');
-                            }
-                        })
-                        .catch(() => {
-                            const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                            modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Network error. Please try again.</div>');
-                        })
-                        .finally(() => {
-                            if (submitBtn) submitBtn.disabled = false;
+            $.ajax({
+                url: form.attr('action'),
+                method: form.attr('method') || 'POST',
+                data: form.serialize(),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        updateTableAfterSave(response);
+                        bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: response.message || 'Record saved successfully',
+                            timer: 1500,
+                            showConfirmButton: false
                         });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message || 'Something went wrong'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        // Validation errors: re-render returned HTML into modal
+                        const modalBody = document.querySelector('#dutyTypeModal .modal-body');
+                        modalBody.innerHTML = xhr.responseText;
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Something went wrong'
+                        });
+                    }
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false).html(originalText);
                 }
             });
         });
-    });
 
-    function buildEditUrl(encryptedPk) {
-        return `${window.location.origin}/master/mdo_duty_type/edit/${encodeURIComponent(encryptedPk)}`;
-    }
-
-    function escapeHtml(str) {
-        if (typeof str !== 'string') return '';
-        return str.replace(/[&<>"']/g, function(ch) {
-            return ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                '\'': '&#39;'
-            } [ch]);
-        });
-    }
-
-    function interceptEditLink(e) {
-        e.preventDefault();
-        openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-    }
-
-    function updateTableAfterSave(payload) {
-        // Reload DataTable after create/update
-        if (typeof $.fn.DataTable !== 'undefined') {
-            const table = $('#mdodutytypemaster-table').DataTable();
-            if (table) {
-                table.ajax.reload(null, false); // false = don't reset pagination
+        function updateTableAfterSave(payload) {
+            // Reload DataTable after create/update
+            if (typeof $.fn.DataTable !== 'undefined') {
+                const table = $('#mdodutytypemaster-table').DataTable();
+                if (table) {
+                    table.ajax.reload(null, false); // false = don't reset pagination
+                }
             }
         }
-    }
+    });
 
 
     $(document).on('change', '.plain-status-toggle', function() {
@@ -451,358 +240,27 @@
 
 <script>
     
-    $(document).on('click', '.edit-btn', function () {
-    let  pk = $(this).data('id');
-    let  mdo_duty_type_name = $(this).data('mdo_duty_type_name');
-    let  active_inactive = $(this).data('active_inactive');
-    let  url = "{{ route('master.mdo_duty_type.store') }}";
-
-    Swal.fire({
-        title: '<strong><small>Edit MDO Duty Type</small></strong>',
-        html: `
-            <form id="EditMDODutyTypeForm">
-                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="id" value="${pk}">
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-4 col-form-label fw-semibold">
-                        Duty Type Name <span class="text-danger">*</span>
-                    </label>
-                    <div class="col-8">
-                        <input type="text"
-                            name="mdo_duty_type_name"
-                            id="mdo_duty_type_name"
-                            class="form-control"
-                            value="${mdo_duty_type_name}">
-                        <small class="text-danger d-none" id="mdo_duty_type_name_error">
-                            Duty Type Name is required
-                        </small>
-                    </div>
-                </div>
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-4 col-form-label fw-semibold">
-                        Status <span class="text-danger">*</span>
-                    </label>
-                    <div class="col-8">
-                        <select name="active_inactive"
-                                id="active_inactive"
-                                class="form-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="1" ${active_inactive == 1 ? 'selected' : ''}>Active</option>
-                            <option value="0" ${active_inactive == 0 ? 'selected' : ''}>Inactive</option>
-                        </select>
-
-                        <small class="text-danger d-none" id="active_inactive_error">
-                            Status is required
-                        </small>
-                    </div>
-                </div>
-
-            </form>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Update',
-        focusConfirm: false,
-
-        preConfirm: () => {
-            const typeNameInput = Swal.getPopup().querySelector('#mdo_duty_type_name');
-            const active_inactiveInput = Swal.getPopup().querySelector('#active_inactive');
-            const errorMsg = Swal.getPopup().querySelector('#mdo_duty_type_name_error');
-            const active_inactiveMsg = Swal.getPopup().querySelector('#active_inactive_error');
-
-            typeNameInput.classList.remove('is-invalid');
-            errorMsg.classList.add('d-none');
-
-            active_inactiveInput.classList.remove('is-invalid');
-            active_inactiveMsg.classList.add('d-none');
-            
-
-            if (!typeNameInput.value.trim()) {
-                typeNameInput.classList.add('is-invalid');
-                errorMsg.classList.remove('d-none');
-                return false;
-            }
-
-            if (!active_inactiveInput.value.trim()) {
-                active_inactiveInput.classList.add('is-invalid');
-                active_inactiveMsg.classList.remove('d-none');
-                return false;
-            }
-
-            return {
-                id: pk,
-                mdo_duty_type_name: typeNameInput.value.trim(),
-                active_inactive: active_inactiveInput.value.trim(),
-                _token: "{{ csrf_token() }}"
-            };
-        }
-    }).then((result) => {
-
-        if (result.isConfirmed) {
-
-            $.ajax({
-                url: url,
-                type: "POST",
-                data: result.value,
-                beforeSend: function () {
-                    Swal.showLoading();
-                },
-                success: function (response) {
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Updated!',
-                        text: response.message ?? 'Record updated successfully',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-
-                    $('.dataTable').DataTable().ajax.reload(null, false);
-                },
-                error: function (xhr) {
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: xhr.responseJSON?.message ?? 'Something went wrong'
-                    });
-                }
-            });
-        }
-    });
-});
-
-// add form//
-
-$(document).on('click', '.add-btn', function () {
-
-    const url  = "{{ route('master.mdo_duty_type.store') }}";
-    const csrf = "{{ csrf_token() }}";
-
-    Swal.fire({
-        title: '<strong><small>Add MDO Duty Type</small></strong>',
-        html: `
-            <form id="AddMDODutyTypeForm">
-                <input type="hidden" name="_token" value="${csrf}">
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
-                        Duty Type Name <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <input type="text"
-                               name="mdo_duty_type_name"
-                               class="form-control">
-                        <small class="text-danger d-none" id="mdo_duty_type_name_error">
-                            Duty Type Name is required
-                        </small>
-                    </div>
-                </div>
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
-                        Status <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <select name="active_inactive" class="form-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                        <small class="text-danger d-none" id="active_inactive_error">
-                            Status is required
-                        </small>
-                    </div>
-                </div>
-            </form>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Save',
-        focusConfirm: false,
-
-        preConfirm: () => {
-
-            const form = $('#AddMDODutyTypeForm');
-            const nameInput   = form.find('[name="mdo_duty_type_name"]');
-            const statusInput = form.find('[name="active_inactive"]');
-
-            let valid = true;
-
-            form.find('.is-invalid').removeClass('is-invalid');
-            $('#mdo_duty_type_name_error, #active_inactive_error').addClass('d-none');
-
-            if (!nameInput.val().trim()) {
-                nameInput.addClass('is-invalid');
-                $('#mdo_duty_type_name_error').removeClass('d-none');
-                valid = false;
-            }
-
-            if (!statusInput.val()) {
-                statusInput.addClass('is-invalid');
-                $('#active_inactive_error').removeClass('d-none');
-                valid = false;
-            }
-
-            if (!valid) return false;
-
-            return {
-                mdo_duty_type_name: nameInput.val().trim(),
-                active_inactive: statusInput.val(),
-                _token: csrf
-            };
-        }
-
-    }).then((result) => {
-
-        if (!result.isConfirmed) return;
-
-        $.ajax({
-            url: url,
-            type: "POST",
-            data: result.value,
-            beforeSend: () => Swal.showLoading(),
-
-            success: (response) => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Saved!',
-                    text: response.message ?? 'Record added successfully',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-
-                $('.dataTable').DataTable().ajax.reload(null, false);
-            },
-
-            error: (xhr) => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: xhr.responseJSON?.message ?? 'Something went wrong'
-                });
-
-            const bsModal = new bootstrap.Modal(modalEl);
-            bsModal.show();
-        }
-
-        if (createBtn) {
-            createBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Create MDO Duty Type');
-            });
-        }
-
-        editLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-            });
-
-            // Handle AJAX form submit inside modal
-            document.getElementById('dutyTypeModal')?.addEventListener('submit', function(e) {
-                const form = e.target;
-                if (form && form.tagName === 'FORM') {
-                    e.preventDefault();
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) submitBtn.disabled = true;
-
-                    fetch(form.action, {
-                            method: form.method || 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: new FormData(form)
-                        })
-                        .then(async (res) => {
-                            if (res.ok) {
-                                // Try to parse JSON; fallback to text
-                                const ct = res.headers.get('content-type') || '';
-                                if (ct.includes('application/json')) {
-                                    const data = await res.json();
-                                    if (data.success || data.status === true) {
-                                        // Update table without full reload
-                                        updateTableAfterSave(data);
-                                        bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                                        return;
-                                    }
-                                }
-                                // Non-JSON success fallback
-                                updateTableAfterSave(null);
-                                bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                            } else if (res.status === 422) {
-                                // Validation errors: re-render returned HTML into modal
-                                const html = await res.text();
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.innerHTML = html;
-                            } else {
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Save failed. Please try again.</div>');
-                            }
-                        })
-                        .catch(() => {
-                            const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                            modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Network error. Please try again.</div>');
-                        })
-                        .finally(() => {
-                            if (submitBtn) submitBtn.disabled = false;
-                        });
-                }
-            });
-        });
-    });
-
-    function buildEditUrl(encryptedPk) {
-        return `${window.location.origin}/master/mdo_duty_type/edit/${encodeURIComponent(encryptedPk)}`;
-    }
-
-    function escapeHtml(str) {
-        if (typeof str !== 'string') return '';
-        return str.replace(/[&<>"']/g, function(ch) {
-            return ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                '\'': '&#39;'
-            } [ch]);
-        });
-    }
-
-    function interceptEditLink(e) {
-        e.preventDefault();
-        openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-    }
-
-    function updateTableAfterSave(payload) {
-        // Reload DataTable after create/update
-        if (typeof $.fn.DataTable !== 'undefined') {
-            const table = $('#mdodutytypemaster-table').DataTable();
-            if (table) {
-                table.ajax.reload(null, false); // false = don't reset pagination
-            }
-        }
-    }
-
-
     $(document).on('change', '.plain-status-toggle', function() {
         let checkbox = $(this);
         let pk = checkbox.data('id');
         let active_inactive = checkbox.is(':checked') ? 1 : 0;
+        var actionText = active_inactive ? 'activate' : 'deactivate';
+        var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+        var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
 
         Swal.fire({
             title: 'Are you sure?',
-            text: 'Are you sure? You want to deactivate this item?',
+            text: `Are you sure you want to ${actionText} this item?`,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
+            confirmButtonColor: confirmBtnColor,
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, deactivate',
+            confirmButtonText: confirmBtnText,
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed){
                 $.ajax({
-                    url: "{{ route('master.mdo_duty_type.status') }}", // route
+                    url: "{{ route('master.mdo_duty_type.status') }}",
                     type: "POST",
                     data: {
                         pk: pk,
@@ -810,9 +268,7 @@ $(document).on('click', '.add-btn', function () {
                         _token: "{{ csrf_token() }}"
                     },
                     success: function(response) {
-
                         $('#mdodutytypemaster-table').DataTable().ajax.reload(null, false);
-
                         Swal.fire({
                             icon: 'success',
                             title: 'Updated!',
@@ -822,14 +278,12 @@ $(document).on('click', '.add-btn', function () {
                         });
                     }
                 });
-
             } else {
                 // revert checkbox
                 checkbox.prop('checked', !active_inactive);
             }
         });
     });
-
 </script>
 @if(session('success'))
 <script>
