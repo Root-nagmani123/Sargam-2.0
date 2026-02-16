@@ -41,9 +41,6 @@
 
             <form method="POST" action="{{ route('admin.estate.add-other-estate-request.store') }}">
                 @csrf
-                @if(isset($record) && $record)
-                    <input type="hidden" name="id" value="{{ $record->pk }}">
-                @endif
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label for="employee_name" class="form-label">Employee Name <span class="text-danger">*</span></label>

@@ -36,6 +36,10 @@ use App\Http\Controllers\Admin\{
     MemoDisciplineController,
     DashboardController,
     CourseRepositoryController,
+    EmployeeIDCardRequestController,
+    FamilyIDCardRequestController,
+    WhosWhoController,
+    EstateController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -786,7 +790,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
-        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
         // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
