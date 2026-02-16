@@ -42,22 +42,24 @@
                         @php
                             $isNodalOrAssigned = $issue->employee_master_pk == Auth::user()->user_id || $issue->assigned_to == Auth::user()->user_id;
                             $isComplainant = $issue->created_by == Auth::user()->user_id;
+                            $isLogger = $issue->issue_logger == Auth::user()->user_id;
                             $isCompleted = (int) $issue->issue_status === 2;
-                            $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted);
+                            $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted) || ($isLogger && $isCompleted);
+                            $showReopenOnly = ($isComplainant || $isLogger) && $isCompleted;
+                            $canEdit = ($isComplainant || $isLogger) && !$isCompleted;
                         @endphp
+                        @once
                         @if($canUpdateStatus)
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
-                            @if($isComplainant && $isCompleted)
+                            @if($showReopenOnly)
                                 <i class="bi bi-arrow-repeat"></i> Reopen Issue
                             @else
                                 <i class="bi bi-arrow-up-circle"></i> Update Status
                             @endif
                         </button>
                         @endif
-                        @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
-                             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal"> <i class="bi bi-arrow-repeat"></i> Reopen Issue
-                             </button>
-                            @else
+                        @endonce
+                        @if($canEdit)
                             <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
                                 <i class="bi bi-pencil"></i> Edit Issue
                             </a>
@@ -161,15 +163,19 @@
                             <h5>Location Details</h5>
                             <div class="card bg-light">
                                 <div class="card-body">
-                                    @if($issue->buildingMapping)
+                                    @if($issue->location === 'O' && !empty($locationFallback))
+                                        <strong>Building:</strong> {{ $locationFallback['name'] }}<br>
+                                        <strong>Floor:</strong> {{ $locationFallback['floor'] }}<br>
+                                        <strong>Room:</strong> {{ $locationFallback['room'] }}<br>
+                                    @elseif($issue->buildingMapping)
                                         @php
                                             $bldgName = $issue->buildingMapping->building->building_name ?? '';
                                             $bldgFloor = $issue->buildingMapping->floor_name ?? '';
                                             $bldgRoom = $issue->buildingMapping->room_name ?? '';
                                         @endphp
                                         <strong>Building:</strong> {{ trim($bldgName) ?: 'N/A' }}<br>
-                                        <strong>Floor:</strong> {{ trim($bldgFloor) ?: 'N/A' }}<br>
-                                        <strong>Room:</strong> {{ trim($bldgRoom) ?: 'N/A' }}<br>
+                                        <strong>Floor:</strong> {{ ($bldgFloor !== null && $bldgFloor !== '') ? $bldgFloor : 'N/A' }}<br>
+                                        <strong>Room:</strong> {{ ($bldgRoom !== null && $bldgRoom !== '') ? $bldgRoom : 'N/A' }}<br>
                                     @elseif($issue->hostelMapping)
                                         @php
                                             $hostelName = 'N/A';
@@ -179,8 +185,8 @@
                                                 $hostelRow = \DB::table('hostel_building_master')->where('pk', $issue->hostelMapping->hostel_building_master_pk)->first();
                                                 $hostelName = $hostelRow ? (trim($hostelRow->hostel_name ?? $hostelRow->building_name ?? '') ?: 'N/A') : 'N/A';
                                             }
-                                            $hostelFloor = trim($issue->hostelMapping->floor_name ?? '') ?: 'N/A';
-                                            $hostelRoom = trim($issue->hostelMapping->room_name ?? '') ?: 'N/A';
+                                            $hostelFloor = ($issue->hostelMapping->floor_name !== null && $issue->hostelMapping->floor_name !== '') ? $issue->hostelMapping->floor_name : 'N/A';
+                                            $hostelRoom = ($issue->hostelMapping->room_name !== null && $issue->hostelMapping->room_name !== '') ? $issue->hostelMapping->room_name : 'N/A';
                                         @endphp
                                         <strong>Hostel:</strong> {{ $hostelName }}<br>
                                         <strong>Floor:</strong> {{ $hostelFloor }}<br>
@@ -344,15 +350,19 @@
                     </div>
                     @endif
 
+                    @php
+                        // After Reopen (6), all status options stay enabled so user can set any status again
+                        $disableStatusOptions = (int)$issue->issue_status !== 6;
+                    @endphp
                     <div class="mb-3">
                         <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>
                         <select name="issue_status" id="issue_status" class="form-select" required>
                             <option value="">-- Select Status --</option>
-                            <option value="0" {{ $issue->issue_status == 0 ? 'selected' : '' }} {{ in_array(0, $usedStatuses) && $issue->issue_status != 0 ? 'disabled' : '' }}>Reported</option>
-                            <option value="1" {{ $issue->issue_status == 1 ? 'selected' : '' }} {{ in_array(1, $usedStatuses) && $issue->issue_status != 1 ? 'disabled' : '' }}>In Progress</option>
-                            <option value="2" {{ $issue->issue_status == 2 ? 'selected' : '' }} {{ in_array(2, $usedStatuses) && $issue->issue_status != 2 ? 'disabled' : '' }}>Completed</option>
-                            <option value="3" {{ $issue->issue_status == 3 ? 'selected' : '' }} {{ in_array(3, $usedStatuses) && $issue->issue_status != 3 ? 'disabled' : '' }}>Pending</option>
-                            <option value="6" {{ $issue->issue_status == 6 ? 'selected' : '' }} {{ in_array(6, $usedStatuses) && $issue->issue_status != 6 ? 'disabled' : '' }}>Reopened</option>
+                            <option value="0" {{ $issue->issue_status == 0 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(0, $usedStatuses) && $issue->issue_status != 0 ? 'disabled' : '' }}>Reported</option>
+                            <option value="1" {{ $issue->issue_status == 1 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(1, $usedStatuses) && $issue->issue_status != 1 ? 'disabled' : '' }}>In Progress</option>
+                            <option value="2" {{ $issue->issue_status == 2 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(2, $usedStatuses) && $issue->issue_status != 2 ? 'disabled' : '' }}>Completed</option>
+                            <option value="3" {{ $issue->issue_status == 3 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(3, $usedStatuses) && $issue->issue_status != 3 ? 'disabled' : '' }}>Pending</option>
+                            <option value="6" {{ $issue->issue_status == 6 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(6, $usedStatuses) && $issue->issue_status != 6 ? 'disabled' : '' }}>Reopened</option>
                         </select>
                     </div>
 

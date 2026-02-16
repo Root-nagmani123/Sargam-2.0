@@ -347,9 +347,9 @@ $(document).ready(function() {
                     if(response.status) {
                         $('#floor_select').html('<option value="">Select Floor Name</option>');
                         $.each(response.data, function(key, value) {
-                            // Handle different field names for different location types
-                            var floorId = value.floor_id || value.pk || value.estate_unit_sub_type_master_pk;
-                            var floorName = value.floor_name || value.floor || value.unit_sub_type;
+                            // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
+                            var floorId = value.floor_id ?? value.pk ?? value.estate_unit_sub_type_master_pk ?? '';
+                            var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
                             $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
                         });
                     }
@@ -379,9 +379,9 @@ $(document).ready(function() {
                     if(response.status) {
                         $('#room_select').html('<option value="">Select Room</option>');
                         $.each(response.data, function(key, value) {
-                            // Handle different field names for different location types
+                            // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
                             var roomId = value.pk;
-                            var roomName = value.room_name || value.house_no || value.floor;
+                            var roomName = value.room_name ?? value.house_no ?? value.floor ?? '';
                             $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
                         });
                     }
