@@ -3,7 +3,9 @@
     @if(!empty($mdoDutyType))
         <input type="hidden" name="id" value="{{ encrypt($mdoDutyType->pk) }}">
     @endif
-    <div class="mb-3">
+    <div class="row">
+        <div class="col-md-6">
+        <div class="mb-3">
         <x-input 
             name="mdo_duty_type_name" 
             label="Name :" 
@@ -16,12 +18,25 @@
             <div class="text-danger small">{{ $message }}</div>
         @enderror
     </div>
+</div>
+<div class="col-md-6">
+<div class="mb-3">
+        <label class="form-label">Status <span class="text-danger">*</span></label>
+        <select name="active_inactive" class="form-select" required>
+            <option value="">-- Select Status --</option>
+            <option value="1" {{ old('active_inactive', $mdoDutyType->active_inactive ?? '') == 1 ? 'selected' : '' }}>Active</option>
+            <option value="0" {{ old('active_inactive', $mdoDutyType->active_inactive ?? '') == 0 ? 'selected' : '' }}>Inactive</option>
+        </select>
+        @error('active_inactive')
+            <div class="text-danger small">{{ $message }}</div>
+        @enderror
+    </div>
+</div>
+    </div>
     <div class="d-flex justify-content-end gap-2">
-        <button type="submit" class="btn btn-primary">
-            <i class="material-icons menu-icon">save</i> {{ !empty($mdoDutyType) ? 'Update' : 'Save' }}
+            <button type="submit" class="btn btn-primary">{{ !empty($mdoDutyType) ? 'Update' : 'Save' }}
         </button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            <i class="material-icons menu-icon">close</i> Close
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"> Close
         </button>
     </div>
 </form>

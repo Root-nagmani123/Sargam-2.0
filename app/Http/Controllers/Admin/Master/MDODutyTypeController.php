@@ -57,7 +57,7 @@ class MDODutyTypeController extends Controller
             ]);
 
             if($request->id){
-                $mdoDutyType = MDODutyTypeMaster::findOrFail($request->id);
+                $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($request->id));
                 $mdoDutyType->update([
                     'mdo_duty_type_name' => $request->mdo_duty_type_name,
                     'active_inactive' => $request->active_inactive
@@ -65,6 +65,7 @@ class MDODutyTypeController extends Controller
                 if($request->ajax()) {
                     return response()->json([
                         'success' => true,
+                        'message' => 'MDO Duty Type updated successfully',
                         'action' => 'update',
                         'data' => [
                             'pk' => $mdoDutyType->pk,
@@ -81,6 +82,7 @@ class MDODutyTypeController extends Controller
             if($request->ajax()) {
                 return response()->json([
                     'success' => true,
+                    'message' => 'MDO Duty Type created successfully',
                     'action' => 'create',
                     'data' => [
                         'pk' => $created->pk,

@@ -15,7 +15,7 @@
         })();
     </script>
     @include('admin.layouts.pre_header')
-    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
+    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
     @section('css')
     <style>
     .nav-item .tab-item .active {

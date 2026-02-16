@@ -4,132 +4,139 @@
 
 @section('setup_content')
 <link rel="stylesheet" href="{{asset('admin_assets/css/dual-listbox.css')}}">
-<style>
-    .dual-listbox .dual-listbox__button {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        color: #fff;
-    }
-</style>
-<div class="container-fluid">
+<div class="container-fluid py-3">
     <x-breadcrum title="Discipline mark record" />
     <x-session_message />
-    <!-- start Vertical Steps Example -->
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-3">Discipline mark record</h4>
-            <hr>
+
+    <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+            <h4 class="card-title mb-0 fw-bold text-body d-flex align-items-center gap-2">
+                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2">
+                    <i class="material-icons material-symbols-rounded fs-6 align-middle">edit_note</i>
+                </span>
+                Discipline mark record
+            </h4>
+        </div>
+        <div class="card-body p-4">
             <form action="{{ route('memo.discipline.discipline_generate_memo_store') }}" method="POST">
                 @csrf
-                <div class="row">
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="course_master_pk" class="form-label">Course</label>
-                            <select name="course_master_pk" class="form-control" id="courseSelectTogetStudent" required>
-                                <option value="">Select Course</option>
-                                @foreach ($activeCourses as $course)
-                                <option value="{{ $course->pk }}"
-                                    {{ old('course_master_pk') == $course->pk ? 'selected' : '' }}>
-                                    {{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                            @error('course_master_pk')
-                            <span class="text-danger">{{ $message }}</span>
-                            @enderror
-
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="date_memo_notice" class="form-label">Date</label>
-                            <input type="date" class="form-control" id="date_of_memo" name="date_of_memo" required
-                                value="{{ old('date_of_memo') }}">
-                            @error('date_of_memo')
-                            <span class="text-danger">{{ $message }}</span>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="" class="form-label">Discipline</label>
-                            <select name="discipline_master_pk" class="form-control" id="discipline_pk" required>
-                                <option value="">Select Discipline</option>
-                               
-                            </select>
-                            @error('discipline_master_pk')
-                            <span class="text-danger">{{ $message }}</span>
-                            @enderror
-
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="" class="form-label">Discipline marks</label>
-                            <input type="number" class="form-control" name="discipline_marks" id="discipline_marks"
-                                required>
-                            @error('discipline_marks')
-                            <span class="text-danger">{{ $message }}</span>
-                            @enderror
-
-                        </div>
-                    </div>
-
-
-
-
-                    <div class="col-12">
-                        <label for="selected_student_list" class="form-label">Select Students</label>
-                        <select id="select_memo_student" class="select1 form-control" name="selected_student_list[]"
-                            multiple>
-
+                <div class="row g-3">
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="course_master_pk" class="form-label fw-semibold small text-body-secondary">
+                            <i class="material-icons material-symbols-rounded fs-6 align-middle me-1">school</i>
+                            Course
+                        </label>
+                        <select name="course_master_pk" class="form-select" id="courseSelectTogetStudent" required aria-label="Select course">
+                            <option value="">Select Course</option>
+                            @foreach ($activeCourses as $course)
+                            <option value="{{ $course->pk }}" {{ old('course_master_pk') == $course->pk ? 'selected' : '' }}>
+                                {{ $course->course_name }}
+                            </option>
+                            @endforeach
                         </select>
-                        @error('selected_student_list')
-                        <span class="text-danger">{{ $message }}</span>
+                        @error('course_master_pk')
+                        <span class="text-danger small">{{ $message }}</span>
                         @enderror
                     </div>
+
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="date_of_memo" class="form-label fw-semibold small text-body-secondary">
+                            <i class="material-icons material-symbols-rounded fs-6 align-middle me-1">event</i>
+                            Date
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="material-icons material-symbols-rounded text-muted fs-6">calendar_today</i>
+                            </span>
+                            <input type="date" class="form-control border-start-0" id="date_of_memo" name="date_of_memo" required
+                                value="{{ old('date_of_memo') }}" aria-label="Memo date">
+                        </div>
+                        @error('date_of_memo')
+                        <span class="text-danger small">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="discipline_pk" class="form-label fw-semibold small text-body-secondary">
+                            <i class="material-icons material-symbols-rounded fs-6 align-middle me-1">category</i>
+                            Discipline
+                        </label>
+                        <select name="discipline_master_pk" class="form-select" id="discipline_pk" required aria-label="Select discipline">
+                            <option value="">Select Discipline</option>
+                        </select>
+                        @error('discipline_master_pk')
+                        <span class="text-danger small">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="discipline_marks" class="form-label fw-semibold small text-body-secondary">
+                            <i class="material-icons material-symbols-rounded fs-6 align-middle me-1">score</i>
+                            Discipline marks
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="discipline_marks" id="discipline_marks" required
+                                placeholder="0" min="0" aria-label="Discipline marks">
+                            <span class="input-group-text bg-light">Marks</span>
+                        </div>
+                        @error('discipline_marks')
+                        <span class="text-danger small">{{ $message }}</span>
+                        @enderror
+                    </div>
+
                     <div class="col-12">
-                        <label for="textarea" class="form-label">Message (If Any) </label>
-                        <textarea class="form-control" id="textarea" rows="3" placeholder="Enter remarks..."
-                            name="Remark"></textarea>
-                        @error('Remark')
-                        <span class="text-danger">{{ $message }}</span>
+                        <label for="select_memo_student" class="form-label fw-semibold small text-body-secondary">
+                            <i class="material-icons material-symbols-rounded fs-6 align-middle me-1">group</i>
+                            Select Students
+                        </label>
+                        <select id="select_memo_student" class="form-control" name="selected_student_list[]" multiple
+                            aria-label="Select defaulter students">
+                        </select>
+                        <div class="form-text">Choose course first to load defaulter students. Use arrows to move between lists.</div>
+                        @error('selected_student_list')
+                        <span class="text-danger small">{{ $message }}</span>
                         @enderror
                     </div>
 
-
+                    <div class="col-12">
+                        <label for="textarea" class="form-label fw-semibold small text-body-secondary">
+                            <i class="material-icons material-symbols-rounded fs-6 align-middle me-1">comment</i>
+                            Message (If Any)
+                        </label>
+                        <textarea class="form-control" id="textarea" rows="4" placeholder="Enter remarks or additional notes..."
+                            name="Remark" aria-label="Additional remarks"></textarea>
+                        @error('Remark')
+                        <span class="text-danger small">{{ $message }}</span>
+                        @enderror
+                    </div>
                 </div>
 
-                <hr>
+                <hr class="my-4">
 
-                <div class="row">
-                    <div class="col-10">
-                        <div class="text-center gap-3">
-
-
-                        </div>
-                    </div>
-                    <div class="col-2">
-                        <div class="text-end gap-3">
-                            <button type="submit" class="btn btn-outline-danger" name="submission_type" value="1">Save</button>
-                            <a href="{{ route('memo.discipline.index') }}" class="btn btn-secondary">Back</a>
-                        </div>
-                    </div>
+                <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
+                    <a href="{{ route('memo.discipline.index') }}" class="btn btn-outline-secondary">
+                        <i class="material-icons material-symbols-rounded align-middle me-1 fs-6">arrow_back</i>
+                        Back
+                    </a>
+                    <button type="submit" class="btn btn-danger" name="submission_type" value="1">
+                        <i class="material-icons material-symbols-rounded align-middle me-1 fs-6">save</i>
+                        Save
+                    </button>
                 </div>
             </form>
-
         </div>
     </div>
-
-    <!-- end Vertical Steps Example -->
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const today = new Date().toISOString().split('T')[0];
-    const dateInput = document.getElementById('date_memo_notice');
-    dateInput.value = today; // Set today's date
-    dateInput.max = today; // Prevent future dates
+    const dateInput = document.getElementById('date_of_memo');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = today;
+        dateInput.max = today;
+    }
 });
 
 $('#courseSelectTogetStudent').on('change', function() {
@@ -202,10 +209,11 @@ $('#courseSelectTogetStudent').on('change', function() {
                         removeEvent: function(value) {},
                         availableTitle: "Defaulter Students",
                         selectedTitle: "Selected Students",
-                        addButtonText: "Move Right",
-                        removeButtonText: "Move Left",
-                        addAllButtonText: "Move All Right",
-                        removeAllButtonText: "Move All Left",
+                        addButtonText: "Add →",
+                        removeButtonText: "← Remove",
+                        addAllButtonText: "Add All ⇒",
+                        removeAllButtonText: "⇐ Remove All",
+                        searchPlaceholder: "Search students...",
                         draggable: true
                     });
 
