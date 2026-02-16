@@ -504,8 +504,8 @@ Route::middleware(['auth'])->group(function () {
             // })->name('admin.courseAttendanceNoticeMap.chat');
             Route::get('/user', 'user')->name('user');
             Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
-            Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
-            Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
+            Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
+            Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
 
             Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
