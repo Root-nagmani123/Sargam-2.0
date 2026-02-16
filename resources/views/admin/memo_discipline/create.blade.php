@@ -128,7 +128,7 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const today = new Date().toISOString().split('T')[0];
@@ -233,26 +233,26 @@ $('#courseSelectTogetStudent').on('change', function() {
 });
 $('#discipline_pk').on('change', function() {
     var discipline_pk = $(this).val();
-    var courseId = $('#courseSelectTogetStudent').val(); // Fix: use selector, not variable
 
-    if (discipline_pk && courseId) {
+    if (discipline_pk) {
         $.ajax({
             url: "{{ route('memo.discipline.getMarkDeduction') }}",
             type: "GET",
-            data: {
-                discipline_master_pk: discipline_pk,
-                course_id: courseId
-            },
+            data: { discipline_master_pk: discipline_pk },
+            dataType: 'json',
             success: function(response) {
-                $('#discipline_marks').val(response);
+                if (response && response.success && response.mark_deduction != null) {
+                    $('#discipline_marks').val(response.mark_deduction);
+                } else {
+                    $('#discipline_marks').val('');
+                }
             },
             error: function() {
-                $('#discipline_marks').val('Error loading topics');
+                $('#discipline_marks').val('');
             }
         });
     } else {
         $('#discipline_marks').val('');
-
     }
 });
 </script>
