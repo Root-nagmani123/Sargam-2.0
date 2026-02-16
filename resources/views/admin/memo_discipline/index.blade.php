@@ -401,9 +401,9 @@
                             <select class="form-select form-select-md" id="status" name="status"
                                 aria-label="Select status">
                                 <option value="">All Status</option>
-                                <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Recorded</option>
+                                <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Recorded</option>
+                                <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Memo Sent</option>
                                 <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
-                                <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Pending</option>
                             </select>
                             <div class="form-text">Filter by memo status</div>
                         </div>
@@ -487,12 +487,11 @@
                                     Reset All
                                 </button>
 
-                                <a href="{{ route('memo.discipline.index') }}"
-                                    class="btn btn-outline-danger d-flex align-items-center"
-                                    aria-label="Remove filters and show all">
+                                <button type="button" class="btn btn-outline-danger d-flex align-items-center"
+                                    id="clearFiltersBtn" aria-label="Remove filters and show all">
                                     <i class="bi bi-x-circle me-2"></i>
                                     Clear Filters
-                                </a>
+                                </button>
 
                                 <button type="submit" class="btn btn-primary d-flex align-items-center"
                                     aria-label="Apply selected filters">
@@ -505,7 +504,7 @@
 
                     <!-- Filter Summary (Optional, shows when filters are active) -->
                     @if($programNameFilter || $statusFilter || $searchFilter || ($fromDateFilter && $toDateFilter))
-                    <div class="col-12">
+                    <div class="col-12" id="filterSummary">
                         <div class="alert alert-info alert-dismissible fade show mt-2" role="alert">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-info-circle me-2 fs-5"></i>
@@ -526,7 +525,7 @@
 
                                         @if($statusFilter)
                                         @php
-                                        $statusLabels = ['1' => 'Pending', '2' => 'Recorded', '3' => 'Closed'];
+                                        $statusLabels = ['1' => 'Recorded', '2' => 'Memo Sent', '3' => 'Closed'];
                                         @endphp
                                         <span class="badge bg-success d-flex align-items-center">
                                             Status: {{ $statusLabels[$statusFilter] ?? 'Selected' }}
@@ -565,15 +564,15 @@
                 </div>
             </form>
 
-            <!-- Add this JavaScript for enhanced UX -->
+            <!-- Add this JavaScript for enhanced UX (AJAX filter - no full page refresh) -->
             <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Update active filter count
                 function updateFilterCount() {
                     const form = document.getElementById('filterForm');
+                    if (!form) return;
                     const inputs = form.querySelectorAll('select, input[type="text"], input[type="date"]');
                     let activeCount = 0;
-
                     inputs.forEach(input => {
                         if ((input.tagName === 'SELECT' && input.value !== '') ||
                             (input.type === 'text' && input.value.trim() !== '') ||
@@ -581,8 +580,49 @@
                             activeCount++;
                         }
                     });
+                    const el = document.getElementById('activeFilterCount');
+                    if (el) el.textContent = activeCount;
+                }
 
-                    document.getElementById('activeFilterCount').textContent = activeCount;
+                // Apply filters via AJAX (no full page refresh)
+                function applyFiltersAjax() {
+                    const form = document.getElementById('filterForm');
+                    const tableWrap = document.querySelector('.table-responsive');
+                    if (!form || !tableWrap) return;
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams(formData).toString();
+                    const url = "{{ route('memo.discipline.index') }}" + (params ? '?' + params : '');
+                    tableWrap.style.opacity = '0.5';
+                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newSummary = doc.querySelector('#filterSummary');
+                            const currentSummary = document.getElementById('filterSummary');
+                            if (newSummary) {
+                                if (currentSummary) currentSummary.replaceWith(newSummary.cloneNode(true));
+                                else form.querySelector('.row').appendChild(newSummary.cloneNode(true));
+                            } else {
+                                if (currentSummary) currentSummary.remove();
+                            }
+                            const newTable = doc.querySelector('.table-responsive');
+                            if (newTable) tableWrap.innerHTML = newTable.innerHTML;
+                            window.history.replaceState({}, '', url);
+                            updateFilterCount();
+                        })
+                        .catch(function() { alert('Failed to apply filters'); })
+                        .finally(function() { tableWrap.style.opacity = '1'; });
+                }
+                window.applyFiltersAjax = applyFiltersAjax;
+
+                // Prevent form full-page submit; use AJAX
+                const filterForm = document.getElementById('filterForm');
+                if (filterForm) {
+                    filterForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        applyFiltersAjax();
+                    });
                 }
 
                 // Initialize filter count
@@ -597,49 +637,52 @@
                 // Date validation
                 const fromDate = document.getElementById('from_date');
                 const toDate = document.getElementById('to_date');
-
                 if (fromDate && toDate) {
-                    fromDate.addEventListener('change', function() {
-                        toDate.min = this.value;
-                    });
+                    fromDate.addEventListener('change', function() { toDate.min = this.value; });
+                    toDate.addEventListener('change', function() { fromDate.max = this.value; });
+                }
 
-                    toDate.addEventListener('change', function() {
-                        fromDate.max = this.value;
+                // Clear Filters button (no full page reload)
+                const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+                if (clearFiltersBtn && filterForm) {
+                    clearFiltersBtn.addEventListener('click', function() {
+                        filterForm.querySelectorAll('select').forEach(s => s.value = '');
+                        filterForm.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
+                        const today = new Date().toISOString().split('T')[0];
+                        filterForm.querySelectorAll('input[type="date"]').forEach(i => i.value = today);
+                        applyFiltersAjax();
                     });
                 }
             });
 
-            // Clear all filters
+            // Clear all filters (Reset All button) - AJAX
             function clearFilters() {
                 const form = document.getElementById('filterForm');
+                if (!form) return;
                 form.querySelectorAll('select').forEach(select => select.value = '');
                 form.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
-
-                // Reset dates to today
                 const today = new Date().toISOString().split('T')[0];
                 form.querySelectorAll('input[type="date"]').forEach(input => input.value = today);
-
-                form.submit();
+                if (typeof window.applyFiltersAjax === 'function') window.applyFiltersAjax();
+                else form.submit();
             }
 
-            // Remove specific filter
+            // Remove specific filter - AJAX
             function removeFilter(filterName) {
-                const input = document.querySelector(`[name="${filterName}"]`);
-                if (input) {
-                    if (input.tagName === 'SELECT') {
-                        input.value = '';
-                    } else {
-                        input.value = '';
-                    }
-                }
-                document.getElementById('filterForm').submit();
+                const input = document.querySelector('[name="' + filterName + '"]');
+                if (input) input.value = '';
+                if (typeof window.applyFiltersAjax === 'function') window.applyFiltersAjax();
+                else document.getElementById('filterForm').submit();
             }
 
-            // Remove date filters
+            // Remove date filters - AJAX
             function removeDateFilters() {
-                document.getElementById('from_date').value = '';
-                document.getElementById('to_date').value = '';
-                document.getElementById('filterForm').submit();
+                const fd = document.getElementById('from_date');
+                const td = document.getElementById('to_date');
+                if (fd) fd.value = '';
+                if (td) td.value = '';
+                if (typeof window.applyFiltersAjax === 'function') window.applyFiltersAjax();
+                else document.getElementById('filterForm').submit();
             }
             </script>
 
@@ -899,7 +942,7 @@
     </div>
 
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 
 @push('scripts')
 <script>

@@ -32,7 +32,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <div class="mb-0">
-                            <label for="date_memo_notice" class="form-label fw-medium">Date</label>
+                            <label for="date_memo_notice" class="form-label fw-medium">Session Date</label>
                             <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice" required>
                             @error('date_memo_notice')
                                 <span class="text-danger small">{{ $message }}</span>
@@ -183,7 +183,7 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
     const today = new Date().toISOString().split('T')[0];
