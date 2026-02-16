@@ -45,6 +45,25 @@
   <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
+  <!-- Block dark-layout clicks - always force light, never allow dark -->
+  <script>
+    (function() {
+      'use strict';
+      function forceLight() {
+        document.documentElement.setAttribute('data-bs-theme', 'light');
+        document.documentElement.style.colorScheme = 'light';
+        localStorage.setItem('bsTheme', 'light');
+      }
+      document.addEventListener('click', function(e) {
+        if (e.target.closest && e.target.closest('.dark-layout')) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          forceLight();
+          return false;
+        }
+      }, true);
+    })();
+  </script>
   <!-- Ensure light mode persists after theme scripts -->
   <script>
     // Force light mode after theme scripts initialize
@@ -108,8 +127,8 @@
         });
       }
       
-      // Periodic check as ultimate fallback
-      setInterval(forceLightMode, 500);
+      // Periodic check as ultimate fallback (2s)
+      setInterval(forceLightMode, 2000);
     })();
   </script>
   <script src="{{asset('admin_assets/js/theme/sidebarmenu.js')}}"></script>
