@@ -2,7 +2,7 @@
 
 namespace App\DataTables\Master;
 
-use App\Models\EmployeeTypeMaster;
+use App\Models\FacultyTypeMaster;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -12,7 +12,7 @@ use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 
-class EmployeeTypeMasterDataTable extends DataTable
+class FacultyTypeMasterDataTable extends DataTable
 {
     /**
      * Build DataTable class.
@@ -24,28 +24,32 @@ class EmployeeTypeMasterDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('category_type_name', fn($row) => $row->category_type_name ?? '-')
+            ->addColumn('faculty_type_name', fn($row) => $row->faculty_type_name ?? '-')
+            ->addColumn('shot_faculty_type_name', fn($row) => $row->shot_faculty_type_name ?? '-')
             ->addColumn('action', function ($row) {
-                $editUrl = route('master.employee.type.edit', ['id' => encrypt($row->pk)]);
-                $deleteUrl = route('master.employee.type.delete', ['id' => encrypt($row->pk)]);
-                $csrf = csrf_token();
+                $editUrl = route('master.faculty.type.master.edit', ['id' => encrypt($row->pk)]);
+                $deleteUrl = route('master.faculty.type.master.delete', ['id' => encrypt($row->pk)]);
+                $facultyTypeName = htmlspecialchars($row->faculty_type_name ?? 'N/A', ENT_QUOTES, 'UTF-8');
                 $isActive = $row->active_inactive == 1;
-
+                
                 $deleteButton = $isActive
-                    ? '<a href="javascript:void(0)" class="text-primary d-flex align-items-center gap-1" title="Cannot delete active employee type">
+                    ? '<button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled aria-disabled="true" title="Cannot delete active Faculty Type">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">delete</i>
-                    </a>'
-                    : '<form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this employee type?\');">
-                        <input type="hidden" name="_token" value="' . $csrf . '">
+                        <span class="d-none d-md-inline">Delete</span>
+                    </button>'
+                    : '<form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
+                        <input type="hidden" name="_token" value="' . csrf_token() . '">
                         <input type="hidden" name="_method" value="DELETE">
-                        <a class="text-primary d-inline-flex align-items-center gap-1" aria-label="Delete employee type">
+                        <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" aria-label="Delete faculty type" title="Delete Faculty Type">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">delete</i>
-                        </a>
+                            <span class="d-none d-md-inline">Delete</span>
+                        </button>
                     </form>';
 
-                return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Employee type actions">
-                    <a href="' . $editUrl . '" class="text-primary d-inline-flex align-items-center gap-1 edit-employee-type" aria-label="Edit employee type">
+                return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Faculty type actions">
+                    <a href="' . $editUrl . '" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" aria-label="Edit faculty type">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">edit</i>
+                        <span class="d-none d-md-inline">Edit</span>
                     </a>
                     ' . $deleteButton . '
                 </div>';
@@ -54,25 +58,28 @@ class EmployeeTypeMasterDataTable extends DataTable
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return '<div class="form-check form-switch d-inline-block ms-2">
                 <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="employee_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    data-table="faculty_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
             </div>';
             })
 
             ->setRowId('pk')
             ->setRowClass('text-center')
-            ->filterColumn('category_type_name', function ($query, $keyword) {
-                $query->where('category_type_name', 'like', "%{$keyword}%");
+            ->filterColumn('faculty_type_name', function ($query, $keyword) {
+                $query->where('faculty_type_name', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['category_type_name', 'action', 'status']);
+            ->filterColumn('shot_faculty_type_name', function ($query, $keyword) {
+                $query->where('shot_faculty_type_name', 'like', "%{$keyword}%");
+            })
+            ->rawColumns(['faculty_type_name', 'shot_faculty_type_name', 'action', 'status']);
     }
 
     /**
      * Get query source of dataTable.
      *
-     * @param \App\Models\EmployeeTypeMaster $model
+     * @param \App\Models\FacultyTypeMaster $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(EmployeeTypeMaster $model): QueryBuilder
+    public function query(FacultyTypeMaster $model): QueryBuilder
     {
         return $model->newQuery();
     }
@@ -85,11 +92,9 @@ class EmployeeTypeMasterDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-            ->setTableId('employeetypemaster-table')
+            ->setTableId('facultytypemaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            //->dom('Bfrtip')
-            // ->orderBy(1)
             ->selectStyleSingle()
             ->parameters([
                 'responsive' => false,
@@ -116,7 +121,8 @@ class EmployeeTypeMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('category_type_name')->title('Category Type Name')->orderable(false)->addClass('text-center'),
+            Column::make('faculty_type_name')->title('Faculty Type')->orderable(false)->addClass('text-center'),
+            Column::make('shot_faculty_type_name')->title('Short Name')->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center')
         ];
@@ -129,6 +135,6 @@ class EmployeeTypeMasterDataTable extends DataTable
      */
     protected function filename(): string
     {
-        return 'EmployeeTypeMaster_' . date('YmdHis');
+        return 'FacultyTypeMaster_' . date('YmdHis');
     }
 }
