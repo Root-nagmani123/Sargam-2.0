@@ -186,20 +186,29 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Complainant searchable dropdown (search by name when creating issue on behalf of others)
-    if ($.fn.select2) {
-        $('#complainant').select2({
-            placeholder: 'Search complainant by name...',
+    // Reusable Select2 with search and focus-on-open for all dropdowns
+    function initSelect2($el, placeholder) {
+        if (!$el.length || !$.fn.select2) return;
+        if ($el.data('select2')) $el.select2('destroy');
+        $el.select2({
+            placeholder: placeholder || '— Search / Select —',
             allowClear: true,
             width: '100%'
         });
-        // Focus search field when complainant dropdown is opened so user can type immediately
-        $('#complainant').on('select2:open', function() {
-            setTimeout(function() {
-                $('.select2-container--open .select2-search__field').focus();
-            }, 0);
+        $el.off('select2:open').on('select2:open', function() {
+            setTimeout(function() { $('.select2-container--open .select2-search__field').focus(); }, 0);
         });
     }
+
+    // Apply searchable Select2 to all dropdowns
+    initSelect2($('#issue_category'), '— Select category —');
+    initSelect2($('#sub_categories'), '— Select sub-category —');
+    initSelect2($('#issue_priority'), '— Select priority —');
+    initSelect2($('#complainant'), 'Search complainant by name...');
+    initSelect2($('#nodal_employee'), '— Select category first —');
+    initSelect2($('#building_select'), '— Select —');
+    initSelect2($('#floor_select'), '— Select floor —');
+    initSelect2($('#room_select'), '— Select room —');
 
     // Character counter for description (max 1000)
     function updateCharCount() {
@@ -215,6 +224,7 @@ $(document).ready(function() {
         
         // Reset nodal employee dropdown when category changes
         $('#nodal_employee').html('<option value="">- Select -</option>');
+        initSelect2($('#nodal_employee'), '— Select category first —');
         
         if(categoryId) {
             // Load sub-categories
@@ -222,10 +232,11 @@ $(document).ready(function() {
                 url: '/admin/issue-management/sub-categories/' + categoryId,
                 type: 'GET',
                 success: function(data) {
-                    $('#sub_categories').html('<option value="">-- Select --</option>');
+                    $('#sub_categories').html('<option value="">— Select sub-category —</option>');
                     $.each(data, function(key, value) {
                         $('#sub_categories').append('<option value="'+ value.pk +'">'+ value.issue_sub_category +'</option>');
                     });
+                    initSelect2($('#sub_categories'), '— Select sub-category —');
                 }
             });
             
@@ -242,6 +253,7 @@ $(document).ready(function() {
                             var selected = (autoSelect && employee.employee_pk == autoSelect) ? 'selected' : '';
                             $('#nodal_employee').append('<option value="'+ employee.employee_pk +'" '+ selected +'>'+ fullName +'</option>');
                         });
+                        initSelect2($('#nodal_employee'), '— Select —');
                         // Level 2 & 3 - display only
                         if(response.level2) {
                             $('#level2_display').text(response.level2.employee_name + ' (' + response.level2.days_notify + ' days)');
@@ -256,18 +268,22 @@ $(document).ready(function() {
                         $('#escalation_levels_display').removeClass('d-none');
                     } else {
                         $('#nodal_employee').html('<option value="">No Level 1 employees - configure Escalation Matrix</option>');
+                        initSelect2($('#nodal_employee'), '— Select —');
                         $('#escalation_levels_display').addClass('d-none');
                     }
                 },
                 error: function() {
                     console.log('Error loading nodal employees');
                     $('#nodal_employee').html('<option value="">Error loading employees</option>');
+                    initSelect2($('#nodal_employee'), '— Select —');
                     $('#escalation_levels_display').addClass('d-none');
                 }
             });
         } else {
-            $('#sub_categories').html('<option value="">-- Select --</option>');
-            $('#nodal_employee').html('<option value="">- Select Category First -</option>');
+            $('#sub_categories').html('<option value="">— Select sub-category —</option>');
+            $('#nodal_employee').html('<option value="">— Select category first —</option>');
+            initSelect2($('#sub_categories'), '— Select sub-category —');
+            initSelect2($('#nodal_employee'), '— Select category first —');
             $('#escalation_levels_display').addClass('d-none');
         }
     });
@@ -306,9 +322,12 @@ $(document).ready(function() {
         $('#building_section').addClass('d-none');
         
         // Reset building details
-        $('#building_select').val('').html('<option value="">-- Select --</option>');
-        $('#floor_select').val('').html('<option value="">Select Floor Name</option>');
-        $('#room_select').val('').html('<option value="">Select Room</option>');
+        $('#building_select').html('<option value="">— Select —</option>');
+        $('#floor_select').html('<option value="">— Select floor —</option>');
+        $('#room_select').html('<option value="">— Select room —</option>');
+        initSelect2($('#building_select'), '— Select —');
+        initSelect2($('#floor_select'), '— Select floor —');
+        initSelect2($('#room_select'), '— Select room —');
         
         if(type == 'H' || type == 'R' || type == 'O') {
             $('#building_section').removeClass('d-none');
@@ -320,10 +339,11 @@ $(document).ready(function() {
                 data: { type: type },
                 success: function(response) {
                     if(response.status) {
-                        $('#building_select').html('<option value="">-- Select --</option>');
+                        $('#building_select').html('<option value="">— Select —</option>');
                         $.each(response.data, function(key, value) {
                             $('#building_select').append('<option value="'+ value.pk +'">'+ value.building_name +'</option>');
                         });
+                        initSelect2($('#building_select'), '— Select —');
                     }
                 },
                 error: function() {
@@ -345,13 +365,14 @@ $(document).ready(function() {
                 data: { building_id: buildingId, type: locationType },
                 success: function(response) {
                     if(response.status) {
-                        $('#floor_select').html('<option value="">Select Floor Name</option>');
+                        $('#floor_select').html('<option value="">— Select floor —</option>');
                         $.each(response.data, function(key, value) {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
                             var floorId = value.floor_id ?? value.pk ?? value.estate_unit_sub_type_master_pk ?? '';
                             var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
                             $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
                         });
+                        initSelect2($('#floor_select'), '— Select floor —');
                     }
                 },
                 error: function() {
@@ -359,8 +380,10 @@ $(document).ready(function() {
                 }
             });
         } else {
-            $('#floor_select').html('<option value="">Select Floor Name</option>');
-            $('#room_select').html('<option value="">Select Room</option>');
+            $('#floor_select').html('<option value="">— Select floor —</option>');
+            $('#room_select').html('<option value="">— Select room —</option>');
+            initSelect2($('#floor_select'), '— Select floor —');
+            initSelect2($('#room_select'), '— Select room —');
         }
     });
 
@@ -377,13 +400,14 @@ $(document).ready(function() {
                 data: { building_id: buildingId, floor_id: floorId, type: locationType },
                 success: function(response) {
                     if(response.status) {
-                        $('#room_select').html('<option value="">Select Room</option>');
+                        $('#room_select').html('<option value="">— Select room —</option>');
                         $.each(response.data, function(key, value) {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
                             var roomId = value.pk;
                             var roomName = value.room_name ?? value.house_no ?? value.floor ?? '';
                             $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
                         });
+                        initSelect2($('#room_select'), '— Select room —');
                     }
                 },
                 error: function() {
@@ -391,7 +415,8 @@ $(document).ready(function() {
                 }
             });
         } else {
-            $('#room_select').html('<option value="">Select Room</option>');
+            $('#room_select').html('<option value="">— Select room —</option>');
+            initSelect2($('#room_select'), '— Select room —');
         }
     });
 
