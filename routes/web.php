@@ -39,6 +39,7 @@ use App\Http\Controllers\Admin\{
     EmployeeIDCardRequestController,
     FamilyIDCardRequestController,
     WhosWhoController,
+    EstateController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -929,9 +930,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             return view('admin.estate.estate_request_for_others');
         })->name('request-for-others');
         
-        Route::get('add-other-estate-request', function () {
-            return view('admin.estate.add_other_estate_request');
-        })->name('add-other-estate-request');
+        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
+        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
 
         // Estate Possession
         Route::get('possession-for-others', function () {
