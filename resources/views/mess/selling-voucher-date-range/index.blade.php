@@ -85,7 +85,7 @@
                             <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
                             <td>{{ $item->quantity }}</td>
                             <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $report->store->store_name ?? '—' }}</td>
+                            <td>{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
                             <td>{{ $report->clientTypeCategory ? ($report->clientTypeCategory->client_name ?? '—') : '—' }}</td>
                             <td>{{ $report->client_name ?? '—' }}</td>
@@ -124,7 +124,7 @@
                             <td>—</td>
                             <td>—</td>
                             <td>—</td>
-                            <td>{{ $report->store->store_name ?? '—' }}</td>
+                            <td>{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
                             <td>{{ $report->clientTypeCategory ? ($report->clientTypeCategory->client_name ?? '—') : '—' }}</td>
                             <td>{{ $report->client_name ?? '—' }}</td>

@@ -84,7 +84,7 @@
                             <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
                             <td>{{ $item->quantity }}</td>
                             <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $voucher->storeMaster->store_name ?? '—' }}</td>
+                            <td>{{ $voucher->resolved_store_name }}</td>
                             <td>{{ $voucher->client_type_label ?? '—' }}</td>
                             <td>
                                 @if($voucher->clientTypeCategory)
@@ -127,7 +127,7 @@
                             <td>—</td>
                             <td>—</td>
                             <td>—</td>
-                            <td>{{ $voucher->storeMaster->store_name ?? '—' }}</td>
+                            <td>{{ $voucher->resolved_store_name }}</td>
                             <td>{{ $voucher->client_type_label ?? '—' }}</td>
                             <td>
                                 @if($voucher->clientTypeCategory)

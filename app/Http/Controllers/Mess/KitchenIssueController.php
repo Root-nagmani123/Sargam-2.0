@@ -224,7 +224,18 @@ class KitchenIssueController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'store_id' => 'required|exists:mess_stores,id',
+            'store_id' => ['required', function ($attribute, $value, $fail) {
+                if (str_starts_with($value, 'sub_')) {
+                    $subStoreId = str_replace('sub_', '', $value);
+                    if (!\App\Models\Mess\SubStore::where('id', $subStoreId)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                } else {
+                    if (!\App\Models\Mess\Store::where('id', $value)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                }
+            }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
@@ -243,6 +254,13 @@ class KitchenIssueController extends Controller
         try {
             DB::beginTransaction();
 
+            $storeId = $request->store_id;
+            $storeType = 'store';
+            if (str_starts_with($storeId, 'sub_')) {
+                $storeId = str_replace('sub_', '', $storeId);
+                $storeType = 'sub_store';
+            }
+
             // Map client_type_slug to numeric value
             $clientTypeMap = [
                 'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
@@ -252,7 +270,8 @@ class KitchenIssueController extends Controller
             ];
 
             $master = KitchenIssueMaster::create([
-                'store_id' => $request->store_id,
+                'store_id' => $storeId,
+                'store_type' => $storeType,
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'client_type_pk' => $request->client_type_pk,
@@ -316,7 +335,7 @@ class KitchenIssueController extends Controller
                 'pk' => $kitchenIssue->pk,
                 'request_date' => $kitchenIssue->created_at ? $kitchenIssue->created_at->format('d/m/Y') : '—',
                 'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('d/m/Y') : '—',
-                'store_name' => $kitchenIssue->store->store_name ?? 'N/A',
+                'store_name' => $kitchenIssue->resolved_store_name,
                 'client_type' => $kitchenIssue->client_type_label ?? '-',
                 'client_name' => $kitchenIssue->client_name ?? '-',
                 'payment_type' => $kitchenIssue->payment_type_label ?? '-',
@@ -429,7 +448,18 @@ class KitchenIssueController extends Controller
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
         $request->validate([
-            'store_id' => 'required|exists:mess_stores,id',
+            'store_id' => ['required', function ($attribute, $value, $fail) {
+                if (str_starts_with($value, 'sub_')) {
+                    $subStoreId = str_replace('sub_', '', $value);
+                    if (!\App\Models\Mess\SubStore::where('id', $subStoreId)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                } else {
+                    if (!\App\Models\Mess\Store::where('id', $value)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                }
+            }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
@@ -448,6 +478,13 @@ class KitchenIssueController extends Controller
         try {
             DB::beginTransaction();
 
+            $storeId = $request->store_id;
+            $storeType = 'store';
+            if (str_starts_with($storeId, 'sub_')) {
+                $storeId = str_replace('sub_', '', $storeId);
+                $storeType = 'sub_store';
+            }
+
             // Map client_type_slug to numeric value
             $clientTypeMap = [
                 'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
@@ -457,7 +494,8 @@ class KitchenIssueController extends Controller
             ];
 
             $kitchenIssue->update([
-                'store_id' => $request->store_id,
+                'store_id' => $storeId,
+                'store_type' => $storeType,
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'client_type_pk' => $request->client_type_pk,
@@ -539,7 +577,7 @@ class KitchenIssueController extends Controller
         })->values()->toArray();
 
         return response()->json([
-            'store_name' => $kitchenIssue->storeMaster->store_name ?? '—',
+            'store_name' => $kitchenIssue->resolved_store_name,
             'items' => $items,
         ]);
     }

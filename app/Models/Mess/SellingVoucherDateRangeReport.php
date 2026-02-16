@@ -15,6 +15,7 @@ class SellingVoucherDateRangeReport extends Model
         'date_from',
         'date_to',
         'store_id',
+        'store_type',
         'report_title',
         'status',
         'total_amount',
@@ -43,6 +44,24 @@ class SellingVoucherDateRangeReport extends Model
     public function store()
     {
         return $this->belongsTo(Store::class, 'store_id', 'id');
+    }
+
+    public function subStore()
+    {
+        return $this->belongsTo(SubStore::class, 'store_id', 'id');
+    }
+
+    /**
+     * Get the resolved store name (works for both store and sub-store)
+     */
+    public function getResolvedStoreNameAttribute()
+    {
+        if ($this->store_type === 'sub_store') {
+            $subStore = $this->subStore;
+            return $subStore ? $subStore->sub_store_name . ' (Sub-Store)' : 'N/A';
+        }
+        $store = $this->store;
+        return $store ? $store->store_name : 'N/A';
     }
 
     public function clientTypeCategory()
