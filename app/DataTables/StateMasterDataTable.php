@@ -2,14 +2,14 @@
 
 namespace App\DataTables;
 
-use App\Models\Country;
+use App\Models\State;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
-class CountryMasterDataTable extends DataTable
+class StateMasterDataTable extends DataTable
 {
     /**
      * Build DataTable class.
@@ -21,50 +21,64 @@ class CountryMasterDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('country_name', fn($row) => $row->country_name ?? 'N/A')
+            ->addColumn('state_name', fn($row) => $row->state_name ?? 'N/A')
+            ->addColumn('country_name', function ($row) {
+                return $row->country->country_name ?? 'N/A';
+            })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return '
                 <div class="form-check form-switch d-inline-block">
                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                        data-table="country_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
+                        data-table="state_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
                 </div>';
             })
             ->addColumn('action', function ($row) {
-                $updateUrl = route('master.country.update', $row->pk);
-                $deleteUrl = route('master.country.delete', $row->pk);
+                $updateUrl = route('master.state.update', $row->pk);
+                $deleteUrl = route('master.state.delete', $row->pk);
                 $isActive = $row->active_inactive == 1;
                 $csrf = csrf_token();
-                $countryName = e($row->country_name ?? '');
+                $stateName = e($row->state_name ?? '');
                 $status = (string) ($row->active_inactive ?? 1);
+                $countryPk = (string) ($row->country_master_pk ?? '');
 
-                $html = '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Country actions">';
+                $html = '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="State actions">';
 
-                $html .= '<button type="button" class="btn btn-link p-0 d-flex align-items-center gap-1 text-primary text-decoration-none" aria-label="Edit country"
-                    data-bs-toggle="modal" data-bs-target="#editCountryModal"
-                    data-id="'.$row->pk.'" data-name="'.$countryName.'" data-status="'.$status.'" data-update-url="'.$updateUrl.'">
+                $html .= '<button type="button" class="btn btn-link p-0 d-flex align-items-center gap-1 text-primary text-decoration-none open-state-edit-modal" aria-label="Edit state"
+                    data-bs-toggle="modal" data-bs-target="#stateFormModal"
+                    data-mode="edit"
+                    data-pk="'.$row->pk.'" 
+                    data-state-name="'.$stateName.'" 
+                    data-country-pk="'.$countryPk.'" 
+                    data-active-inactive="'.$status.'" 
+                    data-update-url="'.$updateUrl.'">
                     <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
                 </button>';
 
                 if ($isActive) {
-                    $html .= '<a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" aria-label="Delete country" disabled aria-disabled="true" title="Cannot delete active country">
+                    $html .= '<a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" aria-label="Delete state" disabled aria-disabled="true" title="Cannot delete active state">
                         <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
                     </a>';
                 } else {
                     $html .= '<form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this?\');">
                         <input type="hidden" name="_token" value="'.$csrf.'">
                         <input type="hidden" name="_method" value="DELETE">
-                        <a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" aria-label="Delete country">
+                        <button type="submit" class="btn btn-link p-0 d-flex align-items-center gap-1 text-primary text-decoration-none" aria-label="Delete state">
                             <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                        </a>
+                        </button>
                     </form>';
                 }
 
                 $html .= '</div>';
                 return $html;
             })
+            ->filterColumn('state_name', function ($query, $keyword) {
+                $query->where('state_master.state_name', 'like', "%{$keyword}%");
+            })
             ->filterColumn('country_name', function ($query, $keyword) {
-                $query->where('country_name', 'like', "%{$keyword}%");
+                $query->whereHas('country', function($countryQuery) use ($keyword) {
+                    $countryQuery->where('country_name', 'like', "%{$keyword}%");
+                });
             })
             ->rawColumns(['action', 'status'])
             ->setRowId('pk');
@@ -73,12 +87,12 @@ class CountryMasterDataTable extends DataTable
     /**
      * Get query source of dataTable.
      *
-     * @param \App\Models\Country $model
+     * @param \App\Models\State $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(Country $model): QueryBuilder
+    public function query(State $model): QueryBuilder
     {
-        return $model->orderBy('pk', 'desc')->newQuery();
+        return $model->with('country')->orderBy('pk', 'desc')->newQuery();
     }
 
     /**
@@ -89,7 +103,7 @@ class CountryMasterDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-            ->setTableId('country-table')
+            ->setTableId('state-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
@@ -110,10 +124,11 @@ class CountryMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->searchable(false)->orderable(false),
-            Column::make('country_name')->title('Country Name')->addClass('text-center')->orderable(true)->searchable(true),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('action')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-left')->searchable(false)->orderable(false),
+            Column::make('state_name')->title('State Name')->addClass('text-left')->orderable(true)->searchable(true),
+            Column::computed('country_name')->title('Country Name')->addClass('text-left')->orderable(false)->searchable(true),
+            Column::computed('status')->title('Status')->addClass('text-left')->orderable(false)->searchable(false),
+            Column::computed('action')->title('Action')->addClass('text-left')->orderable(false)->searchable(false),
         ];
     }
 
@@ -124,6 +139,6 @@ class CountryMasterDataTable extends DataTable
      */
     protected function filename(): string
     {
-        return 'CountryMaster_' . date('YmdHis');
+        return 'StateMaster_' . date('YmdHis');
     }
 }

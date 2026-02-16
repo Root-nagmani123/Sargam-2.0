@@ -1701,9 +1701,9 @@ $(document).on('click', '#resetAttendance', function () {
         $('#manual_session').val('');
     }
     
-    // Hide session containers
-    $('#normal_session_container').hide();
-    $('#manual_session_container').hide();
+    // Hide session containers (Bootstrap d-none)
+    $('#normal_session_container').addClass('d-none');
+    $('#manual_session_container').addClass('d-none');
     
     // Destroy DataTable if it exists
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
@@ -1765,21 +1765,20 @@ function drawAttendanceTable() {
 
 $(document).ready(function() {
 
-    $('#normal_session_container').hide();
-    $('#manual_session_container').hide();
-
+    $('#normal_session_container').addClass('d-none');
+    $('#manual_session_container').addClass('d-none');
 
     $('input[name="attendance_type"]').change(function() {
-        $('#normal_session_container').hide();
-        $('#manual_session_container').hide();
+        $('#normal_session_container').addClass('d-none');
+        $('#manual_session_container').addClass('d-none');
 
         $('#session').val('').trigger('change');
         $('#manual_session').val('').trigger('change');
 
         if ($(this).val() === 'normal') {
-            $('#normal_session_container').show();
+            $('#normal_session_container').removeClass('d-none');
         } else if ($(this).val() === 'manual') {
-            $('#manual_session_container').show();
+            $('#manual_session_container').removeClass('d-none');
         }
         // For 'full_day', both remain hidden
     });
