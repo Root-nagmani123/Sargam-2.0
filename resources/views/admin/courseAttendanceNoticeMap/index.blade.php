@@ -721,10 +721,10 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                     <button class="btn btn-sm btn-outline-secondary" disabled>
                                         Memo
                                     </button>
-                                    @elseif($memo->type_notice_memo == 'Memo' &&
-                                    in_array($memo->communication_status,[1,2]))
+                                    @elseif($memo->type_notice_memo == 'Memo')
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
-                                        class="btn btn-sm btn-outline-primary btn-action-sm d-inline-flex align-items-center">
+                                        class="btn btn-sm btn-outline-primary btn-action-sm d-inline-flex align-items-center"
+                                        title="View memo and conversation">
                                         <i class="bi bi-chat-square-text me-1"></i> Memo
                                     </a>
                                     @endif
@@ -1002,7 +1002,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
     </div>
     <!-- Memo generation end -->
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
     $('.view-conversation').on('click', function() {
