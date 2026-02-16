@@ -183,7 +183,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
     // Complainant searchable dropdown (search by name when creating issue on behalf of others)
