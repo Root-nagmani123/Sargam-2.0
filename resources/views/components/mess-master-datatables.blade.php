@@ -2,16 +2,19 @@
     $tableId = $tableId ?? 'masterTable';
     $searchPlaceholder = $searchPlaceholder ?? 'Search...';
     $orderColumn = (int) ($orderColumn ?? 1);
+    $orderDir = $orderDir ?? 'asc';
     $actionColumnIndex = (int) ($actionColumnIndex ?? -1);
     $infoLabel = $infoLabel ?? 'entries';
     $searchDelay = (int) ($searchDelay ?? 150);
+    $ordering = isset($ordering) ? (bool) $ordering : true;
 @endphp
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (window.jQuery && $.fn.DataTable) {
         $('#{{ $tableId }}').DataTable({
-            order: [[{{ $orderColumn }}, 'asc']],
+            ordering: {{ $ordering ? 'true' : 'false' }},
+            order: {{ $ordering ? "[[{$orderColumn}, '{$orderDir}']]" : "[]" }},
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
             searchDelay: {{ $searchDelay }},
