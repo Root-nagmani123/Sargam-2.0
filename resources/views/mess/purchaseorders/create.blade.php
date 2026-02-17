@@ -12,7 +12,7 @@
             </div>
             <div class="col-md-3 mb-3">
                 <label>PO Date *</label>
-                <input type="date" name="po_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                <input type="date" name="po_date" class="form-control" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
             </div>
             <div class="col-md-3 mb-3">
                 <label>Delivery Date</label>
