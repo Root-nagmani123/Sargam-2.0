@@ -17,127 +17,27 @@
                 </div>
             </div>
             <div class="table-responsive">
-                <table class="table align-middle mb-0" id="updateMeterNoTable">
+                <table class="table text-nowrap" id="updateMeterNoTable">
                     <thead>
                         <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Employee Type</th>
-                            <th scope="col">Unit Type</th>
-                            <th scope="col">Actions</th>
+                            <th>S.No.</th>
+                            <th>Name</th>
+                            <th>Employee Type</th>
+                            <th>Unit Type</th>
+                            <th>Unit Sub Type</th>
+                            <th>Building Name</th>
+                            <th>House No.</th>
+                            <th>Old Meter1 No.</th>
+                            <th>New Meter1 No.</th>
+                            <th>Old Meter2 No.</th>
+                            <th>New Meter2 No.</th>
+                            <th>Old Meter1 Reading</th>
+                            <th>New Meter1 Reading</th>
+                            <th>Old Meter2 Reading</th>
+                            <th>New Meter2 Reading</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>Ravindra Kumar Prajapati</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>Chanda Kiran</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>Kishan Chandra Joshi</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td>Ravindra Kumar Prajapati</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td>Chanda Kiran</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>6</td>
-                            <td>Kishan Chandra Joshi</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>7</td>
-                            <td>Ravindra Kumar Prajapati</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>8</td>
-                            <td>Chanda Kiran</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>9</td>
-                            <td>Kishan Chandra Joshi</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>10</td>
-                            <td>Ravindra Kumar Prajapati</td>
-                            <td>LBSNAA</td>
-                            <td>Residential</td>
-                            <td>
-                                <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-sm btn-primary" title="Update Meter">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
