@@ -150,7 +150,7 @@
             @endif
 
             <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
-            <input id="memo_notice_attachment" type="file" name="attachment" hidden>
+            <input id="memo_notice_attachment" type="file" name="document" accept=".jpg,.jpeg,.png,.pdf" hidden>
 
             <textarea name="student_decip_incharge_msg"
                       class="chat-input"

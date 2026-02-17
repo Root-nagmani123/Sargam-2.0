@@ -1438,6 +1438,7 @@ public function noticedeleteMessage($id,$type)
         'sm.pk as student_id',
         't.subject_topic as topic_name'
     );
+    $notices->orderBy('student_notice_status.pk', 'desc');
     $notices = $notices->get();
 
     $memos = collect();
@@ -1785,23 +1786,25 @@ public function memo_notice_conversation_model(Request $request){
 
      $validated = $request->validate([
         'memo_notice_id' => 'required',
-
-        'student_decip_incharge_msg' => 'required|string|max:500',
+        'student_decip_incharge_msg' => 'required_without:document|nullable|string|max:500',
         'created_by' => 'required',
         'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
          ]);
 
-    // Handle file upload
+    // Handle file upload (form field name must be "document" for side-panel chat)
     $filePath = null;
     if ($request->hasFile('document')) {
         $file = $request->file('document');
-        $filePath = $file->store('notice_documents', 'public'); // stored in /storage/app/public/notice_documents
+        $folder = $request->type === 'memo' ? 'memo_conversation_documents' : 'notice_documents';
+        $filePath = $file->store($folder, 'public');
     }
+
+    $messageText = $validated['student_decip_incharge_msg'] ?? '';
 
     if($request->type == 'memo'){
 $data = DB::table('memo_message_student_decip_incharge')->insert([
         'student_memo_status_pk' => $validated['memo_notice_id'],
-        'student_decip_incharge_msg' => $validated['student_decip_incharge_msg'],
+        'student_decip_incharge_msg' => $messageText,
          'doc_upload' => $filePath,
         'role_type' => $request->role_type, // 'f' for admin, 's' for student
         'created_by' => $validated['created_by'], // Replace with correct user ID
@@ -1816,7 +1819,7 @@ $data = DB::table('memo_message_student_decip_incharge')->insert([
     // Insert into your table
    $data = DB::table('notice_message_student_decip_incharge')->insert([
         'student_notice_status_pk' => $validated['memo_notice_id'],
-        'student_decip_incharge_msg' => $validated['student_decip_incharge_msg'],
+        'student_decip_incharge_msg' => $messageText,
         'doc_upload' => $filePath,
         'role_type' => $request->role_type, // 'f' for admin, 's' for student
         'created_by' => $validated['created_by'], // Replace with correct user ID

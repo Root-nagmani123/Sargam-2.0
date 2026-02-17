@@ -60,6 +60,49 @@ Route::get('clear-cache', function () {
     Artisan::call('optimize:clear');
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
+
+/**
+ * Full optimize flow: clear → config cache → route cache → optimize
+ * Step-by-step proper order. Use after deployment or when caches need refresh.
+ * GET /admin/system/optimize (auth required)
+ */
+Route::get('admin/system/optimize', function () {
+    $steps = [];
+    $run = function ($command, $name) use (&$steps) {
+        try {
+            \Illuminate\Support\Facades\Artisan::call($command);
+            $output = trim(\Illuminate\Support\Facades\Artisan::output());
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => true, 'output' => $output ?: 'OK'];
+        } catch (\Throwable $e) {
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => false, 'output' => $e->getMessage()];
+        }
+    };
+
+    // Step 1: Clear everything (clean slate)
+    $run('config:clear', 'Config cache clear');
+    $run('cache:clear', 'Application cache clear');
+    $run('view:clear', 'View cache clear');
+    $run('route:clear', 'Route cache clear');
+
+    // Step 2: Cache config & routes
+    $run('config:cache', 'Config cache');
+    $run('route:cache', 'Route cache');
+
+    // Step 3: View cache (if available) and optimize
+    try {
+        \Illuminate\Support\Facades\Artisan::call('view:cache');
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => true, 'output' => trim(\Illuminate\Support\Facades\Artisan::output()) ?: 'OK'];
+    } catch (\Throwable $e) {
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => false, 'output' => $e->getMessage()];
+    }
+    $run('optimize', 'Optimize (autoload + bootstrap)');
+
+    $allOk = collect($steps)->every(fn ($s) => $s['ok']);
+    if (request()->wantsJson()) {
+        return response()->json(['success' => $allOk, 'steps' => $steps]);
+    }
+    return response()->view('admin.system.optimize-result', compact('steps', 'allOk'));
+})->middleware('auth')->name('admin.system.optimize');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
@@ -461,8 +504,8 @@ Route::middleware(['auth'])->group(function () {
             // })->name('admin.courseAttendanceNoticeMap.chat');
             Route::get('/user', 'user')->name('user');
             Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
-            Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
-            Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
+            Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
+            Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
 
             Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');

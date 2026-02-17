@@ -44,7 +44,7 @@
         <a href="{{ route('admin.peer.index') }}" class="btn btn-secondary mt-3">Back to Groups</a>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    @include('components.jquery-3-6')
     <script>
         $(function() {
             $('.remove-member').click(function() {
@@ -186,7 +186,7 @@
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    @include('components.jquery-3-6')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(function() {
