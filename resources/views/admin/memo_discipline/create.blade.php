@@ -145,7 +145,7 @@ $('#courseSelectTogetStudent').on('change', function() {
     if (courseId) {
         $('#select_memo_student').empty().append('<option>Select...</option>');
 
-         $('#discipline_pk').empty().append('<option>Select...</option>');
+         $('#discipline_pk').empty().append('<option value="">Select Discipline</option>');
         $.ajax({
             url: "{{ route('memo.discipline.getStudentByCourse') }}",
 
@@ -178,19 +178,15 @@ $('#courseSelectTogetStudent').on('change', function() {
                     }
                      if (response.discipline_master_data && response.discipline_master_data.length > 0) {
                         response.discipline_master_data.forEach(discipline => {
-                            const isSelected = currentSelected.includes(discipline.pk
-                            .toString());
                             $('#discipline_pk').append(
                                 $('<option>', {
                                     value: discipline.pk,
-                                    text: discipline.discipline_name,
-                                    selected: isSelected
+                                    text: discipline.discipline_name
                                 })
                             );
                         });
                     } else {
-                        // Show message if no defaulters found, but don't prevent UI update
-                        console.log('No defaulter students found for this topic.');
+                        console.log('No discipline options found for this course.');
                     }
 
                     // Destroy the old dual listbox wrapper
@@ -228,7 +224,25 @@ $('#courseSelectTogetStudent').on('change', function() {
             }
         });
     } else {
-        $('#subject_master_id').html('<option value="">Select Subject</option>');
+        $('#discipline_pk').empty().append('<option value="">Select Discipline</option>');
+        $('#select_memo_student').empty();
+        $('#discipline_marks').val('');
+        if (typeof dualListbox !== 'undefined' && dualListbox) {
+            try { dualListbox.destroy(); } catch (e) { console.log('Error destroying dual listbox:', e); }
+        }
+        $('.dual-listbox').remove();
+        dualListbox = new DualListbox("#select_memo_student", {
+            addEvent: function(value) {},
+            removeEvent: function(value) {},
+            availableTitle: "Defaulter Students",
+            selectedTitle: "Selected Students",
+            addButtonText: "Add →",
+            removeButtonText: "← Remove",
+            addAllButtonText: "Add All ⇒",
+            removeAllButtonText: "⇐ Remove All",
+            searchPlaceholder: "Search students...",
+            draggable: true
+        });
     }
 });
 $('#discipline_pk').on('change', function() {
