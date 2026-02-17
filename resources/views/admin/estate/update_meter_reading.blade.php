@@ -33,7 +33,7 @@
                     <div class="col-md-4">
                         <label for="meter_change_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="meter_change_month" name="meter_change_month" value="January 2026" required>
+                            <input type="date" class="form-control" id="meter_change_month" name="meter_change_month" value="January 2026" required>
                             <span class="input-group-text">
                                 <i class="bi bi-calendar"></i>
                             </span>

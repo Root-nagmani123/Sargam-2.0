@@ -5,17 +5,11 @@
 @section('setup_content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Request for Others</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Add Other Estate Request</li>
-        </ol>
-    </nav>
+    <x-breadcrum title="Add Other Estate Request"></x-breadcrum>
 
     <!-- Page Title -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Add Other Estate Request</h2>
+        <h2 class="mb-0">{{ isset($record) && $record ? 'Edit' : 'Add' }} Other Estate Request</h2>
         <a href="{{ route('admin.estate.request-for-others') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-2"></i>Back to List
         </a>
@@ -47,6 +41,9 @@
 
             <form method="POST" action="{{ route('admin.estate.add-other-estate-request.store') }}">
                 @csrf
+                @if(isset($record) && $record)
+                    <input type="hidden" name="id" value="{{ $record->pk }}">
+                @endif
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label for="employee_name" class="form-label">Employee Name <span class="text-danger">*</span></label>
