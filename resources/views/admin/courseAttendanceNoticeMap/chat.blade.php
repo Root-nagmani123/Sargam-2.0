@@ -80,7 +80,7 @@
                             <tr>
                                 <td>{{ $row->display_name ?? 'N/A' }}</td>
                                 <td>{{ $row->student_decip_incharge_msg }}</td>
-                                <td>{{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}</td>
+                                <td>{{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}</td>
                                 <td>---</td>
                                 <td>
                                     @if ($row->doc_upload)
@@ -130,7 +130,11 @@
 
                         <div class="text-end">
                             <button type="submit" class="btn btn-primary">Send</button>
+                            @if(hasRole('Student-OT'))
+                            <a href="{{ url('admin/memo-notice-management/user') }}" class="btn btn-outline-secondary">Back</a>
+                            @else
                             <a href="{{ url('admin/memo-notice-management') }}" class="btn btn-outline-secondary">Back</a>
+                            @endif
                         </div>
                     </form>
                 </div>

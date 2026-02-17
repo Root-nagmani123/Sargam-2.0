@@ -37,13 +37,14 @@ class MemoDisciplineController extends Controller
     $programNameFilter = $request->program_name;
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
-    $fromDateFilter    = $request->get('from_date');
-    $toDateFilter      = $request->get('to_date');
 
-    // Default today date
-    if (!$fromDateFilter && !$toDateFilter) {
+    // First load (no date params in URL) = show today's data; Clear Filters (empty date params) = show all data
+    if (!$request->has('from_date') && !$request->has('to_date')) {
         $fromDateFilter = Carbon::today()->toDateString();
         $toDateFilter   = Carbon::today()->toDateString();
+    } else {
+        $fromDateFilter = $request->get('from_date') ?: null;
+        $toDateFilter   = $request->get('to_date') ?: null;
     }
 
     $memos = MemoDiscipline::with([
