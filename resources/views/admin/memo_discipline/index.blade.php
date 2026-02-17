@@ -372,8 +372,8 @@
                     </div>
                 </div>
             </div>
-            <hr class="my-2">
-            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4">
+            <hr class="my-3">
+            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4" onsubmit="return false;">
                 <div class="row g-3">
                     <!-- Program Filter -->
                     <div class="col-md-6 col-lg-3">
@@ -438,33 +438,29 @@
                     <div class="col-md-6 col-lg-4">
                         <div class="row g-2">
                             <div class="col-6">
-                                <div class="form-group">
-                                    <label for="from_date" class="form-label fw-semibold">
-                                        <i class="bi bi-calendar-event me-1"></i>From Date
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light border-end-0">
-                                            <i class="bi bi-calendar-minus text-muted"></i>
-                                        </span>
-                                        <input type="date" class="form-control" id="from_date" name="from_date"
-                                            value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
-                                            max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="Start date">
-                                    </div>
+                                <label for="from_date" class="form-label fw-semibold small text-body-secondary">
+                                    <i class="bi bi-calendar-event me-1"></i>From Date
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-body-secondary border-end-0">
+                                        <i class="bi bi-calendar-minus text-muted"></i>
+                                    </span>
+                                    <input type="date" class="form-control" id="from_date" name="from_date"
+                                        value="{{ $fromDateFilter ?? '' }}"
+                                        max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="Start date">
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="form-group">
-                                    <label for="to_date" class="form-label fw-semibold">
-                                        <i class="bi bi-calendar-event me-1"></i>To Date
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light border-end-0">
-                                            <i class="bi bi-calendar-plus text-muted"></i>
-                                        </span>
-                                        <input type="date" class="form-control" id="to_date" name="to_date"
-                                            value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
-                                            max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="End date">
-                                    </div>
+                                <label for="to_date" class="form-label fw-semibold small text-body-secondary">
+                                    <i class="bi bi-calendar-event me-1"></i>To Date
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-body-secondary border-end-0">
+                                        <i class="bi bi-calendar-plus text-muted"></i>
+                                    </span>
+                                    <input type="date" class="form-control" id="to_date" name="to_date"
+                                        value="{{ $toDateFilter ?? '' }}"
+                                        max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="End date">
                                 </div>
                             </div>
                             <div class="col-12">
@@ -486,18 +482,11 @@
                                     Active filters
                                 </small>
                             </div>
-
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary d-flex align-items-center"
-                                    onclick="clearFilters()" aria-label="Clear all filters">
-                                    <i class="bi bi-arrow-clockwise me-2"></i>
-                                    Reset All
-                                </button>
-
-                                <a href="{{ route('memo.discipline.index') }}"
-                                    class="btn btn-outline-danger d-flex align-items-center"
-                                    aria-label="Remove filters and show all">
-                                    <i class="bi bi-x-circle me-2"></i>
+                            <div class="d-flex flex-wrap gap-2">
+                              
+                                <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center"
+                                    id="clearFiltersBtn" aria-label="Remove filters and show all">
+                                    <i class="bi bi-x-circle me-1"></i>
                                     Clear Filters
                                 </a>
 
@@ -512,61 +501,49 @@
 
                     <!-- Filter Summary (Optional, shows when filters are active) -->
                     @if($programNameFilter || $statusFilter || $searchFilter || ($fromDateFilter && $toDateFilter))
-                    <div class="col-12">
-                        <div class="alert alert-info alert-dismissible fade show mt-2" role="alert">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-info-circle me-2 fs-5"></i>
-                                <div>
-                                    <strong>Active Filters:</strong>
-                                    <div class="d-flex flex-wrap gap-2 mt-1">
-                                        @if($programNameFilter)
-                                        @php
-                                        $selectedCourse = $courses->where('pk', $programNameFilter)->first();
-                                        @endphp
-                                        <span class="badge bg-primary d-flex align-items-center">
-                                            Program: {{ $selectedCourse->course_name ?? 'Selected' }}
-                                            <a href="#" class="text-white ms-2" onclick="removeFilter('program_name')">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-
-                                        @if($statusFilter)
-                                        @php
-                                        $statusLabels = ['1' => 'Pending', '2' => 'Recorded', '3' => 'Closed'];
-                                        @endphp
-                                        <span class="badge bg-success d-flex align-items-center">
-                                            Status: {{ $statusLabels[$statusFilter] ?? 'Selected' }}
-                                            <a href="#" class="text-white ms-2" onclick="removeFilter('status')">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-
-                                        @if($searchFilter)
-                                        <span class="badge bg-warning text-dark d-flex align-items-center">
-                                            Search:
-                                            "{{ substr($searchFilter, 0, 20) }}{{ strlen($searchFilter) > 20 ? '...' : '' }}"
-                                            <a href="#" class="text-dark ms-2" onclick="removeFilter('search')">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-
-                                        @if($fromDateFilter && $toDateFilter)
-                                        <span class="badge bg-info d-flex align-items-center">
-                                            Date: {{ \Carbon\Carbon::parse($fromDateFilter)->format('M d') }} -
-                                            {{ \Carbon\Carbon::parse($toDateFilter)->format('M d, Y') }}
-                                            <a href="#" class="text-white ms-2" onclick="removeDateFilters()">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-                                    </div>
+                    <div class="col-12" id="filterSummary">
+                        <div class="alert alert-info fade show d-flex align-items-start gap-2 rounded-3 border-0 shadow-sm filter-summary-alert" id="filterSummaryAlert" role="alert">
+                            <i class="bi bi-info-circle fs-5 flex-shrink-0 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <strong class="d-block mb-2">Active Filters</strong>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    @if($programNameFilter)
+                                    @php
+                                    $selectedCourse = $courses->where('pk', $programNameFilter)->first();
+                                    @endphp
+                                    <span class="badge rounded-pill bg-primary d-inline-flex align-items-center gap-1 py-2">
+                                        Program: {{ $selectedCourse->course_name ?? 'Selected' }}
+                                        <a href="#" class="text-white text-decoration-none opacity-75 hover-opacity-100" onclick="removeFilter('program_name'); return false;" aria-label="Remove program filter"><i class="bi bi-x-lg small"></i></a>
+                                    </span>
+                                    @endif
+                                    @if($statusFilter)
+                                    @php
+                                    $statusLabels = ['1' => 'Recorded', '2' => 'Memo Sent', '3' => 'Closed'];
+                                    @endphp
+                                    <span class="badge rounded-pill bg-success d-inline-flex align-items-center gap-1 py-2">
+                                        Status: {{ $statusLabels[$statusFilter] ?? 'Selected' }}
+                                        <a href="#" class="text-white text-decoration-none opacity-75" onclick="removeFilter('status'); return false;" aria-label="Remove status filter"><i class="bi bi-x-lg small"></i></a>
+                                    </span>
+                                    @endif
+                                    @if($searchFilter)
+                                    <span class="badge rounded-pill bg-warning text-dark d-inline-flex align-items-center gap-1 py-2">
+                                        Search: "{{ substr($searchFilter, 0, 20) }}{{ strlen($searchFilter) > 20 ? '...' : '' }}"
+                                        <a href="#" class="text-dark text-decoration-none opacity-75" onclick="removeFilter('search'); return false;" aria-label="Remove search filter"><i class="bi bi-x-lg small"></i></a>
+                                    </span>
+                                    @endif
+                                    @if($fromDateFilter && $toDateFilter)
+                                    <span class="badge rounded-pill bg-info text-dark d-inline-flex align-items-center gap-1 py-2">
+                                        Date: {{ \Carbon\Carbon::parse($fromDateFilter)->format('M d') }} - {{ \Carbon\Carbon::parse($toDateFilter)->format('M d, Y') }}
+                                        <a href="#" class="text-dark text-decoration-none opacity-75" onclick="removeDateFilters(); return false;" aria-label="Remove date filter"><i class="bi bi-x-lg small"></i></a>
+                                    </span>
+                                    @endif
                                 </div>
                             </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="btn-close flex-shrink-0 filter-summary-close" aria-label="Close"></button>
                         </div>
+                        <a href="#" id="showFilterDetailsLink" class="show-filter-details-link d-none small text-primary text-decoration-none d-inline-flex align-items-center gap-1 mt-1" aria-label="Show active filter details">
+                            <i class="bi bi-chevron-down"></i> Show active filter details
+                        </a>
                     </div>
                     @endif
                 </div>
@@ -589,7 +566,45 @@
                         }
                     });
 
-                    document.getElementById('activeFilterCount').textContent = activeCount;
+                // Apply filters via AJAX (no full page refresh)
+                function applyFiltersAjax() {
+                    const form = document.getElementById('filterForm');
+                    const listContainer = document.getElementById('memoDisciplineListContainer');
+                    if (!form || !listContainer) return;
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams(formData).toString();
+                    const url = "{{ route('memo.discipline.index') }}" + (params ? '?' + params : '');
+                    listContainer.style.opacity = '0.5';
+                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newSummary = doc.querySelector('#filterSummary');
+                            const currentSummary = document.getElementById('filterSummary');
+                            if (newSummary) {
+                                if (currentSummary) currentSummary.replaceWith(newSummary.cloneNode(true));
+                                else form.querySelector('.row').appendChild(newSummary.cloneNode(true));
+                            } else {
+                                if (currentSummary) currentSummary.remove();
+                            }
+                            const newList = doc.querySelector('#memoDisciplineListContainer');
+                            if (newList) listContainer.innerHTML = newList.innerHTML;
+                            window.history.replaceState({}, '', url);
+                            updateFilterCount();
+                        })
+                        .catch(function() { alert('Failed to apply filters'); })
+                        .finally(function() { listContainer.style.opacity = '1'; });
+                }
+                window.applyFiltersAjax = applyFiltersAjax;
+
+                // Prevent form full-page submit; use AJAX
+                const filterForm = document.getElementById('filterForm');
+                if (filterForm) {
+                    filterForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        applyFiltersAjax();
+                    });
                 }
 
                 // Initialize filter count
@@ -605,15 +620,34 @@
                 const fromDate = document.getElementById('from_date');
                 const toDate = document.getElementById('to_date');
 
-                if (fromDate && toDate) {
-                    fromDate.addEventListener('change', function() {
-                        toDate.min = this.value;
-                    });
-
-                    toDate.addEventListener('change', function() {
-                        fromDate.max = this.value;
+                // Clear Filters button (no full page reload)
+                const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+                if (clearFiltersBtn && filterForm) {
+                    clearFiltersBtn.addEventListener('click', function() {
+                        filterForm.querySelectorAll('select').forEach(s => s.value = '');
+                        filterForm.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
+                        filterForm.querySelectorAll('input[type="date"]').forEach(i => i.value = '');
+                        applyFiltersAjax();
                     });
                 }
+
+                // Toggle Active Filters: close hides alert and shows "Show active filter details"; link shows alert again (event delegation for AJAX)
+                document.addEventListener('click', function(e) {
+                    const summary = document.getElementById('filterSummary');
+                    if (!summary) return;
+                    const alertEl = summary.querySelector('.filter-summary-alert');
+                    const linkEl = summary.querySelector('.show-filter-details-link');
+                    if (!alertEl || !linkEl) return;
+                    if (e.target.closest('.filter-summary-close')) {
+                        e.preventDefault();
+                        alertEl.classList.add('d-none');
+                        linkEl.classList.remove('d-none');
+                    } else if (e.target.closest('.show-filter-details-link')) {
+                        e.preventDefault();
+                        alertEl.classList.remove('d-none');
+                        linkEl.classList.add('d-none');
+                    }
+                });
             });
 
             // Clear all filters
@@ -621,12 +655,9 @@
                 const form = document.getElementById('filterForm');
                 form.querySelectorAll('select').forEach(select => select.value = '');
                 form.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
-
-                // Reset dates to today
-                const today = new Date().toISOString().split('T')[0];
-                form.querySelectorAll('input[type="date"]').forEach(input => input.value = today);
-
-                form.submit();
+                form.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
+                if (typeof window.applyFiltersAjax === 'function') window.applyFiltersAjax();
+                else form.submit();
             }
 
             // Remove specific filter
@@ -650,78 +681,11 @@
             }
             </script>
 
-            <style>
-            .form-select:focus,
-            .form-control:focus {
-                border-color: #86b7fe;
-                box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-            }
-
-            .input-group-text {
-                transition: all 0.2s ease;
-            }
-
-            .badge a {
-                text-decoration: none;
-                opacity: 0.8;
-                transition: opacity 0.2s;
-            }
-
-            .badge a:hover {
-                opacity: 1;
-            }
-
-            .alert {
-                border-left: 4px solid #0d6efd;
-            }
-
-            .btn {
-                transition: all 0.2s ease;
-            }
-
-            .btn-primary {
-                background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-                border: none;
-            }
-
-            .btn-primary:hover {
-                background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
-                transform: translateY(-1px);
-                box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
-            }
-
-            .form-label {
-                color: #495057;
-                font-size: 0.875rem;
-                margin-bottom: 0.5rem;
-            }
-
-            .form-text {
-                font-size: 0.75rem;
-                color: #6c757d;
-                margin-top: 0.25rem;
-            }
-
-            .bg-light {
-                background-color: #f8f9fa !important;
-            }
-
-            @media (max-width: 768px) {
-                .btn {
-                    width: 100%;
-                    justify-content: center;
-                }
-
-                .d-flex.gap-2 {
-                    width: 100%;
-                    flex-direction: column;
-                }
-            }
-            </style>
-            <hr>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-nowrap">
-                    <thead class="sticky-top">
+            <hr class="my-3">
+            <div id="memoDisciplineListContainer">
+            <div class="table-responsive rounded-3 border">
+                    <table class="table align-middle mb-0 text-nowrap">
+                    <thead>
                         <tr>
                             <th width="60">#</th>
                             <th>Program</th>
@@ -868,6 +832,7 @@
                     {{ $memos->links('vendor.pagination.custom') }}
                 </div>
             </div>
+            </div>
         </div>
     </div>
     <!-- end Zero Configuration -->
@@ -948,10 +913,14 @@ $(document).ready(function() {
     initDisciplineChoices();
 
     /* ===============================
-       FILTER AUTO SUBMIT
+       FILTER (AJAX - no page refresh)
     =============================== */
     $('#program_name, #status').on('change', function() {
-        $('#filterForm').submit();
+        if (typeof window.applyFiltersAjax === 'function') {
+            window.applyFiltersAjax();
+        } else {
+            $('#filterForm')[0].submit();
+        }
     });
 
     /* ===============================
@@ -996,7 +965,7 @@ $(document).ready(function() {
             }
         });
     });
-    $('.view-conversation').on('click', function() {
+    $(document).on('click', '.view-conversation', function() {
         let memoId = $(this).data('id');
         let type = $(this).data('type');
 
