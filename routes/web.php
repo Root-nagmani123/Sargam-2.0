@@ -39,6 +39,7 @@ use App\Http\Controllers\Admin\{
     EmployeeIDCardRequestController,
     FamilyIDCardRequestController,
     WhosWhoController,
+    EstateController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -50,6 +51,14 @@ use App\Http\Controllers\Admin\IssueManagement\{
     IssueSubCategoryController,
     IssuePriorityController,
     IssueEscalationMatrixController
+};
+use App\Http\Controllers\Admin\Estate\{
+    EstateCampusController,
+    UnitTypeController,
+    UnitSubTypeController,
+    EstateBlockController,
+    PayScaleController,
+    EligibilityCriteriaController
 };
 
 Route::get('clear-cache', function () {
@@ -971,35 +980,45 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     // Estate Management Routes
     Route::prefix('estate')->name('estate.')->group(function () {
         // Estate Request for Others
-        Route::get('request-for-others', function () {
-            return view('admin.estate.estate_request_for_others');
-        })->name('request-for-others');
+        Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+
+        // Change Requests (HAC Approved)
+        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
+        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
         
-        Route::get('add-other-estate-request', function () {
-            return view('admin.estate.add_other_estate_request');
-        })->name('add-other-estate-request');
+        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
+        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
         // Estate Possession
-        Route::get('possession-for-others', function () {
-            return view('admin.estate.estate_possession_for_others');
-        })->name('possession-for-others');
-        
-        Route::get('possession-view', function () {
-            return view('admin.estate.estate_possession_view');
-        })->name('possession-view');
+        Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
+        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
+        Route::post('possession-view', [EstateController::class, 'storePossession'])->name('possession-view.store');
+        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+        Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
+        Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
+        Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
+        Route::get('possession/requester-details', [EstateController::class, 'getRequesterDetails'])->name('possession.requester-details');
 
         // Update Meter
         Route::get('update-meter-reading', function () {
             return view('admin.estate.update_meter_reading');
         })->name('update-meter-reading');
         
-        Route::get('update-meter-reading-of-other', function () {
-            return view('admin.estate.update_meter_reading_of_other');
-        })->name('update-meter-reading-of-other');
+        Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
+        Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
+        Route::get('update-meter-reading-of-other/meter-reading-dates', [EstateController::class, 'getMeterReadingDatesOther'])->name('update-meter-reading-of-other.meter-reading-dates');
+        Route::get('update-meter-reading-of-other/blocks', [EstateController::class, 'getMeterReadingBlocksOther'])->name('update-meter-reading-of-other.blocks');
+        Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
+        Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
         
         Route::get('update-meter-no', function () {
             return view('admin.estate.update_meter_no');
         })->name('update-meter-no');
+
+        // Generate Estate Bill / Estate Bill Summary
+        Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
 
         // Return House
         Route::get('return-house', function () {
@@ -1010,6 +1029,54 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('define-house', function () {
             return view('admin.estate.define_house');
         })->name('define-house');
+
+        // Define Estate/Campus
+        Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
+        Route::get('define-campus/create', [EstateCampusController::class, 'create'])->name('define-campus.create');
+        Route::post('define-campus', [EstateCampusController::class, 'store'])->name('define-campus.store');
+        Route::get('define-campus/{id}/edit', [EstateCampusController::class, 'edit'])->name('define-campus.edit');
+        Route::put('define-campus/{id}', [EstateCampusController::class, 'update'])->name('define-campus.update');
+        Route::delete('define-campus/{id}', [EstateCampusController::class, 'destroy'])->name('define-campus.destroy');
+
+        // Define Unit Type
+        Route::get('define-unit-type', [UnitTypeController::class, 'index'])->name('define-unit-type.index');
+        Route::get('define-unit-type/create', [UnitTypeController::class, 'create'])->name('define-unit-type.create');
+        Route::post('define-unit-type', [UnitTypeController::class, 'store'])->name('define-unit-type.store');
+        Route::get('define-unit-type/{id}/edit', [UnitTypeController::class, 'edit'])->name('define-unit-type.edit');
+        Route::put('define-unit-type/{id}', [UnitTypeController::class, 'update'])->name('define-unit-type.update');
+        Route::delete('define-unit-type/{id}', [UnitTypeController::class, 'destroy'])->name('define-unit-type.destroy');
+
+        // Define Unit Sub Type
+        Route::get('define-unit-sub-type', [UnitSubTypeController::class, 'index'])->name('define-unit-sub-type.index');
+        Route::get('define-unit-sub-type/create', [UnitSubTypeController::class, 'create'])->name('define-unit-sub-type.create');
+        Route::post('define-unit-sub-type', [UnitSubTypeController::class, 'store'])->name('define-unit-sub-type.store');
+        Route::get('define-unit-sub-type/{id}/edit', [UnitSubTypeController::class, 'edit'])->name('define-unit-sub-type.edit');
+        Route::put('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'update'])->name('define-unit-sub-type.update');
+        Route::delete('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'destroy'])->name('define-unit-sub-type.destroy');
+
+        // Define Block/Building
+        Route::get('define-block-building', [EstateBlockController::class, 'index'])->name('define-block-building.index');
+        Route::get('define-block-building/create', [EstateBlockController::class, 'create'])->name('define-block-building.create');
+        Route::post('define-block-building', [EstateBlockController::class, 'store'])->name('define-block-building.store');
+        Route::get('define-block-building/{id}/edit', [EstateBlockController::class, 'edit'])->name('define-block-building.edit');
+        Route::put('define-block-building/{id}', [EstateBlockController::class, 'update'])->name('define-block-building.update');
+        Route::delete('define-block-building/{id}', [EstateBlockController::class, 'destroy'])->name('define-block-building.destroy');
+
+        // Define Pay Scale (for eligibility)
+        Route::get('define-pay-scale', [PayScaleController::class, 'index'])->name('define-pay-scale.index');
+        Route::get('define-pay-scale/create', [PayScaleController::class, 'create'])->name('define-pay-scale.create');
+        Route::post('define-pay-scale', [PayScaleController::class, 'store'])->name('define-pay-scale.store');
+        Route::get('define-pay-scale/{id}/edit', [PayScaleController::class, 'edit'])->name('define-pay-scale.edit');
+        Route::put('define-pay-scale/{id}', [PayScaleController::class, 'update'])->name('define-pay-scale.update');
+        Route::delete('define-pay-scale/{id}', [PayScaleController::class, 'destroy'])->name('define-pay-scale.destroy');
+
+        // Eligibility - Criteria
+        Route::get('eligibility-criteria', [EligibilityCriteriaController::class, 'index'])->name('eligibility-criteria.index');
+        Route::get('eligibility-criteria/create', [EligibilityCriteriaController::class, 'create'])->name('eligibility-criteria.create');
+        Route::post('eligibility-criteria', [EligibilityCriteriaController::class, 'store'])->name('eligibility-criteria.store');
+        Route::get('eligibility-criteria/{id}/edit', [EligibilityCriteriaController::class, 'edit'])->name('eligibility-criteria.edit');
+        Route::put('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'update'])->name('eligibility-criteria.update');
+        Route::delete('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'destroy'])->name('eligibility-criteria.destroy');
 
         // Estate Reports
         Route::prefix('reports')->name('reports.')->group(function () {
@@ -1025,9 +1092,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
             
-            Route::get('bill-report-print', function () {
-                return view('admin.estate.estate_bill_report_print');
-            })->name('bill-report-print');
+            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
+            Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
+            Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
         });
     });
 });Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
