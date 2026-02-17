@@ -33,23 +33,20 @@ class FacultyTypeMasterDataTable extends DataTable
                 $isActive = $row->active_inactive == 1;
                 
                 $deleteButton = $isActive
-                    ? '<button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled aria-disabled="true" title="Cannot delete active Faculty Type">
+                    ? '<a href="javascript:void(0)" class="text-primary d-flex align-items-center gap-1" disabled aria-disabled="true" title="Cannot delete active Faculty Type">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">delete</i>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>'
+                    </a>'
                     : '<form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
                         <input type="hidden" name="_token" value="' . csrf_token() . '">
                         <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" aria-label="Delete faculty type" title="Delete Faculty Type">
+                        <a href="javascript:void(0)" class="text-primary d-flex align-items-center gap-1" aria-label="Delete faculty type" title="Delete Faculty Type">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">delete</i>
-                            <span class="d-none d-md-inline">Delete</span>
-                        </button>
+                        </a>
                     </form>';
 
                 return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Faculty type actions">
-                    <a href="' . $editUrl . '" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" aria-label="Edit faculty type">
+                    <a href="' . $editUrl . '" class="text-primary d-flex align-items-center gap-1" aria-label="Edit faculty type">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">edit</i>
-                        <span class="d-none d-md-inline">Edit</span>
                     </a>
                     ' . $deleteButton . '
                 </div>';

@@ -2,6 +2,8 @@
 @section('title', 'View ID Card Request - Sargam | Lal Bahadur Shastri')
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Employee ID Card Request Details"></x-breadcrum>
+    <x-session_message />
     <!-- Header Card - Bootstrap 5.3 -->
     <div class="card border-0 shadow rounded-3 mb-4 overflow-hidden" style="border-left: 4px solid #004a93;">
         <div class="card-body p-4 p-lg-5">

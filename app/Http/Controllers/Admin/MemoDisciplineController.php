@@ -99,13 +99,11 @@ class MemoDisciplineController extends Controller
     {
         $activeCourses = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now())
+            ->select('pk', 'course_name')
+            ->orderBy('course_name')
             ->get();
 
-            $disciplines = DisciplineMaster::where('active_inactive', 1)
-                ->get();
-              
-
-        return view('admin.memo_discipline.create', compact('activeCourses', 'disciplines'));
+        return view('admin.memo_discipline.create', compact('activeCourses'));
     }
     function getStudentByCourse(Request $request){
         try {

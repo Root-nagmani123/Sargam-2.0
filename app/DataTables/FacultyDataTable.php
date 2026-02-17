@@ -66,19 +66,19 @@ class FacultyDataTable extends DataTable
                 $deleteUrl = route('faculty.destroy', ['id' => $id]);
 
                 return '
-                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm" title="Edit">
-                        <i class="material-icons" style="font-size:14px;">edit</i>
+                    <a href="'.$editUrl.'" class="text-primary" title="Edit">
+                        <i class="material-icons material-symbols-rounded">edit</i>
                     </a>
-                    <a href="'.$viewUrl.'" class="btn btn-info btn-sm" title="View">
-                        <i class="material-icons" style="font-size:14px;">visibility</i>
+                    <a href="'.$viewUrl.'" class="text-primary" title="View">
+                        <i class="material-icons material-symbols-rounded" >visibility</i>
                     </a>
-                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn" 
+                    <a href="javascript:void(0)" class="text-primary delete-faculty-btn" 
                         data-url="'.$deleteUrl.'" 
                         data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'" 
                         data-token="'.$csrf.'" 
                         title="Delete">
-                        <i class="material-icons" style="font-size:14px;">delete</i>
-                    </button>
+                        <i class="material-icons material-symbols-rounded">delete</i>
+                    </a>
                 ';
             })
             ->addColumn('status', function ($row) {
@@ -214,11 +214,11 @@ class FacultyDataTable extends DataTable
             //     ->addClass('text-center')
             //     ->searchable(false)
             //     ->orderable(false),
-           Column::computed('action')
-                ->addClass('text-center')
-                ->exportable(false)
-                ->printable(false),
             Column::computed('status')
+            ->addClass('text-center')
+            ->exportable(false)
+            ->printable(false),
+           Column::computed('action')
                 ->addClass('text-center')
                 ->exportable(false)
                 ->printable(false)
