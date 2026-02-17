@@ -254,6 +254,59 @@
                                 </li>
                             </ul>
 
+                            {{-- ESTATE MASTER --}}
+                            <li class="sidebar-item mt-2" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#estateMasterCollapse" role="button"
+                                    aria-expanded="false" aria-controls="estateMasterCollapse">
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Estate Master</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="estateMasterCollapse">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-campus.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-campus.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Estate/Campus</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-unit-type.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-unit-type.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Unit Type</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-unit-sub-type.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-unit-sub-type.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Unit Sub Type</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-block-building.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-block-building.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Block/Building</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-pay-scale.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-pay-scale.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Pay Scale</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.eligibility-criteria.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.eligibility-criteria.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Eligibility - Criteria</span>
+                                    </a>
+                                </li>
+                            </ul>
+
                             {{-- ESTATE REPORTS --}}
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
