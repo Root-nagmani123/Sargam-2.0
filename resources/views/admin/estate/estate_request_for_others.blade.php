@@ -46,10 +46,10 @@
                             <td>Karan Pillee</td>
                             <td>
                                 <div class="d-inline-flex gap-1">
-                                    <a href="javascript:void(0)" class="btn btn-sm btn-link text-primary p-1" title="Edit" aria-label="Edit">
+                                    <a href="javascript:void(0)" class="text-primary p-1" title="Edit" aria-label="Edit">
                                         <i class="material-symbols-rounded">edit</i>
                                     </a>
-                                    <a href="javascript:void(0)" class="btn btn-sm btn-link text-danger p-1" title="Delete" aria-label="Delete">
+                                    <a href="javascript:void(0)" class="text-primary p-1" title="Delete" aria-label="Delete">
                                         <i class="material-symbols-rounded">delete</i>
                                     </a>
                                 </div>

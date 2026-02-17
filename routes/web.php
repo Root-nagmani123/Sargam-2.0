@@ -51,6 +51,14 @@ use App\Http\Controllers\Admin\IssueManagement\{
     IssuePriorityController,
     IssueEscalationMatrixController
 };
+use App\Http\Controllers\Admin\Estate\{
+    EstateCampusController,
+    UnitTypeController,
+    UnitSubTypeController,
+    EstateBlockController,
+    PayScaleController,
+    EligibilityCriteriaController
+};
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -1009,6 +1017,54 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('define-house', function () {
             return view('admin.estate.define_house');
         })->name('define-house');
+
+        // Define Estate/Campus
+        Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
+        Route::get('define-campus/create', [EstateCampusController::class, 'create'])->name('define-campus.create');
+        Route::post('define-campus', [EstateCampusController::class, 'store'])->name('define-campus.store');
+        Route::get('define-campus/{id}/edit', [EstateCampusController::class, 'edit'])->name('define-campus.edit');
+        Route::put('define-campus/{id}', [EstateCampusController::class, 'update'])->name('define-campus.update');
+        Route::delete('define-campus/{id}', [EstateCampusController::class, 'destroy'])->name('define-campus.destroy');
+
+        // Define Unit Type
+        Route::get('define-unit-type', [UnitTypeController::class, 'index'])->name('define-unit-type.index');
+        Route::get('define-unit-type/create', [UnitTypeController::class, 'create'])->name('define-unit-type.create');
+        Route::post('define-unit-type', [UnitTypeController::class, 'store'])->name('define-unit-type.store');
+        Route::get('define-unit-type/{id}/edit', [UnitTypeController::class, 'edit'])->name('define-unit-type.edit');
+        Route::put('define-unit-type/{id}', [UnitTypeController::class, 'update'])->name('define-unit-type.update');
+        Route::delete('define-unit-type/{id}', [UnitTypeController::class, 'destroy'])->name('define-unit-type.destroy');
+
+        // Define Unit Sub Type
+        Route::get('define-unit-sub-type', [UnitSubTypeController::class, 'index'])->name('define-unit-sub-type.index');
+        Route::get('define-unit-sub-type/create', [UnitSubTypeController::class, 'create'])->name('define-unit-sub-type.create');
+        Route::post('define-unit-sub-type', [UnitSubTypeController::class, 'store'])->name('define-unit-sub-type.store');
+        Route::get('define-unit-sub-type/{id}/edit', [UnitSubTypeController::class, 'edit'])->name('define-unit-sub-type.edit');
+        Route::put('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'update'])->name('define-unit-sub-type.update');
+        Route::delete('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'destroy'])->name('define-unit-sub-type.destroy');
+
+        // Define Block/Building
+        Route::get('define-block-building', [EstateBlockController::class, 'index'])->name('define-block-building.index');
+        Route::get('define-block-building/create', [EstateBlockController::class, 'create'])->name('define-block-building.create');
+        Route::post('define-block-building', [EstateBlockController::class, 'store'])->name('define-block-building.store');
+        Route::get('define-block-building/{id}/edit', [EstateBlockController::class, 'edit'])->name('define-block-building.edit');
+        Route::put('define-block-building/{id}', [EstateBlockController::class, 'update'])->name('define-block-building.update');
+        Route::delete('define-block-building/{id}', [EstateBlockController::class, 'destroy'])->name('define-block-building.destroy');
+
+        // Define Pay Scale (for eligibility)
+        Route::get('define-pay-scale', [PayScaleController::class, 'index'])->name('define-pay-scale.index');
+        Route::get('define-pay-scale/create', [PayScaleController::class, 'create'])->name('define-pay-scale.create');
+        Route::post('define-pay-scale', [PayScaleController::class, 'store'])->name('define-pay-scale.store');
+        Route::get('define-pay-scale/{id}/edit', [PayScaleController::class, 'edit'])->name('define-pay-scale.edit');
+        Route::put('define-pay-scale/{id}', [PayScaleController::class, 'update'])->name('define-pay-scale.update');
+        Route::delete('define-pay-scale/{id}', [PayScaleController::class, 'destroy'])->name('define-pay-scale.destroy');
+
+        // Eligibility - Criteria
+        Route::get('eligibility-criteria', [EligibilityCriteriaController::class, 'index'])->name('eligibility-criteria.index');
+        Route::get('eligibility-criteria/create', [EligibilityCriteriaController::class, 'create'])->name('eligibility-criteria.create');
+        Route::post('eligibility-criteria', [EligibilityCriteriaController::class, 'store'])->name('eligibility-criteria.store');
+        Route::get('eligibility-criteria/{id}/edit', [EligibilityCriteriaController::class, 'edit'])->name('eligibility-criteria.edit');
+        Route::put('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'update'])->name('eligibility-criteria.update');
+        Route::delete('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'destroy'])->name('eligibility-criteria.destroy');
 
         // Estate Reports
         Route::prefix('reports')->name('reports.')->group(function () {
