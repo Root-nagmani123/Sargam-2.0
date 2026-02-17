@@ -1854,13 +1854,15 @@
                                         <i class="bi bi-person-circle text-primary"></i>
                                         <span>Faculty</span>
                                     </label>
-                                    <select name="faculty[]" id="faculty" class="form-select form-select-responsive" required aria-required="true" multiple>
-                                        @foreach($facultyMaster as $faculty)
-                                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                            {{ $faculty->full_name }}
-                                        </option>
-                                        @endforeach
-                                    </select>
+                                    <div class="position-relative">
+                                        <select name="faculty[]" id="faculty" class="form-select form-select-responsive" required aria-required="true" multiple>
+                                            @foreach($facultyMaster as $faculty)
+                                            <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                                {{ $faculty->full_name }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                     <small class="form-text text-muted d-block mt-1">
                                         <i class="bi bi-info-circle"></i> Select multiple faculty members
                                     </small>
@@ -1898,14 +1900,16 @@
                                         <i class="bi bi-person-check text-primary"></i>
                                         <span>Internal Faculty</span>
                                     </label>
-                                    <select name="internal_faculty[]" id="internal_faculty" class="form-select form-select-responsive" required
-                                        aria-required="true" multiple>
-                                        @foreach($facultyMaster as $faculty)
-                                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                            {{ $faculty->full_name }}
-                                        </option>
-                                        @endforeach
-                                    </select>
+                                    <div class="position-relative">
+                                        <select name="internal_faculty[]" id="internal_faculty" class="form-select form-select-responsive" required
+                                            aria-required="true" multiple>
+                                            @foreach($facultyMaster as $faculty)
+                                            <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                                {{ $faculty->full_name }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                     <small class="form-text text-muted d-block mt-1">
                                         <i class="bi bi-info-circle"></i> Select internal faculty for guest sessions
                                     </small>
@@ -2076,10 +2080,10 @@
 
                 <!-- Modal Footer -->
                 <div class="modal-footer bg-white border-top border-2 border-primary border-opacity-25 flex-column flex-sm-row flex-wrap gap-2 py-3 px-3 px-md-4">
-                    <button type="button" class="btn btn-outline-secondary btn-responsive w-100 w-sm-auto order-2 order-sm-1" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-outline-secondary btn-responsive w-sm-100 w-auto order-2 order-sm-1" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-2"></i><span class="d-none d-sm-inline">Cancel</span><span class="d-sm-none">Cancel</span>
                     </button>
-                    <button type="submit" class="btn btn-primary btn-responsive w-100 w-sm-auto px-3 px-md-4 order-1 order-sm-2" id="submitEventBtn">
+                    <button type="submit" class="btn btn-primary btn-responsive w-sm-100 w-auto px-3 px-md-4 order-1 order-sm-2" id="submitEventBtn">
                         <i class="bi bi-check-circle me-2"></i>
                         <span class="btn-text">Add Event</span>
                     </button>
@@ -2126,22 +2130,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const faculty_type = document.getElementById('faculty_type');
     // internalFacultyDiv.style.display = 'none'; // Hide initially
 
-    // Initialize Select2 when modal is shown (dropdownParent = modal so dropdown is inside modal and mouse clicks work)
+    // Initialize Select2 when modal is shown (dropdownParent = select's wrapper for consistent positioning)
     $('#eventModal').on('shown.bs.modal', function() {
-        var $modal = $('#eventModal');
-        var dropdownParent = $modal; // attach to modal so dropdown is inside modal and mouse clicks work
-        
         // Check if mobile device
         var isMobile = window.innerWidth <= 767;
         var dropdownMaxHeight = isMobile ? '200px' : '300px';
 
-        // Initialize Select2 for faculty field with dropdown inside modal for correct stacking/click
+        // Initialize Select2 for faculty field - use immediate parent (position-relative wrapper) so dropdown stays below field
         if (!$('#faculty').hasClass('select2-hidden-accessible')) {
             $('#faculty').select2({
                 placeholder: '👤 Select Faculty',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: dropdownParent,
+                dropdownParent: $('#faculty').parent(),
                 theme: 'default',
                 selectionCssClass: 'select2-modern',
                 dropdownCssClass: 'select2-modern-dropdown',
@@ -2162,7 +2163,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 placeholder: '👥 Select Internal Faculty',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: dropdownParent,
+                dropdownParent: $('#internal_faculty').parent(),
                 theme: 'default',
                 selectionCssClass: 'select2-modern',
                 dropdownCssClass: 'select2-modern-dropdown',
