@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
 class KitchenIssueController extends Controller
@@ -50,9 +51,10 @@ class KitchenIssueController extends Controller
             $query->whereBetween('issue_date', [$request->start_date, $request->end_date]);
         }
 
+        // DataTables handles pagination/search on the client; return full filtered set.
         $kitchenIssues = $query->orderBy('issue_date', 'desc')
             ->orderBy('pk', 'desc')
-            ->paginate(20);
+            ->get();
 
         $otCourses = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) {
@@ -260,6 +262,18 @@ class KitchenIssueController extends Controller
                 $storeId = str_replace('sub_', '', $storeId);
                 $storeType = 'sub_store';
             }
+            $storeId = (int) $storeId;
+
+            // Server-side enforcement: issue qty cannot exceed available qty (per store + item)
+            $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+            $requestedByItem = [];
+            foreach ((array) $request->items as $row) {
+                $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+                $qty = (float) ($row['quantity'] ?? 0);
+                if ($itemId > 0) {
+                    $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
+                }
+            }
 
             // Map client_type_slug to numeric value
             $clientTypeMap = [
@@ -280,11 +294,27 @@ class KitchenIssueController extends Controller
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,
                 'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
-                'status' => KitchenIssueMaster::STATUS_APPROVED,
+                'status' => KitchenIssueMaster::STATUS_PENDING, // Unpaid by default; Process Mess Bills "Generate Payment" sets to APPROVED (Paid)
                 'remarks' => $request->remarks,
             ]);
 
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+
+            // Validate requested qty vs available (aggregated across duplicate rows)
+            $qtyErrors = [];
+            foreach ($requestedByItem as $itemId => $totalQty) {
+                $avail = (float) ($availableMap[$itemId] ?? 0);
+                if ($totalQty > $avail) {
+                    $sub = $subcategories->get($itemId);
+                    $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
+                    $qtyErrors[] = "{$name}: issue {$totalQty} cannot exceed available {$avail}.";
+                }
+            }
+            if (!empty($qtyErrors)) {
+                throw ValidationException::withMessages([
+                    'items' => implode(' ', $qtyErrors),
+                ]);
+            }
 
             foreach ($request->items as $row) {
                 $sub = $subcategories->get($row['item_subcategory_id']);
@@ -308,6 +338,9 @@ class KitchenIssueController extends Controller
 
             return redirect()->route('admin.mess.material-management.index')
                 ->with('success', 'Selling Voucher created successfully');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->route('admin.mess.material-management.index')
@@ -484,6 +517,18 @@ class KitchenIssueController extends Controller
                 $storeId = str_replace('sub_', '', $storeId);
                 $storeType = 'sub_store';
             }
+            $storeId = (int) $storeId;
+
+            // Server-side enforcement: issue qty cannot exceed available qty (per store + item)
+            $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+            $requestedByItem = [];
+            foreach ((array) $request->items as $row) {
+                $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+                $qty = (float) ($row['quantity'] ?? 0);
+                if ($itemId > 0) {
+                    $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
+                }
+            }
 
             // Map client_type_slug to numeric value
             $clientTypeMap = [
@@ -508,6 +553,23 @@ class KitchenIssueController extends Controller
 
             $kitchenIssue->items()->delete();
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
+
+            // Validate requested qty vs available (aggregated across duplicate rows)
+            $qtyErrors = [];
+            foreach ($requestedByItem as $itemId => $totalQty) {
+                $avail = (float) ($availableMap[$itemId] ?? 0);
+                if ($totalQty > $avail) {
+                    $sub = $subcategories->get($itemId);
+                    $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
+                    $qtyErrors[] = "{$name}: issue {$totalQty} cannot exceed available {$avail}.";
+                }
+            }
+            if (!empty($qtyErrors)) {
+                throw ValidationException::withMessages([
+                    'items' => implode(' ', $qtyErrors),
+                ]);
+            }
+
             foreach ($request->items as $row) {
                 $sub = $subcategories->get($row['item_subcategory_id']);
                 $qty = (float) ($row['quantity'] ?? 0);
@@ -530,6 +592,9 @@ class KitchenIssueController extends Controller
 
             return redirect()->route('admin.mess.material-management.index')
                            ->with('success', 'Selling Voucher updated successfully');
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()
@@ -578,6 +643,7 @@ class KitchenIssueController extends Controller
 
         return response()->json([
             'store_name' => $kitchenIssue->resolved_store_name,
+            'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '',
             'items' => $items,
         ]);
     }
@@ -611,6 +677,24 @@ class KitchenIssueController extends Controller
                 }
                 $returnQty = (float) ($row['return_quantity'] ?? 0);
                 $returnDate = !empty($row['return_date']) ? $row['return_date'] : null;
+                $issuedQty = (float) ($item->quantity ?? 0);
+                if ($returnQty > $issuedQty) {
+                    DB::rollBack();
+                    return back()->withInput()->with('error', 'Return quantity cannot be greater than issued quantity.');
+                }
+                if (!empty($returnDate) && $kitchenIssue->issue_date) {
+                    try {
+                        $ret = Carbon::parse($returnDate)->startOfDay();
+                        $iss = Carbon::parse($kitchenIssue->issue_date)->startOfDay();
+                        if ($ret->lt($iss)) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                        }
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return back()->withInput()->with('error', 'Invalid return date.');
+                    }
+                }
                 $item->update([
                     'return_quantity' => $returnQty,
                     'return_date' => $returnDate,
@@ -784,5 +868,38 @@ class KitchenIssueController extends Controller
         }
         
         return response()->json($items->values());
+    }
+
+    /**
+     * Get available quantities by item_subcategory_id for a store/sub-store.
+     * Mirrors the logic used by getStoreItems() (server-side authoritative check).
+     *
+     * @return array<int, float> [item_subcategory_id => available_quantity]
+     */
+    private function availableQuantitiesForStore(string $storeType, int $storeId): array
+    {
+        if ($storeType === 'sub_store') {
+            $rows = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->where('sa.sub_store_id', $storeId)
+                ->select('sai.item_subcategory_id', DB::raw('SUM(sai.quantity) as total_quantity'))
+                ->groupBy('sai.item_subcategory_id')
+                ->get();
+        } else {
+            $rows = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->where('po.store_id', $storeId)
+                ->where('po.status', 'approved')
+                ->select('poi.item_subcategory_id', DB::raw('SUM(poi.quantity) as total_quantity'))
+                ->groupBy('poi.item_subcategory_id')
+                ->get();
+        }
+
+        $map = [];
+        foreach ($rows as $r) {
+            $id = (int) ($r->item_subcategory_id ?? 0);
+            if ($id > 0) $map[$id] = (float) ($r->total_quantity ?? 0);
+        }
+        return $map;
     }
 }

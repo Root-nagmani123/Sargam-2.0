@@ -54,7 +54,7 @@ class PurchaseOrderController extends Controller
             'po_number' => 'required|unique:mess_purchase_orders,po_number',
             'vendor_id' => 'required|exists:mess_vendors,id',
             'store_id' => 'nullable|exists:mess_stores,id',
-            'po_date' => 'required|date',
+            'po_date' => 'required|date|before_or_equal:today',
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
             'delivery_address' => 'nullable|string|max:500',
@@ -158,7 +158,7 @@ class PurchaseOrderController extends Controller
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',
             'store_id' => 'nullable|exists:mess_stores,id',
-            'po_date' => 'required|date',
+            'po_date' => 'required|date|before_or_equal:today',
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
             'delivery_address' => 'nullable|string|max:500',

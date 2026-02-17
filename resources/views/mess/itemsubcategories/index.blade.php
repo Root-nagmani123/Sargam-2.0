@@ -2,8 +2,9 @@
 @section('title', 'Item Sub Category Master')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Item Sub Category Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
@@ -19,7 +20,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
+                <table id="itemSubcategoriesTable" class="table table-bordered table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
@@ -33,9 +34,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($itemsubcategories as $itemsubcategory)
+                        @foreach($itemsubcategories as $itemsubcategory)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $itemsubcategory->id }}</td>
                                 <td><div class="fw-semibold">{{ $itemsubcategory->category->category_name ?? '-' }}</div></td>
                                 <td><div class="fw-semibold">{{ $itemsubcategory->item_name }}</div></td>
                                 <td>{{ $itemsubcategory->item_code ?? '-' }}</td>
@@ -73,14 +74,11 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-muted">No item sub categories found.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+        </div>
         </div>
     </div>
 </div>
@@ -212,23 +210,22 @@
     </div>
 </div>
 
+@include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search item sub categories...', 'orderColumn' => 1, 'actionColumnIndex' => 7, 'infoLabel' => 'item sub categories'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.btn-edit-itemsubcategory').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            var baseUrl = '{{ url("admin/mess/itemsubcategories") }}';
-            document.getElementById('editItemSubcategoryForm').action = baseUrl + '/' + id;
-            document.getElementById('edit_category_id').value = this.getAttribute('data-category-id') || '';
-            document.getElementById('edit_item_name').value = this.getAttribute('data-item-name') || '';
-            document.getElementById('edit_item_code_display').value = this.getAttribute('data-item-code') || '-';
-            document.getElementById('edit_unit_measurement').value = this.getAttribute('data-unit-measurement') || '';
-            document.getElementById('edit_standard_cost').value = this.getAttribute('data-standard-cost') || '';
-            document.getElementById('edit_description').value = this.getAttribute('data-description') || '';
-            document.getElementById('edit_status').value = this.getAttribute('data-status') || 'active';
-            new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
-        });
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-edit-itemsubcategory');
+        if (!btn) return;
+        document.getElementById('editItemSubcategoryForm').action = '{{ url("admin/mess/itemsubcategories") }}/' + btn.getAttribute('data-id');
+        document.getElementById('edit_category_id').value = btn.getAttribute('data-category-id') || '';
+        document.getElementById('edit_item_name').value = btn.getAttribute('data-item-name') || '';
+        document.getElementById('edit_item_code_display').value = btn.getAttribute('data-item-code') || '-';
+        document.getElementById('edit_unit_measurement').value = btn.getAttribute('data-unit-measurement') || '';
+        document.getElementById('edit_standard_cost').value = btn.getAttribute('data-standard-cost') || '';
+        document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
+        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+        new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
     });
 });
 </script>

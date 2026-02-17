@@ -57,7 +57,7 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
+        <table class="table table-bordered table-hover align-middle" id="sellingVouchersTable">
             <thead style="background-color: #af2910;">
                 <tr>
                     <th style="color: #fff; width: 50px;">Serial No.</th>
@@ -76,7 +76,7 @@
                 </tr>
             </thead>
             <tbody>
-                @php $serial = $kitchenIssues->firstItem() ?: 0; @endphp
+                @php $serial = 1; @endphp
                 @forelse($kitchenIssues as $voucher)
                     @forelse($voucher->items as $item)
                         <tr>
@@ -166,9 +166,14 @@
         </table>
     </div>
 
-    <div class="d-flex justify-content-center mt-3">
-        {{ $kitchenIssues->links() }}
-    </div>
+    @include('components.mess-master-datatables', [
+        'tableId' => 'sellingVouchersTable',
+        'searchPlaceholder' => 'Search selling vouchers...',
+        'ordering' => false,
+        'actionColumnIndex' => 12,
+        'infoLabel' => 'selling vouchers',
+        'searchDelay' => 0
+    ])
 </div>
 
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
@@ -334,8 +339,11 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm sv-avail" step="0.01" min="0" value="0" placeholder="0"></td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td>
+                                                <input type="number" name="items[0][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
+                                            </td>
                                             <td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0"></td>
                                             <td><input type="number" name="items[0][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" required></td>
                                             <td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00"></td>
@@ -515,6 +523,7 @@
 #viewSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #viewSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
 #viewSellingVoucherModal .modal-header { background: #f8f9fa !important; color: #212529 !important; }
+#viewSellingVoucherModal .modal-header * { color: #212529 !important; }
 #viewSellingVoucherModal .modal-title { color: #212529 !important; }
 #viewSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); background: #fff; color: #212529 !important; }
 #viewSellingVoucherModal .modal-body *, #viewSellingVoucherModal .modal-body p, #viewSellingVoucherModal .modal-body span { color: inherit; }
@@ -524,6 +533,8 @@
 #viewSellingVoucherModal .card-body { background: #fff !important; color: #212529 !important; }
 #viewSellingVoucherModal .card-body table th { color: #495057 !important; font-weight: 600; }
 #viewSellingVoucherModal .card-body table td { color: #212529 !important; }
+#viewSellingVoucherModal .card-body .table-borderless th { background: transparent !important; }
+#viewSellingVoucherModal .card-body .table-borderless td { background: transparent !important; }
 #viewSellingVoucherModal #viewItemsCard .table thead th { color: #fff !important; background: #af2910 !important; border-color: #af2910; }
 #viewSellingVoucherModal #viewItemsCard .table tbody td { color: #212529 !important; background: #fff !important; }
 #viewSellingVoucherModal #viewModalGrandTotal { color: #212529 !important; }
@@ -654,6 +665,30 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+
+    // Prevent double submit on Add Selling Voucher form (stops double entry)
+    var sellingVoucherModalForm = document.getElementById('sellingVoucherModalForm');
+    if (sellingVoucherModalForm) {
+        sellingVoucherModalForm.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+            }
+        });
+    }
+
+    // Prevent double submit on Edit Selling Voucher form
+    var editSellingVoucherForm = document.getElementById('editSellingVoucherForm');
+    if (editSellingVoucherForm) {
+        editSellingVoucherForm.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
+            }
+        });
+    }
     
     // Debug: Check if buttons exist
     const viewButtons = document.querySelectorAll('.btn-view-sv');
@@ -674,6 +709,35 @@ document.addEventListener('DOMContentLoaded', function() {
     let editRowIndex = 0;
     let currentStoreId = null;
     let editCurrentStoreId = null;
+
+    function enforceQtyWithinAvailable(row) {
+        if (!row) return;
+        const availEl = row.querySelector('.sv-avail');
+        const qtyEl = row.querySelector('.sv-qty');
+        if (!availEl || !qtyEl) return;
+
+        const avail = parseFloat(availEl.value) || 0;
+        const qtyRaw = qtyEl.value;
+        const qty = parseFloat(qtyRaw);
+
+        // Keep browser constraint in sync
+        qtyEl.max = String(avail);
+
+        // If empty, don't force an error yet
+        if (qtyRaw === '' || Number.isNaN(qty)) {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+            return;
+        }
+
+        if (qty > avail) {
+            qtyEl.setCustomValidity('Issue Qty cannot exceed Available Qty.');
+            qtyEl.classList.add('is-invalid');
+        } else {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+        }
+    }
 
     function fetchStoreItems(storeId, callback) {
         if (!storeId) {
@@ -731,8 +795,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail" step="0.01" min="0" value="0" placeholder="0"></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" required></td>' +
             '<td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00"></td>' +
@@ -749,6 +813,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (unitInp) unitInp.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
+        if (availInp) availInp.readOnly = true;
+        enforceQtyWithinAvailable(row);
     }
 
     function calcRow(row) {
@@ -759,6 +825,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const total = qty * rate;
         row.querySelector('.sv-left').value = left;
         row.querySelector('.sv-total').value = total.toFixed(2);
+        enforceQtyWithinAvailable(row);
     }
 
     function updateGrandTotal() {
@@ -825,7 +892,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modalItemsBody.addEventListener('input', function(e) {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { calcRow(row); updateGrandTotal(); }
+                if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateGrandTotal(); }
             }
         });
 
@@ -1179,8 +1246,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return '<tr class="sv-item-row edit-sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail" step="0.01" min="0" value="' + avail + '" placeholder="0"></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0" value="' + left + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" value="' + rate + '" required></td>' +
             '<td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00" value="' + (total ? total.toFixed(2) : '') + '"></td>' +
@@ -1286,6 +1353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     console.log('Return data:', data);
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                    const issueDate = data.issue_date || '';
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -1295,10 +1363,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         const unit = (item.unit || '—').replace(/</g, '&lt;');
                         const retQty = item.return_quantity != null ? item.return_quantity : 0;
                         const retDate = item.return_date || '';
+                        const issuedQty = parseFloat(qty) || 0;
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
-                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm" step="0.01" min="0" value="' + retQty + '"></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm" value="' + retDate + '"></td></tr>');
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm sv-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm sv-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = returnSvBaseUrl + '/' + voucherId + '/return';
                     const modal = new bootstrap.Modal(document.getElementById('returnItemModal'));
@@ -1310,6 +1379,70 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }
     });
+
+    function enforceReturnQtyWithinIssued(inputEl) {
+        if (!inputEl) return;
+        const issued = parseFloat(inputEl.dataset.issued) || 0;
+        const raw = inputEl.value;
+        const val = parseFloat(raw);
+        inputEl.max = String(issued);
+        if (raw === '' || Number.isNaN(val)) {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+            return;
+        }
+        if (val > issued) {
+            inputEl.setCustomValidity('Return Qty cannot exceed Issued Qty.');
+            inputEl.classList.add('is-invalid');
+        } else {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+        }
+    }
+
+    function enforceReturnDateNotBeforeIssue(inputEl) {
+        if (!inputEl) return;
+        const issue = inputEl.dataset.issueDate || '';
+        const raw = inputEl.value;
+        if (!issue || !raw) {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+            return;
+        }
+        // yyyy-mm-dd safe lexical compare
+        if (raw < issue) {
+            inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
+            inputEl.classList.add('is-invalid');
+        } else {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+        }
+    }
+
+    const returnItemModalBody = document.getElementById('returnItemModalBody');
+    if (returnItemModalBody) {
+        returnItemModalBody.addEventListener('input', function(e) {
+            if (e.target && e.target.classList.contains('sv-return-qty')) {
+                enforceReturnQtyWithinIssued(e.target);
+            }
+            if (e.target && e.target.classList.contains('sv-return-date')) {
+                enforceReturnDateNotBeforeIssue(e.target);
+            }
+        });
+    }
+
+    const returnItemForm = document.getElementById('returnItemForm');
+    if (returnItemForm) {
+        returnItemForm.addEventListener('submit', function(e) {
+            this.querySelectorAll('.sv-return-qty').forEach(enforceReturnQtyWithinIssued);
+            this.querySelectorAll('.sv-return-date').forEach(enforceReturnDateNotBeforeIssue);
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+            }
+        }, true);
+    }
 
     // Edit button handler
     document.addEventListener('click', function(e) {
@@ -1424,7 +1557,7 @@ document.addEventListener('DOMContentLoaded', function() {
         editModalItemsBody.addEventListener('input', function(e) {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { calcRow(row); updateEditGrandTotal(); }
+                if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateEditGrandTotal(); }
             }
         });
         
@@ -1462,6 +1595,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (storeSelect) storeSelect.value = '';
             }
         });
+    }
+
+    // Before disabling submit buttons, ensure form is valid (includes qty <= available)
+    if (sellingVoucherModalForm) {
+        sellingVoucherModalForm.addEventListener('submit', function(e) {
+            // sync validity for all rows
+            document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(enforceQtyWithinAvailable);
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+        }, true);
+    }
+
+    if (editSellingVoucherForm) {
+        editSellingVoucherForm.addEventListener('submit', function(e) {
+            document.querySelectorAll('#editModalItemsBody .sv-item-row').forEach(enforceQtyWithinAvailable);
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+        }, true);
     }
 
     @if($errors->any() || session('open_selling_voucher_modal'))

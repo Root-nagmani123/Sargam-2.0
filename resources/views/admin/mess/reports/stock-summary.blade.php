@@ -51,16 +51,19 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
                     <button type="submit" class="btn btn-primary">
                         <i class="ti ti-filter"></i> Generate Report
                     </button>
                     <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-secondary">
                         <i class="ti ti-refresh"></i> Reset
                     </a>
-                    <button type="button" class="btn btn-success" onclick="window.print()">
-                        <i class="ti ti-printer"></i> Print
+                    <button type="button" class="btn btn-primary" onclick="window.print()" title="Print report or choose Save as PDF in print dialog">
+                        <i class="ti ti-file-export"></i> Print as PDF
                     </button>
+                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success" title="Export to Excel">
+                        <i class="ti ti-file-spreadsheet"></i> Export Excel
+                    </a>
                 </div>
             </form>
         </div>

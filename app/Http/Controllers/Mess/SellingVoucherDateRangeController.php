@@ -14,10 +14,12 @@ use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\MessageBag;
 
 /**
  * Selling Voucher with Date Range - standalone module (design/pattern like Selling Voucher, data/logic separate).
@@ -39,9 +41,10 @@ class SellingVoucherDateRangeController extends Controller
                   ->where('date_to', '>=', $request->start_date);
         }
 
+        // DataTables handles pagination/search on the client; return full filtered set.
         $reports = $query->orderBy('date_from', 'desc')
             ->orderBy('id', 'desc')
-            ->paginate(20);
+            ->get();
 
         // Get active stores and sub-stores
         $stores = Store::active()->get()->map(function ($store) {
@@ -167,15 +170,45 @@ class SellingVoucherDateRangeController extends Controller
             'items.*.available_quantity' => 'nullable|numeric|min:0',
         ]);
 
+        // Enforce: Issue Qty cannot exceed available qty (server-side, cannot be bypassed)
+        $storeIdRaw = $request->inve_store_master_pk;
+        $storeType = 'store';
+        if (str_starts_with($storeIdRaw, 'sub_')) {
+            $storeIdRaw = str_replace('sub_', '', $storeIdRaw);
+            $storeType = 'sub_store';
+        }
+        $storeId = (int) $storeIdRaw;
+        $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+
+        $requestedByItem = [];
+        foreach ((array) $request->items as $row) {
+            $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+            $qty = (float) ($row['quantity'] ?? 0);
+            if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
+        }
+
+        $subcategories = ItemSubcategory::whereIn('id', array_keys($requestedByItem))->get()->keyBy('id');
+        $qtyErrors = [];
+        foreach ($requestedByItem as $itemId => $totalQty) {
+            $avail = (float) ($availableMap[$itemId] ?? 0);
+            if ($totalQty > $avail) {
+                $sub = $subcategories->get($itemId);
+                $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
+                $qtyErrors[] = "{$name}: issue {$totalQty} cannot exceed available {$avail}.";
+            }
+        }
+        if (!empty($qtyErrors)) {
+            $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
+            return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                ->withInput()
+                ->withErrors($bag)
+                ->with('open_add_modal', true);
+        }
+
         try {
             DB::beginTransaction();
 
-            $storeId = $request->inve_store_master_pk;
-            $storeType = 'store';
-            if (str_starts_with($storeId, 'sub_')) {
-                $storeId = str_replace('sub_', '', $storeId);
-                $storeType = 'sub_store';
-            }
+            // storeId + storeType already normalized above
 
             $issueDate = $request->issue_date;
             $report = SellingVoucherDateRangeReport::create([
@@ -359,6 +392,28 @@ class SellingVoucherDateRangeController extends Controller
                 $storeId = str_replace('sub_', '', $storeId);
                 $storeType = 'sub_store';
             }
+            $storeId = (int) $storeId;
+
+            // Enforce: Issue Qty cannot exceed available qty (server-side)
+            $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+            $requestedByItem = [];
+            foreach ((array) $request->items as $row) {
+                $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+                $qty = (float) ($row['quantity'] ?? 0);
+                if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
+            }
+            $subcategoriesForMsg = ItemSubcategory::whereIn('id', array_keys($requestedByItem))->get()->keyBy('id');
+            foreach ($requestedByItem as $itemId => $totalQty) {
+                $avail = (float) ($availableMap[$itemId] ?? 0);
+                if ($totalQty > $avail) {
+                    $sub = $subcategoriesForMsg->get($itemId);
+                    $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
+                    DB::rollBack();
+                    return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                        ->withInput()
+                        ->with('error', "{$name}: issue {$totalQty} cannot exceed available {$avail}.");
+                }
+            }
 
             $issueDate = $request->issue_date;
             $report->update([
@@ -448,6 +503,7 @@ class SellingVoucherDateRangeController extends Controller
 
         return response()->json([
             'store_name' => $report->resolved_store_name,
+            'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
             'items' => $items,
         ]);
     }
@@ -481,6 +537,24 @@ class SellingVoucherDateRangeController extends Controller
                 }
                 $returnQty = (float) ($row['return_quantity'] ?? 0);
                 $returnDate = !empty($row['return_date']) ? $row['return_date'] : null;
+                $issuedQty = (float) ($item->quantity ?? 0);
+                if ($returnQty > $issuedQty) {
+                    DB::rollBack();
+                    return back()->withInput()->with('error', 'Return quantity cannot be greater than issued quantity.');
+                }
+                if (!empty($returnDate) && $report->issue_date) {
+                    try {
+                        $ret = Carbon::parse($returnDate)->startOfDay();
+                        $iss = Carbon::parse($report->issue_date)->startOfDay();
+                        if ($ret->lt($iss)) {
+                            DB::rollBack();
+                            return back()->withInput()->with('error', 'Return date cannot be earlier than issue date.');
+                        }
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return back()->withInput()->with('error', 'Invalid return date.');
+                    }
+                }
                 $item->update([
                     'return_quantity' => $returnQty,
                     'return_date' => $returnDate,
@@ -565,5 +639,38 @@ class SellingVoucherDateRangeController extends Controller
         }
         
         return response()->json($items->values());
+    }
+
+    /**
+     * Get available quantities by item_subcategory_id for a store/sub-store.
+     * Mirrors the logic used by getStoreItems() (server-side authoritative check).
+     *
+     * @return array<int, float> [item_subcategory_id => available_quantity]
+     */
+    private function availableQuantitiesForStore(string $storeType, int $storeId): array
+    {
+        if ($storeType === 'sub_store') {
+            $rows = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->where('sa.sub_store_id', $storeId)
+                ->select('sai.item_subcategory_id', DB::raw('SUM(sai.quantity) as total_quantity'))
+                ->groupBy('sai.item_subcategory_id')
+                ->get();
+        } else {
+            $rows = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->where('po.store_id', $storeId)
+                ->where('po.status', 'approved')
+                ->select('poi.item_subcategory_id', DB::raw('SUM(poi.quantity) as total_quantity'))
+                ->groupBy('poi.item_subcategory_id')
+                ->get();
+        }
+
+        $map = [];
+        foreach ($rows as $r) {
+            $id = (int) ($r->item_subcategory_id ?? 0);
+            if ($id > 0) $map[$id] = (float) ($r->total_quantity ?? 0);
+        }
+        return $map;
     }
 }
