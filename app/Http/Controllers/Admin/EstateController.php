@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\EstateChangeRequestDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
 use App\Models\EstateOtherRequest;
 use App\Models\EstatePossessionOther;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +23,52 @@ class EstateController extends Controller
     public function requestForOthers(EstateOtherRequestDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.estate_request_for_others');
+    }
+
+    /**
+     * Change Requests (Approved by HAC) - Listing from estate_change_home_req_details.
+     */
+    public function changeRequestHacApproved(EstateChangeRequestDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.change_request_hac_approved');
+    }
+
+    /**
+     * Approve change request - set change_ap_dis_status = 1.
+     */
+    public function approveChangeRequest($id)
+    {
+        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail($id);
+        $record->change_ap_dis_status = 1;
+        $record->remarks = null;
+        $record->save();
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Change request approved successfully.']);
+        }
+        return redirect()->route('admin.estate.change-request-hac-approved')
+            ->with('success', 'Change request approved successfully.');
+    }
+
+    /**
+     * Disapprove change request - open modal for reason; save reason in remarks and set change_ap_dis_status = 2.
+     */
+    public function disapproveChangeRequest(Request $request, $id)
+    {
+        $request->validate([
+            'disapprove_reason' => 'required|string|max:500',
+        ]);
+
+        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail($id);
+        $record->change_ap_dis_status = 2;
+        $record->remarks = $request->disapprove_reason;
+        $record->save();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Change request disapproved. Remark saved.']);
+        }
+        return redirect()->route('admin.estate.change-request-hac-approved')
+            ->with('success', 'Change request disapproved. Remark saved.');
     }
 
     /**
@@ -80,9 +129,33 @@ class EstateController extends Controller
             $message = 'Estate request successfully saved.';
         }
 
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
         return redirect()
             ->route('admin.estate.request-for-others')
             ->with('success', $message);
+    }
+
+    /**
+     * Delete Other Estate Request.
+     */
+    public function destroyOtherEstateRequest(Request $request, $id)
+    {
+        $record = EstateOtherRequest::find($id);
+        if (!$record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.request-for-others')->with('error', 'Record not found.');
+        }
+
+        $record->delete();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Estate request deleted successfully.']);
+        }
+        return redirect()->route('admin.estate.request-for-others')->with('success', 'Estate request deleted successfully.');
     }
 
     /**
@@ -459,6 +532,298 @@ class EstateController extends Controller
         return redirect()
             ->route('admin.estate.update-meter-reading-of-other')
             ->with('success', 'Meter readings updated successfully.');
+    }
+
+    /**
+     * Generate Estate Bill / Estate Bill Summary - filters and list of bill cards.
+     */
+    public function generateEstateBill(Request $request)
+    {
+        $unitSubTypes = DB::table('estate_unit_sub_type_master')
+            ->orderBy('unit_sub_type')
+            ->get(['pk', 'unit_sub_type']);
+
+        $billMonth = $request->get('bill_month'); // e.g. 2025-09
+        $unitSubTypePk = $request->get('unit_sub_type_pk');
+        $bills = collect();
+
+        if ($billMonth) {
+            [$year, $month] = explode('-', $billMonth);
+            $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
+            $shortMonth = date('M', mktime(0, 0, 0, (int) $month, 1));
+
+            $query = DB::table('estate_month_reading_details as emrd')
+                ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->where('emrd.bill_year', $year)
+                ->where('emrd.bill_month', $monthName)
+                ->select(
+                    'emrd.pk',
+                    'emrd.bill_no',
+                    'emrd.bill_month',
+                    'emrd.bill_year',
+                    'emrd.from_date',
+                    'emrd.to_date',
+                    'emrd.last_month_elec_red',
+                    'emrd.curr_month_elec_red',
+                    'emrd.electricty_charges',
+                    'emrd.water_charges',
+                    'emrd.licence_fees',
+                    'emrd.house_no',
+                    'emrd.meter_one',
+                    'emrd.meter_one_elec_charge',
+                    'emrd.meter_one_consume_unit',
+                    'ehrd.emp_name',
+                    'ehrd.employee_id',
+                    'ehrd.emp_designation',
+                    'eust.unit_sub_type'
+                );
+
+            if (!empty($unitSubTypePk)) {
+                $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
+            }
+
+            $bills = $query->orderBy('emrd.bill_no')->get();
+
+            foreach ($bills as $b) {
+                $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
+                $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
+                $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+                $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+            }
+        }
+
+        return view('admin.estate.generate_estate_bill', compact('unitSubTypes', 'bills', 'billMonth', 'unitSubTypePk'));
+    }
+
+    /**
+     * Estate Bill Report for Print - filters (month, year, employee type, employee) and single bill.
+     * Also supports direct link with bill_no, month, year query params.
+     */
+    public function estateBillReportPrint(Request $request)
+    {
+        $billNo = $request->get('bill_no');
+        $month = $request->get('month');
+        $year = $request->get('year');
+        $employeeTypePk = $request->get('employee_type_pk');
+        $employeePk = $request->get('employee_pk');
+        $bill = null;
+
+        // Filter dropdown data
+        $years = DB::table('estate_month_reading_details')
+            ->distinct()
+            ->orderByDesc('bill_year')
+            ->pluck('bill_year');
+
+        $months = DB::table('estate_month_reading_details')
+            ->distinct()
+            ->orderByRaw("FIELD(bill_month, 'January','February','March','April','May','June','July','August','September','October','November','December')")
+            ->pluck('bill_month');
+
+        if ($months->isEmpty()) {
+            $months = collect(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
+        }
+
+        $employeeTypes = DB::table('estate_unit_sub_type_master')
+            ->orderBy('unit_sub_type')
+            ->get(['pk', 'unit_sub_type']);
+
+        $employees = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->select('ehrd.pk', 'ehrd.emp_name', 'ehrd.employee_id')
+            ->distinct()
+            ->orderBy('ehrd.emp_name')
+            ->get();
+
+        $baseQuery = function () {
+            return DB::table('estate_month_reading_details as emrd')
+                ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->select(
+                    'emrd.pk',
+                    'emrd.bill_no',
+                    'emrd.bill_month',
+                    'emrd.bill_year',
+                    'emrd.from_date',
+                    'emrd.to_date',
+                    'emrd.last_month_elec_red',
+                    'emrd.curr_month_elec_red',
+                    'emrd.electricty_charges',
+                    'emrd.water_charges',
+                    'emrd.licence_fees',
+                    'emrd.house_no',
+                    'emrd.meter_one',
+                    'emrd.meter_one_elec_charge',
+                    'emrd.meter_one_consume_unit',
+                    'ehrd.emp_name',
+                    'ehrd.employee_id',
+                    'ehrd.emp_designation',
+                    'eust.unit_sub_type'
+                );
+        };
+
+        // Resolve bill: either by bill_no+month+year (direct link) or by month+year+employee_type+employee (filter form)
+        if ($billNo && $month && $year) {
+            $bill = $baseQuery()
+                ->where('emrd.bill_no', $billNo)
+                ->where('emrd.bill_month', $month)
+                ->where('emrd.bill_year', $year)
+                ->first();
+        } elseif ($month && $year && $employeePk) {
+            $query = $baseQuery()
+                ->where('emrd.bill_month', $month)
+                ->where('emrd.bill_year', $year)
+                ->where('ehrd.pk', $employeePk);
+            if (!empty($employeeTypePk)) {
+                $query->where('ehm.estate_unit_sub_type_master_pk', $employeeTypePk);
+            }
+            $bill = $query->first();
+        }
+
+        if ($bill) {
+            $bill->from_date_formatted = $bill->from_date ? \Carbon\Carbon::parse($bill->from_date)->format('d.m.Y') : '—';
+            $bill->to_date_formatted = $bill->to_date ? \Carbon\Carbon::parse($bill->to_date)->format('d.m.Y') : '—';
+            $bill->house_display = $bill->unit_sub_type && $bill->house_no ? $bill->unit_sub_type . '-(' . $bill->house_no . ')' : ($bill->house_no ?? '—');
+            $bill->grand_total = (float) ($bill->electricty_charges ?? 0) + (float) ($bill->water_charges ?? 0) + (float) ($bill->licence_fees ?? 0);
+        }
+
+        return view('admin.estate.estate_bill_report_print', compact('bill', 'years', 'months', 'employeeTypes', 'employees'));
+    }
+
+    /**
+     * Estate Bill Report – Print All: show all bills for the given bill_month and unit_sub_type_pk
+     * in one page with options to print at once or download as PDF.
+     */
+    public function estateBillReportPrintAll(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $unitSubTypePk = $request->get('unit_sub_type_pk');
+        $bills = collect();
+
+        if ($billMonth) {
+            [$year, $month] = explode('-', $billMonth);
+            $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
+
+            $query = DB::table('estate_month_reading_details as emrd')
+                ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->where('emrd.bill_year', $year)
+                ->where('emrd.bill_month', $monthName)
+                ->select(
+                    'emrd.pk',
+                    'emrd.bill_no',
+                    'emrd.bill_month',
+                    'emrd.bill_year',
+                    'emrd.from_date',
+                    'emrd.to_date',
+                    'emrd.last_month_elec_red',
+                    'emrd.curr_month_elec_red',
+                    'emrd.electricty_charges',
+                    'emrd.water_charges',
+                    'emrd.licence_fees',
+                    'emrd.house_no',
+                    'emrd.meter_one',
+                    'emrd.meter_one_elec_charge',
+                    'emrd.meter_one_consume_unit',
+                    'ehrd.emp_name',
+                    'ehrd.employee_id',
+                    'ehrd.emp_designation',
+                    'eust.unit_sub_type'
+                );
+
+            if (!empty($unitSubTypePk)) {
+                $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
+            }
+
+            $bills = $query->orderBy('emrd.bill_no')->get();
+
+            foreach ($bills as $b) {
+                $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
+                $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
+                $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+                $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+            }
+        }
+
+        return view('admin.estate.estate_bill_report_print_all', compact('bills', 'billMonth', 'unitSubTypePk'));
+    }
+
+    /**
+     * Download all estate bills for the given filters as a single PDF.
+     */
+    public function estateBillReportPrintAllPdf(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $unitSubTypePk = $request->get('unit_sub_type_pk');
+        $bills = collect();
+
+        if ($billMonth) {
+            [$year, $month] = explode('-', $billMonth);
+            $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
+
+            $query = DB::table('estate_month_reading_details as emrd')
+                ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->where('emrd.bill_year', $year)
+                ->where('emrd.bill_month', $monthName)
+                ->select(
+                    'emrd.pk',
+                    'emrd.bill_no',
+                    'emrd.bill_month',
+                    'emrd.bill_year',
+                    'emrd.from_date',
+                    'emrd.to_date',
+                    'emrd.last_month_elec_red',
+                    'emrd.curr_month_elec_red',
+                    'emrd.electricty_charges',
+                    'emrd.water_charges',
+                    'emrd.licence_fees',
+                    'emrd.house_no',
+                    'emrd.meter_one',
+                    'emrd.meter_one_elec_charge',
+                    'emrd.meter_one_consume_unit',
+                    'ehrd.emp_name',
+                    'ehrd.employee_id',
+                    'ehrd.emp_designation',
+                    'eust.unit_sub_type'
+                );
+
+            if (!empty($unitSubTypePk)) {
+                $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
+            }
+
+            $bills = $query->orderBy('emrd.bill_no')->get();
+
+            foreach ($bills as $b) {
+                $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
+                $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
+                $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+                $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
+            }
+        }
+
+        if ($bills->isEmpty()) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'No bills found.'], 404);
+            }
+            return redirect()->route('admin.estate.generate-estate-bill')
+                ->with('error', 'No bills found for the selected filters.');
+        }
+
+        $pdf = Pdf::loadView('admin.estate.estate_bill_report_print_all_pdf', compact('bills'))
+            ->setPaper('a4', 'portrait');
+
+        $filename = 'estate-bills-' . str_replace('-', '', $billMonth ?? 'all') . '.pdf';
+        return $pdf->download($filename);
     }
 
     /**
