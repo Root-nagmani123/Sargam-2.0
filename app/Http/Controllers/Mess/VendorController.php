@@ -56,14 +56,17 @@ class VendorController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'contact_person' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'address' => ['nullable', 'string'],
+            'email' => ['required', 'email', 'max:255'],
+            'contact_person' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:20', 'regex:/^[0-9]+$/'],
+            'address' => ['required', 'string'],
             'gst_number' => ['nullable', 'string', 'max:50'],
             'bank_name' => ['nullable', 'string', 'max:255'],
             'ifsc_code' => ['nullable', 'string', 'max:20'],
-            'account_number' => ['nullable', 'string', 'max:50'],
+            'account_number' => ['nullable', 'string', 'max:50', 'regex:/^[0-9]+$/'],
+        ], [
+            'phone.regex' => 'The phone number must contain only digits.',
+            'account_number.regex' => 'The account number must contain only digits.',
         ]);
 
         return [

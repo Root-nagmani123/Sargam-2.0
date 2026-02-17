@@ -658,6 +658,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
             Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
+            Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
             Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
@@ -1029,7 +1030,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             })->name('bill-report-print');
         });
     });
-});
-
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
+});Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
     ->middleware('auth');
