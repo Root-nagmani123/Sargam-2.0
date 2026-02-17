@@ -654,6 +654,30 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+
+    // Prevent double submit on Add Selling Voucher form (stops double entry)
+    var sellingVoucherModalForm = document.getElementById('sellingVoucherModalForm');
+    if (sellingVoucherModalForm) {
+        sellingVoucherModalForm.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+            }
+        });
+    }
+
+    // Prevent double submit on Edit Selling Voucher form
+    var editSellingVoucherForm = document.getElementById('editSellingVoucherForm');
+    if (editSellingVoucherForm) {
+        editSellingVoucherForm.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
+            }
+        });
+    }
     
     // Debug: Check if buttons exist
     const viewButtons = document.querySelectorAll('.btn-view-sv');

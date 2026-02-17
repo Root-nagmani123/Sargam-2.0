@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Models\Mess\ClientType;
 
 class ClientTypeController extends Controller
@@ -55,9 +56,19 @@ class ClientTypeController extends Controller
      */
     protected function validatedData(Request $request, ?ClientType $clientType = null): array
     {
+        $clientNameRules = [
+            'required',
+            'string',
+            'max:255',
+            Rule::unique('mess_client_types', 'client_name'),
+        ];
+        if ($clientType !== null) {
+            $clientNameRules[3] = Rule::unique('mess_client_types', 'client_name')->ignore($clientType->id);
+        }
+
         $validated = $request->validate([
             'client_type' => ['required', 'string', 'in:employee,ot,course,other'],
-            'client_name' => ['required', 'string', 'max:255'],
+            'client_name' => $clientNameRules,
             'status'      => ['nullable', 'in:active,inactive'],
         ]);
 

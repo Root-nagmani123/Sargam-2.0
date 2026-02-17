@@ -1396,6 +1396,30 @@
         });
     }
 
+    // Prevent double submit on Add form (stops double entry on Save Selling Voucher)
+    var addReportFormEl = document.getElementById('addReportForm');
+    if (addReportFormEl) {
+        addReportFormEl.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+            }
+        });
+    }
+
+    // Prevent double submit on Edit form
+    var editReportFormEl = document.getElementById('editReportForm');
+    if (editReportFormEl) {
+        editReportFormEl.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
+            }
+        });
+    }
+
     // Open add modal on validation error
     @if(session('open_add_modal'))
     document.addEventListener('DOMContentLoaded', function() {
