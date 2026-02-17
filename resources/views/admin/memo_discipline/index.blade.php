@@ -30,7 +30,7 @@
                 </div>
             </div>
             <hr class="my-3">
-            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4">
+            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4" onsubmit="return false;">
                 <div class="row g-3">
                     <div class="col-12 col-md-6 col-lg-3">
                         <label for="program_name" class="form-label fw-semibold small text-body-secondary">
@@ -92,7 +92,7 @@
                                         <i class="bi bi-calendar-minus text-muted"></i>
                                     </span>
                                     <input type="date" class="form-control" id="from_date" name="from_date"
-                                        value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
+                                        value="{{ $fromDateFilter ?? '' }}"
                                         max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="Start date">
                                 </div>
                             </div>
@@ -105,7 +105,7 @@
                                         <i class="bi bi-calendar-plus text-muted"></i>
                                     </span>
                                     <input type="date" class="form-control" id="to_date" name="to_date"
-                                        value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
+                                        value="{{ $toDateFilter ?? '' }}"
                                         max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="End date">
                                 </div>
                             </div>
@@ -125,11 +125,7 @@
                                 </small>
                             </div>
                             <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center"
-                                    onclick="clearFilters()" aria-label="Clear all filters">
-                                    <i class="bi bi-arrow-clockwise me-1"></i>
-                                    Reset All
-                                </button>
+                              
                                 <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center"
                                     id="clearFiltersBtn" aria-label="Remove filters and show all">
                                     <i class="bi bi-x-circle me-1"></i>
@@ -146,7 +142,7 @@
 
                     @if($programNameFilter || $statusFilter || $searchFilter || ($fromDateFilter && $toDateFilter))
                     <div class="col-12" id="filterSummary">
-                        <div class="alert alert-info alert-dismissible fade show d-flex align-items-start gap-2 rounded-3 border-0 shadow-sm" role="alert">
+                        <div class="alert alert-info fade show d-flex align-items-start gap-2 rounded-3 border-0 shadow-sm filter-summary-alert" id="filterSummaryAlert" role="alert">
                             <i class="bi bi-info-circle fs-5 flex-shrink-0 mt-1"></i>
                             <div class="flex-grow-1">
                                 <strong class="d-block mb-2">Active Filters</strong>
@@ -183,8 +179,11 @@
                                     @endif
                                 </div>
                             </div>
-                            <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="btn-close flex-shrink-0 filter-summary-close" aria-label="Close"></button>
                         </div>
+                        <a href="#" id="showFilterDetailsLink" class="show-filter-details-link d-none small text-primary text-decoration-none d-inline-flex align-items-center gap-1 mt-1" aria-label="Show active filter details">
+                            <i class="bi bi-chevron-down"></i> Show active filter details
+                        </a>
                     </div>
                     @endif
                 </div>
@@ -213,12 +212,12 @@
                 // Apply filters via AJAX (no full page refresh)
                 function applyFiltersAjax() {
                     const form = document.getElementById('filterForm');
-                    const tableWrap = document.querySelector('.table-responsive');
-                    if (!form || !tableWrap) return;
+                    const listContainer = document.getElementById('memoDisciplineListContainer');
+                    if (!form || !listContainer) return;
                     const formData = new FormData(form);
                     const params = new URLSearchParams(formData).toString();
                     const url = "{{ route('memo.discipline.index') }}" + (params ? '?' + params : '');
-                    tableWrap.style.opacity = '0.5';
+                    listContainer.style.opacity = '0.5';
                     fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                         .then(function(r) { return r.text(); })
                         .then(function(html) {
@@ -232,13 +231,13 @@
                             } else {
                                 if (currentSummary) currentSummary.remove();
                             }
-                            const newTable = doc.querySelector('.table-responsive');
-                            if (newTable) tableWrap.innerHTML = newTable.innerHTML;
+                            const newList = doc.querySelector('#memoDisciplineListContainer');
+                            if (newList) listContainer.innerHTML = newList.innerHTML;
                             window.history.replaceState({}, '', url);
                             updateFilterCount();
                         })
                         .catch(function() { alert('Failed to apply filters'); })
-                        .finally(function() { tableWrap.style.opacity = '1'; });
+                        .finally(function() { listContainer.style.opacity = '1'; });
                 }
                 window.applyFiltersAjax = applyFiltersAjax;
 
@@ -274,11 +273,28 @@
                     clearFiltersBtn.addEventListener('click', function() {
                         filterForm.querySelectorAll('select').forEach(s => s.value = '');
                         filterForm.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
-                        const today = new Date().toISOString().split('T')[0];
-                        filterForm.querySelectorAll('input[type="date"]').forEach(i => i.value = today);
+                        filterForm.querySelectorAll('input[type="date"]').forEach(i => i.value = '');
                         applyFiltersAjax();
                     });
                 }
+
+                // Toggle Active Filters: close hides alert and shows "Show active filter details"; link shows alert again (event delegation for AJAX)
+                document.addEventListener('click', function(e) {
+                    const summary = document.getElementById('filterSummary');
+                    if (!summary) return;
+                    const alertEl = summary.querySelector('.filter-summary-alert');
+                    const linkEl = summary.querySelector('.show-filter-details-link');
+                    if (!alertEl || !linkEl) return;
+                    if (e.target.closest('.filter-summary-close')) {
+                        e.preventDefault();
+                        alertEl.classList.add('d-none');
+                        linkEl.classList.remove('d-none');
+                    } else if (e.target.closest('.show-filter-details-link')) {
+                        e.preventDefault();
+                        alertEl.classList.remove('d-none');
+                        linkEl.classList.add('d-none');
+                    }
+                });
             });
 
             // Clear all filters (Reset All button) - AJAX
@@ -287,8 +303,7 @@
                 if (!form) return;
                 form.querySelectorAll('select').forEach(select => select.value = '');
                 form.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
-                const today = new Date().toISOString().split('T')[0];
-                form.querySelectorAll('input[type="date"]').forEach(input => input.value = today);
+                form.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
                 if (typeof window.applyFiltersAjax === 'function') window.applyFiltersAjax();
                 else form.submit();
             }
@@ -313,6 +328,7 @@
             </script>
 
             <hr class="my-3">
+            <div id="memoDisciplineListContainer">
             <div class="table-responsive rounded-3 border">
                     <table class="table align-middle mb-0 text-nowrap">
                     <thead>
@@ -465,6 +481,7 @@
                     {{ $memos->links('vendor.pagination.custom') }}
                 </div>
             </div>
+            </div>
         </div>
     </div>
     <!-- end Zero Configuration -->
@@ -510,10 +527,14 @@
 $(document).ready(function() {
 
     /* ===============================
-       FILTER AUTO SUBMIT
+       FILTER (AJAX - no page refresh)
     =============================== */
     $('#program_name, #status').on('change', function() {
-        $('#filterForm').submit();
+        if (typeof window.applyFiltersAjax === 'function') {
+            window.applyFiltersAjax();
+        } else {
+            $('#filterForm')[0].submit();
+        }
     });
 
     /* ===============================
@@ -558,7 +579,7 @@ $(document).ready(function() {
             }
         });
     });
-    $('.view-conversation').on('click', function() {
+    $(document).on('click', '.view-conversation', function() {
         let memoId = $(this).data('id');
         let type = $(this).data('type');
 
