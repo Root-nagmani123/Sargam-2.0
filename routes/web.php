@@ -590,6 +590,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
             Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
+            Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
             Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
@@ -871,5 +872,82 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
     Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
+<<<<<<< HEAD
+=======
+
+    // Priority Management
+    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
+    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
+    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
+    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
+
+    // Escalation Matrix (3-level hierarchy)
+    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
+    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
+    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+
+    // Estate Management Routes
+    Route::prefix('estate')->name('estate.')->group(function () {
+        // Estate Request for Others
+        Route::get('request-for-others', function () {
+            return view('admin.estate.estate_request_for_others');
+        })->name('request-for-others');
+        
+        Route::get('add-other-estate-request', function () {
+            return view('admin.estate.add_other_estate_request');
+        })->name('add-other-estate-request');
+
+        // Estate Possession
+        Route::get('possession-for-others', function () {
+            return view('admin.estate.estate_possession_for_others');
+        })->name('possession-for-others');
+        
+        Route::get('possession-view', function () {
+            return view('admin.estate.estate_possession_view');
+        })->name('possession-view');
+
+        // Update Meter
+        Route::get('update-meter-reading', function () {
+            return view('admin.estate.update_meter_reading');
+        })->name('update-meter-reading');
+        
+        Route::get('update-meter-reading-of-other', function () {
+            return view('admin.estate.update_meter_reading_of_other');
+        })->name('update-meter-reading-of-other');
+        
+        Route::get('update-meter-no', function () {
+            return view('admin.estate.update_meter_no');
+        })->name('update-meter-no');
+
+        // Return House
+        Route::get('return-house', function () {
+            return view('admin.estate.return_house');
+        })->name('return-house');
+
+        // Define House
+        Route::get('define-house', function () {
+            return view('admin.estate.define_house');
+        })->name('define-house');
+
+        // Estate Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('pending-meter-reading', function () {
+                return view('admin.estate.pending_meter_reading');
+            })->name('pending-meter-reading');
+            
+            Route::get('house-status', function () {
+                return view('admin.estate.house_status');
+            })->name('house-status');
+            
+            Route::get('bill-report-grid', function () {
+                return view('admin.estate.estate_bill_report_grid');
+            })->name('bill-report-grid');
+            
+            Route::get('bill-report-print', function () {
+                return view('admin.estate.estate_bill_report_print');
+            })->name('bill-report-print');
+        });
+    });
+>>>>>>> 4b13ef6a (report section-design patten -page)
 });Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
     ->middleware('auth');

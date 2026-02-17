@@ -280,7 +280,7 @@ class KitchenIssueController extends Controller
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,
                 'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
-                'status' => KitchenIssueMaster::STATUS_APPROVED,
+                'status' => KitchenIssueMaster::STATUS_PENDING, // Unpaid by default; Process Mess Bills "Generate Payment" sets to APPROVED (Paid)
                 'remarks' => $request->remarks,
             ]);
 
