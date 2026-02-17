@@ -5,8 +5,9 @@
     $storeTypes = \App\Models\Mess\Store::storeTypes();
 @endphp
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Store Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createStoreModal">
@@ -22,7 +23,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
+                <table id="storesTable" class="table table-bordered table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
@@ -34,9 +35,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($stores as $store)
+                        @foreach($stores as $store)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $store->id }}</td>
                                 <td>
                                     <div class="fw-semibold">{{ $store->store_name }}</div>
                                     <div class="text-muted small">Code: {{ $store->store_code }}</div>
@@ -66,14 +67,11 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">No stores found.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+        </div>
         </div>
     </div>
 </div>
@@ -178,20 +176,19 @@
     </div>
 </div>
 
+@include('components.mess-master-datatables', ['tableId' => 'storesTable', 'searchPlaceholder' => 'Search stores...', 'orderColumn' => 1, 'actionColumnIndex' => 5, 'infoLabel' => 'stores'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.btn-edit-store').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            var baseUrl = '{{ url("admin/mess/stores") }}';
-            document.getElementById('editStoreForm').action = baseUrl + '/' + id;
-            document.getElementById('edit_store_name').value = this.getAttribute('data-store-name') || '';
-            document.getElementById('edit_store_type').value = this.getAttribute('data-store-type') || 'mess';
-            document.getElementById('edit_location').value = this.getAttribute('data-location') || '';
-            document.getElementById('edit_status').value = this.getAttribute('data-status') || 'active';
-            new bootstrap.Modal(document.getElementById('editStoreModal')).show();
-        });
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-edit-store');
+        if (!btn) return;
+        document.getElementById('editStoreForm').action = '{{ url("admin/mess/stores") }}/' + btn.getAttribute('data-id');
+        document.getElementById('edit_store_name').value = btn.getAttribute('data-store-name') || '';
+        document.getElementById('edit_store_type').value = btn.getAttribute('data-store-type') || 'mess';
+        document.getElementById('edit_location').value = btn.getAttribute('data-location') || '';
+        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+        new bootstrap.Modal(document.getElementById('editStoreModal')).show();
     });
 });
 </script>

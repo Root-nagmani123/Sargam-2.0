@@ -5,8 +5,9 @@
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
 @endphp
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Client Types Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClientTypeModal">
@@ -22,7 +23,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
+                <table id="clientTypesTable" class="table table-bordered table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
@@ -33,9 +34,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($clientTypes as $clientType)
+                        @foreach($clientTypes as $clientType)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $clientType->id }}</td>
                                 <td><div class="fw-semibold">{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</div></td>
                                 <td><div class="fw-semibold">{{ $clientType->client_name }}</div></td>
                                 <td>
@@ -60,14 +61,11 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">No client types found.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+        </div>
         </div>
     </div>
 </div>
@@ -163,22 +161,21 @@
     </div>
 </div>
 
+@include('components.mess-master-datatables', ['tableId' => 'clientTypesTable', 'searchPlaceholder' => 'Search client types...', 'orderColumn' => 1, 'actionColumnIndex' => 4, 'infoLabel' => 'client types'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     @if($errors->isNotEmpty())
     new bootstrap.Modal(document.getElementById('createClientTypeModal')).show();
     @endif
-    document.querySelectorAll('.btn-edit-clienttype').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            var baseUrl = '{{ url("admin/mess/client-types") }}';
-            document.getElementById('editClientTypeForm').action = baseUrl + '/' + id;
-            document.getElementById('edit_client_type').value = this.getAttribute('data-client-type') || '';
-            document.getElementById('edit_client_name').value = this.getAttribute('data-client-name') || '';
-            document.getElementById('edit_status').value = this.getAttribute('data-status') || 'active';
-            new bootstrap.Modal(document.getElementById('editClientTypeModal')).show();
-        });
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-edit-clienttype');
+        if (!btn) return;
+        document.getElementById('editClientTypeForm').action = '{{ url("admin/mess/client-types") }}/' + btn.getAttribute('data-id');
+        document.getElementById('edit_client_type').value = btn.getAttribute('data-client-type') || '';
+        document.getElementById('edit_client_name').value = btn.getAttribute('data-client-name') || '';
+        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+        new bootstrap.Modal(document.getElementById('editClientTypeModal')).show();
     });
 });
 </script>
