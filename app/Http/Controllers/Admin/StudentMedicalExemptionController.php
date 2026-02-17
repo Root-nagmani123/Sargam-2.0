@@ -9,6 +9,8 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
+use Illuminate\Support\Facades\Auth;
+use App\Models\UserCredential;
 use App\Models\EmployeeMaster;
 use App\Models\StudentCourseGroupMap;
 use App\Models\GroupTypeMasterCourseMasterMap;
@@ -21,6 +23,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+
 
 
 class StudentMedicalExemptionController extends Controller
@@ -352,13 +355,14 @@ class StudentMedicalExemptionController extends Controller
         return null;
     }
 
-    public function store(Request $request)
+   public function store(Request $request)
     {
+
 
         $validated = $request->validate([
             'course_master_pk' => 'required|numeric',
             'student_master_pk' => 'required|numeric',
-            'employee_master_pk' => 'required|numeric',
+           // 'employee_master_pk' => 'required|numeric',
             'exemption_category_master_pk' => 'required|numeric',
             'from_date' => 'required|date',
             'to_date' => 'nullable|date|after_or_equal:from_date',
@@ -374,6 +378,33 @@ class StudentMedicalExemptionController extends Controller
 			'Doc_upload.max' => 'Document size must not exceed 3 MB.',
 			]
         );
+
+//dd($validated);
+
+        $user = Auth::user();
+
+        // Get user credential
+        $userCredential = UserCredential::where('pk', $user->pk)
+          ->where('user_category', 'E')
+          ->first();
+
+        if (!$userCredential) {
+            return back()->withErrors(['employee_master_pk' => 'User credential not found']);
+        }
+
+        // Get employee using user_id mapping
+        $employee = EmployeeMaster::where('pk', $userCredential->user_id)->first();
+
+        if (!$employee) {
+            return back()->withErrors(['employee_master_pk' => 'Employee not mapped']);
+        }
+
+
+        $validated['employee_master_pk'] = $employee->pk;
+
+
+        $validated['created_date'] = now();
+        $validated['modified_date'] = now();
 
         // Check for overlapping time ranges for the same student
         $overlapError = $this->checkOverlap(

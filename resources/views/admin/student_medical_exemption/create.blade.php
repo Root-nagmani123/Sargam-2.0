@@ -258,6 +258,47 @@ $(document).ready(function() {
         $('#otCodeField').val(otCode);
     });
 });
+
+// Restore student after validation error
+let oldCourse = "{{ old('course_master_pk') }}";
+let oldStudent = "{{ old('student_master_pk') }}";
+
+if (oldCourse) {
+
+    $('#courseDropdown').val(oldCourse);
+
+    $.ajax({
+        url: '{{ route("student.medical.exemption.getStudentsByCourse") }}',
+        type: 'GET',
+        data: { course_id: oldCourse },
+        success: function(response) {
+
+            var options = '<option value="">Search Student</option>';
+
+            $.each(response.students, function(i, student) {
+
+                let selected = oldStudent == student.pk ? 'selected' : '';
+
+                options += '<option value="' + student.pk + '" data-ot_code="' +
+                    (student.generated_OT_code || '') + '" ' + selected + '>' +
+                    student.display_name + '</option>';
+            });
+
+            $('#studentDropdown').html(options).trigger('change');
+
+            $('#studentDropdown').select2('destroy').select2({
+                placeholder: 'Search Student',
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Restore OT code
+            let otCode = $('#studentDropdown option:selected').data('ot_code') || '';
+            $('#otCodeField').val(otCode);
+        }
+    });
+}
+
 </script>
 
 
@@ -282,11 +323,8 @@ document.getElementById('Doc_upload').addEventListener('change', function () {
         'application/pdf'
     ];
 
-    const maxSize = 3 * 1024 * 1024; // 3MB
-
-    //  File type
-    if (!allowedTypes.includes(file.type)) {
-        fileError.innerHTML = 'Only image files or PDF are allowed.';
+    if (allowedTypes.indexOf(file.type) === -1) {
+        fileError.textContent = 'Only image files (jpg, jpeg, png, webp) or PDF are allowed.';
         this.value = '';
         return;
     }
