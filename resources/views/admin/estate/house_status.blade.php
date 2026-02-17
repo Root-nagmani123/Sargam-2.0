@@ -5,119 +5,36 @@
 @section('setup_content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.reports.pending-meter-reading') }}">Estate Reports</a></li>
-            <li class="breadcrumb-item active" aria-current="page">House Status</li>
-        </ol>
-    </nav>
-
-    <!-- Page Title -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">House Status</h2>
-        <div>
-            <a href="{{ route('admin.estate.reports.pending-meter-reading') }}" class="btn btn-outline-primary me-2">
-                <i class="bi bi-speedometer2 me-2"></i>Pending Meter Reading
-            </a>
-            <a href="{{ route('admin.estate.reports.bill-report-grid') }}" class="btn btn-outline-primary">
-                <i class="bi bi-file-earmark-text me-2"></i>Bill Reports
-            </a>
-        </div>
-    </div>
+<x-breadcrum title="House Status"></x-breadcrum>
 
     <!-- Data Table Card -->
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="houseStatusTable">
-                    <thead class="table-primary">
+                <table class="table text-nowrap" id="houseStatusTable">
+                    <thead>
                         <tr>
                             <th>Types</th>
-                            <th>Grade Pay</th>
-                            <th>House Available</th>
-                            <th>House Und</th>
+<th>Grade Pay</th>
+<th>House Available</th>
+<th>House Under Construction</th>
+<th>Total Projected Availability</th>
+<th>Allotted to LBSNAA Employee</th>
+<th>Other</th>
+<th>Vacant</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Laundromat</td>
-                            <td></td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Office Building</td>
-                            <td></td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Out House</td>
-                            <td></td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Shops</td>
-                            <td></td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Studio Apartment</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Type-I</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Type-II</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Type-III</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Type-IV</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Type-V</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Type-VI</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td>Type-VII</td>
-                            <td>72,12,14,0,09,11,13A</td>
-                            <td>3</td>
-                            <td></td>
-                        </tr>
-                        <tr class="table-secondary fw-bold">
-                            <td>Total</td>
-                            <td></td>
-                            <td>512</td>
-                            <td></td>
-                        </tr>
+                       <tr>
+                        <td>Type-I</td>
+                        <td>72,12,14,0,09,11,13A</td>
+                        <td>3</td>
+                        <td>3</td>
+                        <td>3</td>
+                        <td>3</td>
+                        <td>3</td>
+                        <td>3</td>
+</tr>
                     </tbody>
                 </table>
             </div>
