@@ -885,7 +885,11 @@ $(document).ready(function() {
         let chatOffcanvas = new bootstrap.Offcanvas(document.getElementById('chatOffcanvas'));
         chatOffcanvas.show();
     });
-});
+
+    // Reset listener guard when offcanvas fully hides, so next open re-registers cleanly if needed
+    document.getElementById('chatOffcanvas').addEventListener('hidden.bs.offcanvas', function () {
+        document._memoNoticeListenersRegistered = false;
+    });});
 </script>
 @push('scripts')
 <script>

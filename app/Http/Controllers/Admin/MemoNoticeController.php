@@ -58,7 +58,7 @@ class MemoNoticeController extends Controller
             if(!empty($data_course_id)){
                 $courses->whereIn('pk',$data_course_id);
             }
-            $courses->orderBy('course_name')
+            $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
@@ -89,8 +89,8 @@ class MemoNoticeController extends Controller
                     ->orWhere(function ($upcoming) use ($currentDate) {
                         $upcoming->where('start_year', '>', $currentDate);
                     });
-            })
-            ->orderBy('course_name')
+            });
+        $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name', 'start_year', 'end_date']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses'));
@@ -168,8 +168,8 @@ class MemoNoticeController extends Controller
 
                     // **OR upcoming courses**: start_year > today
                     ->orWhere('start_year', '>', $currentDate);
-            })
-            ->orderBy('course_name')
+            });
+        $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_edit', compact('template', 'courses'));

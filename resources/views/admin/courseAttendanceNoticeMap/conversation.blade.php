@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Notice Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', ($type == 'memo' ? 'Memo Conversation' : 'Notice Conversation') . ' - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Notice Conversation" />
+    <x-breadcrum title="{{ $type == 'memo' ? 'Memo Conversation' : 'Notice Conversation' }}" />
     <x-session_message />
     @if(session('error') == 'document_error')
     <div class="alert alert-danger">
@@ -21,8 +21,8 @@
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
-            <p class="mb-1">SHOW CAUSE NOTICE</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }} </p>
+            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
+            <p><strong>Date:</strong> {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
             <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
                 from
@@ -43,7 +43,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
+                            <td>{{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}</td>
                             <td>1</td>
                             <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
                             <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
@@ -63,7 +63,7 @@
             </div>
 
             <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: Show Cause Notice for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
+                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}</p>
 
             <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
 

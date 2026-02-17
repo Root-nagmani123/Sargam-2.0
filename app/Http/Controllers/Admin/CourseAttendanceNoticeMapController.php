@@ -153,57 +153,50 @@ class CourseAttendanceNoticeMapController extends Controller
         $memos = $memoQuery->get();
     } else {
         // For Notice or no type filter, process notices normally
-        foreach ($notices as $notice) {
-            if ($notice->status == 2) {
-                // memo exists, try to pull memo data
-                $memoDataQuery = DB::table('student_memo_status')
-                    ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
-                    ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
-                    ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-                    ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
-                    ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
-                    ->where('student_memo_status.student_notice_status_pk', $notice->notice_id);
-                
-                // Apply date range filter for memo data
-                if ($fromDateFilter) {
-                    $memoDataQuery->where('student_memo_status.date', '>=', $fromDateFilter);
-                }
-                if ($toDateFilter) {
-                    $memoDataQuery->where('student_memo_status.date', '<=', $toDateFilter);
-                }
-                
-                $memoData = $memoDataQuery->select(
-                        'student_memo_status.pk as memo_id',
-                        'student_memo_status.pk as memo_notice_id',
-                        'student_memo_status.student_notice_status_pk as notice_id',
-                        'student_memo_status.student_pk',
-                        'student_memo_status.communication_status',
-                        'student_memo_status.course_master_pk',
-                        'student_memo_status.date as date_',
-                        'student_memo_status.conclusion_remark',
-                        DB::raw('NULL as subject_master_pk'),
-                        DB::raw('NULL as subject_topic'),
-                        DB::raw('NULL as venue_id'),
-                        DB::raw('NULL as class_session_master_pk'),
-                        DB::raw('NULL as faculty_master_pk'),
-                        DB::raw('"Memo" as type_notice_memo'),
-                        'student_memo_status.message',
-                        DB::raw('2 as notice_memo'),
-                        'student_memo_status.status',
-                        'sm.display_name as student_name',
-                        'sm.pk as student_id',
-                        't.subject_topic as topic_name',
-                        't.START_DATE as session_date',
-                        'mcm.discussion_name',
-                        'cm.course_name'
-                    )
-                    ->first();
+        // Fix N+1: fetch all memo data for status==2 notices in ONE query
+        $statusTwoNoticeIds = $notices->where('status', 2)->pluck('notice_id')->toArray();
 
-                if ($memoData) {
-                    $memos->push($memoData);
-                } else {
-                    $memos->push($notice);
-                }
+        $memoDataMap = collect();
+        if (!empty($statusTwoNoticeIds)) {
+            $memoDataMap = DB::table('student_memo_status')
+                ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+                ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
+                ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+                ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
+                ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
+                ->whereIn('student_memo_status.student_notice_status_pk', $statusTwoNoticeIds)
+                ->select(
+                    'student_memo_status.pk as memo_id',
+                    'student_memo_status.pk as memo_notice_id',
+                    'student_memo_status.student_notice_status_pk as notice_id',
+                    'student_memo_status.student_pk',
+                    'student_memo_status.communication_status',
+                    'student_memo_status.course_master_pk',
+                    'student_memo_status.date as date_',
+                    'student_memo_status.conclusion_remark',
+                    DB::raw('NULL as subject_master_pk'),
+                    DB::raw('NULL as subject_topic'),
+                    DB::raw('NULL as venue_id'),
+                    DB::raw('NULL as class_session_master_pk'),
+                    DB::raw('NULL as faculty_master_pk'),
+                    DB::raw('"Memo" as type_notice_memo'),
+                    'student_memo_status.message',
+                    DB::raw('2 as notice_memo'),
+                    'student_memo_status.status',
+                    'sm.display_name as student_name',
+                    'sm.pk as student_id',
+                    't.subject_topic as topic_name',
+                    't.START_DATE as session_date',
+                    'mcm.discussion_name',
+                    'cm.course_name'
+                )
+                ->get()
+                ->keyBy('notice_id');
+        }
+
+        foreach ($notices as $notice) {
+            if ($notice->status == 2 && isset($memoDataMap[$notice->notice_id])) {
+                $memos->push($memoDataMap[$notice->notice_id]);
             } else {
                 $memos->push($notice);
             }
@@ -690,6 +683,7 @@ $memo_conclusion_master = collect(); // default empty collection
 
          $template_details = DB::table('student_notice_status as sns')
     ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+    ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
     ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
     ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
     ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
@@ -698,11 +692,12 @@ $memo_conclusion_master = collect(); // default empty collection
     ->select(
         't.course_master_pk',
         't.subject_topic',
-        't.venue_id',
-        't.class_session',
+        'v.venue_name',
+        't.class_session as session_time',
+        'sns.date_ as session_date',
         'sm.display_name',
-        'sm.generated_OT_code'
-        ,'cm.course_name',
+        'sm.generated_OT_code',
+        'cm.course_name',
         'mnt.content',
         'mnt.director_name',
         'mnt.director_designation'
@@ -728,21 +723,23 @@ $memo_conclusion_master = collect(); // default empty collection
             ->get();
             $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
 
-             $template_details = DB::table('student_notice_status as sns')
+             $template_details = DB::table('student_memo_status as sms')
+    ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
     ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-    ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
-    ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
-    ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
-    ->where('sns.pk', $id)
-    ->where('mnt.memo_notice_type', 'Notice')
+    ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+    ->leftJoin('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
+    ->leftJoin('course_master as cm', 'sms.course_master_pk', '=', 'cm.pk')
+    ->leftJoin('memo_notice_templates as mnt', 'sms.course_master_pk', '=', 'mnt.course_master_pk')
+    ->where('sms.pk', $id)
+    ->where('mnt.memo_notice_type', 'Memo')
     ->select(
-        't.course_master_pk',
         't.subject_topic',
-        't.venue_id',
-        't.class_session',
+        'v.venue_name',
+        't.class_session as session_time',
+        'sns.date_ as session_date',
         'sm.display_name',
-        'sm.generated_OT_code'
-        ,'cm.course_name',
+        'sm.generated_OT_code',
+        'cm.course_name',
         'mnt.content',
         'mnt.director_name',
         'mnt.director_designation'
@@ -913,19 +910,27 @@ public function store_memo_notice(Request $request)
     $students = DB::table('course_student_attendance as a')
         ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
         ->whereIn('a.Student_master_pk', $validated['selected_student_list'])
+        ->where('a.timetable_pk', $validated['topic_id'])
         ->select('a.pk as course_attendance_pk', 's.pk as student_pk')
         ->get()
-        ->keyBy('course_attendance_pk'); // So we can access by course attendance PK
+        ->keyBy('student_pk'); // keyBy student_pk to avoid duplicates
 
     $data = [];
     // print_r($students);
     // print_r($validated['selected_student_list']);die;
 
+    // Get already existing notices for these students on same topic to prevent duplicates
+    $existingNotices = DB::table('student_notice_status')
+        ->where('subject_topic', $validated['topic_id'])
+        ->whereIn('student_pk', $students->pluck('student_pk')->toArray())
+        ->pluck('student_pk')
+        ->toArray();
+
     foreach ($students as $studentId) {
-    // $studentId is actually the course_student_attendance.pk
-    // if (isset($students[$studentId])) {
-        // $student = $students[$studentId]; 
-    // print_r($studentId);die;
+    // Skip if notice already exists for this student on this topic
+    if (in_array($studentId->student_pk, $existingNotices)) {
+        continue;
+    }
 
 
             $data[] = [
@@ -945,6 +950,11 @@ public function store_memo_notice(Request $request)
         }
     // }
     // print_r($data);die;
+
+    // If no new notices to create (all duplicates)
+    if (empty($data)) {
+        return redirect()->route('memo.notice.management.index')->with('warning', 'Notice already exists for the selected students on this topic.');
+    }
 
     // ✅ Bulk insert
     $inserted = DB::table('student_notice_status')->insert($data);
@@ -1723,18 +1733,20 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
             ->get();
     }
 
-    // Common mapper
-    $conversations = $conversations->map(function ($item) {
+    // Common mapper - fix N+1 by pre-fetching all users/students in bulk
+    $adminIds    = $conversations->where('role_type', 'f')->pluck('created_by')->unique()->toArray();
+    $studentIds  = $conversations->where('role_type', 's')->pluck('created_by')->unique()->toArray();
+
+    $adminNames   = DB::table('users')->whereIn('id', $adminIds)->pluck('name', 'id');
+    $studentNames = DB::table('student_master')->whereIn('pk', $studentIds)->pluck('display_name', 'pk');
+
+    $conversations = $conversations->map(function ($item) use ($adminNames, $studentNames) {
         if ($item->role_type == 'f') {
-            $user = DB::table('users')->find($item->created_by);
             $item->display_name = 'Admin';
             $item->user_type = 'admin';
-
         } elseif ($item->role_type == 's') {
-            $student = DB::table('student_master')->where('pk', $item->created_by)->first();
-            $item->display_name = $student->display_name ?? 'Student';
+            $item->display_name = $studentNames[$item->created_by] ?? 'Student';
             $item->user_type = 'student';
-
         } else {
             $item->display_name = 'Unknown';
             $item->user_type = 'unknown';
@@ -1910,11 +1922,11 @@ public function getMemoData(Request $request)
     $memoId = $request->memo_notice_id;
 
     $memo = DB::table('student_notice_status')
-        ->join('faculty_master as fm', 'student_notice_status.faculty_master_pk', '=', 'fm.pk')
-        ->join('course_master as cm', 'student_notice_status.course_master_pk', '=', 'cm.pk')
-        ->join('subject_master as subm', 'student_notice_status.subject_master_pk', '=', 'subm.pk')
-        ->join('student_master as sm', 'student_notice_status.student_pk', '=', 'sm.pk')
-        ->join('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')
+        ->leftJoin('faculty_master as fm', 'student_notice_status.faculty_master_pk', '=', 'fm.pk')
+        ->leftJoin('course_master as cm', 'student_notice_status.course_master_pk', '=', 'cm.pk')
+        ->leftJoin('subject_master as subm', 'student_notice_status.subject_master_pk', '=', 'subm.pk')
+        ->leftJoin('student_master as sm', 'student_notice_status.student_pk', '=', 'sm.pk')
+        ->leftJoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')
         ->select(
             'student_notice_status.*',
             'subm.subject_name',
@@ -1936,21 +1948,23 @@ public function getMemoData(Request $request)
         ->where('student_pk', $memo->student_pk)
         ->where('course_master_pk', $memo->course_master_pk)
         ->count();
-        $memo_number = $memo->course_name . ' / ' . ($memoCount + 1) . ' / ' . $memo->generated_OT_code;
+        $memo_number = ($memo->course_name ?? '') . ' / ' . ($memoCount + 1) . ' / ' . ($memo->generated_OT_code ?? '');
 
 
     return response()->json([
-        'course_master_name' => $memo->course_name,
+        'course_master_name' => $memo->course_name ?? '',
         'course_master_pk' => $memo->course_master_pk,
         'student_pk' => $memo->student_pk,
         'student_notice_status_pk' => $memo->pk,
         'date_' => $memo->date_,
-        'subject_master_name' => $memo->subject_name,
+        'subject_master_name' => $memo->subject_name ?? '',
         'subject_master_pk' => $memo->subject_master_pk,
-        'student_name' => $memo->student_name,
-        'subject_topic' => $memo->topic_name,
+        'student_name' => $memo->student_name ?? '',
+        'subject_topic' => $memo->topic_name ?? '',
         'class_session_master_pk' => $memo->class_session_master_pk,
-        'faculty_name' => $memo->faculty_name,
+        'session_name' => $memo->class_session_master_pk,
+        'venue_id' => $memo->venue_id,
+        'faculty_name' => $memo->faculty_name ?? '',
         'memo_date' => $memo->date_,
         'memo_count' => $memoCount,
         'memo_number' => $memo_number

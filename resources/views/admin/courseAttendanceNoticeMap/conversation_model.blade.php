@@ -155,7 +155,7 @@
             @endif
 
             <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
-            <input id="memo_notice_attachment" type="file" name="attachment" hidden>
+            <input id="memo_notice_attachment" type="file" name="document" hidden>
 
             <textarea name="student_decip_incharge_msg"
                       class="chat-input"
@@ -195,30 +195,45 @@
 
 <script>
     (function() {
-        const root = document.currentScript.closest('.chat-wrapper') || document.querySelector('.chat-wrapper');
-        const memoId = root ? root.dataset.memoId : '{{ $id }}';
-        const type = root ? root.dataset.type : '{{ $type }}';
-        const userType = root ? root.dataset.userType : '{{ $user_type }}';
-        const csrfToken = '{{ csrf_token() }}';
+        const root = document.currentScript ? document.currentScript.closest('.chat-wrapper') : null
+                     || document.querySelector('.chat-wrapper');
 
         const chatBody = document.getElementById('chatBody');
-        const reloadTarget = (chatBody && chatBody.querySelector('.chat-body-inner')) || chatBody || (root && root.parentElement) || null;
+        const csrfToken = '{{ csrf_token() }}';
 
-        const scrollToBottom = (el) => {
-            const c = (el || reloadTarget) ? (el || reloadTarget).querySelector('#conversationScroll') : document.querySelector('#conversationScroll');
+        const scrollToBottom = () => {
+            const c = document.querySelector('#conversationScroll');
             if (c) c.scrollTop = c.scrollHeight;
         };
-        if (root) scrollToBottom(root);
+        scrollToBottom();
+
+        // ─── Prevent duplicate listener registration ───────────────────
+        // jQuery re-executes scripts on each $.ajax load; guard against it
+        if (document._memoNoticeListenersRegistered) {
+            return; // listeners already on document, just scrolled above
+        }
+        document._memoNoticeListenersRegistered = true;
+
+        // ─── Send lock ─────────────────────────────────────────────────
+        let isSending = false;
+
+        // ─── Helpers ───────────────────────────────────────────────────
+        function getCurrentWrapper() {
+            return document.querySelector('#chatBody .chat-wrapper');
+        }
 
         function doSend(wrapper) {
-            if (!wrapper) return;
+            if (!wrapper || isSending) return;
             const form = wrapper.querySelector('#memo_notice_conversation');
             if (!form) return;
             const ta = form.querySelector('.chat-input');
             const sendBtn = form.querySelector('.chat-send-btn');
             const fileBtn = form.querySelector('#memo_notice_attachment');
             if (!ta.value.trim() && !(fileBtn && fileBtn.files && fileBtn.files.length)) return;
+
+            isSending = true;
             if (sendBtn) sendBtn.disabled = true;
+
             const fd = new FormData(form);
             fetch(form.action, {
                 method: 'POST',
@@ -238,17 +253,18 @@
                     reloadConversation(true);
                 } else {
                     const msg = (data && data.message) ? data.message : 'Failed to send message.';
-                    if (typeof alert !== 'undefined') alert(msg);
+                    alert(msg);
                 }
             }).catch(() => {
-                if (typeof alert !== 'undefined') alert('Failed to send message.');
+                alert('Failed to send message.');
             }).finally(() => {
+                isSending = false;
                 if (sendBtn) sendBtn.disabled = false;
             });
         }
 
         function showSendSuccess(hadAttachment) {
-            const container = (reloadTarget && reloadTarget.parentElement) || document.getElementById('chatBody');
+            const container = chatBody || document.getElementById('chatBody');
             if (!container) return;
             const msg = hadAttachment ? 'Message and attachment sent.' : 'Message sent.';
             const el = document.createElement('div');
@@ -257,27 +273,36 @@
             el.textContent = msg;
             container.style.position = container.style.position || 'relative';
             container.insertBefore(el, container.firstChild);
-            setTimeout(function() {
-                if (el.parentNode) el.remove();
-            }, 2500);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 2500);
         }
 
         function reloadConversation(flashNew) {
-            if (!reloadTarget) return;
-            const url = '/admin/memo-notice-management/get_conversation_model/' + encodeURIComponent(memoId) + '/' + encodeURIComponent(type) + '/' + encodeURIComponent(userType);
+            // Always read current memoId/type/userType from live DOM, not stale closure
+            const w = getCurrentWrapper();
+            if (!w) return;
+            const memoId   = w.dataset.memoId;
+            const type     = w.dataset.type;
+            const userType = w.dataset.userType;
+            const target   = chatBody || document.getElementById('chatBody');
+            if (!target || !memoId) return;
+
+            const url = '/admin/memo-notice-management/get_conversation_model/'
+                + encodeURIComponent(memoId) + '/' + encodeURIComponent(type) + '/' + encodeURIComponent(userType);
+
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
               .then(r => r.text())
               .then(html => {
-                  reloadTarget.innerHTML = html;
+                  target.innerHTML = html;
                   if (flashNew) {
-                      const last = reloadTarget.querySelector('.chat-bubble:last-child');
+                      const last = target.querySelector('.chat-bubble:last-child');
                       if (last) last.classList.add('flash-new');
                   }
-                  scrollToBottom(reloadTarget);
+                  scrollToBottom();
               })
               .catch(() => {});
         }
 
+        // ─── Event delegation (registered once) ───────────────────────
         document.addEventListener('submit', function(e) {
             if (!e.target.matches('#memo_notice_conversation')) return;
             e.preventDefault();
@@ -301,45 +326,11 @@
             ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
         });
 
-        // Laravel Echo / Pusher real-time polish (if available)
-        try {
-            if (window.Echo) {
-                // Use a generic public channel name pattern; adjust if you already have specific ones
-                const channelName = 'memo.notice.' + memoId;
-                const channel = (window.Echo.private ? window.Echo.private(channelName) : window.Echo.channel(channelName));
+        // Clear send lock when offcanvas closes (safety reset)
+        const offcanvasEl = document.getElementById('chatOffcanvas');
+        if (offcanvasEl) {
+            offcanvasEl.addEventListener('hide.bs.offcanvas', () => { isSending = false; });
+        }
 
-                channel.listen('.MemoNoticeMessageCreated', (e) => {
-                    reloadConversation(true);
-                    setTimeout(() => scrollToBottom(), 150);
-                });
-
-                channel.listen('.MemoNoticeMessageRead', (e) => {
-                    // Update read receipts if message id provided
-                    if (e && e.message_id) {
-                        document.querySelectorAll('[data-message-id="' + e.message_id + '"] .read-receipt .tick')
-                          .forEach(el => { el.className = 'tick tick-double tick-blue'; el.title = 'Seen'; });
-                    } else {
-                        reloadConversation(false);
-                    }
-                });
-            }
-        } catch (err) { /* no-op */ }
-
-        // Custom DOM events as fallback (can be dispatched from elsewhere)
-        window.addEventListener('memo:notice:new', function(ev){
-            if (!ev.detail || String(ev.detail.memoId) !== String(memoId)) return;
-            reloadConversation(true); setTimeout(() => scrollToBottom(), 125);
-        });
-        window.addEventListener('memo:notice:read', function(ev){
-            if (!ev.detail || String(ev.detail.memoId) !== String(memoId)) return;
-            if (ev.detail.messageId) {
-                document.querySelectorAll('[data-message-id="' + ev.detail.messageId + '"] .read-receipt .tick')
-                  .forEach(el => { el.className = 'tick tick-double tick-blue'; el.title = 'Seen'; });
-            }
-        });
-
-        // Ensure scroll to bottom on images/attachments load (first load only)
-        const scrollContainer = (reloadTarget && reloadTarget.querySelector('#conversationScroll')) || document.querySelector('#conversationScroll');
-        if (scrollContainer) scrollContainer.querySelectorAll('img').forEach(img => img.addEventListener('load', () => scrollToBottom()));
     })();
 </script>
