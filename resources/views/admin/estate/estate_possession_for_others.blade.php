@@ -3,375 +3,155 @@
 @section('title', 'Estate Possession for Others - Sargam')
 
 @section('setup_content')
-<div class="container-fluid">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Estate Possession for Others</li>
-        </ol>
-    </nav>
+<div class="container-fluid py-4">
+    <x-breadcrum title="Estate Possession for Others"></x-breadcrum>
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Estate Possession for Others</h2>
-        <div>
-            <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" class="btn btn-link text-decoration-none me-2">Update Reading</a>
-            <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-success btn-sm" title="Add">
-                <i class="bi bi-plus-circle"></i>
-            </a>
-            <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-light btn-sm" title="Edit">
-                <i class="bi bi-pencil"></i>
-            </a>
-            <button class="btn btn-danger btn-sm" title="Delete">
-                <i class="bi bi-x-circle"></i>
-            </button>
+    <!-- Page Card -->
+    <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
+        <div class="card-body p-4 p-lg-5" id="possessionCardBody">
+            <!-- Header -->
+            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 fw-semibold mb-1">Estate Possession for Others</h1>
+                    <p class="text-muted small mb-0">View and manage possession records with add, edit, delete, excel upload, download, and print options.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                    <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 text-decoration-none">
+                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">speed</i>
+                        <span>Update Reading</span>
+                    </a>
+                    <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-success d-inline-flex align-items-center gap-2" title="Add possession">
+                        <i class="material-symbols-rounded" style="font-size: 1.25rem;">add</i>
+                        <span>Add Possession</span>
+                    </a>
+                </div>
+            </div>
+
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
+                    <i class="bi bi-check-circle-fill me-2 flex-shrink-0" aria-hidden="true"></i>
+                    <span class="flex-grow-1">{{ session('success') }}</span>
+                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" aria-hidden="true"></i>
+                    <span class="flex-grow-1">{{ session('error') }}</span>
+                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
+            <!-- Info callout -->
+            <div class="alert alert-info d-flex align-items-start rounded-3 border-0 mb-4 shadow-sm" role="status">
+                <i class="bi bi-info-circle-fill me-2 mt-1 flex-shrink-0" aria-hidden="true"></i>
+                <p class="mb-0 small">This page lists all possession records in the system. Use the actions above to add new records, update meter readings, or manage existing entries via the table (edit, delete, excel upload/download, print).</p>
+            </div>
+
+            <hr class="my-4">
+            <div class="table-responsive overflow-auto estate-possession-table-wrap rounded-3">
+                {!! $dataTable->table(['class' => 'table table-hover align-middle text-nowrap mb-0 w-100', 'style' => 'min-width: 1200px;', 'id' => 'estatePossessionTable', 'aria-describedby' => 'estate-possession-caption']) !!}
+            </div>
+            <div id="estate-possession-caption" class="visually-hidden">Estate Possession for Others list</div>
         </div>
     </div>
 
-    <!-- Info Card -->
-    <div class="alert alert-info mb-4">
-        <p class="mb-0">This page displays all Possession added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
-    </div>
-
-    <!-- Table Controls -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-3">
-                    <label class="form-label">Show</label>
-                    <select class="form-select form-select-sm">
-                        <option value="10" selected>10 entries</option>
-                        <option value="25">25 entries</option>
-                        <option value="50">50 entries</option>
-                        <option value="100">100 entries</option>
-                    </select>
-                </div>
-                <div class="col-md-9 text-end">
-                    <button class="btn btn-outline-secondary btn-sm me-2">Show / hide columns</button>
-                    <button class="btn btn-outline-secondary btn-sm me-2">
-                        <i class="bi bi-grid-3x3-gap"></i>
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm me-2">
-                        <i class="bi bi-printer"></i>
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-search"></i>
-                    </button>
-                </div>
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deletePossessionModal" tabindex="-1" aria-labelledby="deletePossessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-3 shadow border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="deletePossessionModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <label class="form-label">Search with in table:</label>
-                    <input type="text" class="form-control form-control-sm" placeholder="Search...">
-                </div>
+            <div class="modal-body pt-2">
+                <p class="mb-0">Are you sure you want to delete this possession record? This action cannot be undone.</p>
             </div>
-        </div>
-    </div>
-
-    <!-- Data Table Card -->
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover table-striped" id="estatePossessionTable">
-                    <thead class="table-primary">
-                        <tr>
-                            <th>
-                                <input type="checkbox" class="form-check-input" id="select_all">
-                            </th>
-                            <th>S.NO.</th>
-                            <th>REQUEST ID</th>
-                            <th>NAME</th>
-                            <th>SECTION NAME</th>
-                            <th>ESTATE NAME</th>
-                            <th>UNIT TYPE</th>
-                            <th>BUILDING NAME</th>
-                            <th>UNIT SUB TYPE</th>
-                            <th>HOUSE NO.</th>
-                            <th>ALLOTMENT DATE</th>
-                            <th>POSSESSION DATE</th>
-                            <th>LAST MONTH ELECTRIC METER READING</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>1</td>
-                            <td>oth-req-2</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>Behind Karamshilla Building</td>
-                            <td>Residential</td>
-                            <td>Alakhnanda Awas</td>
-                            <td>Type -I</td>
-                            <td>AA-04</td>
-                            <td>2013-10-01</td>
-                            <td>2014-04-30</td>
-                            <td>24050</td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>2</td>
-                            <td>oth-req-5</td>
-                            <td>PRITAM S PAWAR</td>
-                            <td>MEDICAL CENTRE</td>
-                            <td>Above Himachal Avas</td>
-                            <td>Residential</td>
-                            <td>Deodar -II</td>
-                            <td>Type -II</td>
-                            <td>DEO-04</td>
-                            <td>2011-07-15</td>
-                            <td>2014-04-30</td>
-                            <td>7498</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>3</td>
-                            <td>oth-req-2</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>Behind Karamshilla Building</td>
-                            <td>Residential</td>
-                            <td>Alakhnanda Awas</td>
-                            <td>Type -I</td>
-                            <td>AA-04</td>
-                            <td>2013-10-01</td>
-                            <td>2014-04-30</td>
-                            <td>24050</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>4</td>
-                            <td>oth-req-5</td>
-                            <td>PRITAM S PAWAR</td>
-                            <td>MEDICAL CENTRE</td>
-                            <td>Above Himachal Avas</td>
-                            <td>Residential</td>
-                            <td>Deodar -II</td>
-                            <td>Type -II</td>
-                            <td>DEO-04</td>
-                            <td>2011-07-15</td>
-                            <td>2014-04-30</td>
-                            <td>7498</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>5</td>
-                            <td>oth-req-2</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>Behind Karamshilla Building</td>
-                            <td>Residential</td>
-                            <td>Alakhnanda Awas</td>
-                            <td>Type -I</td>
-                            <td>AA-04</td>
-                            <td>2013-10-01</td>
-                            <td>2014-04-30</td>
-                            <td>24050</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>6</td>
-                            <td>oth-req-5</td>
-                            <td>PRITAM S PAWAR</td>
-                            <td>MEDICAL CENTRE</td>
-                            <td>Above Himachal Avas</td>
-                            <td>Residential</td>
-                            <td>Deodar -II</td>
-                            <td>Type -II</td>
-                            <td>DEO-04</td>
-                            <td>2011-07-15</td>
-                            <td>2014-04-30</td>
-                            <td>7498</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>7</td>
-                            <td>oth-req-2</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>Behind Karamshilla Building</td>
-                            <td>Residential</td>
-                            <td>Alakhnanda Awas</td>
-                            <td>Type -I</td>
-                            <td>AA-04</td>
-                            <td>2013-10-01</td>
-                            <td>2014-04-30</td>
-                            <td>24050</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>8</td>
-                            <td>oth-req-5</td>
-                            <td>PRITAM S PAWAR</td>
-                            <td>MEDICAL CENTRE</td>
-                            <td>Above Himachal Avas</td>
-                            <td>Residential</td>
-                            <td>Deodar -II</td>
-                            <td>Type -II</td>
-                            <td>DEO-04</td>
-                            <td>2011-07-15</td>
-                            <td>2014-04-30</td>
-                            <td>7498</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>9</td>
-                            <td>oth-req-2</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>Behind Karamshilla Building</td>
-                            <td>Residential</td>
-                            <td>Alakhnanda Awas</td>
-                            <td>Type -I</td>
-                            <td>AA-04</td>
-                            <td>2013-10-01</td>
-                            <td>2014-04-30</td>
-                            <td>24050</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>10</td>
-                            <td>oth-req-5</td>
-                            <td>PRITAM S PAWAR</td>
-                            <td>MEDICAL CENTRE</td>
-                            <td>Above Himachal Avas</td>
-                            <td>Residential</td>
-                            <td>Deodar -II</td>
-                            <td>Type -II</td>
-                            <td>DEO-04</td>
-                            <td>2011-07-15</td>
-                            <td>2014-04-30</td>
-                            <td>7498</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="form-check-input"></td>
-                            <td>3</td>
-                            <td>oth-req-2</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>AMAR SINGH RANA</td>
-                            <td>Behind Karamshilla Building</td>
-                            <td>Residential</td>
-                            <td>Alakhnanda Awas</td>
-                            <td>Type -I</td>
-                            <td>AA-04</td>
-                            <td>2013-10-01</td>
-                            <td>2014-04-30</td>
-                            <td>24050</td>
-                            <td>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-info" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-sm btn-warning" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary rounded-2" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger rounded-2 d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
             </div>
         </div>
     </div>
 </div>
 @endsection
 
+@push('styles')
+<style>
+    .table-responsive {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    #estatePossessionTable_wrapper .dataTables_scrollBody,
+    #estatePossessionTable_wrapper .dataTables_scroll {
+        max-width: 100%;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    #estatePossessionTable thead th {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    @media (max-width: 991.98px) {        .estate-possession-table-wrap,
+        #estatePossessionTable_wrapper .dataTables_scrollBody {
+            max-height: 60vh;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+    @media (max-width: 575.98px) {
+        .estate-possession-table-wrap,
+        #estatePossessionTable_wrapper .dataTables_scrollBody {
+            max-height: 55vh;
+        }
+    }
+</style>
+@endpush
+
 @push('scripts')
-<script>
-$(document).ready(function() {
-    $('#estatePossessionTable').DataTable({
-        order: [[1, 'asc']],
-        pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-            infoEmpty: "Showing 0 to 0 of 0 entries",
-            infoFiltered: "(filtered from _MAX_ total entries)",
-            paginate: {
-                first: "First",
-                last: "Last",
-                next: "Next",
-                previous: "Previous"
-            }
-        },
-        responsive: true,
-        autoWidth: false,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    {!! $dataTable->scripts() !!}
+    <script>
+    $(document).ready(function() {
+        let deleteUrl = '';
+
+        $(document).on('click', '.btn-delete-possession', function(e) {
+            e.preventDefault();
+            deleteUrl = $(this).data('url');
+            $('#deletePossessionModal').modal('show');
+        });
+
+        $('#confirmDeleteBtn').on('click', function() {
+            if (!deleteUrl) return;
+            $.ajax({
+                url: deleteUrl,
+                type: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                },
+                success: function(response) {
+                    $('#deletePossessionModal').modal('hide');
+                    if (response.success) {
+                        $('#estatePossessionTable').DataTable().ajax.reload(null, false);
+                        const alert = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2 flex-shrink-0" aria-hidden="true"></i><span class="flex-grow-1">' + response.message + '</span><button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert"></button></div>';
+                        $('#possessionCardBody').find('.alert-success').remove();
+                        $('#possessionCardBody').prepend(alert);
+                        setTimeout(function() { $('.alert-success').fadeOut(); }, 3000);
+                    }
+                },
+                error: function(xhr) {
+                    $('#deletePossessionModal').modal('hide');
+                    const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to delete.';
+                    const alert = '<div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" aria-hidden="true"></i><span class="flex-grow-1">' + msg + '</span><button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert"></button></div>';
+                    $('#possessionCardBody').find('.alert-danger').remove();
+                    $('#possessionCardBody').prepend(alert);
+                }
+            });
+            deleteUrl = '';
+        });
     });
 });
 </script>
