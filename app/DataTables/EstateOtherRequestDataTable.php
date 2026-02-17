@@ -29,23 +29,16 @@ class EstateOtherRequestDataTable extends DataTable
                     });
                 }
             }, true)
-            ->orderColumn('DT_RowIndex', 'estate_other_req.pk $1')
             ->addColumn('actions', function ($row) {
                 $viewUrl = route('admin.estate.possession-view', ['requester_id' => $row->pk]);
-                $deleteUrl = route('admin.estate.other-estate-request.destroy', ['id' => $row->pk]);
-                $doj = $row->doj_acad ? $row->doj_acad->format('Y-m-d') : '';
+                $editUrl = route('admin.estate.add-other-estate-request', ['id' => $row->pk]);
 
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="javascript:void(0);" class="text-primary btn-edit-other-request" title="Edit"
-                        data-id="' . (int) $row->pk . '"
-                        data-employee_name="' . e($row->emp_name ?? '') . '"
-                        data-father_name="' . e($row->f_name ?? '') . '"
-                        data-section="' . e($row->section ?? '') . '"
-                        data-doj_academy="' . e($doj) . '">
-                        <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
+                return '<div class="d-inline-flex align-items-center gap-2" role="group">
+                    <a href="' . $viewUrl . '" class="btn btn-sm btn-info" title="View">
+                        <i class="bi bi-eye"></i>
                     </a>
-                    <a href="javascript:void(0);" class="text-primary btn-delete-other-request" data-url="' . e($deleteUrl) . '" data-id="' . $row->pk . '" title="Delete">
-                        <i class="material-symbols-rounded" style="font-size:18px;">delete</i>
+                    <a href="' . $editUrl . '" class="btn btn-sm btn-warning" title="Edit">
+                        <i class="bi bi-pencil"></i>
                     </a>
                 </div>';
             })
@@ -54,14 +47,14 @@ class EstateOtherRequestDataTable extends DataTable
 
     public function query(EstateOtherRequest $model): QueryBuilder
     {
-        return $model->newQuery();
+        return $model->newQuery()->orderBy('pk', 'desc');
     }
 
     public function html(): HtmlBuilder
     {
         return $this->builder()
             ->setTableId('estateRequestTable')
-            ->addTableClass('table text-nowrap w-100')
+            ->addTableClass('table table-bordered table-hover text-nowrap w-100')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
@@ -71,7 +64,7 @@ class EstateOtherRequestDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[0, 'asc']],
+                'order' => [[1, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',
@@ -93,9 +86,9 @@ class EstateOtherRequestDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('80px'),
-            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true),
-            Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('80px'),
+            Column::make('request_no_oth')->title('Request ID')->orderable(true)->searchable(true),
+            Column::make('emp_name')->title('Employee Name')->orderable(true)->searchable(true),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }

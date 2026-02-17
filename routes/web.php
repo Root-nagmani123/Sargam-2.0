@@ -783,58 +783,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::prefix('estate')->name('estate.')->group(function () {
         // Estate Request for Others
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
-
-        // Request For Estate (estate_home_request_details + possession)
-        Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
-        Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
-        Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
-        Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
-        Route::get('request-details/{id}', [EstateController::class, 'requestAndChangeRequestDetails'])->name('request-details');
-        Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
-        Route::post('request-for-estate', [EstateController::class, 'storeRequestForEstate'])->name('request-for-estate.store');
-        Route::delete('request-for-estate/{id}', [EstateController::class, 'destroyRequestForEstate'])->name('request-for-estate.destroy');
-
-        // Estate Approval Setting & Add Approved Request House
-        Route::get('estate-approval-setting', [EstateController::class, 'estateApprovalSetting'])->name('estate-approval-setting');
-        Route::get('add-approved-request-house', [EstateController::class, 'addApprovedRequestHouse'])->name('add-approved-request-house');
-        Route::post('store-approved-request-house', [EstateController::class, 'storeApprovedRequestHouse'])->name('store-approved-request-house');
-        Route::delete('estate-approval-setting/{id}', [EstateController::class, 'destroyEstateApprovalSetting'])->name('estate-approval-setting.destroy');
-
-        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
-        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
-        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
-
-        // Change Requests (HAC Approved) + New requests
-        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
-        Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
-        Route::get('change-request/vacant-houses', [EstateController::class, 'getChangeRequestVacantHouses'])->name('change-request.vacant-houses');
-        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
-        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
-        Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
-        Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
-        Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
-        Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
-        Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
-        Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
-        Route::get('new-request/allot-details/{id}', [EstateController::class, 'getNewRequestAllotDetails'])->name('new-request.allot-details');
-        Route::post('new-request/allot/{id}', [EstateController::class, 'allotNewRequest'])->name('new-request.allot');
         
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
-        // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
-        Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
-        Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
-        Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
+        // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
-        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
-
         Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
-        Route::post('possession-view/store', [EstateController::class, 'storePossession'])->name('possession-view.store');
+        Route::post('possession-view', [EstateController::class, 'storePossession'])->name('possession-view.store');
+        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
         Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
         Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
         Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
+        Route::get('possession/requester-details', [EstateController::class, 'getRequesterDetails'])->name('possession.requester-details');
 
         // Update Meter
         Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
@@ -850,6 +812,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('update-meter-reading-of-other/blocks', [EstateController::class, 'getMeterReadingBlocksOther'])->name('update-meter-reading-of-other.blocks');
         Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
         Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
+        
+        Route::get('update-meter-no', function () {
+            return view('admin.estate.update_meter_no');
+        })->name('update-meter-no');
 
         Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
         Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');

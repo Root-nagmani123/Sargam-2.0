@@ -4,23 +4,76 @@
 
 @section('setup_content')
 <div class="container-fluid">
-<x-breadcrum title="Update Meter Reading of Other"></x-breadcrum>
-<x-session_message />
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.estate.possession-for-others') }}">Estate Possession for Others</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Update Meter Reading of Other</li>
+        </ol>
+    </nav>
 
-    <div class="card">
-        <div class="card-body p-4 p-lg-5">
-<h4 class="h5 mb-4">Please Update Meter Reading</h4>
-<hr class="my-2">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <a href="{{ route('admin.estate.possession-for-others') }}" class="text-decoration-none text-dark">
+                <i class="bi bi-arrow-left me-2"></i>Update Meter Reading of Other
+            </a>
+        </h2>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Please Update Meter Reading</h5>
+        </div>
+        <div class="card-body">
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
             <form id="meterReadingFilterForm">
                 @csrf
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month">
+                        <select class="form-select" id="bill_month" name="bill_month">
+                            <option value="">Select</option>
+                            @foreach($billMonths as $bm)
+                                <option value="{{ $bm->bill_month }}" data-year="{{ $bm->bill_year }}">{{ $bm->bill_month }} {{ $bm->bill_year }}</option>
+                            @endforeach
+                        </select>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Bill Month
                         </small>
                     </div>
+                    <div class="col-md-4">
+                        <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
+                        <select class="form-select" id="unit_name" name="unit_type_id">
+                            <option value="">Select</option>
+                            @foreach($unitTypes as $ut)
+                                <option value="{{ $ut->pk }}" {{ ($ut->unit_type ?? '') == 'Residential' ? 'selected' : '' }}>{{ $ut->unit_type }}</option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Unit
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="unit_sub_type" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="unit_sub_type" name="unit_sub_type">
+                            <option value="">All</option>
+                            @foreach($unitSubTypes ?? [] as $ust)
+                                <option value="{{ $ust->pk }}">{{ $ust->unit_sub_type }}</option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Unit Sub Type
+                        </small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
                     <div class="col-md-4">
                         <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name">
@@ -80,6 +133,15 @@
                 </div>
             </form>
 
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <button type="button" class="btn btn-primary" id="loadMeterReadingsBtn">
+                            <i class="bi bi-search me-2"></i>Load Data
+                        </button>
+                    </div>
+                </div>
+            </form>
+
             <form id="meterReadingSaveForm" method="POST" action="{{ route('admin.estate.update-meter-reading-of-other.store') }}" style="display:none;">
                 @csrf
                 <div class="table-responsive mt-4">
@@ -93,7 +155,6 @@
                                 <th>Meter No.</th>
                                 <th>Last Month Meter Reading</th>
                                 <th>Current Month Reading <span class="text-danger">*</span></th>
-                                <th>Unit</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -101,11 +162,15 @@
                     </table>
                 </div>
 
-                <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-success">
+                <div class="alert alert-danger mb-4">
+                    <small>*Required Fields: All marked fields are mandatory for registration</small>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Save
                     </button>
-                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-outline-primary">Cancel</a>
                 </div>
             </form>
 
@@ -124,24 +189,15 @@ $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.update-meter-reading-of-other.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
     const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
-    const unitTypesByCampus = @json($unitTypesByCampus ?? []);
 
     let dataTable = null;
 
-    function parseBillMonthInput(val) {
-        if (!val || val.length < 7) return { bill_month: null, bill_year: null };
-        const parts = val.split('-');
-        const year = parts[0] ? parseInt(parts[0], 10) : null;
-        const month = parts[1] ? parseInt(parts[1], 10) : null;
-        return { bill_month: (month >= 1 && month <= 12) ? month : null, bill_year: year };
-    }
-
     $('#bill_month').on('change', function() {
-        const val = $(this).val();
-        const { bill_month, bill_year } = parseBillMonthInput(val);
+        const billMonth = $(this).val();
+        const billYear = $(this).find('option:selected').data('year');
         $('#meter_reading_date').html('<option value="">Select</option>');
-        if (!bill_month || !bill_year) return;
-        $.get(meterReadingDatesUrl, { bill_month: bill_month, bill_year: bill_year }, function(res) {
+        if (!billMonth || !billYear) return;
+        $.get(meterReadingDatesUrl, { bill_month: billMonth, bill_year: billYear }, function(res) {
             if (res.status && res.data && res.data.length) {
                 res.data.forEach(function(d) {
                     $('#meter_reading_date').append('<option value="'+d.value+'">'+d.label+'</option>');
@@ -153,18 +209,11 @@ $(document).ready(function() {
 
     $('#estate_name').on('change', function() {
         const campusId = $(this).val();
-        $('#unit_name').html('<option value="">Select</option>');
         $('#building').html('<option value="">All</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
         if (!campusId) return;
-        var unitList = unitTypesByCampus[campusId] || [];
-        unitList.forEach(function(ut) {
-            var sel = (ut.unit_type === 'Residential') ? ' selected' : '';
-            $('#unit_name').append('<option value="'+ut.pk+'"'+sel+'>'+ut.unit_type+'</option>');
-        });
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
-                $('#building').html('<option value="">All</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
@@ -191,8 +240,8 @@ $(document).ready(function() {
             dataTable.destroy();
             dataTable = null;
         }
-        const billMonthVal = $('#bill_month').val();
-        const { bill_month: billMonth, bill_year: billYear } = parseBillMonthInput(billMonthVal);
+        const billMonth = $('#bill_month').val();
+        const billYear = $('#bill_month option:selected').data('year');
         if (!billMonth || !billYear) {
             alert('Please select Bill Month.');
             return;
@@ -221,17 +270,15 @@ $(document).ready(function() {
             const tbody = $('#updateMeterReadingOtherTable tbody');
             tbody.html('');
             res.data.forEach(function(row, idx) {
-                const lastReading = typeof row.last_month_reading === 'number' ? row.last_month_reading : (parseInt(row.last_month_reading, 10) || null);
-                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'">' +
+                const tr = '<tr>' +
                     '<td><input type="checkbox" class="form-check-input row-check"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ (row.meter_no || 'N/A') +'</td>' +
                     '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
-                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '') +'" min="0" placeholder="Enter">' +
+                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ (row.curr_month_reading || '') +'" min="0" placeholder="Enter">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'"></td>' +
-                    '<td class="unit-cell">'+ (row.unit || 'N/A') +'</td>' +
                     '</tr>';
                 tbody.append(tr);
             });
@@ -265,19 +312,6 @@ $(document).ready(function() {
 
     $('#select_all').on('change', function() {
         $('.row-check').prop('checked', $(this).prop('checked'));
-    });
-
-    $(document).on('input change', '.curr-reading', function() {
-        const $row = $(this).closest('tr');
-        const lastVal = $row.data('last-reading');
-        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
-        const currVal = $(this).val();
-        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
-        let unit = 'N/A';
-        if (lastReading !== null && currReading !== null && currReading >= lastReading) {
-            unit = currReading - lastReading;
-        }
-        $row.find('.unit-cell').text(unit);
     });
 
     $('#meterReadingSaveForm').on('submit', function(e) {

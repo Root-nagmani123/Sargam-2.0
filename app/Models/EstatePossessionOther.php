@@ -32,9 +32,6 @@ class EstatePossessionOther extends Model
         'current_meter_reading_date',
         'house_no',
         'return_home_status',
-        'remarks',
-        'upload_document',
-        'noc_document',
     ];
 
     protected $casts = [

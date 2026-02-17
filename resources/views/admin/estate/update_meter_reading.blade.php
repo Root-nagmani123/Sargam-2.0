@@ -39,13 +39,13 @@
                 @csrf
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label for="bill_month" class="form-label">Bill Month (Meter Change Month) <span class="text-danger">*</span></label>
-                        <select class="form-select" id="bill_month" name="bill_month">
-                            <option value="">Select</option>
-                            @foreach($billMonths ?? [] as $bm)
-                                <option value="{{ $bm->bill_month }}" data-year="{{ $bm->bill_year }}">{{ $bm->bill_month }} {{ $bm->bill_year }}</option>
-                            @endforeach
-                        </select>
+                        <label for="meter_change_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="date" class="form-control" id="meter_change_month" name="meter_change_month" value="January 2026" required>
+                            <span class="input-group-text">
+                                <i class="bi bi-calendar"></i>
+                            </span>
+                        </div>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Bill Month
                         </small>
