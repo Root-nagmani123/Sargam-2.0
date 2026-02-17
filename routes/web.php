@@ -893,6 +893,20 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
+        Route::get('change-request-hac-approved', function () {
+            return view('admin.estate.change-request-hac-approved');
+        })->name('change-request-hac-approved');
+
+
+        // Change Requests (HAC Approved)
+        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
+        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
+        
+        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
+        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
+
         // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
@@ -999,6 +1013,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             })->name('bill-report-grid');
             
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
+<<<<<<< HEAD
             Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
             Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
 =======
@@ -1011,6 +1026,12 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 =======
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
 >>>>>>> 0b2bb192 (estate issue on staging)
+=======
+            
+            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
+            Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
+            Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
+>>>>>>> 4140ca09 (estate master and hac)
         });
     });
 });
