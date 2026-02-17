@@ -138,7 +138,7 @@
         @endif
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    @include('components.jquery-3-6')
     <script>
         function validateScore(input) {
             let value = parseInt(input.value);

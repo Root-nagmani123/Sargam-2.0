@@ -150,7 +150,7 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
     $('.view-conversation').on('click', function() {
