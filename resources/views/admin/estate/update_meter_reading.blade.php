@@ -47,6 +47,24 @@
                         </small>
                     </div>
                     <div class="col-md-4">
+                        <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
+                        <select class="form-select" id="estate_name" name="estate_name" required>
+                            <option value="administrative_officer" selected>Administrative Officer</option>
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Estate Name
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
+                        <select class="form-select" id="building" name="building" required>
+                            <option value="bhagirathi_avas" selected>Bhagirathi Avas</option>
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Building
+                        </small>
+                    </div>
+                    <div class="col-md-4">
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_name" required>
                             <option value="residential" selected>Residential</option>
