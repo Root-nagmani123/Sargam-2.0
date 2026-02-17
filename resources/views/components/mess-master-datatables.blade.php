@@ -4,6 +4,7 @@
     $orderColumn = (int) ($orderColumn ?? 1);
     $actionColumnIndex = (int) ($actionColumnIndex ?? -1);
     $infoLabel = $infoLabel ?? 'entries';
+    $searchDelay = (int) ($searchDelay ?? 150);
 @endphp
 @push('scripts')
 <script>
@@ -13,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
             order: [[{{ $orderColumn }}, 'asc']],
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
-            searchDelay: 150,
+            searchDelay: {{ $searchDelay }},
             language: {
                 search: '',
                 searchPlaceholder: '{{ $searchPlaceholder }}',
