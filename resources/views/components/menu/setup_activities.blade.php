@@ -216,7 +216,12 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Others</span>
                                     </a>
                                 </li>
-                              
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-hac-approved') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.change-request-hac-approved') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Change Requests (HAC Approved)</span>
+                                    </a>
+                                </li>
                                 <!-- <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.possession-view') }}">
