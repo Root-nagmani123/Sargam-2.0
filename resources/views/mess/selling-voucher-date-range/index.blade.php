@@ -57,7 +57,7 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
+        <table class="table table-bordered table-hover align-middle" id="sellingVoucherDateRangeTable">
             <thead style="background-color: #af2910;">
                 <tr>
                     <th style="color: #fff; width: 50px;">Serial No.</th>
@@ -77,7 +77,7 @@
                 </tr>
             </thead>
             <tbody>
-                @php $serial = $reports->firstItem() ?: 0; @endphp
+                @php $serial = 1; @endphp
                 @forelse($reports as $report)
                     @forelse($report->items as $item)
                         <tr>
@@ -159,9 +159,14 @@
         </table>
     </div>
 
-    <div class="d-flex justify-content-center mt-3">
-        {{ $reports->links() }}
-    </div>
+    @include('components.mess-master-datatables', [
+        'tableId' => 'sellingVoucherDateRangeTable',
+        'searchPlaceholder' => 'Search selling vouchers...',
+        'ordering' => false,
+        'actionColumnIndex' => 13,
+        'infoLabel' => 'selling vouchers',
+        'searchDelay' => 0
+    ])
 </div>
 
 {{-- Add Report Modal --}}
@@ -326,8 +331,11 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm dr-avail" step="0.01" min="0" value="0" placeholder="0"></td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td>
+                                                <input type="number" name="items[0][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
+                                            </td>
                                             <td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control form-control-sm dr-issue-date" value="{{ date('Y-m-d') }}"></td>
                                             <td><input type="number" name="items[0][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>
@@ -360,6 +368,7 @@
 #viewReportModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #viewReportModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
 #viewReportModal .modal-header { background: #f8f9fa !important; color: #212529 !important; }
+#viewReportModal .modal-header * { color: #212529 !important; }
 #viewReportModal .modal-title { color: #212529 !important; }
 #viewReportModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); background: #fff; color: #212529 !important; }
 #viewReportModal .modal-body *, #viewReportModal .modal-body p, #viewReportModal .modal-body span { color: inherit; }
@@ -369,6 +378,8 @@
 #viewReportModal .card-body { background: #fff !important; color: #212529 !important; }
 #viewReportModal .card-body table th { color: #495057 !important; font-weight: 600; }
 #viewReportModal .card-body table td { color: #212529 !important; }
+#viewReportModal .card-body .table-borderless th { background: transparent !important; }
+#viewReportModal .card-body .table-borderless td { background: transparent !important; }
 #viewReportModal #viewReportItemsCard .table thead th { color: #fff !important; background: #af2910 !important; border-color: #af2910; }
 #viewReportModal #viewReportItemsCard .table tbody td { color: #212529 !important; background: #fff !important; }
 #viewReportModal #viewReportGrandTotal { color: #212529 !important; }
@@ -661,10 +672,40 @@
     let itemSubcategories = @json($itemSubcategories);
     let filteredItems = itemSubcategories;
     const baseUrl = "{{ url('admin/mess/selling-voucher-date-range') }}";
+    // Match Selling Voucher behavior: only "Other" can choose Cash/Online (and Credit if enabled),
+    // Employee/OT/Course should be Credit-only in the UI.
+    const creditOnly = ['employee', 'ot', 'course'];
     let addRowIndex = 1;
     let editRowIndex = 0;
     let currentStoreId = null;
     let editCurrentStoreId = null;
+
+    function enforceQtyWithinAvailable(row, availSelector, qtySelector) {
+        if (!row) return;
+        const availEl = row.querySelector(availSelector);
+        const qtyEl = row.querySelector(qtySelector);
+        if (!availEl || !qtyEl) return;
+
+        const avail = parseFloat(availEl.value) || 0;
+        const qtyRaw = qtyEl.value;
+        const qty = parseFloat(qtyRaw);
+
+        qtyEl.max = String(avail);
+
+        if (qtyRaw === '' || Number.isNaN(qty)) {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+            return;
+        }
+
+        if (qty > avail) {
+            qtyEl.setCustomValidity('Issue Qty cannot exceed Available Qty.');
+            qtyEl.classList.add('is-invalid');
+        } else {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+        }
+    }
 
     function fetchStoreItems(storeId, callback) {
         if (!storeId) {
@@ -721,8 +762,8 @@
         return '<tr class="dr-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm dr-avail" step="0.01" min="0" value="0" placeholder="0"></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>' +
             '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control form-control-sm dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
@@ -740,6 +781,8 @@
         if (unitInp) unitInp.value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
+        if (availInp) availInp.readOnly = true;
+        enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
     }
 
     function updateAddRowLeft(row) {
@@ -755,6 +798,7 @@
         const totalInp = row.querySelector('.dr-total');
         if (totalInp) totalInp.value = (qty * rate).toFixed(2);
         updateAddRowLeft(row);
+        enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
     }
 
     function updateAddGrandTotal() {
@@ -812,7 +856,7 @@
     document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
         row.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(row); });
         row.querySelector('.dr-avail').addEventListener('input', function() { updateAddRowLeft(row); });
-        row.querySelector('.dr-qty').addEventListener('input', function() { updateAddRowTotal(row); updateAddGrandTotal(); });
+        row.querySelector('.dr-qty').addEventListener('input', function() { enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty'); updateAddRowTotal(row); updateAddGrandTotal(); });
         row.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(row); updateAddGrandTotal(); });
     });
 
@@ -882,6 +926,22 @@
     }
     document.querySelectorAll('#addReportModal .dr-client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
+            // Payment Type: enforce Credit-only for Employee/OT/Course; allow selection for Other
+            const paymentSelect = document.querySelector('#addReportModal select[name="payment_type"]');
+            const hint = document.getElementById('drPaymentTypeHint');
+            if (paymentSelect) {
+                if (creditOnly.indexOf((this.value || '').toLowerCase()) !== -1) {
+                    paymentSelect.value = '1';
+                    paymentSelect.querySelectorAll('option').forEach(function(opt) {
+                        opt.disabled = (opt.value !== '' && opt.value !== '1');
+                    });
+                    if (hint) hint.textContent = 'Credit only for this client type';
+                } else {
+                    paymentSelect.querySelectorAll('option').forEach(function(opt) { opt.disabled = false; });
+                    if (hint) hint.textContent = 'Cash / Online / Credit';
+                }
+            }
+
             const isOt = (this.value || '').toLowerCase() === 'ot';
             const isCourse = (this.value || '').toLowerCase() === 'course';
             const clientSelect = document.getElementById('drClientNameSelect');
@@ -1140,8 +1200,8 @@
         return '<tr class="edit-dr-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail" step="0.01" min="0" value="' + avail + '"></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm edit-dr-left bg-light" readonly value="' + left + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
             '<td><input type="text" class="form-control form-control-sm edit-dr-total bg-light" readonly value="' + total + '"></td>' +
@@ -1162,6 +1222,7 @@
         const totalInp = row.querySelector('.edit-dr-total');
         if (totalInp) totalInp.value = (qty * rate).toFixed(2);
         updateEditRowLeft(row);
+        enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
     }
 
     function updateEditGrandTotal() {
@@ -1185,7 +1246,7 @@
         const opt = sel && sel.options[sel.selectedIndex];
         newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
         newTr.querySelector('.edit-dr-avail').addEventListener('input', function() { updateEditRowLeft(newTr); });
-        newTr.querySelector('.edit-dr-qty').addEventListener('input', function() { updateEditRowTotal(newTr); updateEditGrandTotal(); });
+        newTr.querySelector('.edit-dr-qty').addEventListener('input', function() { enforceQtyWithinAvailable(newTr, '.edit-dr-avail', '.edit-dr-qty'); updateEditRowTotal(newTr); updateEditGrandTotal(); });
         newTr.querySelector('.edit-dr-rate').addEventListener('input', function() { updateEditRowTotal(newTr); updateEditGrandTotal(); });
         newTr.querySelector('.edit-dr-item-select').addEventListener('change', function() {
             const o = this.options[this.selectedIndex];
@@ -1262,6 +1323,7 @@
                 .then(r => r.json())
                 .then(function(data) {
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                    const issueDate = data.issue_date || '';
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -1271,10 +1333,11 @@
                         const unit = (item.unit || '—').replace(/</g, '&lt;');
                         const retQty = item.return_quantity != null ? item.return_quantity : 0;
                         const retDate = item.return_date || '';
+                        const issuedQty = parseFloat(qty) || 0;
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
-                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm" step="0.01" min="0" value="' + retQty + '"></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm" value="' + retDate + '"></td></tr>');
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();
@@ -1282,6 +1345,69 @@
                 .catch(err => { console.error(err); alert('Failed to load return data.'); });
         });
     });
+
+    function enforceReturnQtyWithinIssued(inputEl) {
+        if (!inputEl) return;
+        const issued = parseFloat(inputEl.dataset.issued) || 0;
+        const raw = inputEl.value;
+        const val = parseFloat(raw);
+        inputEl.max = String(issued);
+        if (raw === '' || Number.isNaN(val)) {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+            return;
+        }
+        if (val > issued) {
+            inputEl.setCustomValidity('Return Qty cannot exceed Issued Qty.');
+            inputEl.classList.add('is-invalid');
+        } else {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+        }
+    }
+
+    function enforceReturnDateNotBeforeIssue(inputEl) {
+        if (!inputEl) return;
+        const issue = inputEl.dataset.issueDate || '';
+        const raw = inputEl.value;
+        if (!issue || !raw) {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+            return;
+        }
+        if (raw < issue) {
+            inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
+            inputEl.classList.add('is-invalid');
+        } else {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+        }
+    }
+
+    const returnItemModalBody = document.getElementById('returnItemModalBody');
+    if (returnItemModalBody) {
+        returnItemModalBody.addEventListener('input', function(e) {
+            if (e.target && e.target.classList.contains('dr-return-qty')) {
+                enforceReturnQtyWithinIssued(e.target);
+            }
+            if (e.target && e.target.classList.contains('dr-return-date')) {
+                enforceReturnDateNotBeforeIssue(e.target);
+            }
+        });
+    }
+
+    const returnItemForm = document.getElementById('returnItemForm');
+    if (returnItemForm) {
+        returnItemForm.addEventListener('submit', function(e) {
+            this.querySelectorAll('.dr-return-qty').forEach(enforceReturnQtyWithinIssued);
+            this.querySelectorAll('.dr-return-date').forEach(enforceReturnDateNotBeforeIssue);
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+            }
+        }, true);
+    }
 
     // Edit report
     document.querySelectorAll('.btn-edit-report').forEach(function(btn) {
@@ -1399,6 +1525,17 @@
     // Prevent double submit on Add form (stops double entry on Save Selling Voucher)
     var addReportFormEl = document.getElementById('addReportForm');
     if (addReportFormEl) {
+        addReportFormEl.addEventListener('submit', function(e) {
+            document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
+                enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
+            });
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+        }, true);
         addReportFormEl.addEventListener('submit', function() {
             var btn = this.querySelector('button[type="submit"]');
             if (btn && !btn.disabled) {
@@ -1411,6 +1548,17 @@
     // Prevent double submit on Edit form
     var editReportFormEl = document.getElementById('editReportForm');
     if (editReportFormEl) {
+        editReportFormEl.addEventListener('submit', function(e) {
+            document.querySelectorAll('#editModalItemsBody .edit-dr-item-row').forEach(function(row) {
+                enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
+            });
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+        }, true);
         editReportFormEl.addEventListener('submit', function() {
             var btn = this.querySelector('button[type="submit"]');
             if (btn && !btn.disabled) {
