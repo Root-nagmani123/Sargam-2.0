@@ -166,6 +166,9 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    @if($errors->isNotEmpty())
+    new bootstrap.Modal(document.getElementById('createClientTypeModal')).show();
+    @endif
     document.querySelectorAll('.btn-edit-clienttype').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var id = this.getAttribute('data-id');
