@@ -50,6 +50,11 @@
     .chat-send-btn[disabled]{opacity:.6;cursor:not-allowed}
     .chat-attach-btn{cursor:pointer;font-size:1.1rem;color:#6c757d;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px}
     .chat-attach-btn:hover{background:#e2e8f0}
+    .chat-selected-file{display:flex;align-items:center;gap:.35rem;padding:.25rem .5rem;margin-top:.35rem;font-size:.75rem;color:#334155;background:#e2e8f0;border-radius:8px;max-width:100%}
+    .chat-selected-file.d-none{display:none!important}
+    .chat-selected-file-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .chat-selected-file-remove{cursor:pointer;color:#64748b;padding:0 .2rem;line-height:1;border:none;background:transparent;font-size:1rem}
+    .chat-selected-file-remove:hover{color:#dc2626}
     .flash-new{animation:flashFade .8s ease}
     @keyframes flashFade{from{background:rgba(255,255,0,.25)}to{background:transparent}}
     .text-muted-2{color:#94a3b8}
@@ -157,11 +162,17 @@
             <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
             <input id="memo_notice_attachment" type="file" name="document" accept=".jpg,.jpeg,.png,.pdf" hidden>
 
+           
+
             <textarea name="student_decip_incharge_msg"
                       class="chat-input"
                       rows="1"
                       placeholder="Type your message..."
                       required></textarea>
+                       <div id="memo_notice_selected_file" class="chat-selected-file d-none" aria-live="polite" role="status">
+                <span class="chat-selected-file-name"></span>
+                <button type="button" class="chat-selected-file-remove" title="Remove file" aria-label="Remove selected file">&times;</button>
+            </div>
 
             <button type="button" class="chat-send-btn" aria-label="Send">
                 <span class="visually-hidden">Send</span>➤
@@ -234,6 +245,7 @@
                     const hadAttachment = !!(fileBtn && fileBtn.files && fileBtn.files.length);
                     if (ta) { ta.value = ''; ta.style.height = 'auto'; }
                     if (fileBtn) fileBtn.value = '';
+                    if (typeof updateSelectedFileDisplay === 'function') updateSelectedFileDisplay(form);
                     showSendSuccess(hadAttachment);
                     reloadConversation(true);
                 } else {
@@ -299,6 +311,40 @@
             const ta = e.target;
             ta.style.height = 'auto';
             ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+        });
+
+        // Show selected file name in chat composer
+        function updateSelectedFileDisplay(form) {
+            if (!form) return;
+            const fileInput = form.querySelector('#memo_notice_attachment');
+            const fileDisplay = form.querySelector('#memo_notice_selected_file');
+            const fileNameEl = form.querySelector('.chat-selected-file-name');
+            if (!fileDisplay || !fileNameEl) return;
+            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+            if (hasFile) {
+                const name = fileInput.files[0].name;
+                fileNameEl.textContent = name;
+                fileDisplay.classList.remove('d-none');
+            } else {
+                fileNameEl.textContent = '';
+                fileDisplay.classList.add('d-none');
+            }
+        }
+
+        document.addEventListener('change', function(e) {
+            if (e.target.id !== 'memo_notice_attachment') return;
+            const form = e.target.closest('form');
+            updateSelectedFileDisplay(form);
+        });
+        document.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('.chat-selected-file-remove');
+            if (!removeBtn) return;
+            e.preventDefault();
+            const form = removeBtn.closest('form');
+            if (!form) return;
+            const fileInput = form.querySelector('#memo_notice_attachment');
+            if (fileInput) fileInput.value = '';
+            updateSelectedFileDisplay(form);
         });
 
         // Laravel Echo / Pusher real-time polish (if available)
