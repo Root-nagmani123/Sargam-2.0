@@ -159,7 +159,9 @@
                     @endforelse
                 @empty
                     <tr>
-                        <td colspan="13" class="text-center py-4">No selling vouchers found.</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td class="text-center py-4">No selling vouchers found.</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td>
                     </tr>
                 @endforelse
             </tbody>

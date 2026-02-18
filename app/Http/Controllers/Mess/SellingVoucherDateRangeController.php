@@ -581,11 +581,15 @@ class SellingVoucherDateRangeController extends Controller
             // Sub-store: get items from store allocations
             $subStoreId = (int) str_replace('sub_', '', $storeIdentifier);
             
-            // Get items with their allocated quantities
+            // Get items with their allocated quantities and store-specific rate (weighted avg unit_price)
             $allocatedItems = DB::table('mess_store_allocation_items as sai')
                 ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
                 ->where('sa.sub_store_id', $subStoreId)
-                ->select('sai.item_subcategory_id', DB::raw('SUM(sai.quantity) as total_quantity'))
+                ->select(
+                    'sai.item_subcategory_id',
+                    DB::raw('SUM(sai.quantity) as total_quantity'),
+                    DB::raw('SUM(sai.quantity * sai.unit_price) / NULLIF(SUM(sai.quantity), 0) as avg_unit_price')
+                )
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -597,11 +601,12 @@ class SellingVoucherDateRangeController extends Controller
                     ->get()
                     ->map(function ($s) use ($allocatedItems) {
                         $allocated = $allocatedItems->get($s->id);
+                        $storeRate = $allocated && isset($allocated->avg_unit_price) ? (float) $allocated->avg_unit_price : null;
                         return [
                             'id' => $s->id,
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
-                            'standard_cost' => $s->standard_cost ?? 0,
+                            'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
                             'available_quantity' => $allocated ? (float) $allocated->total_quantity : 0,
                         ];
                     });
@@ -610,12 +615,16 @@ class SellingVoucherDateRangeController extends Controller
             // Main store: get items from purchase orders
             $storeId = (int) $storeIdentifier;
             
-            // Get items with their purchased quantities
+            // Get items with their purchased quantities and store-specific rate (weighted avg unit_price from POs)
             $purchasedItems = DB::table('mess_purchase_order_items as poi')
                 ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
                 ->where('po.store_id', $storeId)
                 ->where('po.status', 'approved')
-                ->select('poi.item_subcategory_id', DB::raw('SUM(poi.quantity) as total_quantity'))
+                ->select(
+                    'poi.item_subcategory_id',
+                    DB::raw('SUM(poi.quantity) as total_quantity'),
+                    DB::raw('SUM(poi.quantity * poi.unit_price) / NULLIF(SUM(poi.quantity), 0) as avg_unit_price')
+                )
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
@@ -627,11 +636,12 @@ class SellingVoucherDateRangeController extends Controller
                     ->get()
                     ->map(function ($s) use ($purchasedItems) {
                         $purchased = $purchasedItems->get($s->id);
+                        $storeRate = $purchased && isset($purchased->avg_unit_price) ? (float) $purchased->avg_unit_price : null;
                         return [
                             'id' => $s->id,
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
-                            'standard_cost' => $s->standard_cost ?? 0,
+                            'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
                             'available_quantity' => $purchased ? (float) $purchased->total_quantity : 0,
                         ];
                     });
