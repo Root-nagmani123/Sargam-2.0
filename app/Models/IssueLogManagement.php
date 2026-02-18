@@ -51,14 +51,11 @@ class IssueLogManagement extends Model
         'device_id',
         'updated_by',
         'updated_date',
-        'clear_date',
-        'clear_time',
     ];
 
     protected $casts = [
         'created_date' => 'datetime',
         'updated_date' => 'datetime',
-        'clear_date' => 'datetime',
         'issue_status' => 'integer',
         'behalf' => 'integer',
         'notification_status' => 'integer',

@@ -155,11 +155,14 @@ class IssueManagementController extends Controller
             'raised_by' => $request->get('raised_by'),
         ];
         $export = new IssueManagementExport($filters);
-        $issues = $export->collection();
+        $collection = $export->collection();
+        $header = $collection->first();
+        $rows = $collection->slice(1)->values();
         $filterLabels = $this->getExportFilterLabels($filters);
 
         $data = [
-            'issues' => $issues,
+            'header' => $header,
+            'rows' => $rows,
             'filters' => $filterLabels,
             'export_date' => now()->format('d-M-Y H:i'),
         ];
@@ -1156,7 +1159,8 @@ class IssueManagementController extends Controller
             $assignedTo = null;
             $assignedToContact = null;
 
-            $allowAssignmentChange = !$isAssigned || $isNodalOfficer;
+            // Re-assign not allowed for closed (Completed) issues
+            $allowAssignmentChange = (!$isAssigned || $isNodalOfficer) && !$isCompleted;
 
             if (!$allowAssignmentChange) {
                 $assignedTo = $issue->assigned_to;
@@ -1166,9 +1170,25 @@ class IssueManagementController extends Controller
                 $assignedToContact = $issue->assigned_to_contact;
             } elseif ($request->filled('assign_to_type')) {
                 if ($request->assign_to_type === 'other') {
+                    $request->merge([
+                        'other_phone' => preg_replace('/\D/', '', (string) $request->other_phone),
+                    ]);
                     $request->validate([
                         'other_name' => 'required|string|max:255',
-                        'other_phone' => 'required|string|max:10',
+                        'other_phone' => [
+                            'required',
+                            'string',
+                            'size:10',
+                            'regex:/^[0-9]{10}$/',
+                            function ($attribute, $value, $fail) {
+                                if ($value !== '' && $value[0] === '6') {
+                                    $fail('Mobile number cannot start with 6.');
+                                }
+                            },
+                        ],
+                    ], [
+                        'other_phone.regex' => 'The phone number must be exactly 10 digits (numbers only).',
+                        'other_phone.size' => 'The phone number must be exactly 10 digits.',
                     ]);
                     $assignedTo = $request->other_name;
                     $assignedToContact = $request->other_phone;
@@ -1193,7 +1213,7 @@ class IssueManagementController extends Controller
                 $updateData['assigned_to'] = $assignedTo;
                 $updateData['assigned_to_contact'] = $assignedToContact;
             }
-            
+
             $issue->update($updateData);
 
             // Create status history record
