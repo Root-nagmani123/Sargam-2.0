@@ -121,9 +121,13 @@
                                     <td>
                                         @if($issue->assigned_to)
                                             @php
-                                                $assignedEmployee = \DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+                                                if (is_numeric($issue->assigned_to)) {
+                                                    $assignedEmployee = \DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+                                                    echo $assignedEmployee ? trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) : 'N/A';
+                                                } else {
+                                                    echo e($issue->assigned_to);
+                                                }
                                             @endphp
-                                            {{ $assignedEmployee ? trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) : 'N/A' }}
                                         @else
                                             Not Assigned
                                         @endif
@@ -332,6 +336,8 @@
                     @php
                         $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
                         $isAssigned = !empty($issue->assigned_to);
+                        $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
+                        $canReassign = $isNodalOfficer; // Nodal can change assignee even after first assignment
                         $canOnlyReopen = $isComplainant && $isCompleted;
                     @endphp
 
@@ -342,11 +348,17 @@
                     </div>
                     <input type="hidden" name="issue_status" value="6">
                     @else
-                    <!-- Assignment Status Notice -->
-                    @if($isAssigned)
+                    <!-- Assignment Locked: only for non-nodal (assigned person) -->
+                    @if($isAssigned && !$canReassign)
                     <div class="alert alert-info mb-3">
                         <i class="bi bi-info-circle"></i>
                         <strong>Assignment Locked:</strong> This issue has been assigned. You can only update the status and remarks.
+                    </div>
+                    @endif
+                    @if($isAssigned && $canReassign)
+                    <div class="alert alert-secondary mb-3">
+                        <i class="bi bi-person-gear"></i>
+                        <strong>Re-assign:</strong> As nodal officer, you can change the assigned person below if needed.
                     </div>
                     @endif
 
@@ -366,9 +378,9 @@
                         </select>
                     </div>
 
-                    <!-- Assignment Section - Disabled if already assigned -->
-                    @if($isAssigned)
-                    <!-- Show current assignment as read-only -->
+                    <!-- Assignment: read-only when assigned and user is not nodal; else show dropdown (first assign or re-assign by nodal) -->
+                    @if($isAssigned && !$canReassign)
+                    <!-- Show current assignment as read-only (assigned person cannot change) -->
                     <div class="mb-3">
                         <label for="current_assignment" class="form-label">Currently Assigned To</label>
                         <input type="text" class="form-control" id="current_assignment" readonly style="background-color: #e9ecef;">
@@ -376,17 +388,18 @@
                         <input type="hidden" name="assigned_to_contact" id="assigned_to_contact_hidden">
                     </div>
                     @else
-                    <!-- Show assignment options if not yet assigned -->
+                    <!-- Assign / Re-assign dropdown (required when not assigned; optional when nodal re-assigning) -->
                     <div class="mb-3">
-                        <label for="assign_to_type" class="form-label">Assign To <span class="text-danger">*</span></label>
-                        <select name="assign_to_type" id="assign_to_type" class="form-select" required>
-                            <option value="">-- Select --</option>
+                        <label for="assign_to_type" class="form-label">Assign To @if(!$isAssigned)<span class="text-danger">*</span>@endif</label>
+                        <select name="assign_to_type" id="assign_to_type" class="form-select" @if(!$isAssigned) required @endif>
+                            <option value="">-- Select @if($isAssigned)(keep current)@else--@endif</option>
                             <option value="other">Other Employee</option>
                             @if(isset($employees) && count($employees) > 0)
                                 @foreach($employees as $employee)
                                     <option value="{{ $employee->employee_pk }}" 
                                         data-name="{{ $employee->employee_name }}"
-                                        data-mobile="{{ $employee->mobile ?? '' }}">
+                                        data-mobile="{{ $employee->mobile ?? '' }}"
+                                        @if($isAssigned && (string)$issue->assigned_to === (string)$employee->employee_pk) selected @endif>
                                         {{ $employee->employee_name }}
                                     </option>
                                 @endforeach
@@ -396,25 +409,22 @@
                         </select>
                     </div>
 
-                    <!-- Phone Number Display Field -->
                     <div class="mb-3" id="phoneNumberSection" style="display: none;">
                         <label for="display_phone" class="form-label">Phone Number</label>
                         <input type="text" class="form-control" id="display_phone" readonly style="background-color: #e9ecef;">
                     </div>
 
-                    <!-- Hidden fields for actual submission -->
                     <input type="hidden" name="assigned_to" id="assigned_to_hidden">
                     <input type="hidden" name="assigned_to_contact" id="assigned_to_contact_hidden">
 
-                    <!-- Other Option Fields -->
                     <div id="otherFieldsSection" style="display: none;">
                         <div class="mb-3">
                             <label for="other_name" class="form-label">Member Name <span class="text-danger">*</span></label>
-                            <input type="text" name="other_name" class="form-control" id="other_name" placeholder="Enter member name">
+                            <input type="text" name="other_name" class="form-control" id="other_name" placeholder="Enter member name" value="{{ $isAssigned && !is_numeric($issue->assigned_to) ? $issue->assigned_to : '' }}">
                         </div>
                         <div class="mb-3">
                             <label for="other_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                            <input type="text" name="other_phone" class="form-control" id="other_phone" placeholder="Enter phone number" maxlength="10">
+                            <input type="text" name="other_phone" class="form-control" id="other_phone" placeholder="Enter phone number" maxlength="10" value="{{ $isAssigned && !is_numeric($issue->assigned_to) ? ($issue->assigned_to_contact ?? '') : '' }}">
                         </div>
                     </div>
                     @endif
@@ -439,26 +449,37 @@
 <script>
 $(document).ready(function() {
     @if($issue->assigned_to)
-    // Pre-fill current assignment if already assigned
-    var currentAssignment = '{{ $issue->assigned_to }}';
+    var currentAssignment = '{{ $issue->assigned_to ?? "" }}';
     var currentContact = '{{ $issue->assigned_to_contact ?? "" }}';
-    
-    // Set hidden fields
     $('#assigned_to_hidden').val(currentAssignment);
     $('#assigned_to_contact_hidden').val(currentContact);
-    
-    // Display current assignment in read-only field
     @php
-        $assignedEmployee = DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
-        $assignmentText = $assignedEmployee ? 
-            trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) . 
-            ' (' . ($issue->assigned_to_contact ?? 'N/A') . ')' : 
-            'Unknown (' . ($issue->assigned_to_contact ?? 'N/A') . ')';
+        if (is_numeric($issue->assigned_to)) {
+            $assignedEmployee = DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+            $assignmentText = $assignedEmployee
+                ? trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) . ' (' . ($issue->assigned_to_contact ?? 'N/A') . ')'
+                : 'Unknown (' . ($issue->assigned_to_contact ?? 'N/A') . ')';
+        } else {
+            $assignmentText = $issue->assigned_to . ' (' . ($issue->assigned_to_contact ?? 'N/A') . ')';
+        }
     @endphp
-    $('#current_assignment').val('{{ $assignmentText }}');
+    $('#current_assignment').val({!! json_encode($assignmentText) !!});
     @endif
 
-    // Handle assign_to_type change (only if not already assigned)
+    @if($canReassign && $isAssigned)
+    @if(is_numeric($issue->assigned_to))
+    $('#assigned_to_hidden').val('{{ $issue->assigned_to }}');
+    $('#assigned_to_contact_hidden').val('{{ $issue->assigned_to_contact ?? "" }}');
+    $('#display_phone').val('{{ $issue->assigned_to_contact ?? "N/A" }}');
+    $('#phoneNumberSection').show();
+    @else
+    $('#assign_to_type').val('other');
+    $('#otherFieldsSection').show();
+    $('#phoneNumberSection').hide();
+    @endif
+    @endif
+
+    // Handle assign_to_type change
     $('#assign_to_type').change(function() {
         var selectedValue = $(this).val();
         
@@ -500,26 +521,20 @@ $(document).ready(function() {
         }
     });
 
-    // Before form submission, if "other" is selected, populate hidden fields
+    // Before form submit: when "other" selected, validate and set hidden; when empty and re-assign, keep current (controller will keep existing)
     $('#updateStatusModal form').submit(function(e) {
-        @if(!$issue->assigned_to)
         var assignToType = $('#assign_to_type').val();
-        
         if (assignToType === 'other') {
             var otherName = $('#other_name').val().trim();
             var otherPhone = $('#other_phone').val().trim();
-            
             if (otherName === '' || otherPhone === '') {
                 e.preventDefault();
                 alert('Please enter both member name and phone number.');
                 return false;
             }
-            
-            // Set hidden fields with other values
-            $('#assigned_to_hidden').val(otherName);
+            $('#assigned_to_hidden').val('');
             $('#assigned_to_contact_hidden').val(otherPhone);
         }
-        @endif
     });
 });
 </script>
