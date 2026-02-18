@@ -31,28 +31,29 @@ class StreamDataTable extends DataTable
             ->addColumn('status', function ($row) {
                 return '<div class="form-check form-switch d-inline-block">
                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                        data-table="stream_master" data-column="status" data-id="' . $row->pk . '" ' . ($row->status == 1 ? 'checked' : '') . '>
+                        data-table="stream_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
                 </div>';
             })
             ->addColumn('actions', function ($row) {
                 $updateUrl = route('stream.update', $row->pk);
                 $deleteUrl = route('stream.destroy', $row->pk);
                 $csrf = csrf_token();
-                $isActive = $row->status == 1;
+                $isActive = $row->active_inactive  == 1;
 
-                $deleteButton = $isActive
-                    ? '<a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" disabled aria-disabled="true" title="Cannot delete active stream">
-                        <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                    </a>'
-                    : '<form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this stream?\');">
-                        <input type="hidden" name="_token" value="' . $csrf . '">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" aria-label="Delete stream">
-                            <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                        </a>
-                    </form>';
+              $deleteButton = $isActive
+    ? '<span class="material-symbols-rounded fs-6 text-muted" title="Deactivate first">delete</span>'
+    : '
+    <a href="javascript:void(0)"
+        class="delete-stream text-primary"
+        data-url="'.$deleteUrl.'"
+        data-token="'.$csrf.'"
+        title="Delete Stream">
 
-                return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Stream actions">
+        <span class="material-symbols-rounded fs-6">delete</span>
+    </a>
+    ';
+
+             return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Stream actions">
                     <a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary open-stream-modal" role="button"
                         data-id="' . e($row->pk) . '" data-name="' . e($row->stream_name) . '" data-url="' . e($updateUrl) . '" aria-label="Edit stream">
                         <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
@@ -76,8 +77,18 @@ class StreamDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'responsive' => false,
+                'responsive' => true,
                 'autoWidth' => false,
+				 'columnDefs' => [
+                [
+                    'responsivePriority' => 1,
+                    'targets' => -1,     // Actions ALWAYS visible
+                ],
+                [
+                    'responsivePriority' => 2,
+                    'targets' => 2,      // Status second priority
+                ],
+				],
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
