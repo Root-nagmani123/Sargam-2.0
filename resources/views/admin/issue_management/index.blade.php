@@ -2,6 +2,89 @@
 
 @section('title', 'All Issues - Sargam | Lal Bahadur')
 
+<<<<<<< HEAD
+=======
+@section('css')
+<style>
+    .issue-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075), 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+    .issue-card .card-header {
+        background: linear-gradient(135deg, #004a93 0%, #f25d33 100%);
+        color: #fff;
+        border: none;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+    }
+    .issue-table {
+        table-layout: fixed;
+        width: 100%;
+        --bs-table-hover-bg: rgba(0, 74, 147, 0.04);
+        --bs-table-hover-color: inherit;
+    }
+    .issue-table thead th {
+        width: 1%;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #495057;
+        border-bottom-width: 2px;
+        white-space: nowrap;
+    }
+    .issue-table tbody td {
+        vertical-align: middle;
+    }
+    .badge-pill {
+        padding: 0.35em 0.65em;
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    .btn-action {
+        width: 2.25rem;
+        height: 2.25rem;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+    }
+    .filter-card {
+        background: #f8fafc;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .nav-tabs-issue .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0.6rem 1rem;
+        border-radius: 0.5rem;
+        transition: color 0.2s, background 0.2s;
+    }
+    .nav-tabs-issue .nav-link:hover {
+        color: #004a93;
+        background: rgba(175, 41, 16, 0.06);
+    }
+    .nav-tabs-issue .nav-link.active {
+        color: #004a93;
+        background: rgba(175, 41, 16, 0.1);
+    }
+    @media (max-width: 768px) {
+        .issue-table thead th { font-size: 0.75rem; }
+    }
+</style>
+@endsection
+
+>>>>>>> 1a2c46f4 (estate datatable)
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="All Issues" />
@@ -94,6 +177,7 @@
                 </form>
 
                 <!-- Issues DataTable -->
+<<<<<<< HEAD
               <!-- Issues Table -->
               <div class="table-responsive">
                     <table class="table mb-0">
@@ -160,21 +244,21 @@
                             @endforelse
                         </tbody>
                     </table>
+=======
+                <div class="table-responsive">
+                    {!! $dataTable->table() !!}
+>>>>>>> 1a2c46f4 (estate datatable)
                 </div>
-
-                <!-- Pagination -->
-                @if($issues->hasPages())
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3 border-top bg-light">
-                    <small class="text-body-secondary">
-                        Showing {{ $issues->firstItem() ?? 0 }} - {{ $issues->lastItem() ?? 0 }} of {{ $issues->total() }}
-                    </small>
-                    <nav aria-label="Issue pagination">
-                        {{ $issues->withQueryString()->links() }}
-                    </nav>
-                </div>
-                @endif
             </div>
         </div>
     </div>
 </div>
+<<<<<<< HEAD
 @endsection
+=======
+@endsection
+
+@push('scripts')
+    {!! $dataTable->scripts() !!}
+@endpush
+>>>>>>> 1a2c46f4 (estate datatable)
