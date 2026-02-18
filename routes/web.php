@@ -237,19 +237,12 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
-    //Route::post('admin/toggle-status', [StreamController::class, 'toggleStatus'])
-   // ->name('admin.toggleStatus');
-   Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
+     Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
     ->name('admin.stream.toggleStatus');
-
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
-
     Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
-
-
-
 
     // curriculum route
     Route::prefix('curriculum')->name('curriculum.')->group(function () {

@@ -20,60 +20,35 @@ class StreamController extends Controller
 
 
     public function store(Request $request)
-{
-    $data = $request->input('stream_name');
-
-    // Force array always
-    $streams = is_array($data) ? $data : [$data];
-
-    $request->validate([
-        'stream_name.*' => 'required|string|max:100',
-    ]);
-
-    foreach ($streams as $name) {
-        Stream::create([
-            'stream_name' => trim($name),
-            'active_inactive' => 1,
-        ]);
-    }
-
-    return redirect()->route('stream.index')->with('success', 'Streams added successfully!');
-}
-
-
-    public function store_17022026(Request $request)
     {
-            $request->validate([
-            'stream_name' => 'required|array|min:1',
+        $data = $request->input('stream_name');
+
+        // Force array always
+        $streams = is_array($data) ? $data : [$data];
+
+        $request->validate([
             'stream_name.*' => 'required|string|max:100',
-            ], [
-                'stream_name.required' => 'At least one stream is required.',
-                'stream_name.*.required' => 'The stream name field is required.',
-                'stream_name.*.max' => 'Stream name may not be greater than 100 characters.',
-            ]);
+        ]);
 
-        foreach ($request->stream_name as $name) {
-
-            if(trim($name) == '') continue;
-
+        foreach ($streams as $name) {
             Stream::create([
-                'stream_name' => $name,
+                'stream_name' => trim($name),
                 'active_inactive' => 1,
             ]);
         }
 
-
-    return redirect()->route('stream.index')->with('success', 'Streams added successfully!');
+        return redirect()->route('stream.index')->with('success', 'Streams added successfully!');
     }
+
 
     public function edit($id)
-    {
+        {
         $stream = Stream::findOrFail($id);
         return view('admin.stream.edit', compact('stream'));
-    }
+        }
 
     public function update(Request $request, $id)
-    {
+        {
         $request->validate([
             'stream_name' => 'required|string|max:100',
         ]);
@@ -83,15 +58,15 @@ class StreamController extends Controller
         $stream->save();
 
         return redirect()->route('stream.index')->with('success', 'Stream updated successfully.');
-    }
+        }
 
     public function toggleStatus(Request $request)
-    {
-    $stream = Stream::where('pk', $request->id)->first();
+        {
+         $stream = Stream::where('pk', $request->id)->first();
 
-    if (!$stream) {
-        return response()->json(['success' => false]);
-    }
+         if (!$stream) {
+         return response()->json(['success' => false]);
+     }
 
     $stream->active_inactive = $stream->active_inactive == 1 ? 0 : 1;
     $stream->save();
