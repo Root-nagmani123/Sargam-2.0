@@ -22,7 +22,6 @@ class SellingVoucherDateRangeReport extends Model
         'remarks',
         'client_type_slug',
         'client_type_pk',
-        'course_master_pk',
         'client_name',
         'payment_type',
         'issue_date',
@@ -67,6 +66,25 @@ class SellingVoucherDateRangeReport extends Model
     public function clientTypeCategory()
     {
         return $this->belongsTo(ClientType::class, 'client_type_pk', 'id');
+    }
+
+    /**
+     * When client_type_slug is 'ot' or 'course', client_type_pk stores course_master.pk.
+     */
+    public function course()
+    {
+        return $this->belongsTo(\App\Models\CourseMaster::class, 'client_type_pk', 'pk');
+    }
+
+    /**
+     * Display name for Client Name column: course name for OT/Course, else client type category name.
+     */
+    public function getDisplayClientNameAttribute()
+    {
+        if (in_array($this->client_type_slug, ['ot', 'course']) && $this->client_type_pk) {
+            return $this->course?->course_name ?? '—';
+        }
+        return $this->clientTypeCategory?->client_name ?? '—';
     }
 
     public function items()
