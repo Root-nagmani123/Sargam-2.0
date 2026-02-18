@@ -37,6 +37,7 @@ class SecurityParmIdApply extends Model
         'id_card_forward_status',
         'id_card_reapply',
         'id_photo_path',
+        'joining_letter_path',
         'employee_dob',
         'mobile_no',
         'blood_group',

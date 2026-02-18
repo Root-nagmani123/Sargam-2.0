@@ -7,7 +7,9 @@ use App\Exports\FamilyIDCardExport;
 use App\Models\SecurityFamilyIdApply;
 use App\Support\IdCardSecurityMapper;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -16,18 +18,78 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class FamilyIDCardRequestController extends Controller
 {
-    public function index()
+    /**
+     * Group rows by (emp_id_apply, created_by, created_date) and return paginated group list.
+     */
+    private function groupedFamilyRequests(int $idStatus, int $perPage, string $pageName = 'page'): LengthAwarePaginator
     {
-        $base = SecurityFamilyIdApply::orderBy('created_date', 'desc');
-        $activeRequests = (clone $base)->where('id_status', 1)->paginate(200);
-        $archivedRequests = (clone $base)->whereIn('id_status', [2, 3])->paginate(200, ['*'], 'archive_page');
+        $query = SecurityFamilyIdApply::query();
+        if ($idStatus === 1) {
+            $query->where('id_status', 1);
+        } else {
+            $query->whereIn('id_status', [2, 3]);
+        }
+        $all = $query->orderBy('created_date', 'desc')->get();
+        $groupKey = function ($r) {
+            $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
+            return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
+        };
+        $groups = $all->groupBy($groupKey);
+        $groupList = $groups->map(function ($rows) {
+            $first = $rows->sortBy('fml_id_apply')->first();
+            return (object) [
+                'first_id' => $first->fml_id_apply,
+                'created_at' => $first->created_date,
+                'employee_id' => $first->emp_id_apply,
+                'employee_name' => $first->emp_id_apply,
+                'designation' => '--',
+                'section' => '--',
+                'member_count' => $rows->count(),
+                'card_type' => 'Family Card',
+            ];
+        })->values();
+        $page = request()->get($pageName, 1);
+        $slice = $groupList->forPage($page, $perPage);
+        return new LengthAwarePaginator(
+            $slice->values(),
+            $groupList->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'pageName' => $pageName]
+        );
+    }
 
-        $activeRequests->getCollection()->transform(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
-        $archivedRequests->getCollection()->transform(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
+    public function index(Request $request)
+    {
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 10;
+        $activeRequests = $this->groupedFamilyRequests(1, $perPage, 'page');
+        $activeRequests->withQueryString();
+        $archivedRequests = $this->groupedFamilyRequests(0, $perPage, 'archive_page');
+        $archivedRequests->withQueryString();
 
         return view('admin.family_idcard.index', [
             'activeRequests' => $activeRequests,
             'archivedRequests' => $archivedRequests,
+        ]);
+    }
+
+    /**
+     * List of family members for one request (same emp_id_apply + created_by + created_date).
+     */
+    public function members($id)
+    {
+        $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        $members = SecurityFamilyIdApply::where('emp_id_apply', $row->emp_id_apply)
+            ->where('created_by', $row->created_by)
+            ->where('created_date', $row->created_date)
+            ->orderBy('fml_id_apply')
+            ->get();
+        $memberDtos = $members->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
+        return view('admin.family_idcard.members', [
+            'parentId' => $row->emp_id_apply,
+            'requestDate' => $row->created_date,
+            'members' => $memberDtos,
         ]);
     }
 
@@ -141,6 +203,7 @@ class FamilyIDCardRequestController extends Controller
         $row->card_valid_to = $validated['valid_to'] ?? null;
         $row->employee_dob = $validated['dob'] ?? null;
         $row->remarks = $validated['remarks'] ?? null;
+        $row->id_card_no = $validated['family_member_id'] ?? null;
         if ($request->hasFile('family_photo')) {
             $row->family_photo = $request->file('family_photo')->store('family_idcard/photos', 'public');
             $row->id_photo_path = $row->family_photo;
@@ -169,6 +232,35 @@ class FamilyIDCardRequestController extends Controller
     {
         return redirect()->route('admin.family_idcard.index')
             ->with('info', 'Security table does not use soft delete.');
+    }
+
+    /**
+     * Submit duplicate ID card request for a family member (modal form).
+     */
+    public function duplicateRequest(Request $request, $id)
+    {
+        $request->validate([
+            'duplicate_reason' => 'required|string|in:Card Lost,Card Damage,Card Extended',
+            'from_date' => 'nullable|date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
+            'dup_doc' => 'nullable|file|mimes:pdf,jpeg,png,jpg|max:5120',
+        ]);
+
+        $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        $row->dup_reason = $request->input('duplicate_reason');
+        if ($request->input('from_date')) {
+            $row->card_valid_from = $request->input('from_date');
+        }
+        if ($request->input('to_date')) {
+            $row->card_valid_to = $request->input('to_date');
+        }
+        if ($request->hasFile('dup_doc')) {
+            $row->dup_doc = $request->file('dup_doc')->store('family_idcard/dup_docs', 'public');
+        }
+        $row->save();
+
+        $membersUrl = route('admin.family_idcard.members', $id);
+        return redirect($membersUrl)->with('success', 'Duplicate ID card request submitted successfully.');
     }
 
     public function export(Request $request)

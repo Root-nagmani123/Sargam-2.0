@@ -31,88 +31,83 @@
                 <h6 class="idcard-form-title mb-4">Please add the Request For Employee ID Card</h6>
 
                 @php
-                    $oldCardType = old('card_type', 'LBSNAA');
-                    $oldSubType = old('sub_type', 'Gazetted A Staff');
-                    $oldRequestFor = old('request_for', 'Own ID Card');
-                    $oldName = old('name', 'Sargam Admin');
-                    $oldDesignation = old('designation', 'Administrative Officer');
-                    $oldDob = old('date_of_birth', '1983-10-18');
-                    $oldAcademy = old('academy_joining', '2013-09-05');
-                    $oldIdValid = old('id_card_valid_upto', '01/01/2027');
-                    $oldMobile = old('mobile_number', '9356753250');
+                    $cardTypes = $cardTypes ?? [];
+                    $oldCardType = old('card_type', '');
+                    $oldSubType = old('sub_type', '');
+                    $oldRequestFor = old('request_for', '');
+                    $oldName = old('name', '');
+                    $oldDesignation = old('designation', '');
+                    $oldDob = old('date_of_birth', '');
+                    $oldAcademy = old('academy_joining', '');
+                    $oldIdValid = old('id_card_valid_upto', '');
+                    $oldMobile = old('mobile_number', '');
                     $oldBlood = old('blood_group', '');
                 @endphp
+                <input type="hidden" name="employee_master_pk" id="employee_master_pk_input" value="{{ old('employee_master_pk') }}">
 
                 <!-- ========== PERMANENT EMPLOYEE VIEW ========== -->
                 <div id="permanent-view" class="idcard-view-fields">
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label for="card_type_perm" class="form-label">Card Type <span class="text-danger">*</span></label>
-                            <select name="card_type" id="card_type_perm" class="form-select idcard-perm-field" data-field="card_type" required>
+                            <select name="card_type" id="card_type_perm" class="form-select idcard-perm-field idcard-step-field" data-field="card_type" required>
                                 <option value="">Select Card Type</option>
-                                <option value="LBSNAA" {{ $oldCardType == 'LBSNAA' ? 'selected' : '' }}>LBSNAA</option>
-                                <option value="Visitor" {{ $oldCardType == 'Visitor' ? 'selected' : '' }}>Visitor</option>
-                                <option value="Contractor" {{ $oldCardType == 'Contractor' ? 'selected' : '' }}>Contractor</option>
+                                @foreach($cardTypes as $ct)
+                                    <option value="{{ $ct }}" {{ $oldCardType == $ct ? 'selected' : '' }}>{{ $ct }}</option>
+                                @endforeach
                             </select>
                             @error('card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
                             <label for="sub_type_perm" class="form-label">Sub Type <span class="text-danger">*</span></label>
-                            <select name="sub_type" id="sub_type_perm" class="form-select idcard-perm-field" data-field="sub_type" required>
+                            <select name="sub_type" id="sub_type_perm" class="form-select idcard-perm-field idcard-step-field" data-field="sub_type" required>
                                 <option value="">Select Sub Type</option>
-                                <option value="Gazetted A Staff" {{ $oldSubType == 'Gazetted A Staff' ? 'selected' : '' }}>Gazetted-A Staff</option>
-                                <option value="Non-Gazetted" {{ $oldSubType == 'Non-Gazetted' ? 'selected' : '' }}>Non-Gazetted</option>
-                                <option value="Support Staff" {{ $oldSubType == 'Support Staff' ? 'selected' : '' }}>Support Staff</option>
                             </select>
                             @error('sub_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
                             <label for="request_for_perm" class="form-label">Request For <span class="text-danger">*</span></label>
-                            <select name="request_for" id="request_for_perm" class="form-select idcard-perm-field" data-field="request_for" required>
+                            <select name="request_for" id="request_for_perm" class="form-select idcard-perm-field idcard-step-field" data-field="request_for" required>
                                 <option value="">Select Request</option>
                                 <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
-                                <option value="Family ID Card" {{ $oldRequestFor == 'Family ID Card' ? 'selected' : '' }}>Family ID Card</option>
-                                <option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
-                                <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
-                                <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option>
                             </select>
                             @error('request_for')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-12 duplication-extension-field" id="duplicationExtensionPerm" style="{{ in_array($oldRequestFor, ['Replacement', 'Duplication', 'Extension']) ? '' : 'display:none;' }}">
-                            <button type="button" class="btn btn-outline-warning btn-sm" id="openDuplicationModalPerm" data-bs-toggle="modal" data-bs-target="#duplicationExtensionModal">
-                                <i class="material-icons material-symbols-rounded align-middle" style="font-size:18px;">edit_note</i>
-                                Fill Duplication / Extension Details
-                            </button>
-                            <span class="ms-2 small text-muted" id="duplicationSummaryPerm"></span>
+                        <div class="col-12 duplication-extension-field" id="duplicationExtensionPerm" style="display:none;">
                         </div>
                         <div class="col-md-6">
                             <label for="name_perm" class="form-label">Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="name_perm" class="form-control idcard-perm-field" data-field="name" value="{{ $oldName }}" required>
+                            <input type="text" name="name" id="name_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="name" value="{{ $oldName }}" required>
                             @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="designation_perm" class="form-label">Designation</label>
-                            <input type="text" name="designation" id="designation_perm" class="form-control idcard-perm-field" data-field="designation" value="{{ $oldDesignation }}">
+                            <input type="text" name="designation" id="designation_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="designation" value="{{ $oldDesignation }}">
                             @error('designation')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
+                            <label for="father_name_perm" class="form-label">Father Name</label>
+                            <input type="text" name="father_name" id="father_name_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="father_name" value="{{ old('father_name', '') }}">
+                            @error('father_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
                             <label for="date_of_birth_perm" class="form-label">Date of Birth</label>
-                            <input type="date" name="date_of_birth" id="date_of_birth_perm" class="form-control idcard-perm-field" data-field="date_of_birth" value="{{ $oldDob }}">
+                            <input type="date" name="date_of_birth" id="date_of_birth_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="date_of_birth" value="{{ $oldDob }}">
                             @error('date_of_birth')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="academy_joining_perm" class="form-label">Academy Joining</label>
-                            <input type="date" name="academy_joining" id="academy_joining_perm" class="form-control idcard-perm-field" data-field="academy_joining" value="{{ $oldAcademy }}">
+                            <input type="date" name="academy_joining" id="academy_joining_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="academy_joining" value="{{ $oldAcademy }}">
                             @error('academy_joining')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="mobile_number_perm" class="form-label">Mobile Number</label>
-                            <input type="tel" name="mobile_number" id="mobile_number_perm" class="form-control idcard-perm-field" data-field="mobile_number" value="{{ $oldMobile }}" placeholder="10 digit mobile number">
+                            <input type="tel" name="mobile_number" id="mobile_number_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="mobile_number" value="{{ $oldMobile }}" placeholder="10 digit mobile number">
                             @error('mobile_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="telephone_number_perm" class="form-label">Telephone Number</label>
-                            <input type="tel" name="telephone_number" id="telephone_number_perm" class="form-control idcard-perm-field" data-field="telephone_number" value="{{ old('telephone_number', '9356753250') }}">
+                            <input type="tel" name="telephone_number" id="telephone_number_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="telephone_number" value="{{ old('telephone_number', '') }}">
                             @error('telephone_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
@@ -133,12 +128,12 @@
                         </div>
                         <div class="col-6">
                             <label for="id_card_valid_upto_perm" class="form-label">ID Card Valid Upto</label>
-                            <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
+                            <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
                             @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-6">
                             <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
-                            <div class="idcard-upload-zone position-relative" id="photoUploadAreaPerm">
+                            <label for="photo_perm" class="idcard-upload-zone position-relative d-block cursor-pointer mb-0" id="photoUploadAreaPerm" style="cursor:pointer;">
                                 <input type="file" name="photo" id="photo_perm" class="d-none idcard-perm-field" data-field="photo" accept="image/*" required>
                                 <div class="idcard-upload-placeholder" id="photoPlaceholderPerm">
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
@@ -146,15 +141,15 @@
                                 </div>
                                 <div class="idcard-upload-preview d-none" id="photoPreviewPerm">
                                     <img src="" alt="Preview" class="idcard-preview-img" id="photoPreviewImgPerm">
-                                    <button type="button" class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="photoRemovePerm" aria-label="Remove photo">&times;</button>
+                                    <span class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="photoRemovePerm" aria-label="Remove photo" role="button" tabindex="0">&times;</span>
                                 </div>
-                            </div>
+                            </label>
                             <small class="text-muted">Photo should be in JPG/PNG format and should be less than 2MB</small>
                             @error('photo')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-6">
                             <label class="form-label">Upload Joining Letter <span class="text-danger">*</span></label>
-                            <div class="idcard-upload-zone position-relative" id="joiningLetterUploadAreaPerm">
+                            <label for="joining_letter_perm" class="idcard-upload-zone position-relative d-block cursor-pointer mb-0" id="joiningLetterUploadAreaPerm" style="cursor:pointer;">
                                 <input type="file" name="joining_letter" id="joining_letter_perm" class="d-none idcard-perm-field" data-field="joining_letter" accept=".pdf,.doc,.docx">
                                 <div class="idcard-upload-placeholder" id="joiningLetterPlaceholderPerm">
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
@@ -167,10 +162,10 @@
                                         <button type="button" class="btn btn-sm btn-outline-primary" id="joiningLetterPreviewBtnPerm" aria-label="Preview joining letter">
                                             <i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">visibility</i> Preview
                                         </button>
-                                        <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="joiningLetterRemovePerm" aria-label="Remove joining letter">&times;</button>
+                                        <span class="idcard-preview-remove btn btn-sm btn-danger" id="joiningLetterRemovePerm" aria-label="Remove joining letter" role="button" tabindex="0">&times;</span>
                                     </div>
                                 </div>
-                            </div>
+                            </label>
                             @error('joining_letter')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -181,97 +176,88 @@
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label for="card_type_cont" class="form-label">Card Type <span class="text-danger">*</span></label>
-                            <select name="card_type" id="card_type_cont" class="form-select idcard-cont-field" required disabled>
+                            <select name="card_type" id="card_type_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
                                 <option value="">Select Card Type</option>
-                                <option value="LBSNAA" {{ $oldCardType == 'LBSNAA' ? 'selected' : '' }}>LBSNAA</option>
-                                <option value="Visitor" {{ $oldCardType == 'Visitor' ? 'selected' : '' }}>Visitor</option>
-                                <option value="Contractor" {{ $oldCardType == 'Contractor' ? 'selected' : '' }}>Contractor</option>
+                                @foreach($cardTypes as $ct)
+                                    <option value="{{ $ct }}" {{ $oldCardType == $ct ? 'selected' : '' }}>{{ $ct }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label for="sub_type_cont" class="form-label">Sub Type <span class="text-danger">*</span></label>
-                            <select name="sub_type" id="sub_type_cont" class="form-select idcard-cont-field" required disabled>
+                            <select name="sub_type" id="sub_type_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
                                 <option value="">Select Sub Type</option>
-                                <option value="Gazetted A Staff" {{ $oldSubType == 'Gazetted A Staff' ? 'selected' : '' }}>Gazetted-A Staff</option>
-                                <option value="Non-Gazetted" {{ $oldSubType == 'Non-Gazetted' ? 'selected' : '' }}>Non-Gazetted</option>
-                                <option value="Support Staff" {{ $oldSubType == 'Support Staff' ? 'selected' : '' }}>Support Staff</option>
                             </select>
                         </div>
                         <div class="col-md-4">
                             <label for="request_for_cont" class="form-label">Request For <span class="text-danger">*</span></label>
-                            <select name="request_for" id="request_for_cont" class="form-select idcard-cont-field" required disabled>
-                                <option value="">Select Request</option>
-                                <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
-                                <option value="Family ID Card" {{ $oldRequestFor == 'Family ID Card' ? 'selected' : '' }}>Family ID Card</option>
-                                <option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
-                                <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
-                                <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option>
+                            <select name="request_for" id="request_for_cont" class="form-select idcard-cont-field idcard-step-field" required disabled>
+                                <option value="">---Select---</option>
+                                <option value="Others ID Card" {{ $oldRequestFor == 'Others ID Card' ? 'selected' : '' }}>Others ID Card</option>
                             </select>
                         </div>
-                        <div class="col-12 duplication-extension-field" id="duplicationExtensionCont" style="{{ in_array($oldRequestFor, ['Replacement', 'Duplication', 'Extension']) ? '' : 'display:none;' }}">
-                            <button type="button" class="btn btn-outline-warning btn-sm idcard-cont-field" id="openDuplicationModalCont" data-bs-toggle="modal" data-bs-target="#duplicationExtensionModal" disabled>
-                                <i class="material-icons material-symbols-rounded align-middle" style="font-size:18px;">edit_note</i>
-                                Fill Duplication / Extension Details
-                            </button>
-                            <span class="ms-2 small text-muted" id="duplicationSummaryCont"></span>
+                        <div class="col-12 duplication-extension-field" id="duplicationExtensionCont" style="display:none;">
                         </div>
+                        <!-- Contractual: Left col = Name, DOB, Academy Joining, Mobile, Section | Right col = Designation, Father Name, ID Card Valid upto, Vender/Org, Approval Authority -->
                         <div class="col-md-6">
                             <label for="name_cont" class="form-label">Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="name_cont" class="form-control idcard-cont-field" value="{{ $oldName }}" disabled required>
+                            <input type="text" name="name" id="name_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldName }}" disabled required placeholder="Name">
                         </div>
                         <div class="col-md-6">
                             <label for="designation_cont" class="form-label">Designation</label>
-                            <input type="text" name="designation" id="designation_cont" class="form-control idcard-cont-field" value="{{ $oldDesignation }}" disabled>
+                            <input type="text" name="designation" id="designation_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldDesignation }}" disabled placeholder="Designation">
                         </div>
                         <div class="col-md-6">
-                            <label for="date_of_birth_cont" class="form-label">Date of Birth</label>
-                            <input type="date" name="date_of_birth" id="date_of_birth_cont" class="form-control idcard-cont-field" value="{{ $oldDob }}" disabled>
+                            <label for="date_of_birth_cont" class="form-label">Date Of Birth</label>
+                            <input type="date" name="date_of_birth" id="date_of_birth_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldDob }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label for="father_name_cont" class="form-label">Father Name</label>
-                            <input type="text" name="father_name" id="father_name_cont" class="form-control idcard-cont-field" value="{{ old('father_name', '05/09/2013') }}" disabled>
+                            <input type="text" name="father_name" id="father_name_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ old('father_name', '') }}" disabled placeholder="Father Name">
                             @error('father_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="academy_joining_cont" class="form-label">Academy Joining</label>
-                            <input type="date" name="academy_joining" id="academy_joining_cont" class="form-control idcard-cont-field" value="{{ $oldAcademy }}" disabled>
+                            <input type="date" name="academy_joining" id="academy_joining_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldAcademy }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label for="id_card_valid_upto_cont" class="form-label">ID Card Valid Upto</label>
-                            <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY" disabled>
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldIdValid }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label for="mobile_number_cont" class="form-label">Mobile Number</label>
-                            <input type="tel" name="mobile_number" id="mobile_number_cont" class="form-control idcard-cont-field" value="{{ $oldMobile }}" placeholder="10 digit mobile number" disabled>
+                            <input type="tel" name="mobile_number" id="mobile_number_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldMobile }}" placeholder="10 digit mobile number" disabled>
                         </div>
+                        
                         <div class="col-md-6">
-                            <label for="vendor_organization_name_cont" class="form-label">Vendor / Organization Name</label>
-                            <input type="text" name="vendor_organization_name" id="vendor_organization_name_cont" class="form-control idcard-cont-field" value="{{ old('vendor_organization_name') }}" disabled>
+                            <label for="vendor_organization_name_cont" class="form-label">Vender / Organization Name</label>
+                            <input type="text" name="vendor_organization_name" id="vendor_organization_name_cont" class="form-control idcard-cont-field" value="{{ old('vendor_organization_name') }}" disabled placeholder="Vender / Organization Name">
                             @error('vendor_organization_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="section_cont" class="form-label">Section</label>
                             <select name="section" id="section_cont" class="form-select idcard-cont-field" disabled>
-                                <option value="">Select</option>
-                                @foreach(['Admin', 'Finance', 'HR', 'IT', 'Academics'] as $opt)
-                                    <option value="{{ $opt }}" {{ old('section') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                                @endforeach
+                                <option value="">--Select--</option>
+                                @if(!empty($userDepartmentName))
+                                    <option value="{{ $userDepartmentName }}" {{ old('section', $userDepartmentName) == $userDepartmentName ? 'selected' : '' }}>{{ $userDepartmentName }}</option>
+                                @endif
                             </select>
                             @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="approval_authority_cont" class="form-label">Approval Authority</label>
                             <select name="approval_authority" id="approval_authority_cont" class="form-select idcard-cont-field" disabled>
-                                <option value="">Select</option>
-                                @foreach(['HOD', 'Director', 'Registrar'] as $opt)
-                                    <option value="{{ $opt }}" {{ old('approval_authority') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                <option value="">--Select--</option>
+                                @foreach($approvalAuthorityEmployees ?? [] as $emp)
+                                    @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
+                                    <option value="{{ $emp->pk }}" {{ old('approval_authority') == $emp->pk ? 'selected' : '' }}>{{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}</option>
                                 @endforeach
                             </select>
                             @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label for="blood_group_cont" class="form-label">Blood Group <span class="text-danger">*</span></label>
-                            <select name="blood_group" id="blood_group_cont" class="form-select idcard-cont-field" disabled required>
+                            <select name="blood_group" id="blood_group_cont" class="form-select idcard-cont-field"  required>
                                 <option value="">Select Blood Group</option>
                                 <option value="O+ve" {{ $oldBlood == 'O+ve' ? 'selected' : '' }}>O+ve</option>
                                 <option value="O+" {{ $oldBlood == 'O+' ? 'selected' : '' }}>O+</option>
@@ -287,67 +273,23 @@
                         <div class="col-md-6"></div>
                         <div class="col-md-6">
                             <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
-                            <div class="idcard-upload-zone position-relative" id="photoUploadAreaCont">
-                                <input type="file" name="photo" id="photo_cont" class="d-none idcard-cont-field" accept="image/*" disabled required>
+                            <label for="photo_cont" class="idcard-upload-zone position-relative d-block cursor-pointer mb-0" id="photoUploadAreaCont" style="cursor:pointer;">
+                                <input type="file" name="photo" id="photo_cont" class="d-none idcard-cont-field" accept="image/*" required>
                                 <div class="idcard-upload-placeholder" id="photoPlaceholderCont">
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                     <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                                 </div>
                                 <div class="idcard-upload-preview d-none" id="photoPreviewCont">
                                     <img src="" alt="Preview" class="idcard-preview-img" id="photoPreviewImgCont">
-                                    <button type="button" class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="photoRemoveCont" aria-label="Remove photo">&times;</button>
+                                    <span class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="photoRemoveCont" aria-label="Remove photo" role="button" tabindex="0">&times;</span>
                                 </div>
-                            </div>
+                            </label>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Upload Joining Letter</label>
-                            <div class="idcard-upload-zone position-relative" id="joiningLetterUploadAreaCont">
-                                <input type="file" name="joining_letter" id="joining_letter_cont" class="d-none idcard-cont-field" accept=".pdf,.doc,.docx" disabled>
-                                <div class="idcard-upload-placeholder" id="joiningLetterPlaceholderCont">
-                                    <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
-                                    <p class="mt-2 mb-0">Click to upload or drag and drop</p>
-                                </div>
-                                <div class="idcard-upload-preview idcard-doc-preview d-none" id="joiningLetterPreviewCont">
-                                    <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
-                                    <span class="idcard-doc-name" id="joiningLetterFileNameCont"></span>
-                                    <div class="d-flex gap-2 justify-content-center flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" id="joiningLetterPreviewBtnCont" aria-label="Preview joining letter">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">visibility</i> Preview
-                                        </button>
-                                        <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="joiningLetterRemoveCont" aria-label="Remove joining letter">&times;</button>
-                                    </div>
-                                </div>
-                            </div>
-                            @error('joining_letter')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Upload Documents (if any)</label>
-                            <div class="idcard-upload-zone position-relative" id="documentsUploadArea">
-                                <input type="file" name="documents" id="documents" class="d-none @error('documents') is-invalid @enderror" accept=".pdf,.doc,.docx" disabled>
-                                <div class="idcard-upload-placeholder" id="documentsPlaceholder">
-                                    <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
-                                    <p class="mt-2 mb-0">Click to upload or drag and drop</p>
-                                </div>
-                                <div class="idcard-upload-preview idcard-doc-preview d-none" id="documentsPreview">
-                                    <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
-                                    <span class="idcard-doc-name" id="documentsFileName"></span>
-                                    <button type="button" class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="documentsRemove" aria-label="Remove document">&times;</button>
-                                </div>
-                            </div>
-                            @error('documents')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        </div>
+                        
                     </div>
                 </div>
 
-                <!-- Remarks (shared) -->
-                <div class="row g-3 mt-1">
-                    <div class="col-12">
-                        <label for="remarks" class="form-label">Remarks</label>
-                        <textarea name="remarks" id="remarks" class="form-control @error('remarks') is-invalid @enderror" rows="3" placeholder="Add any additional remarks...">{{ old('remarks') }}</textarea>
-                        @error('remarks')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                </div>
-
+               
                 <!-- Required Fields Note -->
                 <p class="small text-danger mt-4 mb-0">*Required Fields: All marked fields are mandatory for registration</p>
 
@@ -535,9 +477,9 @@
         permanentView.style.display = 'block';
         contractualView.style.display = 'none';
         permanentView.querySelectorAll('.idcard-perm-field').forEach(function(el) { el.disabled = false; });
-        contractualView.querySelectorAll('.idcard-cont-field').forEach(function(el) { el.disabled = true; });
-        var docEl = document.getElementById('documents');
-        if (docEl) docEl.disabled = true;
+        contractualView.querySelectorAll('.idcard-cont-field').forEach(function(el) {
+            if (!(el.tagName === 'INPUT' && el.type === 'file')) el.disabled = true;
+        });
         var photoPerm = document.getElementById('photo_perm');
         var photoCont = document.getElementById('photo_cont');
         if (photoPerm) photoPerm.required = true;
@@ -547,20 +489,198 @@
     function showContractual() {
         permanentView.style.display = 'none';
         contractualView.style.display = 'block';
-        permanentView.querySelectorAll('.idcard-perm-field').forEach(function(el) { el.disabled = true; });
+        permanentView.querySelectorAll('.idcard-perm-field').forEach(function(el) {
+            if (!(el.tagName === 'INPUT' && el.type === 'file')) el.disabled = true;
+        });
         contractualView.querySelectorAll('.idcard-cont-field').forEach(function(el) { el.disabled = false; });
-        var docEl = document.getElementById('documents');
-        if (docEl) docEl.disabled = false;
         var photoPerm = document.getElementById('photo_perm');
         var photoCont = document.getElementById('photo_cont');
         if (photoPerm) photoPerm.required = false;
         if (photoCont) photoCont.required = true;
     }
 
-    permRad.addEventListener('change', showPermanent);
-    contRad.addEventListener('change', showContractual);
+    permRad.addEventListener('change', function() { showPermanent(); idcardResetFlow(); });
+    contRad.addEventListener('change', function() { showContractual(); idcardResetFlow(); });
     if (contRad.checked) showContractual();
     else showPermanent();
+
+    var subTypesUrl = '{{ route("admin.employee_idcard.subTypes") }}';
+    var meUrl = '{{ route("admin.employee_idcard.me") }}';
+
+    function idcardGetStepFields() {
+        var isPerm = permanentView.style.display !== 'none';
+        return {
+            cardType: document.getElementById(isPerm ? 'card_type_perm' : 'card_type_cont'),
+            subType: document.getElementById(isPerm ? 'sub_type_perm' : 'sub_type_cont'),
+            requestFor: document.getElementById(isPerm ? 'request_for_perm' : 'request_for_cont'),
+            isPerm: isPerm
+        };
+    }
+
+    function idcardResetFlow() {
+        var step = idcardGetStepFields();
+        step.subType.innerHTML = '<option value="">Select Sub Type</option>';
+        step.subType.disabled = true;
+        step.requestFor.disabled = true;
+        step.requestFor.value = '';
+        var autofillFields = (step.isPerm ? permanentView : contractualView).querySelectorAll('.idcard-autofill-field');
+        autofillFields.forEach(function(el) {
+            el.disabled = true;
+            el.removeAttribute('readonly');
+            el.value = '';
+        });
+        document.getElementById('employee_master_pk_input').value = '';
+        var bloodPerm = document.getElementById('blood_group_perm');
+        var bloodCont = document.getElementById('blood_group_cont');
+        if (bloodPerm) bloodPerm.value = '';
+        if (bloodCont) bloodCont.value = '';
+        idcardDisableAutofillExceptStep();
+    }
+
+    function idcardDisableAutofillExceptStep() {
+        var step = idcardGetStepFields();
+        var view = step.isPerm ? permanentView : contractualView;
+        view.querySelectorAll('.idcard-autofill-field').forEach(function(el) { el.disabled = true; });
+        // Photo and Joining Letter: keep enabled so user can always select file when this view is visible
+        // Blood Group: always enabled so user can select (never disabled)
+    }
+
+    function idcardEnableOnlyPhotoAndBlood() {
+        var step = idcardGetStepFields();
+        var view = step.isPerm ? permanentView : contractualView;
+        view.querySelectorAll('.idcard-autofill-field').forEach(function(el) {
+            el.disabled = false;
+            if (el.tagName === 'INPUT' && el.type !== 'hidden' && (el.type === 'text' || el.type === 'date' || el.type === 'tel')) el.readOnly = true;
+        });
+        var photoInput = document.getElementById(step.isPerm ? 'photo_perm' : 'photo_cont');
+        var joinInput = document.getElementById(step.isPerm ? 'joining_letter_perm' : 'joining_letter_cont');
+        if (photoInput) { photoInput.disabled = false; photoInput.required = true; }
+        if (joinInput) joinInput.disabled = false;
+        if (step.isPerm) {
+            var bg = document.getElementById('blood_group_perm');
+            if (bg) { bg.disabled = false; bg.required = true; }
+        } else {
+            var bg = document.getElementById('blood_group_cont');
+            if (bg) { bg.disabled = false; bg.required = true; }
+        }
+    }
+
+    function idcardLoadSubTypes() {
+        var step = idcardGetStepFields();
+        var cardType = step.cardType.value;
+        var employeeType = document.getElementById('permanent').checked ? 'Permanent Employee' : 'Contractual Employee';
+        if (!cardType) {
+            step.subType.innerHTML = '<option value="">Select Sub Type</option>';
+            step.subType.disabled = true;
+            step.requestFor.disabled = true;
+            return;
+        }
+        fetch(subTypesUrl + '?card_type=' + encodeURIComponent(cardType) + '&employee_type=' + encodeURIComponent(employeeType))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                step.subType.innerHTML = '<option value="">Select Sub Type</option>';
+                (data.sub_types || []).forEach(function(o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    step.subType.appendChild(opt);
+                });
+                step.subType.disabled = false;
+                step.subType.value = '';
+                step.requestFor.disabled = true;
+            })
+            .catch(function() {
+                step.subType.innerHTML = '<option value="">Select Sub Type</option>';
+                step.subType.disabled = false;
+            });
+    }
+
+    function idcardLoadMe() {
+        var step = idcardGetStepFields();
+        if (step.requestFor.value !== 'Own ID Card') return;
+        fetch(meUrl)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var emp = data.employee;
+                if (!emp) return;
+                document.getElementById('employee_master_pk_input').value = emp.employee_master_pk || '';
+                var view = step.isPerm ? permanentView : contractualView;
+                var set = function(id, val) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = val || '';
+                };
+                if (step.isPerm) {
+                    set('name_perm', emp.name);
+                    set('designation_perm', emp.designation);
+                    set('date_of_birth_perm', emp.date_of_birth);
+                    set('father_name_perm', emp.father_name);
+                    set('academy_joining_perm', emp.academy_joining);
+                    set('mobile_number_perm', emp.mobile_number);
+                    set('telephone_number_perm', emp.telephone_number);
+                    set('id_card_valid_upto_perm', emp.id_card_valid_upto);
+                } else {
+                    set('name_cont', emp.name);
+                    set('designation_cont', emp.designation);
+                    set('date_of_birth_cont', emp.date_of_birth);
+                    set('father_name_cont', emp.father_name);
+                    set('academy_joining_cont', emp.academy_joining);
+                    set('mobile_number_cont', emp.mobile_number);
+                    set('id_card_valid_upto_cont', emp.id_card_valid_upto);
+                }
+                idcardEnableOnlyPhotoAndBlood();
+            })
+            .catch(function() {});
+    }
+
+    document.getElementById('card_type_perm').addEventListener('change', function() {
+        if (permanentView.style.display !== 'none') idcardLoadSubTypes();
+    });
+    document.getElementById('card_type_cont').addEventListener('change', function() {
+        if (contractualView.style.display !== 'none') idcardLoadSubTypes();
+    });
+    document.getElementById('sub_type_perm').addEventListener('change', function() {
+        if (permanentView.style.display !== 'none') {
+            document.getElementById('request_for_perm').disabled = !document.getElementById('sub_type_perm').value;
+        }
+    });
+    document.getElementById('sub_type_cont').addEventListener('change', function() {
+        if (contractualView.style.display !== 'none') {
+            document.getElementById('request_for_cont').disabled = !document.getElementById('sub_type_cont').value;
+        }
+    });
+    document.getElementById('request_for_perm').addEventListener('change', function() {
+        if (permanentView.style.display !== 'none') idcardLoadMe();
+    });
+    document.getElementById('request_for_cont').addEventListener('change', function() {
+        if (contractualView.style.display !== 'none') {
+            if (this.value === 'Others ID Card') {
+                contractualView.querySelectorAll('.idcard-autofill-field').forEach(function(el) { el.disabled = false; el.removeAttribute('readonly'); });
+                var sec = document.getElementById('section_cont'); if (sec) sec.disabled = false;
+                var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = false;
+                var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = false;
+            } else {
+                contractualView.querySelectorAll('.idcard-autofill-field').forEach(function(el) { el.disabled = true; el.value = ''; });
+                var sec = document.getElementById('section_cont'); if (sec) sec.disabled = true;
+                var app = document.getElementById('approval_authority_cont'); if (app) app.disabled = true;
+                var ven = document.getElementById('vendor_organization_name_cont'); if (ven) ven.disabled = true;
+            }
+        }
+    });
+
+    idcardDisableAutofillExceptStep();
+    [ 'photo_perm', 'photo_cont', 'joining_letter_perm', 'joining_letter_cont', 'documents' ].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && el.type === 'file') el.disabled = false;
+    });
+    if (permanentView.style.display !== 'none') {
+        document.getElementById('sub_type_perm').disabled = true;
+        document.getElementById('request_for_perm').disabled = true;
+        if (document.getElementById('card_type_perm').value) idcardLoadSubTypes();
+    } else {
+        document.getElementById('sub_type_cont').disabled = true;
+        document.getElementById('request_for_cont').disabled = true;
+        if (document.getElementById('card_type_cont').value) idcardLoadSubTypes();
+    }
 
     function toggleDuplicationExtension() {
         var reqPerm = document.getElementById('request_for_perm');
@@ -782,15 +902,17 @@
         var input = document.getElementById(item.inputId);
         if (!area || !input) return;
         area.addEventListener('click', function(e) {
-            if (e.target.closest('button')) return;
-            if (!input.disabled) input.click();
+            if (e.target.closest('button') || e.target.closest('[role="button"]')) return;
+            input.disabled = false;
+            if (area.tagName !== 'LABEL') input.click();
         });
         area.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('idcard-upload-zone-active'); });
         area.addEventListener('dragleave', function(e) { e.preventDefault(); this.classList.remove('idcard-upload-zone-active'); });
         area.addEventListener('drop', function(e) {
             e.preventDefault();
             var files = e.dataTransfer.files;
-            if (files.length && !input.disabled) {
+            if (files.length) {
+                input.disabled = false;
                 input.files = files;
                 if (item.inputId === 'photo_perm') showPhotoPreview(input, 'photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
                 else if (item.inputId === 'photo_cont') showPhotoPreview(input, 'photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
