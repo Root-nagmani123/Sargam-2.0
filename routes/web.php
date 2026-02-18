@@ -797,19 +797,19 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
-Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+    Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+    Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
 // Change export routes to POST
-Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
     ->name('admin.feedback.export.pdf');
 
-Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+    Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
 
 // ============================================
 // Issue Management Module Routes (CENTCOM)
 // ============================================
-Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+    Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
 
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
@@ -860,6 +860,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     // Estate Management Routes
     Route::prefix('estate')->name('estate.')->group(function () {
         // Estate Request for Others
+<<<<<<< HEAD
+<<<<<<< HEAD
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
 
         // Change Requests (HAC Approved)
@@ -872,13 +874,42 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
         // Estate Possession
-        Route::get('possession-for-others', function () {
-            return view('admin.estate.estate_possession_for_others');
-        })->name('possession-for-others');
-        
+        Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
+        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
+        Route::post('possession-view', [EstateController::class, 'storePossession'])->name('possession-view.store');
+        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+        Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
+        Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
+        Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
+        Route::get('possession/requester-details', [EstateController::class, 'getRequesterDetails'])->name('possession.requester-details');
+=======
+        Route::get('request-for-others', function () {
+            return view('admin.estate.estate_request_for_others');
+        })->name('request-for-others');
+=======
+        Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+>>>>>>> 0b2bb192 (estate issue on staging)
+
+        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
+        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
+
+        // Estate Possession
+        Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
+        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+
+<<<<<<< HEAD
         Route::get('possession-view', function () {
             return view('admin.estate.estate_possession_view');
         })->name('possession-view');
+>>>>>>> ee1c23ee (stream bugs fixed)
+=======
+        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
+        Route::post('possession-view/store', [EstateController::class, 'storePossession'])->name('possession-view.store');
+        Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
+        Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
+        Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
+>>>>>>> 0b2bb192 (estate issue on staging)
 
         // Update Meter
         Route::get('update-meter-reading', function () {
@@ -979,6 +1010,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
             Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
             Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
+=======
+
+<<<<<<< HEAD
+            Route::get('bill-report-print', function () {
+                return view('admin.estate.estate_bill_report_print');
+            })->name('bill-report-print');
+>>>>>>> ee1c23ee (stream bugs fixed)
+=======
+            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
+>>>>>>> 0b2bb192 (estate issue on staging)
         });
     });
 });

@@ -439,14 +439,21 @@ class EstateController extends Controller
         $rows = $query->get()->map(function ($row) {
             $poss = $row->estatePossessionOther;
             $req = $poss ? $poss->estateOtherRequest : null;
+            $last = $row->last_month_elec_red !== null ? (int) $row->last_month_elec_red : null;
+            $curr = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
+            $unit = ($last !== null && $curr !== null && $curr >= $last)
+                ? ($curr - $last)
+                : null;
+
             return [
                 'pk' => $row->pk,
                 'house_no' => $row->house_no ?? 'N/A',
                 'name' => $req ? ($req->emp_name ?? 'N/A') : 'N/A',
                 'last_reading_date' => $row->from_date ? $row->from_date->format('d/m/Y') : 'N/A',
                 'meter_no' => $row->meter_one ?? $row->meter_two ?? 'N/A',
-                'last_month_reading' => $row->last_month_elec_red ?? 'N/A',
-                'curr_month_reading' => $row->curr_month_elec_red,
+                'last_month_reading' => $last !== null ? $last : 'N/A',
+                'curr_month_reading' => $curr,
+                'unit' => $unit !== null ? $unit : 'N/A',
             ];
         });
 
