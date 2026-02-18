@@ -8,10 +8,14 @@ use App\Models\SecurityParmIdApply;
 use App\Models\SecurityParmIdApplyApproval;
 use App\Models\EmployeeMaster;
 use App\Support\IdCardSecurityMapper;
+use App\Support\IdCardSecurityLookup;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
@@ -27,21 +31,59 @@ class EmployeeIDCardRequestController extends Controller
             'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
             'approvals.approver:pk,first_name,last_name',
         ];
-        $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'remarks', 'created_by', 'employee_dob'];
-        $base = fn () => SecurityParmIdApply::select($columns)->with($with)->orderBy('pk', 'desc');
-
-        // simplePaginate avoids slow COUNT(*) on large tables; pagination shows Next/Previous only
+        $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
         $perPage = 25;
-        $activeTotal = SecurityParmIdApply::where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)->count();
-        $archivedTotal = SecurityParmIdApply::whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED])->count();
 
-        $activeRequests = (clone $base())->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-            ->simplePaginate($perPage);
-        $archivedRequests = (clone $base())->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED])
-            ->simplePaginate($perPage, $columns, 'archive_page');
+        // Permanent: active (id_status = 1) and archived (2, 3)
+        $permActive = SecurityParmIdApply::select($columns)->with($with)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
+            ->orderBy('created_date', 'desc')
+            ->get();
+        $permArchived = SecurityParmIdApply::select($columns)->with($with)
+            ->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED])
+            ->orderBy('created_date', 'desc')
+            ->get();
 
-        $activeRequests->getCollection()->transform(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
-        $archivedRequests->getCollection()->transform(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        // Contractual: same status logic (security_con_oth_id_apply.id_status 1=Pending, 2=Approved, 3=Rejected)
+        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
+        $contActive = DB::table('security_con_oth_id_apply')
+            ->select($contCols)
+            ->where('id_status', 1)
+            ->orderBy('created_date', 'desc')
+            ->get();
+        $contArchived = DB::table('security_con_oth_id_apply')
+            ->select($contCols)
+            ->whereIn('id_status', [2, 3])
+            ->orderBy('created_date', 'desc')
+            ->get();
+
+        $permActiveDto = $permActive->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $permArchivedDto = $permArchived->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $contActiveDto = $contActive->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
+        $contArchivedDto = $contArchived->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
+
+        $activeMerged = $permActiveDto->concat($contActiveDto)->sortByDesc('created_at')->values();
+        $archivedMerged = $permArchivedDto->concat($contArchivedDto)->sortByDesc('created_at')->values();
+
+        $activeTotal = $activeMerged->count();
+        $archivedTotal = $archivedMerged->count();
+
+        $activePage = (int) request()->get('page', 1);
+        $archivePage = (int) request()->get('archive_page', 1);
+        $activeRequests = new LengthAwarePaginator(
+            $activeMerged->forPage($activePage, $perPage),
+            $activeTotal,
+            $perPage,
+            $activePage,
+            ['path' => request()->url(), 'pageName' => 'page']
+        );
+        $archivedRequests = new LengthAwarePaginator(
+            $archivedMerged->forPage($archivePage, $perPage),
+            $archivedTotal,
+            $perPage,
+            $archivePage,
+            ['path' => request()->url(), 'pageName' => 'archive_page']
+        );
 
         $duplicationRequests = $activeRequests;
         $extensionRequests = $activeRequests;
@@ -58,16 +100,110 @@ class EmployeeIDCardRequestController extends Controller
 
     public function create()
     {
-        return view('admin.employee_idcard.create');
+        $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name');
+
+        // Contractual: Section = logged-in user's department only; Approval Authority = same department employees with Payroll=0 (permanent)
+        $userDepartmentPk = null;
+        $userDepartmentName = null;
+        $approvalAuthorityEmployees = collect();
+        $authUserId = Auth::user()->user_id ?? null;
+        if ($authUserId) {
+            $authEmp = EmployeeMaster::with('department')
+                ->where('pk', $authUserId)
+                ->orWhere('pk_old', $authUserId)
+                ->first();
+            if ($authEmp && $authEmp->department_master_pk) {
+                $userDepartmentPk = $authEmp->department_master_pk;
+                $userDepartmentName = $authEmp->department->department_name ?? null;
+                // Same department, Payroll = 0 (permanent) for Approval Authority dropdown
+                $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                    ->where('department_master_pk', $userDepartmentPk)
+                    ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                    ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                    ->orderBy('first_name')
+                    ->orderBy('last_name')
+                    ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+            }
+        }
+
+        return view('admin.employee_idcard.create', [
+            'cardTypes' => $cardTypes,
+            'userDepartmentPk' => $userDepartmentPk,
+            'userDepartmentName' => $userDepartmentName,
+            'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+        ]);
+    }
+
+    /**
+     * AJAX: Sub-types for selected card type + employee type (for dropdown).
+     */
+    public function subTypes(Request $request)
+    {
+        $cardType = $request->get('card_type');
+        $employeeType = $request->get('employee_type', 'Permanent Employee');
+        $code = $employeeType === 'Permanent Employee' ? 'p' : 'c';
+        $masterPk = IdCardSecurityLookup::resolveCardMasterPk($cardType);
+        if (!$masterPk) {
+            return response()->json(['sub_types' => []]);
+        }
+        $rows = DB::table('sec_id_cardno_config_map')
+            ->where('card_name', $code)
+            ->where('sec_id_cardno_master', $masterPk)
+            ->whereNotNull('config_name')
+            ->where('config_name', '!=', '')
+            ->orderBy('config_name')
+            ->get(['pk', 'config_name']);
+        $subTypes = $rows->map(fn ($r) => ['value' => $r->config_name, 'text' => $r->config_name])->values();
+        return response()->json(['sub_types' => $subTypes]);
+    }
+
+    /**
+     * AJAX: Logged-in user's employee details for "Own ID Card" autofill.
+     * Resolves employee by pk or pk_old so data is found either way.
+     */
+    public function me()
+    {
+        $userId = Auth::user()->user_id ?? null;
+        if (!$userId) {
+            return response()->json(['employee' => null]);
+        }
+        $emp = EmployeeMaster::with('designation')
+            ->where(function ($q) use ($userId) {
+                $q->where('pk', $userId)->orWhere('pk_old', $userId);
+            })
+            ->first();
+        if (!$emp) {
+            return response()->json(['employee' => null]);
+        }
+        $dupPermIdApply = DB::table('security_dup_perm_id_apply')->where('employee_master_pk', $emp->pk)->orWhere('employee_master_pk', $emp->pk_old)->orderBy('pk', 'desc')->first();
+        $name = trim($emp->first_name . ' ' . ($emp->middle_name ?? '') . ' ' . ($emp->last_name ?? ''));
+        $designation = $emp->designation->designation_name ?? null;
+        $dob = $emp->dob ? \Carbon\Carbon::parse($emp->dob)->format('Y-m-d') : null;
+        $doj = $emp->doj ? \Carbon\Carbon::parse($emp->doj)->format('Y-m-d') : null;
+        $mobile = $emp->mobile ? (string) $emp->mobile : null;
+        $telephone = $emp->landline_contact_no ? (string) $emp->landline_contact_no : ($emp->residence_no ?? null);
+        return response()->json([
+            'employee' => [
+                'employee_master_pk' => (int) $emp->pk,
+                'name' => $name,
+                'designation' => $designation,
+                'date_of_birth' => $dob,
+                'father_name' => $emp->father_name,
+                'academy_joining' => $doj,
+                'mobile_number' => $mobile,
+                'telephone_number' => $telephone,
+                'id_card_valid_upto' => $dupPermIdApply->card_valid_to ?? null,
+            ],
+        ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'employee_type' => 'required|in:Permanent Employee,Contractual Employee',
-            'card_type' => 'nullable|string|max:100',
-            'sub_type' => 'nullable|string|max:100',
-            'request_for' => 'nullable|string|max:100|in:Own ID Card,Family ID Card,Replacement,Duplication,Extension',
+            'card_type' => 'required|string|max:100',
+            'sub_type' => 'required|string|max:100',
+            'request_for' => 'nullable|string|max:100|in:Own ID Card,Others ID Card,Family ID Card,Replacement,Duplication,Extension',
             'duplication_reason' => 'nullable|string|in:Expired Card,Lost,Damage',
             'name' => 'required|string|max:255',
             'designation' => 'nullable|string|max:255',
@@ -84,7 +220,7 @@ class EmployeeIDCardRequestController extends Controller
             'approval_authority' => 'nullable|string|max:255',
             'vendor_organization_name' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'joining_letter' => 'required_if:employee_type,Permanent Employee|nullable|mimes:pdf,doc,docx|max:5120',
+            'joining_letter' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'fir_receipt' => 'required_if:duplication_reason,Lost|nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
@@ -94,66 +230,438 @@ class EmployeeIDCardRequestController extends Controller
             'fir_receipt.required_if' => 'FIR Receipt is required when the card is reported as Lost.',
         ]);
 
-        $employeePk = $validated['employee_master_pk'] ?? null;
+        $authEmpPk = Auth::user()->user_id ?? Auth::id();
+        $employeePk = $validated['employee_master_pk'] ?? $authEmpPk;
+        // Resolve to actual employee_master.pk (user_id may be pk or pk_old)
+        if ($employeePk) {
+            $empRow = EmployeeMaster::where('pk', $employeePk)->orWhere('pk_old', $employeePk)->first();
+            if ($empRow) {
+                $employeePk = $empRow->pk;
+            }
+        }
         if (!$employeePk && !empty($validated['name'])) {
             $emp = EmployeeMaster::where(DB::raw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))"), 'like', '%' . trim($validated['name']) . '%')->first();
             $employeePk = $emp?->pk;
         }
 
-        $nextId = SecurityParmIdApply::max('pk') + 1;
-        $empIdApply = 'PID' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
+        $employeeType = $validated['employee_type'];
+        $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
+        $cardMasterPk = IdCardSecurityLookup::resolveCardMasterPk($validated['card_type']);
+        if (!$cardMasterPk) {
+            throw ValidationException::withMessages([
+                'card_type' => 'Invalid Card Type for security mapping. Please select a valid card type.',
+            ]);
+        }
+        $configMap = IdCardSecurityLookup::resolveConfigMapRow($cardNameCode, $cardMasterPk, $validated['sub_type']);
+        if (!$configMap) {
+            throw ValidationException::withMessages([
+                'sub_type' => 'Invalid Sub Type for the selected Card Type (security mapping not found).',
+            ]);
+        }
+
+        $isDupOrExt = in_array(($validated['request_for'] ?? 'Own ID Card'), ['Replacement', 'Duplication', 'Extension'], true);
 
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('idcard/photos', 'public');
         }
+        $joiningLetterPath = null;
+        if ($request->hasFile('joining_letter')) {
+            $joiningLetterPath = $request->file('joining_letter')->store('idcard/joining_letters', 'public');
+        }
 
         $cardValidFrom = null;
         $cardValidTo = null;
         if (!empty($validated['id_card_valid_from'])) {
-            $cardValidFrom = \Carbon\Carbon::createFromFormat('d/m/Y', $validated['id_card_valid_from'])->format('Y-m-d');
+            $cardValidFrom = static::parseDateToYmd($validated['id_card_valid_from']);
         }
         if (!empty($validated['id_card_valid_upto'])) {
-            $cardValidTo = \Carbon\Carbon::createFromFormat('d/m/Y', $validated['id_card_valid_upto'])->format('Y-m-d');
+            $cardValidTo = static::parseDateToYmd($validated['id_card_valid_upto']);
         }
 
-        SecurityParmIdApply::create([
-            'emp_id_apply' => $empIdApply,
-            'employee_master_pk' => $employeePk,
-            'card_valid_from' => $cardValidFrom,
-            'card_valid_to' => $cardValidTo,
-            'id_card_no' => $validated['id_card_number'] ?? null,
-            'id_status' => SecurityParmIdApply::ID_STATUS_PENDING,
-            'remarks' => $validated['remarks'] ?? null,
-            'created_by' => Auth::id(),
-            'created_date' => now()->format('Y-m-d H:i:s'),
-            'id_photo_path' => $photoPath,
-            'employee_dob' => $validated['date_of_birth'] ?? null,
-            'mobile_no' => $validated['mobile_number'] ?? null,
-            'telephone_no' => $validated['telephone_number'] ?? null,
-            'blood_group' => $validated['blood_group'] ?? null,
-            'card_type' => $validated['card_type'] ?? null,
-        ]);
+        $now = now()->format('Y-m-d H:i:s');
+
+        // Build approver chain from idcard_request_approvar_master_new
+        $statusFlagColumn = $employeeType === 'Permanent Employee' ? 'per_status' : 'cont_status';
+        if ($isDupOrExt) {
+            $statusFlagColumn = 'duplicate_status';
+        }
+        $approvers = DB::table('idcard_request_approvar_master_new')
+            ->where('employee_master_pk', $employeePk)
+            ->where('type', 'employee')
+            ->where($statusFlagColumn, 1)
+            ->orderBy('sequence', 'asc')
+            ->pluck('employees_pk')
+            ->filter()
+            ->values();
+
+        // Contractual: section column is bigint (department_master_pk). Resolve logged-in user's department.
+        $userDepartmentPk = null;
+        if ($employeeType === 'Contractual Employee' && $authEmpPk) {
+            $authEmp = EmployeeMaster::where('pk', $authEmpPk)->orWhere('pk_old', $authEmpPk)->first(['department_master_pk']);
+            $userDepartmentPk = $authEmp->department_master_pk ?? null;
+        }
+
+        DB::transaction(function () use (
+            $employeeType,
+            $employeePk,
+            $authEmpPk,
+            $validated,
+            $cardNameCode,
+            $cardMasterPk,
+            $configMap,
+            $photoPath,
+            $joiningLetterPath,
+            $cardValidFrom,
+            $cardValidTo,
+            $now,
+            $approvers,
+            $isDupOrExt,
+            $request,
+            $userDepartmentPk
+        ) {
+            // If user is applying for duplication/extension via this form,
+            // insert into duplication tables; otherwise insert into normal apply tables.
+            if ($isDupOrExt) {
+                if ($employeeType === 'Permanent Employee') {
+                    $nextPk = (int) DB::table('security_dup_perm_id_apply')->max('pk') + 1;
+                    $applyId = 'DUP' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
+
+                    $paymentReceipt = null;
+                    if ($request->hasFile('payment_receipt')) {
+                        $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                        $file = $applyId . '_PAY_' . time() . '.' . $ext;
+                        $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                        $paymentReceipt = $file;
+                    }
+
+                    $firDoc = null;
+                    if ($request->hasFile('fir_receipt')) {
+                        $ext = $request->file('fir_receipt')->getClientOriginalExtension();
+                        $file = $applyId . '_FIR_' . time() . '.' . $ext;
+                        $request->file('fir_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                        $firDoc = $file;
+                    }
+
+                    $serviceExt = null;
+                    if ($request->hasFile('joining_letter')) {
+                        $ext = $request->file('joining_letter')->getClientOriginalExtension();
+                        $file = $applyId . '_EXT_' . time() . '.' . $ext;
+                        $request->file('joining_letter')->storeAs('idcard/dup_docs', $file, 'public');
+                        $serviceExt = $file;
+                    }
+
+                    $reason = $validated['duplication_reason'] ?? null;
+                    $cardReason = match ($validated['request_for'] ?? '') {
+                        'Extension' => 'Service Extended',
+                        default => match ($reason) {
+                            'Lost' => 'Card Lost',
+                            'Damage' => 'Damage Card',
+                            'Expired Card' => 'Expired Card',
+                            default => ($validated['request_for'] ?? 'Duplication'),
+                        },
+                    };
+
+                    $emp = EmployeeMaster::select(['pk', 'designation_master_pk'])->find($employeePk);
+                    DB::table('security_dup_perm_id_apply')->insert([
+                        'emp_id_apply' => $applyId,
+                        'employee_master_pk' => $employeePk,
+                        'designation_pk' => $emp?->designation_master_pk,
+                        'card_valid_from' => $cardValidFrom,
+                        'card_valid_to' => $cardValidTo,
+                        'id_card_no' => $validated['id_card_number'] ?? null,
+                        'id_status' => SecurityParmIdApply::ID_STATUS_PENDING,
+                        'remarks' => $validated['remarks'] ?? null,
+                        'created_by' => $employeePk ?? $authEmpPk,
+                        'created_date' => $now,
+                        'id_photo_path' => $photoPath,
+                        'employee_dob' => $validated['date_of_birth'] ?? null,
+                        'mobile_no' => $validated['mobile_number'] ?? null,
+                        'blood_group' => $validated['blood_group'] ?? null,
+                        'payment_receipt' => $paymentReceipt,
+                        'fir_doc' => $firDoc,
+                        'service_ext' => ($validated['request_for'] ?? '') === 'Extension' ? $serviceExt : null,
+                        'parent_id' => null,
+                        'card_reason' => $cardReason,
+                        'name_change_doc' => null,
+                    ]);
+
+                    foreach ($approvers as $idx => $approverPk) {
+                        DB::table('security_dup_perm_id_apply_approval')->insert([
+                            'security_parm_id_apply_pk' => $applyId,
+                            'status' => $idx + 1,
+                            'approval_remarks' => null,
+                            'recommend_status' => $idx === 0 ? 1 : null,
+                            'approval_emp_pk' => (int) $approverPk,
+                            'created_by' => $employeePk ?? $authEmpPk,
+                            'created_date' => $now,
+                            'modified_by' => null,
+                            'modified_date' => null,
+                        ]);
+                    }
+                } else {
+                    $nextPk = (int) DB::table('security_dup_other_id_apply')->max('pk') + 1;
+                    $applyId = 'DUO' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
+
+                    $paymentReceipt = null;
+                    if ($request->hasFile('payment_receipt')) {
+                        $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                        $file = $applyId . '_PAY_' . time() . '.' . $ext;
+                        $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                        $paymentReceipt = $file;
+                    }
+
+                    $firDoc = null;
+                    if ($request->hasFile('fir_receipt')) {
+                        $ext = $request->file('fir_receipt')->getClientOriginalExtension();
+                        $file = $applyId . '_FIR_' . time() . '.' . $ext;
+                        $request->file('fir_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                        $firDoc = $file;
+                    }
+
+                    $serviceExt = null;
+                    if ($request->hasFile('documents')) {
+                        $ext = $request->file('documents')->getClientOriginalExtension();
+                        $file = $applyId . '_DOC_' . time() . '.' . $ext;
+                        $request->file('documents')->storeAs('idcard/dup_docs', $file, 'public');
+                        $serviceExt = $file;
+                    }
+
+                    $reason = $validated['duplication_reason'] ?? null;
+                    $cardReason = match ($validated['request_for'] ?? '') {
+                        'Extension' => 'Service Extended',
+                        default => match ($reason) {
+                            'Lost' => 'Card Lost',
+                            'Damage' => 'Damage Card',
+                            'Expired Card' => 'Expired Card',
+                            default => ($validated['request_for'] ?? 'Duplication'),
+                        },
+                    };
+
+                    DB::table('security_dup_other_id_apply')->insert([
+                        'emp_id_apply' => $applyId,
+                        'employee_name' => $validated['name'] ?? null,
+                        'designation_name' => $validated['designation'] ?? null,
+                        'card_valid_from' => $cardValidFrom,
+                        'card_valid_to' => $cardValidTo,
+                        'id_card_no' => $validated['id_card_number'] ?? null,
+                        'id_status' => SecurityParmIdApply::ID_STATUS_PENDING,
+                        'remarks' => $validated['remarks'] ?? null,
+                        'created_by' => $employeePk ?? $authEmpPk,
+                        'created_date' => $now,
+                        'id_photo_path' => $photoPath,
+                        'employee_dob' => $validated['date_of_birth'] ?? null,
+                        'mobile_no' => $validated['mobile_number'] ?? null,
+                        'blood_group' => $validated['blood_group'] ?? null,
+                        'payment_receipt' => $paymentReceipt,
+                        'fir_doc' => $firDoc,
+                        'service_ext' => ($validated['request_for'] ?? '') === 'Extension' ? $serviceExt : null,
+                        'card_reason' => $cardReason,
+                        'vender_name' => $validated['vendor_organization_name'] ?? null,
+                        'father_name' => $validated['father_name'] ?? null,
+                        'card_type' => '',
+                        'department_approval_emp_pk' => null,
+                        'depart_approval_status' => null,
+                        'depart_approval_date' => null,
+                        'section' => null,
+                        'id_proof' => null,
+                        'aadhar_doc' => null,
+                    ]);
+
+                    foreach ($approvers as $idx => $approverPk) {
+                        DB::table('security_dup_other_id_apply_approval')->insert([
+                            'security_con_id_apply_pk' => $applyId,
+                            'status' => $idx + 1,
+                            'approval_remarks' => null,
+                            'recommend_status' => $idx === 0 ? 1 : null,
+                            'approval_emp_pk' => (int) $approverPk,
+                            'created_by' => $employeePk ?? $authEmpPk,
+                            'created_date' => $now,
+                            'modified_by' => null,
+                            'modified_date' => null,
+                        ]);
+                    }
+                }
+
+                return;
+            }
+
+            if ($employeeType === 'Permanent Employee') {
+                $nextId = (int) DB::table('security_parm_id_apply')->max('pk') + 1;
+                $empIdApply = 'PID' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
+
+                $emp = EmployeeMaster::select(['pk', 'designation_master_pk'])->find($employeePk);
+                SecurityParmIdApply::create([
+                    'emp_id_apply' => $empIdApply,
+                    'employee_master_pk' => $employeePk,
+                    'sec_id_card_config_pk' => $configMap->config_pk,
+                    'designation_pk' => $emp?->designation_master_pk,
+                    'card_valid_from' => $cardValidFrom,
+                    'card_valid_to' => $cardValidTo,
+                    'id_card_no' => $validated['id_card_number'] ?? null,
+                    'id_status' => SecurityParmIdApply::ID_STATUS_PENDING,
+                    'remarks' => $validated['remarks'] ?? null,
+                    'created_by' => $employeePk ?? $authEmpPk,
+                    'created_date' => $now,
+                    'id_photo_path' => $photoPath,
+                    'joining_letter_path' => $joiningLetterPath,
+                    'employee_dob' => $validated['date_of_birth'] ?? null,
+                    'mobile_no' => $validated['mobile_number'] ?? null,
+                    'telephone_no' => $validated['telephone_number'] ?? null,
+                    'blood_group' => $validated['blood_group'] ?? null,
+                    'card_type' => $cardNameCode, // p/c
+                    'permanent_type' => $cardMasterPk, // sec_id_cardno_master.pk
+                    'perm_sub_type' => $configMap->map_pk, // sec_id_cardno_config_map.pk
+                ]);
+
+                foreach ($approvers as $idx => $approverPk) {
+                    DB::table('security_parm_id_apply_approval')->insert([
+                        'security_parm_id_apply_pk' => $empIdApply,
+                        'status' => $idx + 1,
+                        'approval_remarks' => null,
+                        'recommend_status' => $idx === 0 ? 1 : null,
+                        'approval_emp_pk' => (int) $approverPk,
+                        'created_by' => $employeePk ?? $authEmpPk,
+                        'created_date' => $now,
+                        'modified_by' => null,
+                        'modified_date' => null,
+                    ]);
+                }
+            } else {
+                $nextId = (int) DB::table('security_con_oth_id_apply')->max('pk') + 1;
+                $empIdApply = 'COD' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
+
+                $docPath = null;
+                if ($request->hasFile('documents')) {
+                    $docPath = $request->file('documents')->store('idcard/documents', 'public');
+                }
+
+                // Insert matches security_con_oth_id_apply structure (pk auto; section = bigint department_master_pk)
+                DB::table('security_con_oth_id_apply')->insert([
+                    'emp_id_apply' => $empIdApply,
+                    'employee_name' => $validated['name'] ?? null,
+                    'sec_id_card_config_pk' => $configMap->config_pk,
+                    'designation_name' => $validated['designation'] ?? null,
+                    'card_valid_from' => $cardValidFrom,
+                    'card_valid_to' => $cardValidTo,
+                    'id_card_no' => $validated['id_card_number'] ?? null,
+                    'id_status' => SecurityParmIdApply::ID_STATUS_PENDING,
+                    'remarks' => $validated['remarks'] ?? null,
+                    'created_by' => $employeePk ?? $authEmpPk,
+                    'created_date' => $now,
+                    'id_photo_path' => $photoPath,
+                    'employee_dob' => $validated['date_of_birth'] ?? null,
+                    'mobile_no' => $validated['mobile_number'] ?? null,
+                    'blood_group' => $validated['blood_group'] ?? null,
+                    'card_type' => $cardNameCode,
+                    'permanent_type' => $cardMasterPk,
+                    'perm_sub_type' => $configMap->map_pk,
+                    'telephone_no' => $validated['telephone_number'] ?? null,
+                    'vender_name' => $validated['vendor_organization_name'] ?? null,
+                    'father_name' => $validated['father_name'] ?? null,
+                    'doc_path' => $docPath,
+                    'department_approval_emp_pk' => !empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null,
+                    'section' => $userDepartmentPk,
+                ]);
+
+                foreach ($approvers as $idx => $approverPk) {
+                    DB::table('security_con_oth_id_apply_approval')->insert([
+                        'security_parm_id_apply_pk' => $empIdApply,
+                        'status' => $idx + 1,
+                        'approval_remarks' => null,
+                        'recommend_status' => $idx === 0 ? 1 : null,
+                        'approval_emp_pk' => (int) $approverPk,
+                        'created_by' => $employeePk ?? $authEmpPk,
+                        'created_date' => $now,
+                        'modified_by' => null,
+                        'modified_date' => null,
+                    ]);
+                }
+            }
+        });
 
         return redirect()
             ->route('admin.employee_idcard.index')
             ->with('success', 'Employee ID Card request created successfully!');
     }
 
+    /**
+     * Resolve list id to source: permanent (pk int) or contractual (c-{pk}).
+     * @return array{type: 'perm'|'cont', pk: int, id: string|int}
+     */
+    private static function resolveId($id): array
+    {
+        if (is_string($id) && str_starts_with($id, 'c-')) {
+            $pk = (int) substr($id, 2);
+            return ['type' => 'cont', 'pk' => $pk, 'id' => $id];
+        }
+        $pk = (int) $id;
+        return ['type' => 'perm', 'pk' => $pk, 'id' => $pk];
+    }
+
     public function show($id)
     {
+        $res = static::resolveId($id);
+        if ($res['type'] === 'cont') {
+            $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if (!$row) {
+                abort(404);
+            }
+            $request = IdCardSecurityMapper::toContractualRequestDto($row);
+            return view('admin.employee_idcard.show', ['request' => $request]);
+        }
         $row = SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])
-            ->where('pk', $id)->firstOrFail();
+            ->where('pk', $res['pk'])->firstOrFail();
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
         return view('admin.employee_idcard.show', ['request' => $request]);
     }
 
     public function edit($id)
     {
+        $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name');
+        $userDepartmentPk = null;
+        $userDepartmentName = null;
+        $approvalAuthorityEmployees = collect();
+        $authUserId = Auth::user()->user_id ?? null;
+        if ($authUserId) {
+            $authEmp = EmployeeMaster::with('department')
+                ->where('pk', $authUserId)
+                ->orWhere('pk_old', $authUserId)
+                ->first();
+            if ($authEmp && $authEmp->department_master_pk) {
+                $userDepartmentPk = $authEmp->department_master_pk;
+                $userDepartmentName = $authEmp->department->department_name ?? null;
+                $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                    ->where('department_master_pk', $userDepartmentPk)
+                    ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                    ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                    ->orderBy('first_name')->orderBy('last_name')
+                    ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+            }
+        }
+        $res = static::resolveId($id);
+        if ($res['type'] === 'cont') {
+            $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if (!$row) {
+                abort(404);
+            }
+            $request = IdCardSecurityMapper::toContractualRequestDto($row);
+            return view('admin.employee_idcard.edit', [
+                'request' => $request,
+                'cardTypes' => $cardTypes,
+                'userDepartmentName' => $userDepartmentName,
+                'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+            ]);
+        }
         $row = SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])
-            ->where('pk', $id)->firstOrFail();
+            ->where('pk', $res['pk'])->firstOrFail();
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
-        return view('admin.employee_idcard.edit', ['request' => $request]);
+        return view('admin.employee_idcard.edit', [
+            'request' => $request,
+            'cardTypes' => $cardTypes,
+            'userDepartmentName' => $userDepartmentName,
+            'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+        ]);
     }
 
     public function update(Request $request, $id)
@@ -162,7 +670,7 @@ class EmployeeIDCardRequestController extends Controller
             'employee_type' => 'required|in:Permanent Employee,Contractual Employee',
             'card_type' => 'nullable|string|max:100',
             'sub_type' => 'nullable|string|max:100',
-            'request_for' => 'nullable|string|max:100|in:Own ID Card,Family ID Card,Replacement,Duplication,Extension',
+            'request_for' => 'nullable|string|max:100|in:Own ID Card,Others ID Card,Family ID Card,Replacement,Duplication,Extension',
             'duplication_reason' => 'nullable|string|in:Expired Card,Lost,Damage',
             'name' => 'required|string|max:255',
             'designation' => 'nullable|string|max:255',
@@ -187,14 +695,88 @@ class EmployeeIDCardRequestController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        $row = SecurityParmIdApply::where('pk', $id)->firstOrFail();
+        $res = static::resolveId($id);
+        if ($res['type'] === 'cont') {
+            $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if (!$row) {
+                abort(404);
+            }
+            $authUserId = Auth::user()->user_id ?? Auth::id();
+            $userDepartmentPkForUpdate = null;
+            if ($authUserId) {
+                $authEmp = EmployeeMaster::where('pk', $authUserId)->orWhere('pk_old', $authUserId)->first(['department_master_pk']);
+                $userDepartmentPkForUpdate = $authEmp->department_master_pk ?? null;
+            }
+            $employeeType = $validated['employee_type'] ?? 'Contractual Employee';
+            $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
+            $cardMasterPk = $row->permanent_type;
+            if (!empty($validated['card_type'])) {
+                $cardMasterPk = IdCardSecurityLookup::resolveCardMasterPk($validated['card_type']) ?? $row->permanent_type;
+            }
+            $configMapPk = $row->perm_sub_type;
+            if (!empty($validated['sub_type']) && $cardMasterPk) {
+                $configMap = IdCardSecurityLookup::resolveConfigMapRow($cardNameCode, $cardMasterPk, $validated['sub_type']);
+                if ($configMap) {
+                    $configMapPk = $configMap->map_pk;
+                }
+            }
+            $cardValidFrom = !empty($validated['id_card_valid_from']) ? static::parseDateToYmd($validated['id_card_valid_from']) : $row->card_valid_from;
+            $cardValidTo = !empty($validated['id_card_valid_upto']) ? static::parseDateToYmd($validated['id_card_valid_upto']) : $row->card_valid_to;
+            $up = [
+                'employee_name' => $validated['name'] ?? $row->employee_name,
+                'designation_name' => $validated['designation'] ?? $row->designation_name,
+                'card_valid_from' => $cardValidFrom,
+                'card_valid_to' => $cardValidTo,
+                'id_card_no' => $validated['id_card_number'] ?? $row->id_card_no,
+                'remarks' => $validated['remarks'] ?? $row->remarks,
+                'employee_dob' => $validated['date_of_birth'] ?? $row->employee_dob,
+                'mobile_no' => $validated['mobile_number'] ?? $row->mobile_no,
+                'telephone_no' => $validated['telephone_number'] ?? $row->telephone_no,
+                'blood_group' => $validated['blood_group'] ?? $row->blood_group,
+                'permanent_type' => $cardMasterPk,
+                'perm_sub_type' => $configMapPk,
+                'vender_name' => $validated['vendor_organization_name'] ?? $row->vender_name,
+                'father_name' => $validated['father_name'] ?? $row->father_name,
+                'department_approval_emp_pk' => array_key_exists('approval_authority', $validated) ? (!empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null) : $row->department_approval_emp_pk,
+                'section' => $userDepartmentPkForUpdate ?? $row->section,
+            ];
+            if ($request->hasFile('photo')) {
+                $up['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
+            }
+            if ($request->hasFile('documents')) {
+                $up['doc_path'] = $request->file('documents')->store('idcard/documents', 'public');
+            }
+            DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->update($up);
+            return redirect()
+                ->route('admin.employee_idcard.show', $res['id'])
+                ->with('success', 'Employee ID Card request updated successfully!');
+        }
+
+        $row = SecurityParmIdApply::where('pk', $res['pk'])->firstOrFail();
+
+        $employeeType = $validated['employee_type'] ?? 'Permanent Employee';
+        $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
+        if (!empty($validated['card_type'])) {
+            $cardMasterPk = IdCardSecurityLookup::resolveCardMasterPk($validated['card_type']);
+            if ($cardMasterPk) {
+                $row->permanent_type = $cardMasterPk;
+            }
+        }
+        if (!empty($validated['sub_type']) && !empty($row->permanent_type)) {
+            $configMap = IdCardSecurityLookup::resolveConfigMapRow($cardNameCode, $row->permanent_type, $validated['sub_type']);
+            if ($configMap) {
+                $row->perm_sub_type = $configMap->map_pk;
+            }
+        }
+        $row->card_type = $cardNameCode;
+
         $cardValidFrom = null;
         $cardValidTo = null;
         if (!empty($validated['id_card_valid_from'])) {
-            $cardValidFrom = \Carbon\Carbon::createFromFormat('d/m/Y', $validated['id_card_valid_from'])->format('Y-m-d');
+            $cardValidFrom = static::parseDateToYmd($validated['id_card_valid_from']);
         }
         if (!empty($validated['id_card_valid_upto'])) {
-            $cardValidTo = \Carbon\Carbon::createFromFormat('d/m/Y', $validated['id_card_valid_upto'])->format('Y-m-d');
+            $cardValidTo = static::parseDateToYmd($validated['id_card_valid_upto']);
         }
 
         $row->card_valid_from = $cardValidFrom;
@@ -205,9 +787,11 @@ class EmployeeIDCardRequestController extends Controller
         $row->mobile_no = $validated['mobile_number'] ?? null;
         $row->telephone_no = $validated['telephone_number'] ?? null;
         $row->blood_group = $validated['blood_group'] ?? null;
-        $row->card_type = $validated['card_type'] ?? null;
         if ($request->hasFile('photo')) {
             $row->id_photo_path = $request->file('photo')->store('idcard/photos', 'public');
+        }
+        if ($request->hasFile('joining_letter')) {
+            $row->joining_letter_path = $request->file('joining_letter')->store('idcard/joining_letters', 'public');
         }
         $row->save();
 
@@ -218,6 +802,10 @@ class EmployeeIDCardRequestController extends Controller
 
     public function amendDuplicationExtension(Request $request, $id)
     {
+        $res = static::resolveId($id);
+        if ($res['type'] === 'cont') {
+            abort(404, 'Duplication/Extension is not supported for contractual ID card requests.');
+        }
         $validated = $request->validate([
             'duplication_reason' => 'nullable|string|in:Expired Card,Lost,Damage',
             'id_card_valid_from' => 'nullable|string|max:50',
@@ -227,12 +815,12 @@ class EmployeeIDCardRequestController extends Controller
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
         ]);
 
-        $row = SecurityParmIdApply::where('pk', $id)->firstOrFail();
+        $row = SecurityParmIdApply::where('pk', $res['pk'])->firstOrFail();
         if (array_key_exists('id_card_valid_from', $validated) && $validated['id_card_valid_from']) {
-            $row->card_valid_from = \Carbon\Carbon::createFromFormat('d/m/Y', $validated['id_card_valid_from'])->format('Y-m-d');
+            $row->card_valid_from = static::parseDateToYmd($validated['id_card_valid_from']);
         }
         if (array_key_exists('id_card_valid_upto', $validated) && $validated['id_card_valid_upto']) {
-            $row->card_valid_to = \Carbon\Carbon::createFromFormat('d/m/Y', $validated['id_card_valid_upto'])->format('Y-m-d');
+            $row->card_valid_to = static::parseDateToYmd($validated['id_card_valid_upto']);
         }
         if (array_key_exists('id_card_number', $validated)) {
             $row->id_card_no = $validated['id_card_number'];
@@ -254,7 +842,19 @@ class EmployeeIDCardRequestController extends Controller
 
     public function destroy($id)
     {
-        $row = SecurityParmIdApply::where('pk', $id)->firstOrFail();
+        $res = static::resolveId($id);
+        if ($res['type'] === 'cont') {
+            $row = DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->first();
+            if (!$row) {
+                abort(404);
+            }
+            DB::table('security_con_oth_id_apply_approval')->where('security_parm_id_apply_pk', $row->emp_id_apply)->delete();
+            DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->delete();
+            return redirect()
+                ->route('admin.employee_idcard.index')
+                ->with('success', 'Employee ID Card request archived successfully!');
+        }
+        $row = SecurityParmIdApply::where('pk', $res['pk'])->firstOrFail();
         SecurityParmIdApplyApproval::where('security_parm_id_apply_pk', $row->emp_id_apply)->delete();
         $row->delete();
 
@@ -310,5 +910,38 @@ class EmployeeIDCardRequestController extends Controller
             $filename . ($format === 'csv' ? '.csv' : '.xlsx'),
             $format === 'csv' ? \Maatwebsite\Excel\Excel::CSV : \Maatwebsite\Excel\Excel::XLSX
         );
+    }
+
+    /**
+     * Parse date string (Y-m-d from HTML date input, or d/m/Y from text) to Y-m-d.
+     */
+    private static function parseDateToYmd(?string $value): ?string
+    {
+        $value = trim($value ?? '');
+        if ($value === '') {
+            return null;
+        }
+        // HTML5 date input sends Y-m-d (e.g. 2025-12-31)
+        try {
+            $date = \Carbon\Carbon::createFromFormat('Y-m-d', $value);
+            if ($date !== false) {
+                return $date->format('Y-m-d');
+            }
+        } catch (\Exception $e) {
+        }
+        // Text field placeholder DD/MM/YYYY (e.g. 31/12/2025)
+        try {
+            $date = \Carbon\Carbon::createFromFormat('d/m/Y', $value);
+            if ($date !== false) {
+                return $date->format('Y-m-d');
+            }
+        } catch (\Exception $e) {
+        }
+        // Fallback: Carbon::parse (handles many formats)
+        try {
+            return \Carbon\Carbon::parse($value)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

@@ -623,6 +623,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
+        // AJAX helpers for create form
+        Route::get('/sub-types', 'subTypes')->name('subTypes');
+        Route::get('/me', 'me')->name('me');
         Route::get('/show/{id}', 'show')->name('show');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::put('/update/{id}', 'update')->name('update');
@@ -635,6 +638,7 @@ Route::middleware(['auth'])->group(function () {
     // Family ID Card Request Routes (mapped to security_family_id_apply)
     Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/members/{id}', 'members')->name('members');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/export', 'export')->name('export');
@@ -644,6 +648,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
         Route::post('/restore/{id}', 'restore')->name('restore');
         Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
+        Route::post('/duplicate/{id}', 'duplicateRequest')->name('duplicate');
     });
 
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {
