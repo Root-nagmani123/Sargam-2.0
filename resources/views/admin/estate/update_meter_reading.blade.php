@@ -39,15 +39,10 @@
                 @csrf
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label for="bill_month" class="form-label">Bill Month (Meter Change Month) <span class="text-danger">*</span></label>
-                        <select class="form-select" id="bill_month" name="bill_month">
-                            <option value="">Select</option>
-                            @foreach($billMonths ?? [] as $bm)
-                                <option value="{{ $bm->bill_month }}" data-year="{{ $bm->bill_year }}">{{ $bm->bill_month }} {{ $bm->bill_year }}</option>
-                            @endforeach
-                        </select>
+                        <label for="bill_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month">
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Bill Month
+                            <i class="bi bi-info-circle"></i> Select Meter Change Month
                         </small>
                     </div>
                     <div class="col-md-4">
@@ -99,12 +94,10 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="meter_reading_date" class="form-label">Master Update Date (Meter Reading Date) <span class="text-danger">*</span></label>
-                        <select class="form-select" id="meter_reading_date" name="meter_reading_date">
-                            <option value="">Select</option>
-                        </select>
+                        <label for="meter_reading_date" class="form-label">Meter Update Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date">
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Meter Reading Date
+                            <i class="bi bi-info-circle"></i> Select date
                         </small>
                     </div>
                 </div>
@@ -127,10 +120,10 @@
                                 <th><input type="checkbox" class="form-check-input" id="select_all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
-                                <th>Last Month Electric Reading Date</th>
-                                <th>Meter No.</th>
-                                <th>Last Month Meter Reading</th>
-                                <th>Current Month Reading (Electric Meter Reading) <span class="text-danger">*</span></th>
+                                <th>Old Meter No.</th>
+                                <th>Electric Meter Reading</th>
+                                <th>New Meter No.</th>
+                                <th>New Meter Reading <span class="text-danger">*</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -164,24 +157,8 @@ $(document).ready(function() {
     const listUrl = "{{ route('admin.estate.update-meter-reading.list') }}";
     const blocksUrl = "{{ route('admin.estate.update-meter-reading.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading.unit-sub-types') }}";
-    const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading.meter-reading-dates') }}";
 
     let dataTable = null;
-
-    $('#bill_month').on('change', function() {
-        const billMonth = $(this).val();
-        const billYear = $(this).find('option:selected').data('year');
-        $('#meter_reading_date').html('<option value="">Select</option>');
-        if (!billMonth || !billYear) return;
-        $.get(meterReadingDatesUrl, { bill_month: billMonth, bill_year: billYear }, function(res) {
-            if (res.status && res.data && res.data.length) {
-                res.data.forEach(function(d) {
-                    $('#meter_reading_date').append('<option value="'+d.value+'">'+d.label+'</option>');
-                });
-                if (res.data.length === 1) $('#meter_reading_date').val(res.data[0].value);
-            }
-        });
-    });
 
     $('#estate_name').on('change', function() {
         const campusId = $(this).val();
@@ -216,12 +193,15 @@ $(document).ready(function() {
             dataTable.destroy();
             dataTable = null;
         }
-        const billMonth = $('#bill_month').val();
-        const billYear = $('#bill_month option:selected').data('year');
-        if (!billMonth || !billYear) {
-            alert('Please select Bill Month.');
+        const billMonthVal = $('#bill_month').val();
+        if (!billMonthVal) {
+            alert('Please select Meter Change Month.');
             return;
         }
+        var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        var parts = billMonthVal.split('-');
+        var billYear = parts[0];
+        var billMonth = monthNames[parseInt(parts[1], 10) - 1];
         const params = {
             bill_month: billMonth,
             bill_year: billYear,
@@ -246,15 +226,18 @@ $(document).ready(function() {
             const tbody = $('#updateMeterReadingTable tbody');
             tbody.html('');
             res.data.forEach(function(row, idx) {
+                var newMeterNo = row.new_meter_no != null ? row.new_meter_no : '';
+                var newMeterReading = row.new_meter_reading != null ? row.new_meter_reading : '';
                 const tr = '<tr>' +
                     '<td><input type="checkbox" class="form-check-input row-check"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
-                    '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
-                    '<td>'+ (row.meter_no || 'N/A') +'</td>' +
-                    '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
-                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ (row.curr_month_reading || '') +'" min="0" placeholder="Enter">' +
-                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'"></td>' +
+                    '<td>'+ (row.old_meter_no || 'N/A') +'</td>' +
+                    '<td>'+ (row.electric_meter_reading ?? 'N/A') +'</td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ newMeterNo +'" placeholder="Enter new meter no."></td>' +
+                    '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ newMeterReading +'" min="0" placeholder="Enter">' +
+                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
+                    '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+(row.meter_slot || 1)+'"></td>' +
                     '</tr>';
                 tbody.append(tr);
             });
