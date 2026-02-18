@@ -1,8 +1,6 @@
 @php
     /** @var \App\Models\Mess\ItemSubcategory|null $itemsubcategory */
     $itemsubcategory = $itemsubcategory ?? null;
-    $categories = $categories ?? \App\Models\Mess\ItemCategory::orderBy('category_name')->get();
-    $oldCategoryId = old('category_id', $itemsubcategory ? $itemsubcategory->category_id : '');
     $oldItemName = old('item_name', $itemsubcategory ? $itemsubcategory->item_name : '');
     $oldUnitMeasurement = old('unit_measurement', $itemsubcategory ? $itemsubcategory->unit_measurement : '');
     $oldStandardCost = old('standard_cost', $itemsubcategory ? $itemsubcategory->standard_cost : '');
@@ -11,20 +9,7 @@
 @endphp
 
 <div class="row">
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Category Name <span class="text-danger">*</span></label>
-        <select name="category_id" class="form-control" required>
-            <option value="">Select Category</option>
-            @foreach($categories as $category)
-                <option value="{{ $category->id }}" {{ $oldCategoryId == $category->id ? 'selected' : '' }}>
-                    {{ $category->category_name }}
-                </option>
-            @endforeach
-        </select>
-        @error('category_id')<div class="text-danger small">{{ $message }}</div>@enderror
-    </div>
-
-    <div class="col-md-6 mb-3">
+    <div class="col-md-12 mb-3">
         <label class="form-label">Item Name <span class="text-danger">*</span></label>
         <input type="text" name="item_name" class="form-control" required value="{{ $oldItemName }}">
         @error('item_name')<div class="text-danger small">{{ $message }}</div>@enderror

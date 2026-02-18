@@ -15,19 +15,27 @@
         .main-table th { background: #004a93; color: white; padding: 5px 4px; text-align: left; border: 1px solid #003a73; }
         .main-table td { padding: 4px; border: 1px solid #dee2e6; vertical-align: top; word-wrap: break-word; }
         .main-table tr:nth-child(even) { background: #f8f9fa; }
-        .main-table .col-id { width: 4%; }
-        .main-table .col-date { width: 8%; }
-        .main-table .col-category { width: 10%; }
-        .main-table .col-subcat { width: 10%; }
-        .main-table .col-desc { width: 26%; }
-        .main-table .col-priority { width: 6%; }
-        .main-table .col-status { width: 10%; }
+        .main-table th, .main-table td { font-size: 7px; }
+        .main-table .col-sno { width: 3%; }
+        .main-table .col-section { width: 8%; }
+        .main-table .col-callid { width: 5%; }
+        .main-table .col-name { width: 12%; }
+        .main-table .col-desc { width: 18%; }
+        .main-table .col-attended { width: 10%; }
+        .main-table .col-date { width: 6%; }
+        .main-table .col-time { width: 5%; }
+        .main-table .col-cleared-date { width: 6%; }
+        .main-table .col-cleared-time { width: 5%; }
+        .main-table .col-taken { width: 6%; }
+        .main-table .col-location { width: 6%; }
+        .main-table .col-status { width: 6%; }
+        .main-table .col-remarks { width: 10%; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="title">Issue Management - Export Report</div>
-        <div class="subtitle">Sargam | Lal Bahadur</div>
+        <div class="subtitle">Sargam | Lal Bahadur Shastri National Academy of Administration (LBSNAA), Mussoorie</div>
         <div class="timestamp">Generated: {{ $export_date }}</div>
     </div>
 
@@ -43,29 +51,60 @@
     <table class="main-table">
         <thead>
             <tr>
-                <th class="col-id">ID</th>
-                <th class="col-date">Date</th>
-                <th class="col-category">Category</th>
-                <th class="col-subcat">Sub-Category</th>
-                <th class="col-desc">Description</th>
-                <th class="col-priority">Priority</th>
-                <th class="col-status">Status</th>
+                @if(isset($header) && is_array($header))
+                    <th class="col-sno">{{ $header[0] ?? 'S.No.' }}</th>
+                    <th class="col-section">{{ $header[1] ?? 'Section' }}</th>
+                    <th class="col-callid">{{ $header[2] ?? 'Call ID' }}</th>
+                    <th class="col-name">{{ $header[3] ?? 'Name' }}</th>
+                    <th class="col-desc">{{ $header[4] ?? 'Description' }}</th>
+                    <th class="col-attended">{{ $header[5] ?? 'Attended By' }}</th>
+                    <th class="col-date">{{ $header[6] ?? 'Call Date' }}</th>
+                    <th class="col-time">{{ $header[7] ?? 'Call Time' }}</th>
+                    <th class="col-cleared-date">{{ $header[8] ?? 'Cleared Date' }}</th>
+                    <th class="col-cleared-time">{{ $header[9] ?? 'Cleared Time' }}</th>
+                    <th class="col-taken">{{ $header[10] ?? 'Time Taken In Hours' }}</th>
+                    <th class="col-location">{{ $header[11] ?? 'location' }}</th>
+                    <th class="col-status">{{ $header[12] ?? 'Status' }}</th>
+                    <th class="col-remarks">{{ $header[13] ?? 'Remarks' }}</th>
+                @else
+                    <th class="col-sno">S.No.</th>
+                    <th class="col-section">Section</th>
+                    <th class="col-callid">Call ID</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-desc">Description</th>
+                    <th class="col-attended">Attended By</th>
+                    <th class="col-date">Call Date</th>
+                    <th class="col-time">Call Time</th>
+                    <th class="col-cleared-date">Cleared Date</th>
+                    <th class="col-cleared-time">Cleared Time</th>
+                    <th class="col-taken">Time Taken In Hours</th>
+                    <th class="col-location">location</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-remarks">Remarks</th>
+                @endif
             </tr>
         </thead>
         <tbody>
-            @forelse($issues as $row)
+            @forelse($rows as $row)
             <tr>
-                <td class="col-id">{{ $row[0] ?? '-' }}</td>
-                <td class="col-date">{{ $row[1] ?? '-' }}</td>
-                <td class="col-category">{{ $row[2] ?? '-' }}</td>
-                <td class="col-subcat">{{ $row[3] ?? '-' }}</td>
+                <td class="col-sno">{{ $row[0] ?? '-' }}</td>
+                <td class="col-section">{{ $row[1] ?? '-' }}</td>
+                <td class="col-callid">{{ $row[2] ?? '-' }}</td>
+                <td class="col-name">{{ $row[3] ?? '-' }}</td>
                 <td class="col-desc">{{ $row[4] ?? '-' }}</td>
-                <td class="col-priority">{{ $row[5] ?? '-' }}</td>
-                <td class="col-status">{{ $row[6] ?? '-' }}</td>
+                <td class="col-attended">{{ $row[5] ?? '-' }}</td>
+                <td class="col-date">{{ $row[6] ?? '-' }}</td>
+                <td class="col-time">{{ $row[7] ?? '-' }}</td>
+                <td class="col-cleared-date">{{ $row[8] ?? '-' }}</td>
+                <td class="col-cleared-time">{{ $row[9] ?? '-' }}</td>
+                <td class="col-taken">{{ $row[10] ?? '-' }}</td>
+                <td class="col-location">{{ $row[11] ?? '-' }}</td>
+                <td class="col-status">{{ $row[12] ?? '-' }}</td>
+                <td class="col-remarks">{{ $row[13] ?? '-' }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="7" style="text-align: center; padding: 20px;">No issues to export</td>
+                <td colspan="14" style="text-align: center; padding: 20px;">No issues to export</td>
             </tr>
             @endforelse
         </tbody>
