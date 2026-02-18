@@ -3,12 +3,19 @@
 namespace App\Exports;
 
 use App\Models\IssueLogManagement;
+use App\Models\EmployeeMaster;
 use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\{FromCollection, WithHeadings};
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class IssueManagementExport implements FromCollection, WithHeadings
+class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSize
 {
     protected $filters;
 
@@ -17,12 +24,14 @@ class IssueManagementExport implements FromCollection, WithHeadings
         $this->filters = $filters;
     }
 
-    public function collection()
+    public function collection(): Collection
     {
         $query = IssueLogManagement::with([
             'category',
             'priority',
-            'subCategoryMappings.subCategory',
+            'creator.designation',
+            'buildingMapping.building',
+            'hostelMapping.hostelBuilding',
         ]);
 
         // User scope (non-admin sees only own issues)
@@ -35,12 +44,10 @@ class IssueManagementExport implements FromCollection, WithHeadings
             });
         }
 
-        // Raised by: "self" = raised by himself only
         if (!empty($this->filters['raised_by']) && $this->filters['raised_by'] === 'self') {
             $query->where('created_by', Auth::user()->user_id);
         }
 
-        // Search
         if (!empty($this->filters['search'])) {
             $term = trim($this->filters['search']);
             $query->where(function ($q) use ($term) {
@@ -53,63 +60,153 @@ class IssueManagementExport implements FromCollection, WithHeadings
             });
         }
 
-        // Category
         if (!empty($this->filters['category'])) {
             $query->where('issue_category_master_pk', $this->filters['category']);
         }
 
-        // Priority
         if (!empty($this->filters['priority'])) {
             $query->where('issue_priority_master_pk', $this->filters['priority']);
         }
 
-        // Date range
         if (!empty($this->filters['date_from'])) {
-            // Use full datetime so the day's range is applied correctly
             $from = Carbon::parse($this->filters['date_from'])->startOfDay()->toDateTimeString();
             $query->where('created_date', '>=', $from);
         }
         if (!empty($this->filters['date_to'])) {
-            // Use full datetime so the "to" date includes the entire day (23:59:59)
             $to = Carbon::parse($this->filters['date_to'])->endOfDay()->toDateTimeString();
             $query->where('created_date', '<=', $to);
         }
 
-        // Status: only filter when user selects a status; otherwise export all complaints
         if (isset($this->filters['status']) && $this->filters['status'] !== '') {
             $query->where('issue_status', (int) $this->filters['status']);
         }
 
         $issues = $query->orderBy('created_date', 'desc')->get();
 
-        return $issues->map(function ($issue) {
-            $subCategories = $issue->subCategoryMappings
-                ->map(fn ($m) => optional($m->subCategory)->issue_sub_category)
-                ->filter()
-                ->unique()
-                ->implode(', ');
-            return [
-                $issue->pk,
-                $issue->created_date ? $issue->created_date->format('d-m-Y H:i') : 'N/A',
+        $locationLabel = function ($issue) {
+            if ($issue->buildingMapping && $issue->buildingMapping->building) {
+                return trim($issue->buildingMapping->building->building_name ?? '') ?: '';
+            }
+            if ($issue->hostelMapping && $issue->hostelMapping->hostelBuilding) {
+                $h = $issue->hostelMapping->hostelBuilding;
+                return trim($h->hostel_name ?? $h->building_name ?? '') ?: '';
+            }
+            return '';
+        };
+
+        $nameWithDesignation = function ($issue) {
+            $creator = $issue->creator;
+            if (!$creator) {
+                return 'CENTCOM LBSNAA - USER';
+            }
+            $name = trim(($creator->first_name ?? '') . ' ' . ($creator->middle_name ?? '') . ' ' . ($creator->last_name ?? ''));
+            $designation = $creator->designation->designation_name ?? '';
+            return $designation ? $name . ' - ' . $designation : $name;
+        };
+
+        $assignedToName = function ($issue) {
+            if (!$issue->assigned_to) {
+                return '';
+            }
+            if (is_numeric($issue->assigned_to)) {
+                $emp = EmployeeMaster::find($issue->assigned_to);
+                return $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : '';
+            }
+            return $issue->assigned_to;
+        };
+
+        $timeTaken = function ($issue) {
+            $created = $issue->created_date ? Carbon::parse($issue->created_date) : null;
+            $cleared = $issue->clear_date ? Carbon::parse($issue->clear_date) : null;
+            if (!$created || !$cleared) {
+                return '';
+            }
+            $diff = $created->diff($cleared);
+            return sprintf('%02d:%02d:%02d', $diff->h + $diff->days * 24, $diff->i, $diff->s);
+        };
+
+        $rows = collect();
+
+        // Table header - yellow in styles
+        $rows->push([
+            'S.No.',
+            'Section',
+            'Call ID',
+            'Name',
+            'Description',
+            'Attended By',
+            'Call Date',
+            'Call Time',
+            'Cleared Date',
+            'Cleared Time',
+            'Time Taken In Hours',
+            'location',
+            'Status',
+            'Remarks',
+        ]);
+
+        // Data rows
+        $sno = 1;
+        foreach ($issues as $issue) {
+            $callDate = $issue->created_date ? $issue->created_date->format('d-m-Y') : '';
+            $callTime = $issue->created_date ? $issue->created_date->format('H:i:s') : '';
+            $clearedDate = $issue->clear_date ? Carbon::parse($issue->clear_date)->format('d-m-Y') : '';
+            $clearedTime = $issue->clear_date ? Carbon::parse($issue->clear_date)->format('H:i:s') : '';
+
+            $rows->push([
+                $sno++,
                 $issue->category->issue_category ?? 'N/A',
-                $subCategories ?: 'N/A',
+                $issue->pk,
+                $nameWithDesignation($issue),
                 $issue->description ?? '',
-                $issue->priority->priority ?? 'N/A',
-                $issue->status_label,
-            ];
-        });
+                $assignedToName($issue),
+                $callDate,
+                $callTime,
+                $clearedDate,
+                $clearedTime,
+                $timeTaken($issue),
+                $locationLabel($issue),
+                $issue->issue_status == 2 ? 'Closed' : $issue->status_label,
+                $issue->remark ?? '',
+            ]);
+        }
+
+        return $rows;
     }
 
-    public function headings(): array
+    public function styles(Worksheet $sheet): array
     {
-        return [
-            'ID',
-            'Date',
-            'Category',
-            'Sub-Category',
-            'Description',
-            'Priority',
-            'Status',
-        ];
+        $lastRow = $sheet->getHighestRow();
+        $lastCol = 'N';
+
+        // Table header row (row 1) - yellow background, bold
+        $sheet->getStyle('A1:N1')->applyFromArray([
+            'font' => ['bold' => true],
+            'fill' => [
+                'fillType'   => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'FFFF00'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        // Data area border and alignment (from row 1 to end)
+        if ($lastRow >= 1) {
+            $sheet->getStyle('A1:' . $lastCol . $lastRow)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color'       => ['argb' => 'FF000000'],
+                    ],
+                ],
+                'alignment' => [
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+        }
+
+        return [];
     }
 }

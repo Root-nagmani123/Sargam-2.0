@@ -562,6 +562,27 @@ class IssueManagementController extends Controller
         // Complaint section: employees + faculty only (user_credentials.user_category != 'S'), optional department filter
         $employees = User::getEmployeesAndFacultyForComplaint($department_id);
 
+        // If already assigned to an employee (numeric), ensure they appear in dropdown for pre-select and re-assign
+        if (!empty($issue->assigned_to) && is_numeric($issue->assigned_to)) {
+            $assignedPk = (string) $issue->assigned_to;
+            $alreadyInList = $employees->contains(fn ($e) => (string) $e->employee_pk === $assignedPk);
+            if (!$alreadyInList) {
+                $assigned = DB::table('employee_master as e')
+                    ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
+                    ->where('e.pk', $issue->assigned_to)
+                    ->select(
+                        'e.pk as employee_pk',
+                        DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
+                        DB::raw("COALESCE(e.mobile, '') as mobile"),
+                        'd.designation_name'
+                    )
+                    ->first();
+                if ($assigned) {
+                    $employees = $employees->prepend($assigned);
+                }
+            }
+        }
+
         // Fallback: load location mapping from DB (for O always; for H/R when no mapping loaded)
         $locationFallback = null;
         if ($issue->location === 'O') {
@@ -1100,7 +1121,7 @@ class IssueManagementController extends Controller
         $issue = IssueLogManagement::findOrFail($id);
         $userId = Auth::user()->user_id ?? null;
 
-        $isNodalOrAssigned = ($issue->employee_master_pk == $userId) || ($issue->assigned_to == $userId);
+        $isNodalOrAssigned = ($issue->employee_master_pk == $userId) || ((string)$issue->assigned_to === (string)$userId);
         $isComplainant = ($issue->created_by == $userId);
         $isLogger = ($issue->issue_logger == $userId);
         $isCompleted = (int) $issue->issue_status === 2;
@@ -1118,12 +1139,12 @@ class IssueManagementController extends Controller
         }
 
         $isAssigned = !empty($issue->assigned_to);
+        $isNodalOfficer = ($issue->employee_master_pk == $userId);
 
         $rules = [
             'issue_status' => 'required|in:0,1,2,3,6',
             'remark' => 'nullable|string|max:500',
         ];
-        // Reopen-only (complainant/logger) does not send assignment; skip assign_to_type when only reopening
         if (!$isAssigned && !(($isComplainant || $isLogger) && $isReopenOnly)) {
             $rules['assign_to_type'] = 'required';
         }
@@ -1131,49 +1152,44 @@ class IssueManagementController extends Controller
 
         DB::beginTransaction();
         try {
+            // assigned_to column (VARCHAR): stores employee PK (string) or "Other" person's name
             $assignedTo = null;
             $assignedToContact = null;
 
-            // Handle assignment based on type (only if not already assigned)
-            if (!$isAssigned) {
-                // Reopen-only by complainant/logger: do not change assignment
-                if (($isComplainant || $isLogger) && $isReopenOnly) {
-                    $assignedTo = $issue->assigned_to;
-                    $assignedToContact = $issue->assigned_to_contact;
-                } elseif ($request->assign_to_type === 'other') {
-                    // Validate other fields if "other" is selected
+            $allowAssignmentChange = !$isAssigned || $isNodalOfficer;
+
+            if (!$allowAssignmentChange) {
+                $assignedTo = $issue->assigned_to;
+                $assignedToContact = $issue->assigned_to_contact;
+            } elseif (($isComplainant || $isLogger) && $isReopenOnly) {
+                $assignedTo = $issue->assigned_to;
+                $assignedToContact = $issue->assigned_to_contact;
+            } elseif ($request->filled('assign_to_type')) {
+                if ($request->assign_to_type === 'other') {
                     $request->validate([
                         'other_name' => 'required|string|max:255',
                         'other_phone' => 'required|string|max:10',
                     ]);
-                    
                     $assignedTo = $request->other_name;
                     $assignedToContact = $request->other_phone;
                 } else {
-                    // Employee selected - use hidden fields
-                    $assignedTo = $request->assigned_to;
+                    $assignedTo = $request->assigned_to ? (string) $request->assigned_to : null;
                     $assignedToContact = $request->assigned_to_contact;
                 }
             } else {
-                // Keep existing assignment
                 $assignedTo = $issue->assigned_to;
                 $assignedToContact = $issue->assigned_to_contact;
             }
 
-            // Update the main issue record
             $updateData = [
                 'issue_status' => $request->issue_status,
                 'updated_by' => Auth::user()->user_id,
                 'updated_date' => now(),
             ];
-            
-            // Add remark if provided
             if ($request->remark) {
                 $updateData['remark'] = $request->remark;
             }
-            
-            // Update assignment only if not already assigned
-            if (!$isAssigned) {
+            if ($allowAssignmentChange) {
                 $updateData['assigned_to'] = $assignedTo;
                 $updateData['assigned_to_contact'] = $assignedToContact;
             }
