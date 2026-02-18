@@ -87,7 +87,7 @@
                             <td>{{ $item->return_quantity ?? 0 }}</td>
                             <td>{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
-                            <td>{{ $report->clientTypeCategory ? ($report->clientTypeCategory->client_name ?? '—') : '—' }}</td>
+                            <td>{{ $report->display_client_name }}</td>
                             <td>{{ $report->client_name ?? '—' }}</td>
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
@@ -126,7 +126,7 @@
                             <td>—</td>
                             <td>{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
-                            <td>{{ $report->clientTypeCategory ? ($report->clientTypeCategory->client_name ?? '—') : '—' }}</td>
+                            <td>{{ $report->display_client_name }}</td>
                             <td>{{ $report->client_name ?? '—' }}</td>
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
@@ -244,7 +244,7 @@
                                     <select id="drCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -275,7 +275,7 @@
                                     <select id="drCourseNameSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -573,7 +573,7 @@
                                     <select id="editDrCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -604,7 +604,7 @@
                                     <select id="editDrCourseNameSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -954,21 +954,21 @@
             const nameInput = document.getElementById('drClientNameInput');
             if (isOt) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
+                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.removeAttribute('name'); drCourseSelect.value = ''; }
                 if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'block'; drCourseSelect.setAttribute('required', 'required'); drCourseSelect.value = ''; }
+                if (drCourseSelect) { drCourseSelect.style.display = 'block'; drCourseSelect.setAttribute('required', 'required'); drCourseSelect.setAttribute('name', 'client_type_pk'); drCourseSelect.value = ''; }
                 if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; drCourseNameSelect.setAttribute('required', 'required'); drCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else {
                 if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
                 if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
@@ -990,7 +990,8 @@
         if (!otStudentSelect || !nameInput) return;
         otStudentSelect.innerHTML = '<option value="">Loading...</option>';
         otStudentSelect.value = '';
-        nameInput.value = '';
+        const selectedOpt = this.options[this.selectedIndex];
+        nameInput.value = (selectedOpt && selectedOpt.dataset.courseName) ? selectedOpt.dataset.courseName : '';
         if (!coursePk) {
             otStudentSelect.innerHTML = '<option value="">Select course first</option>';
             return;
@@ -1013,18 +1014,20 @@
         if (inp) inp.value = this.value || '';
     });
     document.getElementById('drCourseSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const drCourseNameSelect = document.getElementById('drCourseNameSelect');
         const inp = document.getElementById('drClientNameInput');
-        if (drCourseNameSelect) drCourseNameSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (drCourseNameSelect) drCourseNameSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('drCourseNameSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const drCourseSelect = document.getElementById('drCourseSelect');
         const inp = document.getElementById('drClientNameInput');
-        if (drCourseSelect) drCourseSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (drCourseSelect) drCourseSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
     document.getElementById('drFacultySelect').addEventListener('change', function() {
@@ -1100,23 +1103,23 @@
             const nameInput = document.getElementById('editDrClientNameInput');
             if (isOt) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.value = ''; }
+                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.removeAttribute('name'); editDrCourseSelect.value = ''; }
                 if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; editDrCourseSelect.setAttribute('required', 'required'); editDrCourseSelect.value = nameInput.value || ''; }
-                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; editDrCourseNameSelect.setAttribute('required', 'required'); editDrCourseNameSelect.value = nameInput.value || ''; }
+                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; editDrCourseSelect.setAttribute('required', 'required'); editDrCourseSelect.setAttribute('name', 'client_type_pk'); editDrCourseSelect.value = ''; }
+                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; editDrCourseNameSelect.setAttribute('required', 'required'); editDrCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else {
                 if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.value = ''; }
+                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.removeAttribute('name'); editDrCourseSelect.value = ''; }
                 if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
                 if (clientSelect) {
                     clientSelect.querySelectorAll('option').forEach(function(opt) {
@@ -1136,7 +1139,8 @@
         if (!otStudentSelect || !nameInput) return;
         otStudentSelect.innerHTML = '<option value="">Loading...</option>';
         otStudentSelect.value = '';
-        nameInput.value = '';
+        const selectedOpt = this.options[this.selectedIndex];
+        nameInput.value = (selectedOpt && selectedOpt.dataset.courseName) ? selectedOpt.dataset.courseName : '';
         if (!coursePk) {
             otStudentSelect.innerHTML = '<option value="">Select course first</option>';
             return;
@@ -1159,18 +1163,20 @@
         if (inp) inp.value = this.value || '';
     });
     document.getElementById('editDrCourseSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const editDrCourseNameSelect = document.getElementById('editDrCourseNameSelect');
         const inp = document.getElementById('editDrClientNameInput');
-        if (editDrCourseNameSelect) editDrCourseNameSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (editDrCourseNameSelect) editDrCourseNameSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('editDrCourseNameSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const editDrCourseSelect = document.getElementById('editDrCourseSelect');
         const inp = document.getElementById('editDrClientNameInput');
-        if (editDrCourseSelect) editDrCourseSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (editDrCourseSelect) editDrCourseSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('editDrClientNameSelect').addEventListener('change', updateEditDrNameField);
     document.getElementById('editDrFacultySelect').addEventListener('change', function() {
@@ -1430,11 +1436,11 @@
                     const editMessEl = document.getElementById('editDrMessStaffSelect');
                     if (editMessEl) editMessEl.value = v.client_name || '';
                     const editOtCourseEl = document.getElementById('editDrOtCourseSelect');
-                    if (editOtCourseEl) editOtCourseEl.value = v.client_name || '';
+                    if (editOtCourseEl) editOtCourseEl.value = v.client_type_pk || '';
                     const editDrCourseEl = document.getElementById('editDrCourseSelect');
-                    if (editDrCourseEl) editDrCourseEl.value = v.client_name || '';
+                    if (editDrCourseEl) editDrCourseEl.value = v.client_type_pk || '';
                     const editDrCourseNameEl = document.getElementById('editDrCourseNameSelect');
-                    if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_name || '';
+                    if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('.edit-payment-type').value = String(v.payment_type ?? 1);
                     document.querySelector('.edit-issue-date').value = v.issue_date || '';
                     document.querySelector('.edit-client-type-pk').value = v.client_type_pk || '';
@@ -1451,20 +1457,20 @@
                     const editNameInp = document.getElementById('editDrClientNameInput');
                     if (isOt) {
                         if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.value = ''; }
+                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
+                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else if (isCourse) {
                         if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.value = v.client_name || ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_name || ''; }
+                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
+                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_type_pk || ''; }
                         if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else {
                         if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== slug; }); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.value = ''; }
+                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
                     }
