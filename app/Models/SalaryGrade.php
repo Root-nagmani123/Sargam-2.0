@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PayScale extends Model
+class SalaryGrade extends Model
 {
     protected $table = 'salary_grade_master';
 
