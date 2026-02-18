@@ -942,9 +942,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('possession/requester-details', [EstateController::class, 'getRequesterDetails'])->name('possession.requester-details');
 
         // Update Meter
-        Route::get('update-meter-reading', function () {
-            return view('admin.estate.update_meter_reading');
-        })->name('update-meter-reading');
+        Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
+        Route::get('update-meter-reading/list', [EstateController::class, 'getMeterReadingList'])->name('update-meter-reading.list');
+        Route::get('update-meter-reading/meter-reading-dates', [EstateController::class, 'getMeterReadingDates'])->name('update-meter-reading.meter-reading-dates');
+        Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
+        Route::get('update-meter-reading/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypes'])->name('update-meter-reading.unit-sub-types');
+        Route::post('update-meter-reading/store', [EstateController::class, 'storeMeterReadings'])->name('update-meter-reading.store');
         
         Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
         Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
