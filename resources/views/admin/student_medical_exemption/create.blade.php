@@ -323,20 +323,20 @@ document.getElementById('Doc_upload').addEventListener('change', function () {
         'application/pdf'
     ];
 
+    const maxSize = 3 * 1024 * 1024; // ✅ 3MB
+
     if (allowedTypes.indexOf(file.type) === -1) {
         fileError.textContent = 'Only image files (jpg, jpeg, png, webp) or PDF are allowed.';
         this.value = '';
         return;
     }
 
-    // Size check
     if (file.size > maxSize) {
         fileError.innerHTML = 'File size must not exceed 3 MB.';
         this.value = '';
         return;
     }
 
-    // Show file info
     const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
 
     fileInfo.innerHTML = `
