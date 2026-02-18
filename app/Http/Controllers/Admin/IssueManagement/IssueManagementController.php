@@ -382,6 +382,7 @@ class IssueManagementController extends Controller
      */
     public function store(Request $request)
     {
+      
         try {
             // Validate attachment files first (so unsupported files always show an error)
             $allowedExtensions = ['jpg', 'jpeg', 'png'];
@@ -497,7 +498,7 @@ class IssueManagementController extends Controller
                 );
                 DB::table('issue_log_hostel_map')->insert($residential_data);
             } elseif ($request->location == 'O') {
-                // Other location
+                // Other (O): building = building_master; floor & room = building_room_master
                 $other_data = array(
                     'issue_log_management_pk' => $id,
                     'building_master_pk' => $request->building_master_pk,
@@ -518,7 +519,7 @@ class IssueManagementController extends Controller
 
             return redirect()->route('admin.issue-management.show', $id)
                 ->with('success', 'Complaint submitted successfully!');
-
+            
         } catch (ValidationException $e) {
             return back()->withInput()->withErrors($e->validator);
         } catch (\Exception $e) {
@@ -561,37 +562,47 @@ class IssueManagementController extends Controller
         // Complaint section: employees + faculty only (user_credentials.user_category != 'S'), optional department filter
         $employees = User::getEmployeesAndFacultyForComplaint($department_id);
 
-        // Fallback: load location mapping from DB if not loaded via relationship (e.g. issues lodged via API or on behalf)
+        // Fallback: load location mapping from DB (for O always; for H/R when no mapping loaded)
         $locationFallback = null;
-        if (!$issue->buildingMapping && !$issue->hostelMapping) {
-            if ($issue->location === 'H' || $issue->location === 'R') {
-                $row = DB::table('issue_log_hostel_map as m')
-                    ->leftJoin('hostel_building_master as h', 'm.hostel_building_master_pk', '=', 'h.pk')
-                    ->where('m.issue_log_management_pk', $issue->pk)
-                    ->select('m.hostel_building_master_pk', 'm.floor_name', 'm.room_name', 'h.hostel_name', 'h.building_name')
-                    ->first();
-                if ($row) {
-                    $locationFallback = [
-                        'type' => $issue->location === 'H' ? 'hostel' : 'residential',
-                        'name' => trim($row->hostel_name ?? $row->building_name ?? '') ?: 'N/A',
-                        'floor' => trim($row->floor_name ?? '') ?: 'N/A',
-                        'room' => trim($row->room_name ?? '') ?: 'N/A',
-                    ];
+        if ($issue->location === 'O') {
+            // Other (O): always load from issue_log_building_map + building_master; derive floor from building_room_master if empty
+            $row = DB::table('issue_log_building_map as m')
+                ->leftJoin('building_master as b', 'm.building_master_pk', '=', 'b.pk')
+                ->where('m.issue_log_management_pk', $issue->pk)
+                ->select('m.building_master_pk', 'm.floor_name', 'm.room_name', 'b.building_name')
+                ->first();
+            if ($row) {
+                $floorDisplay = $this->locationDisplayValue($row->floor_name);
+                if ($floorDisplay === 'N/A' && $row->building_master_pk !== null && trim((string)($row->room_name ?? '')) !== '') {
+                    $roomRow = DB::table('building_room_master')
+                        ->where('building_master_pk', $row->building_master_pk)
+                        ->where(function ($q) use ($row) {
+                            $q->where('room_no', $row->room_name)->orWhere('room_no', 'like', '%' . $row->room_name . '%');
+                        })
+                        ->select('floor')
+                        ->first();
+                    $floorDisplay = $roomRow !== null ? (string)$roomRow->floor : 'N/A';
                 }
-            } elseif ($issue->location === 'O') {
-                $row = DB::table('issue_log_building_map as m')
-                    ->leftJoin('building_master as b', 'm.building_master_pk', '=', 'b.pk')
-                    ->where('m.issue_log_management_pk', $issue->pk)
-                    ->select('m.building_master_pk', 'm.floor_name', 'm.room_name', 'b.building_name')
-                    ->first();
-                if ($row) {
-                    $locationFallback = [
-                        'type' => 'building',
-                        'name' => trim($row->building_name ?? '') ?: 'N/A',
-                        'floor' => trim($row->floor_name ?? '') ?: 'N/A',
-                        'room' => trim($row->room_name ?? '') ?: 'N/A',
-                    ];
-                }
+                $locationFallback = [
+                    'type' => 'building',
+                    'name' => trim($row->building_name ?? '') ?: 'N/A',
+                    'floor' => $floorDisplay,
+                    'room' => $this->locationDisplayValue($row->room_name),
+                ];
+            }
+        } elseif (!$issue->buildingMapping && !$issue->hostelMapping && ($issue->location === 'H' || $issue->location === 'R')) {
+            $row = DB::table('issue_log_hostel_map as m')
+                ->leftJoin('hostel_building_master as h', 'm.hostel_building_master_pk', '=', 'h.pk')
+                ->where('m.issue_log_management_pk', $issue->pk)
+                ->select('m.hostel_building_master_pk', 'm.floor_name', 'm.room_name', 'h.hostel_name', 'h.building_name')
+                ->first();
+            if ($row) {
+                $locationFallback = [
+                    'type' => $issue->location === 'H' ? 'hostel' : 'residential',
+                    'name' => trim($row->hostel_name ?? $row->building_name ?? '') ?: 'N/A',
+                    'floor' => $this->locationDisplayValue($row->floor_name),
+                    'room' => $this->locationDisplayValue($row->room_name),
+                ];
             }
         }
 
@@ -752,7 +763,7 @@ class IssueManagementController extends Controller
                 ]);
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
             } elseif ($request->location == 'O') {
-                // Other (Office building) location
+                // Other (O): building = building_master; floor & room = building_room_master
                 IssueLogBuildingMap::where('issue_log_management_pk', $issue->pk)->delete();
                 IssueLogBuildingMap::create([
                     'issue_log_management_pk' => $issue->pk,
@@ -950,20 +961,16 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Get other floors (from ApiController logic).
+     * Get other floors from building_room_master (for location O).
+     * Building = building_master; Floor & Room = building_room_master.
      */
     protected function getOtherFloors($buildingId)
     {
-        return DB::table('building_master as k')
-            ->join('building_room_master as l', 'k.pk', '=', 'l.building_master_pk')
-            ->where('k.pk', $buildingId)
-            ->select(
-                'k.building_name as floor',
-                'l.floor',
-                DB::raw("GROUP_CONCAT(DISTINCT l.room_no ORDER BY l.room_no SEPARATOR ', ') as room_numbers")
-            )
-            ->groupBy('k.building_name', 'l.floor')
-            ->orderBy('k.building_name')
+        return DB::table('building_room_master as l')
+            ->where('l.building_master_pk', $buildingId)
+            ->select('l.floor as floor_id', 'l.floor as floor')
+            ->distinct()
+            ->orderBy('l.floor')
             ->get();
     }
 
@@ -975,7 +982,7 @@ class IssueManagementController extends Controller
         try {
             $request->validate([
                 'building_id' => 'required|integer',
-                'floor_id' => 'required|integer',
+                'floor_id' => 'required', // integer for H/R; for O (building_room_master) can be string e.g. "Ground"
                 'type' => 'required|string|in:H,R,O',
             ]);
 
@@ -1213,5 +1220,16 @@ class IssueManagementController extends Controller
         ]);
 
         return back()->with('success', 'Feedback added successfully.');
+    }
+
+    /**
+     * Return display value for location field; only N/A when null or empty string (so 0 is shown).
+     */
+    protected function locationDisplayValue($value)
+    {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+        return (string) $value;
     }
 }

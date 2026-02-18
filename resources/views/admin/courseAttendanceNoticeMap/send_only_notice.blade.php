@@ -62,7 +62,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6 col-12" id="normal_session_container" style="display: none;">
+                <div class="col-lg-3 col-md-6 col-12 d-none" id="normal_session_container">
                     <label for="session" class="form-label">Normal Session :</label>
                     <div class="mb-3">
                         <select name="session" id="session" class="form-select select2">
@@ -75,7 +75,7 @@
                     </div>
                 </div>
 
-                <div class="col-lg-3 col-md-6 col-12" id="manual_session_container" style="display: none;">
+                <div class="col-lg-3 col-md-6 col-12 d-none" id="manual_session_container">
                     <label for="manual_session" class="form-label">Manual Session:</label>
                     <div class="mb-3">
                         <select name="manual_session" id="manual_session" class="form-select select2">
