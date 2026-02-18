@@ -152,7 +152,9 @@
                     @endforelse
                 @empty
                     <tr>
-                        <td colspan="14" class="text-center py-4">No reports found.</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td class="text-center py-4">No reports found.</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td>
                     </tr>
                 @endforelse
             </tbody>
