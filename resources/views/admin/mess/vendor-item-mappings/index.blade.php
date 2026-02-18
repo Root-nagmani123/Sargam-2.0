@@ -31,8 +31,7 @@
                         <tr>
                             <th>S.No.</th>
                             <th>Vendor Name</th>
-                            <th>Item Category</th>
-                            <th>Item Sub Category</th>
+                            <th>Item</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -42,15 +41,10 @@
                             <td>{{ $mappings->firstItem() + $key }}</td>
                             <td>{{ $mapping->vendor->vendor_name ?? $mapping->vendor->name ?? 'N/A' }}</td>
                             <td>
-                                @if($mapping->mapping_type === \App\Models\Mess\VendorItemMapping::MAPPING_TYPE_ITEM_CATEGORY && $mapping->itemCategory)
-                                    {{ $mapping->itemCategory->category_name }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td>
-                                @if($mapping->mapping_type === \App\Models\Mess\VendorItemMapping::MAPPING_TYPE_ITEM_SUB_CATEGORY && $mapping->itemSubcategory)
+                                @if($mapping->itemSubcategory)
                                     {{ $mapping->itemSubcategory->item_name ?? $mapping->itemSubcategory->subcategory_name ?? 'N/A' }}
+                                @elseif($mapping->itemCategory)
+                                    {{ $mapping->itemCategory->category_name }}
                                 @else
                                     —
                                 @endif
@@ -65,7 +59,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="5" class="text-center">No vendor mappings found</td></tr>
+                        <tr><td colspan="4" class="text-center">No vendor mappings found</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -100,31 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var modalBody = modalEl.querySelector('.modal-body');
     var modalTitle = modalEl.querySelector('.modal-title');
 
-    function initVendorMappingForm() {
-        var wrapCat = modalBody.querySelector('#wrap_item_categories');
-        var wrapSub = modalBody.querySelector('#wrap_item_subcategories');
-        if (!wrapCat || !wrapSub) return;
-        var radios = modalBody.querySelectorAll('.mapping-type-radio');
-        function toggleMappingFields() {
-            var typeCat = modalBody.querySelector('#mapping_type_category');
-            if (!typeCat) return;
-            if (typeCat.checked) {
-                wrapCat.classList.remove('d-none');
-                wrapSub.classList.add('d-none');
-                wrapSub.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
-                var subSel = modalBody.querySelector('#item_subcategory_id');
-                if (subSel) subSel.value = '';
-            } else {
-                wrapCat.classList.add('d-none');
-                wrapSub.classList.remove('d-none');
-                wrapCat.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
-                var catSel = modalBody.querySelector('#item_category_id');
-                if (catSel) catSel.value = '';
-            }
-        }
-        radios.forEach(function(r) { r.addEventListener('change', toggleMappingFields); });
-        toggleMappingFields();
-    }
+    function initVendorMappingForm() {}
 
     function loadForm(url, title) {
         modalTitle.textContent = title || 'Vendor Mapping';
