@@ -89,7 +89,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'store_id',
                 DB::raw("'kitchen_issue' as source_type")
             ])
-            ->whereIn('client_type', $kitchenClientTypes)
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
 
         if ($dateFrom) {
@@ -138,30 +138,13 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Map client type slug to KitchenIssueMaster client_type constant.
-     */
-    private function clientTypeSlugToKitchenId(string $slug): int
-    {
-        $map = [
-            'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
-            'ot' => KitchenIssueMaster::CLIENT_OT,
-            'course' => KitchenIssueMaster::CLIENT_COURSE,
-            'other' => KitchenIssueMaster::CLIENT_OTHER,
-        ];
-        return $map[$slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE;
-    }
-
-    /**
      * Get summary statistics for mess bills (Employee, OT, Course, Other) in the given date range.
      */
     private function getSummaryStats(?string $dateFrom, ?string $dateTo, ?string $search, ?string $clientType = null, ?string $buyerName = null): array
     {
         $dateRangeSlugs = $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS;
         $dateRangeBase = SellingVoucherDateRangeReport::query()
-            ->whereIn('client_type_slug', $dateRangeSlugs);
-        if ($buyerName) {
-            $dateRangeBase->where('client_name', 'like', '%' . $buyerName . '%');
-        }
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
         if ($dateFrom) {
             $dateRangeBase->where(function ($q) use ($dateFrom) {
                 $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
@@ -177,7 +160,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ? [$this->clientTypeSlugToKitchenId($clientType)]
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
         $kitchenBase = KitchenIssueMaster::query()
-            ->whereIn('client_type', $kitchenClientTypes)
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
         if ($buyerName) {
             $kitchenBase->where('client_name', 'like', '%' . $buyerName . '%');
@@ -369,7 +352,7 @@ class ProcessMessBillsEmployeeController extends Controller
         // Query 1: Selling Voucher with Date Range
         $dateRangeSlugs = $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS;
         $dateRangeQuery = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->whereIn('client_type_slug', $dateRangeSlugs)
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->where('status', '!=', 2); // Only unpaid bills
 
         if ($buyerName) {
@@ -391,7 +374,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ? [$this->clientTypeSlugToKitchenId($clientType)]
             : self::ALLOWED_KITCHEN_CLIENT_TYPES;
         $kitchenIssueQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
-            ->whereIn('client_type', $kitchenClientTypes)
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('status', '!=', 2); // Only unpaid bills
 
