@@ -104,7 +104,57 @@ class ProcessMessBillsEmployeeController extends Controller
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
 
-        return view('admin.mess.process-mess-bills-employee.index', compact('bills', 'effectiveDateFrom', 'effectiveDateTo'));
+        // Summary stats for the same date range (for dashboard cards)
+        $stats = $this->getSummaryStats($dateFrom, $dateTo, $search);
+
+        return view('admin.mess.process-mess-bills-employee.index', compact('bills', 'effectiveDateFrom', 'effectiveDateTo', 'stats'));
+    }
+
+    /**
+     * Get summary statistics for employee mess bills in the given date range.
+     */
+    private function getSummaryStats(?string $dateFrom, ?string $dateTo, ?string $search): array
+    {
+        $dateRangeBase = SellingVoucherDateRangeReport::query()
+            ->where('client_type_slug', 'employee');
+        if ($dateFrom) {
+            $dateRangeBase->where(function ($q) use ($dateFrom) {
+                $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
+            });
+        }
+        if ($dateTo) {
+            $dateRangeBase->where(function ($q) use ($dateTo) {
+                $q->where('issue_date', '<=', $dateTo)->orWhere('date_to', '<=', $dateTo);
+            });
+        }
+
+        $kitchenBase = KitchenIssueMaster::query()
+            ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+        if ($dateFrom) {
+            $kitchenBase->where('issue_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $kitchenBase->where('issue_date', '<=', $dateTo);
+        }
+
+        $totalBills = (clone $dateRangeBase)->count() + (clone $kitchenBase)->count();
+        $paidCount = (clone $dateRangeBase)->where('status', 2)->count() + (clone $kitchenBase)->where('status', 2)->count();
+        $unpaidCount = $totalBills - $paidCount;
+
+        $svAmount = (float) (clone $dateRangeBase)->sum('total_amount');
+        $kitchenPks = (clone $kitchenBase)->pluck('pk');
+        $kitchenAmount = $kitchenPks->isEmpty()
+            ? 0.0
+            : (float) DB::table('kitchen_issue_items')->whereIn('kitchen_issue_master_pk', $kitchenPks)->sum('amount');
+        $totalAmount = $svAmount + $kitchenAmount;
+
+        return [
+            'total_bills' => $totalBills,
+            'paid_count' => $paidCount,
+            'unpaid_count' => $unpaidCount,
+            'total_amount' => $totalAmount,
+        ];
     }
 
     public function printReceipt($id)
