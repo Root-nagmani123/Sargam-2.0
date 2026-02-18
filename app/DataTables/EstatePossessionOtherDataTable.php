@@ -81,7 +81,7 @@ class EstatePossessionOtherDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('estatePossessionTable')
-            ->addTableClass('table table-bordered table-hover text-nowrap w-100')
+            ->addTableClass('table text-nowrap w-100')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
@@ -114,19 +114,19 @@ class EstatePossessionOtherDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('request_id')->title('REQUEST ID')->orderable(false)->searchable(false),
-            Column::make('name')->title('NAME')->orderable(false)->searchable(false),
-            Column::make('section_name')->title('SECTION NAME')->orderable(false)->searchable(false),
-            Column::make('estate_name')->title('ESTATE NAME')->orderable(false)->searchable(false),
-            Column::make('unit_type')->title('UNIT TYPE')->orderable(false)->searchable(false),
-            Column::make('building_name')->title('BUILDING NAME')->orderable(false)->searchable(false),
-            Column::make('unit_sub_type')->title('UNIT SUB TYPE')->orderable(false)->searchable(false),
-            Column::make('house_no')->title('HOUSE NO.')->orderable(false)->searchable(true),
-            Column::make('allotment_date')->title('ALLOTMENT DATE')->orderable(false)->searchable(false),
-            Column::make('possession_date_oth')->title('POSSESSION DATE')->orderable(false)->searchable(false),
-            Column::make('meter_reading_oth')->title('LAST MONTH ELECTRIC METER READING')->orderable(false)->searchable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
+            Column::computed('DT_RowIndex')->title('S.No.')->orderable(false)->searchable(false),
+            Column::make('request_id')->title('Request ID')->orderable(false)->searchable(false),
+            Column::make('name')->title('Name')->orderable(false)->searchable(false),
+            Column::make('section_name')->title('Section Name')->orderable(false)->searchable(false),
+            Column::make('estate_name')->title('Estate Name')->orderable(false)->searchable(false),
+            Column::make('unit_type')->title('Unit Type')->orderable(false)->searchable(false),
+            Column::make('building_name')->title('Building Name')->orderable(false)->searchable(false),
+            Column::make('unit_sub_type')->title('Unit Sub Type')->orderable(false)->searchable(false),
+            Column::make('house_no')->title('House No.')->orderable(false)->searchable(true),
+            Column::make('allotment_date')->title('Allotment Date')->orderable(false)->searchable(false),
+            Column::make('possession_date_oth')->title('Possession Date')->orderable(false)->searchable(false),
+            Column::make('meter_reading_oth')->title('Last Month Electric Meter Reading')->orderable(false)->searchable(false),
+            Column::computed('actions')->title('Action')->orderable(false)->searchable(false),
         ];
     }
 
