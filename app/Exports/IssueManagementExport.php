@@ -32,6 +32,7 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
             'creator.designation',
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
+            'statusHistory',
         ]);
 
         // User scope (non-admin sees only own issues)
@@ -105,19 +106,31 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
         };
 
         $assignedToName = function ($issue) {
-            if (!$issue->assigned_to) {
-                return '';
+            if (empty($issue->assigned_to) || trim((string) $issue->assigned_to) === '') {
+                return 'Not assigned';
             }
             if (is_numeric($issue->assigned_to)) {
                 $emp = EmployeeMaster::find($issue->assigned_to);
-                return $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : '';
+                return $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : (string) $issue->assigned_to;
             }
             return $issue->assigned_to;
         };
 
-        $timeTaken = function ($issue) {
+        // Effective cleared datetime: clear_date if set, else from status history when status is Completed (2)
+        $effectiveClearedAt = function ($issue) {
+            if ($issue->clear_date) {
+                return Carbon::parse($issue->clear_date);
+            }
+            if ((int) $issue->issue_status === 2 && $issue->relationLoaded('statusHistory')) {
+                $completed = $issue->statusHistory->where('issue_status', 2)->sortByDesc('issue_date')->first();
+                return $completed && $completed->issue_date ? Carbon::parse($completed->issue_date) : null;
+            }
+            return null;
+        };
+
+        $timeTaken = function ($issue) use ($effectiveClearedAt) {
             $created = $issue->created_date ? Carbon::parse($issue->created_date) : null;
-            $cleared = $issue->clear_date ? Carbon::parse($issue->clear_date) : null;
+            $cleared = $effectiveClearedAt($issue);
             if (!$created || !$cleared) {
                 return '';
             }
@@ -150,8 +163,9 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
         foreach ($issues as $issue) {
             $callDate = $issue->created_date ? $issue->created_date->format('d-m-Y') : '';
             $callTime = $issue->created_date ? $issue->created_date->format('H:i:s') : '';
-            $clearedDate = $issue->clear_date ? Carbon::parse($issue->clear_date)->format('d-m-Y') : '';
-            $clearedTime = $issue->clear_date ? Carbon::parse($issue->clear_date)->format('H:i:s') : '';
+            $clearedAt = $effectiveClearedAt($issue);
+            $clearedDate = $clearedAt ? $clearedAt->format('d-m-Y') : '';
+            $clearedTime = $clearedAt ? $clearedAt->format('H:i:s') : '';
 
             $rows->push([
                 $sno++,

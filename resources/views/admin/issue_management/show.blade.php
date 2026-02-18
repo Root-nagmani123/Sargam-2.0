@@ -337,7 +337,7 @@
                         $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
                         $isAssigned = !empty($issue->assigned_to);
                         $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
-                        $canReassign = $isNodalOfficer; // Nodal can change assignee even after first assignment
+                        $canReassign = $isNodalOfficer && !$isCompleted; // Re-assign not allowed for closed (Completed) issues
                         $canOnlyReopen = $isComplainant && $isCompleted;
                     @endphp
 
@@ -348,11 +348,15 @@
                     </div>
                     <input type="hidden" name="issue_status" value="6">
                     @else
-                    <!-- Assignment Locked: only for non-nodal (assigned person) -->
+                    <!-- Assignment Locked: non-nodal (assigned person) or closed issue (re-assign restricted) -->
                     @if($isAssigned && !$canReassign)
                     <div class="alert alert-info mb-3">
                         <i class="bi bi-info-circle"></i>
+                        @if($isCompleted)
+                        <strong>Re-assign restricted:</strong> Assignment cannot be changed for closed (Completed) issues.
+                        @else
                         <strong>Assignment Locked:</strong> This issue has been assigned. You can only update the status and remarks.
+                        @endif
                     </div>
                     @endif
                     @if($isAssigned && $canReassign)
@@ -424,7 +428,8 @@
                         </div>
                         <div class="mb-3">
                             <label for="other_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                            <input type="text" name="other_phone" class="form-control" id="other_phone" placeholder="Enter phone number" maxlength="10" value="{{ $isAssigned && !is_numeric($issue->assigned_to) ? ($issue->assigned_to_contact ?? '') : '' }}">
+                            <input type="tel" name="other_phone" class="form-control" id="other_phone" placeholder="Enter 10 digit mobile number (cannot start with 6)" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" title="Enter 10 digit mobile number. Cannot start with 6." value="{{ $isAssigned && !is_numeric($issue->assigned_to) ? ($issue->assigned_to_contact ?? '') : '' }}">
+                            
                         </div>
                     </div>
                     @endif
@@ -521,15 +526,36 @@ $(document).ready(function() {
         }
     });
 
+    // Allow only digits in Other phone number
+    $('#other_phone').on('input', function() {
+        this.value = this.value.replace(/\D/g, '');
+        if (this.value.length > 10) this.value = this.value.slice(0, 10);
+    });
+
     // Before form submit: when "other" selected, validate and set hidden; when empty and re-assign, keep current (controller will keep existing)
     $('#updateStatusModal form').submit(function(e) {
         var assignToType = $('#assign_to_type').val();
         if (assignToType === 'other') {
             var otherName = $('#other_name').val().trim();
             var otherPhone = $('#other_phone').val().trim();
-            if (otherName === '' || otherPhone === '') {
+            if (otherName === '') {
                 e.preventDefault();
-                alert('Please enter both member name and phone number.');
+                alert('Please enter member name.');
+                return false;
+            }
+            if (otherPhone === '') {
+                e.preventDefault();
+                alert('Please enter phone number.');
+                return false;
+            }
+            if (!/^[0-9]{10}$/.test(otherPhone)) {
+                e.preventDefault();
+                alert('Phone number must be exactly 10 digits (numbers only).');
+                return false;
+            }
+            if (otherPhone.charAt(0) === '6') {
+                e.preventDefault();
+                alert('Mobile number cannot start with 6.');
                 return false;
             }
             $('#assigned_to_hidden').val('');
