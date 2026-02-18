@@ -26,50 +26,45 @@
                     </div>
                 </div>
                 <hr>
-<<<<<<< HEAD
-                <table class="table w-100 text-nowrap">
-                    <thead>
-                        <tr>
-                            <th>S.No.</th>
-                            <th>Vendor Name</th>
-                            <th>Item</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($mappings as $key => $mapping)
-                        <tr>
-                            <td>{{ $mappings->firstItem() + $key }}</td>
-                            <td>{{ $mapping->vendor->vendor_name ?? $mapping->vendor->name ?? 'N/A' }}</td>
-                            <td>
-                                @if($mapping->itemSubcategory)
-                                    {{ $mapping->itemSubcategory->item_name ?? $mapping->itemSubcategory->subcategory_name ?? 'N/A' }}
-                                @elseif($mapping->itemCategory)
-                                    {{ $mapping->itemCategory->category_name }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td>
-                                <a href="{{ route('admin.mess.vendor-item-mappings.edit', $mapping->id) }}" class="btn btn-sm btn-warning openEditVendorMapping">Edit</a>
-                                <form action="{{ route('admin.mess.vendor-item-mappings.destroy', $mapping->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this mapping?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="4" class="text-center">No vendor mappings found</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-                <div class="d-flex justify-content-center mt-3">{{ $mappings->links() }}</div>
-=======
                 <div class="table-responsive">
-                    {!! $dataTable->table(['class' => 'table table-bordered table-hover align-middle w-100']) !!}
+                    <table id="vendorMappingsTable" class="table table-bordered table-hover align-middle w-100">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px; background-color: #004a93; color: #fff; border-color: #004a93;">S.No.</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Vendor Name</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Item</th>
+                                <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($mappings as $key => $mapping)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $mapping->vendor->vendor_name ?? $mapping->vendor->name ?? 'N/A' }}</td>
+                                <td>
+                                    @if($mapping->itemSubcategory)
+                                        {{ $mapping->itemSubcategory->item_name ?? $mapping->itemSubcategory->subcategory_name ?? 'N/A' }}
+                                    @elseif($mapping->itemCategory)
+                                        {{ $mapping->itemCategory->category_name }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td>
+                                    <a href="{{ route('admin.mess.vendor-item-mappings.edit', $mapping->id) }}" class="btn btn-sm btn-warning openEditVendorMapping">Edit</a>
+                                    <form action="{{ route('admin.mess.vendor-item-mappings.destroy', $mapping->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this mapping?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="4" class="text-center">No vendor mappings found</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
->>>>>>> 051cf8b3 (vendor-mapping)
             </div>
         </div>
     </div>
@@ -91,10 +86,14 @@
         </div>
     </div>
 </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> 051cf8b3 (vendor-mapping)
+@include('components.mess-master-datatables', [
+    'tableId' => 'vendorMappingsTable',
+    'searchPlaceholder' => 'Search vendor mappings...',
+    'orderColumn' => 1,
+    'actionColumnIndex' => 3,
+    'infoLabel' => 'vendor mappings'
+])
 @endsection
 
 @push('scripts')

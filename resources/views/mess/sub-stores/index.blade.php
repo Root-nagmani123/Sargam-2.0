@@ -21,12 +21,12 @@
 
             <div class="table-responsive">
                 <table id="subStoresTable" class="table table-bordered table-hover align-middle w-100">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Sub Store Name</th>
-                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
+                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
+                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Sub Store Name</th>
+                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
+                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -155,6 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
 @endpush
 
 <style>
-.table thead th { background-color: #af2910 !important; color: #fff !important; }
+.table thead th { background-color: #004a93 !important; color: #fff !important; }
 </style>
 @endsection

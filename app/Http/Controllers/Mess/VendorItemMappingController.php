@@ -18,7 +18,7 @@ class VendorItemMappingController extends Controller
         $mappings = VendorItemMapping::with(['vendor', 'itemCategory', 'itemSubcategory'])
             ->orderBy('vendor_id')
             ->orderBy('id')
-            ->paginate(20);
+            ->get();
         $vendors = Vendor::when(
             \Illuminate\Support\Facades\Schema::hasColumn('mess_vendors', 'is_active'),
             fn ($q) => $q->where('is_active', true)
