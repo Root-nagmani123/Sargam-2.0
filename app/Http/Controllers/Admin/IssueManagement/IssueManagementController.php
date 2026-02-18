@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Http\Controllers\Controller;
+use App\DataTables\IssueManagementDataTable;
 use App\Exports\IssueManagementExport;
 use App\Models\{
     IssueLogManagement,
@@ -31,8 +32,9 @@ class IssueManagementController extends Controller
     /**
      * Display a listing of all issues.
      */
-    public function index(Request $request)
+    public function index(IssueManagementDataTable $dataTable)
     {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -142,10 +144,12 @@ class IssueManagementController extends Controller
 >>>>>>> 1a2c46f4 (estate datatable)
 =======
 >>>>>>> 0623079b (Revert "estate datatable")
+=======
+>>>>>>> 9b058492 (estate datatable)
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities'));
+        return $dataTable->render('admin.issue_management.index', compact('categories', 'priorities'));
     }
 
     /**

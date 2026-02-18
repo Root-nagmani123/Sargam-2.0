@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin\Estate;
 
+use App\DataTables\PayScaleDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\PayScale;
 use Illuminate\Http\Request;
 
 class PayScaleController extends Controller
 {
-    public function index()
+    public function index(PayScaleDataTable $dataTable)
     {
-        $items = PayScale::orderBy('pay_scale_range')->paginate(request('per_page', 10));
-        return view('admin.estate.define_pay_scale.index', compact('items'));
+        return $dataTable->render('admin.estate.define_pay_scale.index');
     }
 
     public function create()
@@ -23,9 +23,7 @@ class PayScaleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'pay_scale_range' => 'required|string|max:100',
-            'pay_scale_level' => 'required|string|max:50',
-            'display_label' => 'nullable|string|max:255',
+            'salary_grade' => 'required|string|max:200',
         ]);
         PayScale::create($validated);
         return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Pay scale added successfully.');
@@ -41,9 +39,7 @@ class PayScaleController extends Controller
     {
         $item = PayScale::findOrFail($id);
         $validated = $request->validate([
-            'pay_scale_range' => 'required|string|max:100',
-            'pay_scale_level' => 'required|string|max:50',
-            'display_label' => 'nullable|string|max:255',
+            'salary_grade' => 'required|string|max:200',
         ]);
         $item->update($validated);
         return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Pay scale updated successfully.');
