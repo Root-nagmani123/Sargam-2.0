@@ -19,14 +19,14 @@
                 @endif
                 <div class="table-responsive">
                     <table id="purchaseOrdersTable" class="table table-bordered table-hover align-middle w-100">
-                        <thead style="background-color: #af2910;">
+                        <thead>
                             <tr>
-                                <th style="color: #fff; border-color: #af2910; width: 60px;">S.No</th>
-                                <th style="color: #fff; border-color: #af2910;">Order Number</th>
-                                <th style="color: #fff; border-color: #af2910;">Vendor Name</th>
-                                <th style="color: #fff; border-color: #af2910;">Store Name</th>
-                                <th style="color: #fff; border-color: #af2910;">Status</th>
-                                <th style="color: #fff; border-color: #af2910; min-width: 180px;">Action</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; width: 60px;">S.No</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Order Number</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Vendor Name</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; min-width: 180px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
