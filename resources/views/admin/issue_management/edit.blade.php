@@ -288,7 +288,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
     // Complainant searchable dropdown (search by name when creating/editing issue on behalf of others)
@@ -431,8 +431,8 @@ $(document).ready(function() {
                     
                     $.each(floors, function(key, value) {
                        
-                         var floorId = value.floor_id || value.pk || value.estate_unit_sub_type_master_pk;
-                            var floorName = value.floor_name || value.floor || value.unit_sub_type;
+                         var floorId = value.floor_id ?? value.pk ?? value.estate_unit_sub_type_master_pk ?? '';
+                            var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
                         var selected = (currentFloor && floorId == currentFloor) ? 'selected' : '';
 
                             $('#floor_select').append('<option value="'+ floorId +'" '+ selected +'>'+ floorName +'</option>');
@@ -474,7 +474,7 @@ $(document).ready(function() {
                     
                     $.each(rooms, function(key, value) {
                         var roomId = value.pk || value.room_no;
-                        var roomName = value.room_name || value.room_no || value.house_no;
+                        var roomName = value.room_name ?? value.room_no ?? value.house_no ?? '';
                         var selected = (currentRoom && roomId == currentRoom) ? 'selected' : '';
 
                         if(roomName) {

@@ -35,29 +35,27 @@ class StreamDataTable extends DataTable
                 </div>';
             })
             ->addColumn('actions', function ($row) {
-                $editUrl = route('stream.edit', $row->pk);
+                $updateUrl = route('stream.update', $row->pk);
                 $deleteUrl = route('stream.destroy', $row->pk);
                 $csrf = csrf_token();
                 $isActive = $row->status == 1;
 
                 $deleteButton = $isActive
-                    ? '<button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled aria-disabled="true" title="Cannot delete active stream">
+                    ? '<a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" disabled aria-disabled="true" title="Cannot delete active stream">
                         <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>'
+                    </a>'
                     : '<form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this stream?\');">
                         <input type="hidden" name="_token" value="' . $csrf . '">
                         <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" aria-label="Delete stream">
+                        <a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" aria-label="Delete stream">
                             <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                            <span class="d-none d-md-inline">Delete</span>
-                        </button>
+                        </a>
                     </form>';
 
                 return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Stream actions">
-                    <a href="' . $editUrl . '" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" aria-label="Edit stream">
+                    <a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary open-stream-modal" role="button"
+                        data-id="' . e($row->pk) . '" data-name="' . e($row->stream_name) . '" data-url="' . e($updateUrl) . '" aria-label="Edit stream">
                         <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
-                        <span class="d-none d-md-inline">Edit</span>
                     </a>
                     ' . $deleteButton . '
                 </div>';

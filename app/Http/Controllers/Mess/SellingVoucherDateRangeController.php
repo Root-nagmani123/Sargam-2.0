@@ -142,7 +142,18 @@ class SellingVoucherDateRangeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'inve_store_master_pk' => 'required|exists:mess_stores,id',
+            'inve_store_master_pk' => ['required', function ($attribute, $value, $fail) {
+                if (str_starts_with($value, 'sub_')) {
+                    $subStoreId = str_replace('sub_', '', $value);
+                    if (!\App\Models\Mess\SubStore::where('id', $subStoreId)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                } else {
+                    if (!\App\Models\Mess\Store::where('id', $value)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                }
+            }],
             'payment_type' => 'required|integer|in:0,1,2,5',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
@@ -159,11 +170,19 @@ class SellingVoucherDateRangeController extends Controller
         try {
             DB::beginTransaction();
 
+            $storeId = $request->inve_store_master_pk;
+            $storeType = 'store';
+            if (str_starts_with($storeId, 'sub_')) {
+                $storeId = str_replace('sub_', '', $storeId);
+                $storeType = 'sub_store';
+            }
+
             $issueDate = $request->issue_date;
             $report = SellingVoucherDateRangeReport::create([
                 'date_from' => $issueDate,
                 'date_to' => $issueDate,
-                'store_id' => $request->inve_store_master_pk,
+                'store_id' => $storeId,
+                'store_type' => $storeType,
                 'report_title' => null,
                 'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
                 'total_amount' => 0,
@@ -226,7 +245,7 @@ class SellingVoucherDateRangeController extends Controller
                 'request_date' => $report->date_from ? $report->date_from->format('d/m/Y') : '—',
                 'date_from' => $report->date_from ? $report->date_from->format('d/m/Y') : '—',
                 'date_to' => $report->date_to ? $report->date_to->format('d/m/Y') : '—',
-                'store_name' => $report->store->store_name ?? '—',
+                'store_name' => $report->resolved_store_name,
                 'report_title' => $report->report_title ?? '—',
                 'status' => $report->status,
                 'status_label' => SellingVoucherDateRangeReport::statusLabels()[$report->status] ?? '—',
@@ -306,7 +325,18 @@ class SellingVoucherDateRangeController extends Controller
         $report = SellingVoucherDateRangeReport::findOrFail($id);
 
         $request->validate([
-            'inve_store_master_pk' => 'required|exists:mess_stores,id',
+            'inve_store_master_pk' => ['required', function ($attribute, $value, $fail) {
+                if (str_starts_with($value, 'sub_')) {
+                    $subStoreId = str_replace('sub_', '', $value);
+                    if (!\App\Models\Mess\SubStore::where('id', $subStoreId)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                } else {
+                    if (!\App\Models\Mess\Store::where('id', $value)->exists()) {
+                        $fail('The selected store is invalid.');
+                    }
+                }
+            }],
             'payment_type' => 'required|integer|in:0,1,2,5',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
             'client_type_pk' => 'nullable|exists:mess_client_types,id',
@@ -323,11 +353,19 @@ class SellingVoucherDateRangeController extends Controller
         try {
             DB::beginTransaction();
 
+            $storeId = $request->inve_store_master_pk;
+            $storeType = 'store';
+            if (str_starts_with($storeId, 'sub_')) {
+                $storeId = str_replace('sub_', '', $storeId);
+                $storeType = 'sub_store';
+            }
+
             $issueDate = $request->issue_date;
             $report->update([
                 'date_from' => $issueDate,
                 'date_to' => $issueDate,
-                'store_id' => $request->inve_store_master_pk,
+                'store_id' => $storeId,
+                'store_type' => $storeType,
                 'report_title' => null,
                 'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
                 'remarks' => $request->remarks,
@@ -409,7 +447,7 @@ class SellingVoucherDateRangeController extends Controller
         })->values()->toArray();
 
         return response()->json([
-            'store_name' => $report->store->store_name ?? '—',
+            'store_name' => $report->resolved_store_name,
             'items' => $items,
         ]);
     }

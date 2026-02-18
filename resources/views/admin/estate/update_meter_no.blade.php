@@ -5,25 +5,17 @@
 @section('setup_content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Update Meter No.</li>
-        </ol>
-    </nav>
-
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Update Meter No.</h2>
-        <div>
-            <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-link text-decoration-none">Update Reading & Meter No.</a>
-        </div>
-    </div>
+<x-breadcrum title="Update Meter No."></x-breadcrum>
 
     <!-- Data Table Card -->
-    <div class="card shadow-sm">
-        <div class="card-body">
+    <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h5 mb-0">Update Meter No.</h2>
+                <div>
+                    <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary text-decoration-none">Update Reading & Meter No.</a>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table text-nowrap" id="updateMeterNoTable">
                     <thead>

@@ -43,7 +43,6 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     Route::post('/forms/{formId}/submit', [FormController::class, 'submit'])->name('forms.submit');
 
     // Route::get('/forms/{id}/courselist', [FormController::class, 'courseList'])->name('forms.courseList');
-    Route::get('/forms/{id}/pending', [FormController::class, 'pending'])->name('forms.pending');
     Route::post('/forms/{id}/moveup', [FormController::class, 'moveUp'])->name('forms.moveup');
     Route::post('/forms/{id}/movedown', [FormController::class, 'moveDown'])->name('forms.movedown');
 
@@ -320,11 +319,11 @@ Route::get('/peer/download-template', [PeerEvaluationController::class, 'PeerDow
 // Route::get('/peer-evaluation', [PeerEvaluationController::class, 'index'])->name('peer.index');
 // Route::post('/peer-evaluation', [PeerEvaluationController::class, 'store'])->name('peer.store');
 
-// User-facing routes
+// User-facing routes (peer.store is POST /peer-evaluation above; do not duplicate name here)
 Route::prefix('peer')->middleware('auth')->group(function () {
     Route::get('my-groups', [PeerEvaluationController::class, 'user_groups'])->name('peer.user_groups');
     Route::get('evaluate/{groupId}', [PeerEvaluationController::class, 'user_evaluation'])->name('peer.user_evaluation');
-    Route::post('store', [PeerEvaluationController::class, 'store'])->name('peer.store');
+    Route::post('store', [PeerEvaluationController::class, 'store'])->name('peer.store.submit');
 });
 
 // View submissions for a specific peer group

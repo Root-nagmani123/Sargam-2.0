@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Mess\Store;
+use App\Models\Mess\SubStore;
 use App\Models\Mess\Inventory;
 use App\Models\User;
 
@@ -22,6 +23,7 @@ class KitchenIssueMaster extends Model
         'name_id',
         'issue_date',
         'store_id',
+        'store_type',
         'kitchen_issue_type',
         'remarks',
         'status',
@@ -64,11 +66,32 @@ class KitchenIssueMaster extends Model
     }
 
     /**
+     * Get the sub-store
+     */
+    public function subStore()
+    {
+        return $this->belongsTo(SubStore::class, 'store_id', 'id');
+    }
+
+    /**
      * Alias for backward compatibility
      */
     public function storeMaster()
     {
         return $this->store();
+    }
+
+    /**
+     * Get the resolved store name (works for both store and sub-store)
+     */
+    public function getResolvedStoreNameAttribute()
+    {
+        if ($this->store_type === 'sub_store') {
+            $subStore = $this->subStore;
+            return $subStore ? $subStore->sub_store_name . ' (Sub-Store)' : 'N/A';
+        }
+        $store = $this->store;
+        return $store ? $store->store_name : 'N/A';
     }
 
     /**

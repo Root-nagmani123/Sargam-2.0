@@ -99,13 +99,11 @@ class MemoDisciplineController extends Controller
     {
         $activeCourses = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now())
+            ->select('pk', 'course_name')
+            ->orderBy('course_name')
             ->get();
 
-            $disciplines = DisciplineMaster::where('active_inactive', 1)
-                ->get();
-              
-
-        return view('admin.memo_discipline.create', compact('activeCourses', 'disciplines'));
+        return view('admin.memo_discipline.create', compact('activeCourses'));
     }
     function getStudentByCourse(Request $request){
         try {
@@ -182,20 +180,22 @@ class MemoDisciplineController extends Controller
     }
     function getMarkDeduction(Request $request){
         $discipline_master_pk = $request->discipline_master_pk;
-        $course_id = $request->course_id;
 
-        if (!$discipline_master_pk && !$course_id) {
-            return response()->json('Discipline and Course are required.');
+        if (!$discipline_master_pk) {
+            return response()->json(['success' => false, 'message' => 'Discipline is required.', 'mark_deduction' => null]);
         }
 
-        $discipline = DisciplineMaster::find($discipline_master_pk)->where('course_master_pk', $course_id)->where('active_inactive', 1)->first();
+        // Fetch by primary key only so the selected discipline's mark is always returned
+        $discipline = DisciplineMaster::find($discipline_master_pk);
 
-        if (!$discipline) {
-            return response()->json('Discipline not found.');
+        if (!$discipline || $discipline->active_inactive != 1) {
+            return response()->json(['success' => false, 'message' => 'Discipline not found.', 'mark_deduction' => null]);
         }
 
-        return response()->json($discipline->mark_deduction);
-        
+        return response()->json([
+            'success' => true,
+            'mark_deduction' => $discipline->mark_deduction !== null && $discipline->mark_deduction !== '' ? (float) $discipline->mark_deduction : 0
+        ]);
     }
     function discipline_generate_memo_store(Request $request){
         // return $request->all();

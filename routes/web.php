@@ -52,6 +52,14 @@ use App\Http\Controllers\Admin\IssueManagement\{
     IssuePriorityController,
     IssueEscalationMatrixController
 };
+use App\Http\Controllers\Admin\Estate\{
+    EstateCampusController,
+    UnitTypeController,
+    UnitSubTypeController,
+    EstateBlockController,
+    PayScaleController,
+    EligibilityCriteriaController
+};
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -61,6 +69,49 @@ Route::get('clear-cache', function () {
     Artisan::call('optimize:clear');
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
+
+/**
+ * Full optimize flow: clear → config cache → route cache → optimize
+ * Step-by-step proper order. Use after deployment or when caches need refresh.
+ * GET /admin/system/optimize (auth required)
+ */
+Route::get('admin/system/optimize', function () {
+    $steps = [];
+    $run = function ($command, $name) use (&$steps) {
+        try {
+            \Illuminate\Support\Facades\Artisan::call($command);
+            $output = trim(\Illuminate\Support\Facades\Artisan::output());
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => true, 'output' => $output ?: 'OK'];
+        } catch (\Throwable $e) {
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => false, 'output' => $e->getMessage()];
+        }
+    };
+
+    // Step 1: Clear everything (clean slate)
+    $run('config:clear', 'Config cache clear');
+    $run('cache:clear', 'Application cache clear');
+    $run('view:clear', 'View cache clear');
+    $run('route:clear', 'Route cache clear');
+
+    // Step 2: Cache config & routes
+    $run('config:cache', 'Config cache');
+    $run('route:cache', 'Route cache');
+
+    // Step 3: View cache (if available) and optimize
+    try {
+        \Illuminate\Support\Facades\Artisan::call('view:cache');
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => true, 'output' => trim(\Illuminate\Support\Facades\Artisan::output()) ?: 'OK'];
+    } catch (\Throwable $e) {
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => false, 'output' => $e->getMessage()];
+    }
+    $run('optimize', 'Optimize (autoload + bootstrap)');
+
+    $allOk = collect($steps)->every(fn ($s) => $s['ok']);
+    if (request()->wantsJson()) {
+        return response()->json(['success' => $allOk, 'steps' => $steps]);
+    }
+    return response()->view('admin.system.optimize-result', compact('steps', 'allOk'));
+})->middleware('auth')->name('admin.system.optimize');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
@@ -462,8 +513,8 @@ Route::middleware(['auth'])->group(function () {
             // })->name('admin.courseAttendanceNoticeMap.chat');
             Route::get('/user', 'user')->name('user');
             Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
-            Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
-            Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
+            Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
+            Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
 
             Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
@@ -788,6 +839,8 @@ Route::middleware(['auth'])->group(function () {
     // Who's Who Routes
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
+    Route::get('/faculty/whos-who/cadres', [WhosWhoController::class, 'getCadres'])->name('admin.faculty.whos-who.cadres');
+    Route::get('/faculty/whos-who/counsellor-groups', [WhosWhoController::class, 'getCounsellorGroups'])->name('admin.faculty.whos-who.counsellor-groups');
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
@@ -927,9 +980,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::prefix('estate')->name('estate.')->group(function () {
         // Estate Request for Others
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+
+        // Change Requests (HAC Approved)
+        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
+        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
         
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
         // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
@@ -960,6 +1019,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             return view('admin.estate.update_meter_no');
         })->name('update-meter-no');
 
+        // Generate Estate Bill / Estate Bill Summary
+        Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
+
         // Return House
         Route::get('return-house', function () {
             return view('admin.estate.return_house');
@@ -969,6 +1031,54 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('define-house', function () {
             return view('admin.estate.define_house');
         })->name('define-house');
+
+        // Define Estate/Campus
+        Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
+        Route::get('define-campus/create', [EstateCampusController::class, 'create'])->name('define-campus.create');
+        Route::post('define-campus', [EstateCampusController::class, 'store'])->name('define-campus.store');
+        Route::get('define-campus/{id}/edit', [EstateCampusController::class, 'edit'])->name('define-campus.edit');
+        Route::put('define-campus/{id}', [EstateCampusController::class, 'update'])->name('define-campus.update');
+        Route::delete('define-campus/{id}', [EstateCampusController::class, 'destroy'])->name('define-campus.destroy');
+
+        // Define Unit Type
+        Route::get('define-unit-type', [UnitTypeController::class, 'index'])->name('define-unit-type.index');
+        Route::get('define-unit-type/create', [UnitTypeController::class, 'create'])->name('define-unit-type.create');
+        Route::post('define-unit-type', [UnitTypeController::class, 'store'])->name('define-unit-type.store');
+        Route::get('define-unit-type/{id}/edit', [UnitTypeController::class, 'edit'])->name('define-unit-type.edit');
+        Route::put('define-unit-type/{id}', [UnitTypeController::class, 'update'])->name('define-unit-type.update');
+        Route::delete('define-unit-type/{id}', [UnitTypeController::class, 'destroy'])->name('define-unit-type.destroy');
+
+        // Define Unit Sub Type
+        Route::get('define-unit-sub-type', [UnitSubTypeController::class, 'index'])->name('define-unit-sub-type.index');
+        Route::get('define-unit-sub-type/create', [UnitSubTypeController::class, 'create'])->name('define-unit-sub-type.create');
+        Route::post('define-unit-sub-type', [UnitSubTypeController::class, 'store'])->name('define-unit-sub-type.store');
+        Route::get('define-unit-sub-type/{id}/edit', [UnitSubTypeController::class, 'edit'])->name('define-unit-sub-type.edit');
+        Route::put('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'update'])->name('define-unit-sub-type.update');
+        Route::delete('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'destroy'])->name('define-unit-sub-type.destroy');
+
+        // Define Block/Building
+        Route::get('define-block-building', [EstateBlockController::class, 'index'])->name('define-block-building.index');
+        Route::get('define-block-building/create', [EstateBlockController::class, 'create'])->name('define-block-building.create');
+        Route::post('define-block-building', [EstateBlockController::class, 'store'])->name('define-block-building.store');
+        Route::get('define-block-building/{id}/edit', [EstateBlockController::class, 'edit'])->name('define-block-building.edit');
+        Route::put('define-block-building/{id}', [EstateBlockController::class, 'update'])->name('define-block-building.update');
+        Route::delete('define-block-building/{id}', [EstateBlockController::class, 'destroy'])->name('define-block-building.destroy');
+
+        // Define Pay Scale (for eligibility)
+        Route::get('define-pay-scale', [PayScaleController::class, 'index'])->name('define-pay-scale.index');
+        Route::get('define-pay-scale/create', [PayScaleController::class, 'create'])->name('define-pay-scale.create');
+        Route::post('define-pay-scale', [PayScaleController::class, 'store'])->name('define-pay-scale.store');
+        Route::get('define-pay-scale/{id}/edit', [PayScaleController::class, 'edit'])->name('define-pay-scale.edit');
+        Route::put('define-pay-scale/{id}', [PayScaleController::class, 'update'])->name('define-pay-scale.update');
+        Route::delete('define-pay-scale/{id}', [PayScaleController::class, 'destroy'])->name('define-pay-scale.destroy');
+
+        // Eligibility - Criteria
+        Route::get('eligibility-criteria', [EligibilityCriteriaController::class, 'index'])->name('eligibility-criteria.index');
+        Route::get('eligibility-criteria/create', [EligibilityCriteriaController::class, 'create'])->name('eligibility-criteria.create');
+        Route::post('eligibility-criteria', [EligibilityCriteriaController::class, 'store'])->name('eligibility-criteria.store');
+        Route::get('eligibility-criteria/{id}/edit', [EligibilityCriteriaController::class, 'edit'])->name('eligibility-criteria.edit');
+        Route::put('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'update'])->name('eligibility-criteria.update');
+        Route::delete('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'destroy'])->name('eligibility-criteria.destroy');
 
         // Estate Reports
         Route::prefix('reports')->name('reports.')->group(function () {
@@ -984,9 +1094,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
             
-            Route::get('bill-report-print', function () {
-                return view('admin.estate.estate_bill_report_print');
-            })->name('bill-report-print');
+            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
+            Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
+            Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
         });
     });
 });

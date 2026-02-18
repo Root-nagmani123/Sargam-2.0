@@ -29,6 +29,37 @@ class IssueCategoryController extends Controller
      */
     public function store(Request $request)
     {
+        // Handle multiple categories if submitted
+        if ($request->has('categories') && is_array($request->categories)) {
+            $request->validate([
+                'categories.*.issue_category' => 'required|string|max:255',
+                'categories.*.description' => 'nullable|string',
+            ]);
+
+            $userId = Auth::user()->user_id ?? Auth::id();
+            $createdCount = 0;
+
+            foreach ($request->categories as $categoryData) {
+                if (!empty($categoryData['issue_category'])) {
+                    IssueCategoryMaster::create([
+                        'issue_category' => $categoryData['issue_category'],
+                        'description' => $categoryData['description'] ?? null,
+                        'created_by' => $userId,
+                        'status' => 1,
+                    ]);
+                    $createdCount++;
+                }
+            }
+
+            $message = $createdCount > 1 
+                ? "$createdCount categories created successfully." 
+                : 'Category created successfully.';
+
+            return redirect()->route('admin.issue-categories.index')
+                ->with('success', $message);
+        }
+
+        // Handle single category (backward compatibility)
         $request->validate([
             'issue_category' => 'required|string|max:255',
             'description' => 'nullable|string',

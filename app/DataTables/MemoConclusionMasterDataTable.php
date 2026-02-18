@@ -12,91 +12,82 @@ use Yajra\DataTables\Services\DataTable;
 class MemoConclusionMasterDataTable extends DataTable
 {
     public function dataTable(QueryBuilder $query): EloquentDataTable
-{
-    return (new EloquentDataTable($query))
-        ->addIndexColumn()
+    {
+        return (new EloquentDataTable($query))
+            ->addIndexColumn()
 
-        ->editColumn('discussion_name', fn ($row) => $row->discussion_name ?? 'N/A')
-        ->editColumn('pt_discusion', fn ($row) => $row->pt_discusion ?? 'N/A')
+            ->editColumn('discussion_name', fn ($row) => $row->discussion_name ?? 'N/A')
+            ->editColumn('pt_discusion', fn ($row) => $row->pt_discusion ?? 'N/A')
 
-        ->filterColumn('discussion_name', function ($query, $keyword) {
-            $query->where('discussion_name', 'like', "%{$keyword}%");
-        })
+            ->filterColumn('discussion_name', function ($query, $keyword) {
+                $query->where('discussion_name', 'like', "%{$keyword}%");
+            })
 
-        ->filterColumn('pt_discusion', function ($query, $keyword) {
-            $query->where('pt_discusion', 'like', "%{$keyword}%");
-        })
+            ->filterColumn('pt_discusion', function ($query, $keyword) {
+                $query->where('pt_discusion', 'like', "%{$keyword}%");
+            })
 
-        ->filter(function ($query) {
-            $searchValue = request()->input('search.value');
-            if (!empty($searchValue)) {
-                $query->where(function ($subQuery) use ($searchValue) {
-                    $subQuery->where('discussion_name', 'like', "%{$searchValue}%")
-                             ->orWhere('pt_discusion', 'like', "%{$searchValue}%");
-                });
-            }
-        }, true)
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('discussion_name', 'like', "%{$searchValue}%")
+                                 ->orWhere('pt_discusion', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
 
-        ->addColumn('actions', function ($row) {
+            ->addColumn('actions', function ($row) {
 
-            $deleteUrl = route('master.memo.conclusion.master.delete', $row->pk);
-            $isActive  = ($row->active_inactive == 1);
+                $deleteUrl = route('master.memo.conclusion.master.delete', $row->pk);
+                $isActive  = ($row->active_inactive == 1);
 
-            /* 🔹 DELETE BUTTON LOGIC */
-            if ($isActive) {
-                $deleteButton = '
-                    <button type="button"
-                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                        disabled
-                        title="Cannot delete active memo conclusion">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-            } else {
-                $deleteButton = '
-                    <button type="button"
-                        class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
-                        data-url="' . $deleteUrl . '"
-                        data-id="' . $row->pk . '">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-            }
+                /* 🔹 DELETE BUTTON LOGIC */
+                if ($isActive) {
+                    $deleteButton = '
+                        <a href="javascript:void(0);"
+                            class="d-inline-flex align-items-center gap-1 text-primary"
+                            disabled
+                            title="Cannot delete active memo conclusion">
+                            <span class="material-icons material-symbols-rounded">delete</span>
+                        </a>';
+                } else {
+                    $deleteButton = '
+                        <a href="javascript:void(0);"
+                            class="d-inline-flex align-items-center gap-1 text-primary"
+                            data-url="' . $deleteUrl . '"
+                            data-id="' . $row->pk . '">
+                            <span class="material-icons material-symbols-rounded">delete</span>
+                        </a>';
+                }
 
-            return '
-                <div class="d-inline-flex align-items-center gap-2" role="group">
+                return '
+                    <div class="d-inline-flex align-items-center gap-2" role="group">
 
-                    <!-- Edit -->
-                    <a href="javascript:void(0)"
-                        class="editshowConclusionAlert btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                        data-pk="' . $row->pk . '"
-                        data-discussion_name="' . e($row->discussion_name) . '"
-                        data-pt_discusion="' . e($row->pt_discusion) . '"
-                        data-active_inactive="' . $row->active_inactive . '">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
-                        <span class="d-none d-md-inline">Edit</span>
-                    </a>
+                        <!-- Edit -->
+                        <a href="javascript:void(0)"
+                            class="d-inline-flex align-items-center gap-1 text-primary editshowConclusionAlert"
+                            data-pk="' . $row->pk . '"
+                            data-discussion_name="' . e($row->discussion_name) . '"
+                            data-pt_discusion="' . e($row->pt_discusion) . '"
+                            data-active_inactive="' . $row->active_inactive . '"><span class="material-icons material-symbols-rounded">edit</span></a>
+                        ' . $deleteButton . '
+                    </div>';
+            })
+            ->addColumn('status', function ($row) {
+                return '
+                    <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input status-toggle"
+                            type="checkbox"
+                            data-table="memo_conclusion_master"
+                            data-column="active_inactive"
+                            data-id="' . $row->pk . '"
+                            ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
+                    </div>';
+            })
 
-                    <!-- Delete -->
-                    ' . $deleteButton . '
-
-                </div>';
-        })
-
-        ->addColumn('status', function ($row) {
-            return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle"
-                        type="checkbox"
-                        data-table="memo_conclusion_master"
-                        data-column="active_inactive"
-                        data-id="' . $row->pk . '"
-                        ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
-                </div>';
-        })
-
-        ->rawColumns(['discussion_name', 'pt_discusion', 'actions', 'status']);
-}
+            ->rawColumns(['discussion_name', 'pt_discusion', 'actions', 'status']);
+    }
 
 
     public function query(MemoConclusionMaster $model): QueryBuilder

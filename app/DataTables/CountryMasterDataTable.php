@@ -31,31 +31,32 @@ class CountryMasterDataTable extends DataTable
                 </div>';
             })
             ->addColumn('action', function ($row) {
-                $editUrl = route('master.country.edit', $row->pk);
+                $updateUrl = route('master.country.update', $row->pk);
                 $deleteUrl = route('master.country.delete', $row->pk);
                 $isActive = $row->active_inactive == 1;
                 $csrf = csrf_token();
+                $countryName = e($row->country_name ?? '');
+                $status = (string) ($row->active_inactive ?? 1);
 
                 $html = '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Country actions">';
 
-                $html .= '<a href="'.$editUrl.'" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" aria-label="Edit country">
+                $html .= '<button type="button" class="btn btn-link p-0 d-flex align-items-center gap-1 text-primary text-decoration-none" aria-label="Edit country"
+                    data-bs-toggle="modal" data-bs-target="#editCountryModal"
+                    data-id="'.$row->pk.'" data-name="'.$countryName.'" data-status="'.$status.'" data-update-url="'.$updateUrl.'">
                     <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
-                    <span class="d-none d-md-inline">Edit</span>
-                </a>';
+                </button>';
 
                 if ($isActive) {
-                    $html .= '<button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled aria-disabled="true" title="Cannot delete active country">
+                    $html .= '<a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" aria-label="Delete country" disabled aria-disabled="true" title="Cannot delete active country">
                         <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
+                    </a>';
                 } else {
                     $html .= '<form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this?\');">
                         <input type="hidden" name="_token" value="'.$csrf.'">
                         <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" aria-label="Delete country">
+                        <a href="javascript:void(0);" class="d-flex align-items-center gap-1 text-primary" aria-label="Delete country">
                             <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                            <span class="d-none d-md-inline">Delete</span>
-                        </button>
+                        </a>
                     </form>';
                 }
 

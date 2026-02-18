@@ -45,15 +45,12 @@ class EstatePossessionOtherDataTable extends DataTable
                 $deleteUrl = route('admin.estate.possession-delete', ['id' => $row->pk]);
 
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="' . $viewUrl . '" class="btn btn-sm btn-info" title="View">
-                        <i class="material-symbols-rounded" style="font-size:18px;">visibility</i>
+                    <a href="' . $editUrl . '" class="text-primary" title="Edit">
+                        <i class="material-symbols-rounded">edit</i>
                     </a>
-                    <a href="' . $editUrl . '" class="btn btn-sm btn-warning" title="Edit">
-                        <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
+                    <a href="javascript:void(0);" class="text-primary btn-delete-possession" data-url="' . $deleteUrl . '" data-id="' . $row->pk . '" title="Delete">
+                        <i class="material-symbols-rounded">delete</i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-danger btn-delete-possession" data-url="' . $deleteUrl . '" data-id="' . $row->pk . '" title="Delete">
-                        <i class="material-symbols-rounded" style="font-size:18px;">delete</i>
-                    </button>
                 </div>';
             })
             ->rawColumns(['actions'])
@@ -88,7 +85,7 @@ class EstatePossessionOtherDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
                 'searching' => true,
