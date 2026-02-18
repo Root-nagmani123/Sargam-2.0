@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\EstateMonthReadingDetails;
 use App\Models\EstateMonthReadingDetailsOther;
 use App\Models\EstateOtherRequest;
 use App\Models\EstatePossessionOther;
@@ -309,6 +310,189 @@ class EstateController extends Controller
         return view('admin.estate.update_meter_reading_of_other', compact(
             'campuses', 'unitTypes', 'billMonths', 'unitSubTypes'
         ));
+    }
+
+    /**
+     * Update Meter Reading - main page (employee/regular possession).
+     */
+    public function updateMeterReading()
+    {
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+
+        $unitTypes = DB::table('estate_unit_type_master')
+            ->orderBy('unit_type')
+            ->get(['pk', 'unit_type']);
+
+        $billMonths = EstateMonthReadingDetails::select('bill_year', 'bill_month')
+            ->whereNotNull('bill_year')
+            ->whereNotNull('bill_month')
+            ->groupBy('bill_year', 'bill_month')
+            ->orderBy('bill_year', 'desc')
+            ->get();
+
+        $unitSubTypes = DB::table('estate_unit_sub_type_master')
+            ->orderBy('unit_sub_type')
+            ->get(['pk', 'unit_sub_type']);
+
+        return view('admin.estate.update_meter_reading', compact(
+            'campuses', 'unitTypes', 'billMonths', 'unitSubTypes'
+        ));
+    }
+
+    /**
+     * API: Get meter reading list for "Update Meter Reading" (filtered).
+     */
+    public function getMeterReadingList(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $billYear = $request->get('bill_year');
+        $meterReadingDate = $request->get('meter_reading_date');
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        $unitTypeId = $request->get('unit_type_id');
+        $unitSubTypeId = $request->get('unit_sub_type_id');
+
+        $query = EstateMonthReadingDetails::query()
+            ->from('estate_month_reading_details as emrd')
+            ->select([
+                'emrd.pk',
+                'emrd.from_date',
+                'emrd.last_month_elec_red',
+                'emrd.curr_month_elec_red',
+                'emrd.house_no',
+                'emrd.meter_one',
+                'emrd.meter_two',
+                'ehrd.emp_name',
+            ])
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->orderBy('emrd.house_no');
+
+        if ($billMonth) {
+            $query->where('emrd.bill_month', $billMonth);
+        }
+        if ($billYear) {
+            $query->where('emrd.bill_year', $billYear);
+        }
+        if ($meterReadingDate) {
+            $query->whereDate('emrd.to_date', $meterReadingDate);
+        }
+        if ($campusId) {
+            $query->where('ehm.estate_campus_master_pk', $campusId);
+        }
+        if ($blockId) {
+            $query->where('ehm.estate_block_master_pk', $blockId);
+        }
+        if ($unitTypeId) {
+            // estate_house_master has estate_unit_master_pk; estate_unit_master has estate_unit_type_master_pk
+            $query->join('estate_unit_master as eum', 'ehm.estate_unit_master_pk', '=', 'eum.pk')
+                ->where('eum.estate_unit_type_master_pk', $unitTypeId);
+        }
+        if ($unitSubTypeId) {
+            $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypeId);
+        }
+
+        $rows = $query->get()->map(function ($row) {
+            return [
+                'pk' => $row->pk,
+                'house_no' => $row->house_no ?? 'N/A',
+                'name' => $row->emp_name ?? 'N/A',
+                'last_reading_date' => $row->from_date ? \Carbon\Carbon::parse($row->from_date)->format('d/m/Y') : 'N/A',
+                'meter_no' => $row->meter_one ?? $row->meter_two ?? 'N/A',
+                'last_month_reading' => $row->last_month_elec_red ?? 'N/A',
+                'curr_month_reading' => $row->curr_month_elec_red,
+            ];
+        });
+
+        return response()->json(['status' => true, 'data' => $rows->values()]);
+    }
+
+    /**
+     * API: Get blocks for meter reading filter (by campus) - regular possession.
+     */
+    public function getMeterReadingBlocks(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        if (!$campusId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $blocks = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->where('h.estate_campus_master_pk', $campusId)
+            ->select('b.pk', 'b.block_name')
+            ->distinct()
+            ->orderBy('b.block_name')
+            ->get();
+        return response()->json(['status' => true, 'data' => $blocks]);
+    }
+
+    /**
+     * API: Get meter reading dates for selected bill month - regular possession.
+     */
+    public function getMeterReadingDates(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $billYear = $request->get('bill_year');
+        if (!$billMonth || !$billYear) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $dates = EstateMonthReadingDetails::where('bill_month', $billMonth)
+            ->where('bill_year', $billYear)
+            ->select('to_date')
+            ->distinct()
+            ->orderBy('to_date')
+            ->get()
+            ->map(fn($r) => ['value' => $r->to_date->format('Y-m-d'), 'label' => $r->to_date->format('d/m/Y')]);
+        return response()->json(['status' => true, 'data' => $dates]);
+    }
+
+    /**
+     * API: Get unit sub types for meter reading filter (by campus + block) - regular possession.
+     */
+    public function getMeterReadingUnitSubTypes(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        if (!$campusId || !$blockId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $items = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
+            ->join('estate_unit_sub_type_master as u', 'h.estate_unit_sub_type_master_pk', '=', 'u.pk')
+            ->where('h.estate_campus_master_pk', $campusId)
+            ->where('h.estate_block_master_pk', $blockId)
+            ->select('u.pk', 'u.unit_sub_type')
+            ->distinct()
+            ->orderBy('u.unit_sub_type')
+            ->get();
+        return response()->json(['status' => true, 'data' => $items]);
+    }
+
+    /**
+     * Store/Update meter readings for "Update Meter Reading" (regular possession).
+     */
+    public function storeMeterReadings(Request $request)
+    {
+        $validated = $request->validate([
+            'readings' => 'required|array',
+            'readings.*.pk' => 'required|exists:estate_month_reading_details,pk',
+            'readings.*.curr_month_elec_red' => 'nullable|integer|min:0',
+        ]);
+
+        foreach ($validated['readings'] as $item) {
+            EstateMonthReadingDetails::where('pk', $item['pk'])
+                ->update(['curr_month_elec_red' => $item['curr_month_elec_red'] ?? null]);
+        }
+
+        return redirect()
+            ->route('admin.estate.update-meter-reading')
+            ->with('success', 'Meter readings updated successfully.');
     }
 
     /**
