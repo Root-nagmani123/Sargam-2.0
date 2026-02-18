@@ -95,11 +95,67 @@
                     </button>
                 </div>
             </div>
-        `;
-        document.getElementById('stream_fields').insertAdjacentHTML('beforeend', field);
-    }
+        </section>
+    </main>
+</div>
+@endsection
 
-    function removeField(button) {
-        button.closest('.row').remove();
-    }
+@push('scripts')
+<script>
+(function() {
+    'use strict';
+
+    let streamFieldCounter = {{ old('stream_name') ? count(old('stream_name')) : 1 }};
+
+    window.addStreamField = function() {
+        streamFieldCounter++;
+
+        const container = document.getElementById('stream_fields');
+        const fieldRow = document.createElement('div');
+
+        fieldRow.className = 'stream-field-row row g-2 align-items-end mb-3';
+
+        const inputId = 'stream_name_' + streamFieldCounter;
+
+        fieldRow.innerHTML = `
+            <div class="col-12 col-md-11">
+                <input type="text"
+                    id="${inputId}"
+                    name="stream_name[]"
+                    class="form-control form-control-lg stream-input"
+                    placeholder="Enter stream name"
+                    autocomplete="organization">
+            </div>
+
+            <div class="col-12 col-md-1">
+                <button type="button" class="btn btn-danger btn-lg px-3" onclick="removeField(this)">
+                    delete
+                </button>
+            </div>
+        `;
+
+        container.appendChild(fieldRow);
+    };
+
+    window.removeField = function(btn) {
+        const row = btn.closest('.stream-field-row');
+        if(document.querySelectorAll('.stream-field-row').length > 1){
+            row.remove();
+        }
+    };
+
+    // 🔥 CLEAN EMPTY INPUTS BEFORE SUBMIT (MOBILE FIX)
+    document.getElementById('stream-form').addEventListener('submit', function(e){
+
+        document.querySelectorAll('.stream-input').forEach(function(input){
+            if(input.value.trim() === ''){
+                input.remove();
+            }
+        });
+
+    });
+
+})();
 </script>
+@endpush
+

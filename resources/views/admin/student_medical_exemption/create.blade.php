@@ -323,7 +323,7 @@ document.getElementById('Doc_upload').addEventListener('change', function () {
         'application/pdf'
     ];
 
-    if (allowedTypes.indexOf(file.type) === -1) {
+wedTypes.indexOf(file.type) === -1) {
         fileError.textContent = 'Only image files (jpg, jpeg, png, webp) or PDF are allowed.';
         this.value = '';
         return;
