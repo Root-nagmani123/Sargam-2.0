@@ -27,7 +27,7 @@
 <body>
     <div class="header">
         <div class="title">Issue Management - Export Report</div>
-        <div class="subtitle">Sargam | Lal Bahadur</div>
+        <div class="subtitle">Sargam | Lal Bahadur Shastri National Academy of Administration (LBSNAA), Mussoorie</div>
         <div class="timestamp">Generated: {{ $export_date }}</div>
     </div>
 
