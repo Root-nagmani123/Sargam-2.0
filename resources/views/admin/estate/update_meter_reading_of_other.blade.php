@@ -91,6 +91,8 @@
                                 <th>Last Month Electric Reading Date</th>
                                 <th>Meter No.</th>
                                 <th>Last Month Meter Reading</th>
+                                <th>Current Month Reading <span class="text-danger">*</span></th>
+                                <th>Unit</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -137,10 +139,140 @@ $(document).ready(function() {
                 next: "Next",
                 previous: "Previous"
             }
-        },
-        responsive: true,
-        autoWidth: false,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+    });
+
+    $('#estate_name').on('change', function() {
+        const campusId = $(this).val();
+        $('#building').html('<option value="">All</option>');
+        $('#unit_sub_type').html('<option value="">All</option>');
+        if (!campusId) return;
+        $.get(blocksUrl, { campus_id: campusId }, function(res) {
+            if (res.status && res.data) {
+                $.each(res.data, function(i, b) {
+                    $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
+                });
+            }
+        });
+    });
+
+    $('#building').on('change', function() {
+        const campusId = $('#estate_name').val();
+        const blockId = $(this).val();
+        $('#unit_sub_type').html('<option value="">All</option>');
+        if (!campusId || !blockId) return;
+        $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
+            if (res.status && res.data) {
+                $.each(res.data, function(i, u) {
+                    $('#unit_sub_type').append('<option value="'+u.pk+'">'+u.unit_sub_type+'</option>');
+                });
+            }
+        });
+    });
+
+    $('#loadMeterReadingsBtn').on('click', function() {
+        if (dataTable) {
+            dataTable.destroy();
+            dataTable = null;
+        }
+        const billMonth = $('#bill_month').val();
+        const billYear = $('#bill_month option:selected').data('year');
+        if (!billMonth || !billYear) {
+            alert('Please select Bill Month.');
+            return;
+        }
+        const params = {
+            bill_month: billMonth,
+            bill_year: billYear,
+            meter_reading_date: $('#meter_reading_date').val() || '',
+            campus_id: $('#estate_name').val() || '',
+            block_id: $('#building').val() || '',
+            unit_type_id: $('#unit_name').val() || '',
+            unit_sub_type_id: $('#unit_sub_type').val() || ''
+        };
+        $.get(listUrl, params, function(res) {
+            if (!res.status || !res.data || res.data.length === 0) {
+                $('#meterReadingSaveForm').hide();
+                $('#noDataMessage').show();
+                if (dataTable) {
+                    dataTable.destroy();
+                    dataTable = null;
+                }
+                $('#updateMeterReadingOtherTable tbody').html('');
+                return;
+            }
+            $('#noDataMessage').hide();
+            const tbody = $('#updateMeterReadingOtherTable tbody');
+            tbody.html('');
+            res.data.forEach(function(row, idx) {
+                const lastReading = typeof row.last_month_reading === 'number' ? row.last_month_reading : (parseInt(row.last_month_reading, 10) || null);
+                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'">' +
+                    '<td><input type="checkbox" class="form-check-input row-check"></td>' +
+                    '<td>'+ (row.house_no || 'N/A') +'</td>' +
+                    '<td>'+ (row.name || 'N/A') +'</td>' +
+                    '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
+                    '<td>'+ (row.meter_no || 'N/A') +'</td>' +
+                    '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
+                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '') +'" min="0" placeholder="Enter">' +
+                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'"></td>' +
+                    '<td class="unit-cell">'+ (row.unit || 'N/A') +'</td>' +
+                    '</tr>';
+                tbody.append(tr);
+            });
+            $('#meterReadingSaveForm').show();
+            initDataTable();
+        }).fail(function() {
+            alert('Failed to load data.');
+        });
+    });
+
+    function initDataTable() {
+        if (dataTable) dataTable.destroy();
+        dataTable = $('#updateMeterReadingOtherTable').DataTable({
+            order: [[1, 'asc']],
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+            paging: true,
+            language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty: "Showing 0 to 0 of 0 entries",
+                infoFiltered: "(filtered from _MAX_ total entries)",
+                paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
+            },
+            responsive: true,
+            autoWidth: false,
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        });
+    }
+
+    $('#select_all').on('change', function() {
+        $('.row-check').prop('checked', $(this).prop('checked'));
+    });
+
+    $(document).on('input change', '.curr-reading', function() {
+        const $row = $(this).closest('tr');
+        const lastVal = $row.data('last-reading');
+        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+        const currVal = $(this).val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        let unit = 'N/A';
+        if (lastReading !== null && currReading !== null && currReading >= lastReading) {
+            unit = currReading - lastReading;
+        }
+        $row.find('.unit-cell').text(unit);
+    });
+
+    $('#meterReadingSaveForm').on('submit', function(e) {
+        if (dataTable && dataTable.page.len() !== -1) {
+            e.preventDefault();
+            dataTable.page.len(-1).draw('page');
+            const $form = $(this);
+            setTimeout(function() {
+                $form.off('submit').submit();
+            }, 150);
+        }
     });
 });
 </script>
