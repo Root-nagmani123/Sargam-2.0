@@ -2875,14 +2875,14 @@ class EstateController extends Controller
                 'last_reading_date' => $row->from_date ? \Carbon\Carbon::parse($row->from_date)->format('d/m/Y') : 'N/A',
             ];
             $pushed = false;
-            // Meter 1 - prefill new_meter_no / new_meter_reading from existing when present
+            // Meter 1 - New Meter No & New Meter Reading stay blank; user enters, Save updates DB
             if ($hasMeterOne) {
                 $rows->push(array_merge($base, [
                     'meter_slot' => 1,
                     'old_meter_no' => (string) $meterOne,
                     'electric_meter_reading' => $row->last_month_elec_red !== null ? $row->last_month_elec_red : 'N/A',
-                    'new_meter_no' => $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : '',
-                    'new_meter_reading' => $row->curr_month_elec_red !== null && $row->curr_month_elec_red !== '' ? (string) $row->curr_month_elec_red : '',
+                    'new_meter_no' => '',
+                    'new_meter_reading' => '',
                 ]));
                 $pushed = true;
             }
@@ -2892,8 +2892,8 @@ class EstateController extends Controller
                     'meter_slot' => 2,
                     'old_meter_no' => (string) $meterTwo,
                     'electric_meter_reading' => $row->last_month_elec_red2 !== null ? $row->last_month_elec_red2 : 'N/A',
-                    'new_meter_no' => $row->emrd_meter_two !== null && $row->emrd_meter_two !== '' ? (string) $row->emrd_meter_two : '',
-                    'new_meter_reading' => $row->curr_month_elec_red2 !== null && $row->curr_month_elec_red2 !== '' ? (string) $row->curr_month_elec_red2 : '',
+                    'new_meter_no' => '',
+                    'new_meter_reading' => '',
                 ]));
                 $pushed = true;
             }
@@ -2906,7 +2906,7 @@ class EstateController extends Controller
                     'old_meter_no' => (string) $lastMeter,
                     'electric_meter_reading' => $lastReading,
                     'new_meter_no' => '',
-                    'new_meter_reading' => $row->curr_month_elec_red !== null && $row->curr_month_elec_red !== '' ? (string) $row->curr_month_elec_red : '',
+                    'new_meter_reading' => '',
                 ]));
             }
         }
@@ -2991,28 +2991,21 @@ class EstateController extends Controller
             'readings.*.new_meter_no' => 'nullable|string|max:50',
         ]);
 
-        $readings = array_values($validated['readings']);
-
-        foreach ($readings as $item) {
+        foreach ($validated['readings'] as $item) {
             $update = [];
             $meterSlot = (int) ($item['meter_slot'] ?? 1);
-            $readingVal = array_key_exists('curr_month_elec_red', $item) ? $item['curr_month_elec_red'] : null;
-            $readingNum = ($readingVal !== null && $readingVal !== '') ? (int) $readingVal : null;
-            $newMeterNo = isset($item['new_meter_no']) ? trim((string) $item['new_meter_no']) : '';
-
             if ($meterSlot === 2) {
-                $update['curr_month_elec_red2'] = $readingNum;
-                if ($newMeterNo !== '') {
-                    $update['meter_two'] = $newMeterNo;
+                $update['curr_month_elec_red2'] = isset($item['curr_month_elec_red']) && $item['curr_month_elec_red'] !== '' ? (int) $item['curr_month_elec_red'] : null;
+                if (!empty($item['new_meter_no'])) {
+                    $update['meter_two'] = $item['new_meter_no'];
                 }
             } else {
-                $update['curr_month_elec_red'] = $readingNum;
-                if ($newMeterNo !== '') {
-                    $update['meter_one'] = $newMeterNo;
+                $update['curr_month_elec_red'] = isset($item['curr_month_elec_red']) && $item['curr_month_elec_red'] !== '' ? (int) $item['curr_month_elec_red'] : null;
+                if (!empty($item['new_meter_no'])) {
+                    $update['meter_one'] = $item['new_meter_no'];
                 }
             }
-
-            if (! empty($update)) {
+            if (!empty($update)) {
                 EstateMonthReadingDetails::where('pk', $item['pk'])->update($update);
             }
         }
