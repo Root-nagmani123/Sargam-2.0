@@ -14,20 +14,16 @@
             <dt class="col-sm-3">Vendor Name</dt>
             <dd class="col-sm-9">{{ $mapping->vendor->vendor_name ?? $mapping->vendor->name ?? 'N/A' }}</dd>
 
-            <dt class="col-sm-3">Mapping Type</dt>
+            <dt class="col-sm-3">Item</dt>
             <dd class="col-sm-9">
-                {{ $mapping->mapping_type === \App\Models\Mess\VendorItemMapping::MAPPING_TYPE_ITEM_CATEGORY ? 'Item Category' : 'Item Sub Category' }}
+                @if($mapping->itemSubcategory)
+                    {{ $mapping->itemSubcategory->item_name ?? $mapping->itemSubcategory->subcategory_name ?? 'N/A' }}
+                @elseif($mapping->itemCategory)
+                    {{ $mapping->itemCategory->category_name }}
+                @else
+                    —
+                @endif
             </dd>
-
-            @if($mapping->itemCategory)
-            <dt class="col-sm-3">Item Category</dt>
-            <dd class="col-sm-9">{{ $mapping->itemCategory->category_name }}</dd>
-            @endif
-
-            @if($mapping->itemSubcategory)
-            <dt class="col-sm-3">Item Sub Category</dt>
-            <dd class="col-sm-9">{{ $mapping->itemSubcategory->item_name ?? $mapping->itemSubcategory->subcategory_name ?? 'N/A' }}</dd>
-            @endif
         </dl>
         <hr>
         <a href="{{ route('admin.mess.vendor-item-mappings.edit', $mapping->id) }}" class="btn btn-primary btn-sm">Edit</a>

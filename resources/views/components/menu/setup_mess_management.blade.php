@@ -26,13 +26,8 @@
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.itemcategories.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Item Category Master</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.itemsubcategories.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Item Subcategory / Item Master</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Item Master</span>
                 </a>
             </li>
             <li class="sidebar-item">
