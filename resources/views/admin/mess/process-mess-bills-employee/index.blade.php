@@ -1,12 +1,12 @@
 @extends('admin.layouts.master')
-@section('title', 'Process Mess Bills (Employee)')
+@section('title', 'Process Mess Bills')
 @section('setup_content')
 <div class="container-fluid">
     {{-- Page header --}}
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <div>
-            <h4 class="mb-1 fw-bold">Process Mess Bills (Employee)</h4>
-            <p class="text-muted small mb-0">View employee mess bills, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
+            <h4 class="mb-1 fw-bold">Process Mess Bills</h4>
+            <p class="text-muted small mb-0">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
         </div>
         <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal">
             <i class="material-symbols-rounded" style="font-size: 1.25rem;">receipt_long</i>
@@ -160,7 +160,7 @@
                                 <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
                                 <td>{{ $billId }}</td>
                                 <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>
-                                <td>{{ $bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—') }}</td>
+                                <td>{{ $bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—')) }}</td>
                                 <td class="text-end fw-semibold">₹ {{ number_format($bill->total_amount ?? $bill->items->sum('amount'), 2) }}</td>
                                 <td>{{ $paymentTypeMap[$bill->payment_type ?? 1] ?? '—' }}</td>
                                 <td>
