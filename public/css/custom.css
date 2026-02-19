@@ -12,13 +12,3 @@ body.custom-loaded {
 .error-fix {
     display: none;
 }
-
-/* DataTables: remove dropdown arrow from "Show entries" select (applies to all Bootstrap DataTables) */
-.dataTables_wrapper .dataTables_length select {
-    background-image: none !important;
-}
-
-/* Unit Type DataTable: only table body scrolls; search, count, pagination stay fixed */
-.unit-type-datatable-scroll .dataTables_wrapper .dataTables_scrollBody {
-    -webkit-overflow-scrolling: touch;
-}

@@ -26,14 +26,14 @@
                 @if($item) @method('PUT') @endif
 
                 <div class="mb-3">
-                    <label for="salary_grade_master_pk" class="form-label">Pay Scale (Salary Grade) <span class="text-danger">*</span></label>
-                    <select class="form-select @error('salary_grade_master_pk') is-invalid @enderror" id="salary_grade_master_pk" name="salary_grade_master_pk" required>
+                    <label for="pay_scale_master_pk" class="form-label">Pay Scale <span class="text-danger">*</span></label>
+                    <select class="form-select @error('pay_scale_master_pk') is-invalid @enderror" id="pay_scale_master_pk" name="pay_scale_master_pk" required>
                         <option value="">--select--</option>
-                        @foreach($salaryGrades as $pk => $label)
-                        <option value="{{ $pk }}" {{ old('salary_grade_master_pk', $item->salary_grade_master_pk ?? '') == $pk ? 'selected' : '' }}>{{ $label }}</option>
+                        @foreach($payScales as $pk => $label)
+                        <option value="{{ $pk }}" {{ old('pay_scale_master_pk', $item->pay_scale_master_pk ?? '') == $pk ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
-                    @error('salary_grade_master_pk')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @error('pay_scale_master_pk')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
 
                 <div class="mb-3">
