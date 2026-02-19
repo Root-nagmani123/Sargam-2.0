@@ -289,9 +289,6 @@ class ReportController extends Controller
         if ($request->filled('client_type_slug')) {
             $svQuery->where('client_type_slug', $request->client_type_slug);
         }
-        if ($request->filled('course_master_pk') && $request->get('client_type_slug') === \App\Models\Mess\ClientType::TYPE_OT) {
-            $svQuery->where('course_master_pk', $request->course_master_pk);
-        }
         if ($request->filled('client_type_pk')) {
             $svQuery->where('client_type_pk', $request->client_type_pk);
         }

@@ -30,7 +30,7 @@ class KitchenIssueController extends Controller
      */
     public function index(Request $request)
     {
-        $query = KitchenIssueMaster::with(['store', 'items.itemSubcategory', 'clientTypeCategory', 'employee', 'student']);
+        $query = KitchenIssueMaster::with(['store', 'items.itemSubcategory', 'clientTypeCategory', 'course', 'employee', 'student']);
 
         if ($request->filled('store')) {
             $query->where('store_id', $request->store);
@@ -240,7 +240,16 @@ class KitchenIssueController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
-            'client_type_pk' => 'nullable|exists:mess_client_types,id',
+            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
+                if ($value === null || $value === '') return;
+                $slug = $request->client_type_slug ?? '';
+                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                    $fail('The selected client is invalid.');
+                }
+                if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
+                    $fail('The selected course is invalid.');
+                }
+            }],
             'client_id' => 'nullable|integer',
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
@@ -288,7 +297,7 @@ class KitchenIssueController extends Controller
                 'store_type' => $storeType,
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
-                'client_type_pk' => $request->client_type_pk,
+                'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_id' => $request->client_id,
                 'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
@@ -359,6 +368,7 @@ class KitchenIssueController extends Controller
             'store',
             'items.itemSubcategory',
             'clientTypeCategory',
+            'course',
             'employee',
             'student'
         ])->findOrFail($id);
@@ -370,7 +380,7 @@ class KitchenIssueController extends Controller
                 'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('d/m/Y') : '—',
                 'store_name' => $kitchenIssue->resolved_store_name,
                 'client_type' => $kitchenIssue->client_type_label ?? '-',
-                'client_name' => $kitchenIssue->client_name ?? '-',
+                'client_name' => $kitchenIssue->display_client_name,
                 'payment_type' => $kitchenIssue->payment_type_label ?? '-',
                 'kitchen_issue_type' => $kitchenIssue->kitchen_issue_type_label ?? '-',
                 'status' => $kitchenIssue->status,
@@ -380,16 +390,24 @@ class KitchenIssueController extends Controller
                 'updated_at' => $kitchenIssue->updated_at ? $kitchenIssue->updated_at->format('d/m/Y H:i') : null,
             ];
             $items = $kitchenIssue->items->map(function ($item) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                $rate = (float) $item->rate;
+                $amount = max(0, $qty - $retQty) * $rate;
                 return [
                     'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? '—'),
                     'unit' => $item->unit ?? '—',
-                    'quantity' => (float) $item->quantity,
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
+                    'quantity' => $qty,
+                    'return_quantity' => $retQty,
                     'rate' => number_format($item->rate, 2),
-                    'amount' => number_format($item->amount, 2),
+                    'amount' => number_format($amount, 2),
                 ];
             })->values()->toArray();
-            $grand_total = $kitchenIssue->items->sum('amount');
+            $grand_total = $kitchenIssue->items->sum(function ($item) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                return max(0, $qty - $retQty) * (float) $item->rate;
+            });
             $has_items = $kitchenIssue->items->isNotEmpty();
             return response()->json([
                 'voucher' => $voucher,
@@ -495,7 +513,16 @@ class KitchenIssueController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
-            'client_type_pk' => 'nullable|exists:mess_client_types,id',
+            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
+                if ($value === null || $value === '') return;
+                $slug = $request->client_type_slug ?? '';
+                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                    $fail('The selected client is invalid.');
+                }
+                if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
+                    $fail('The selected course is invalid.');
+                }
+            }],
             'client_id' => 'nullable|integer',
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
@@ -543,7 +570,7 @@ class KitchenIssueController extends Controller
                 'store_type' => $storeType,
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
-                'client_type_pk' => $request->client_type_pk,
+                'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_id' => $request->client_id,
                 'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
