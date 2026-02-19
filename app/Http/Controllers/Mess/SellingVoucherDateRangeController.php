@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mess;
 use App\Http\Controllers\Controller;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
+use App\Services\Mess\AvailableQuantityService;
 use App\Models\Mess\Store;
 use App\Models\Mess\SubStore;
 use App\Models\Mess\ItemSubcategory;
@@ -187,7 +188,7 @@ class SellingVoucherDateRangeController extends Controller
             $storeType = 'sub_store';
         }
         $storeId = (int) $storeIdRaw;
-        $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+        $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
 
         $requestedByItem = [];
         foreach ((array) $request->items as $row) {
@@ -338,11 +339,15 @@ class SellingVoucherDateRangeController extends Controller
 
         if ($request->wantsJson()) {
             $clientTypeSlug = $report->clientTypeCategory ? $report->clientTypeCategory->client_type : ($report->client_type_slug ?? 'employee');
+            $storeType = $report->store_type ?? 'store';
+            $storeId = (int) $report->store_id;
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
             $voucher = [
                 'id' => $report->id,
                 'date_from' => $report->date_from ? $report->date_from->format('Y-m-d') : '',
                 'date_to' => $report->date_to ? $report->date_to->format('Y-m-d') : '',
-                'store_id' => $report->store_id,
+                'store_id' => $storeType === 'sub_store' ? 'sub_' . $storeId : (string) $storeId,
                 'report_title' => $report->report_title,
                 'status' => (int) $report->status,
                 'remarks' => $report->remarks,
@@ -352,13 +357,15 @@ class SellingVoucherDateRangeController extends Controller
                 'payment_type' => (int) $report->payment_type,
                 'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
             ];
-            $items = $report->items->map(function ($item) {
+            $items = $report->items->map(function ($item) use ($availableMap) {
+                $itemId = (int) ($item->item_subcategory_id ?? 0);
+                $currentAvailable = $itemId > 0 ? (float) ($availableMap[$itemId] ?? 0) : (float) ($item->available_quantity ?? 0);
                 return [
                     'item_subcategory_id' => $item->item_subcategory_id,
                     'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                     'unit' => $item->unit ?? '',
                     'quantity' => (float) $item->quantity,
-                    'available_quantity' => (float) ($item->available_quantity ?? 0),
+                    'available_quantity' => $currentAvailable,
                     'return_quantity' => (float) ($item->return_quantity ?? 0),
                     'rate' => (float) $item->rate,
                     'amount' => (float) $item->amount,
@@ -421,7 +428,7 @@ class SellingVoucherDateRangeController extends Controller
             $storeId = (int) $storeId;
 
             // Enforce: Issue Qty cannot exceed available qty (server-side)
-            $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
             $requestedByItem = [];
             foreach ((array) $request->items as $row) {
                 $itemId = (int) ($row['item_subcategory_id'] ?? 0);
@@ -601,16 +608,18 @@ class SellingVoucherDateRangeController extends Controller
     public function getStoreItems($storeIdentifier)
     {
         $items = collect();
-        
+        $storeType = 'store';
+        $storeId = (int) $storeIdentifier;
+
         // Check if it's a sub-store (prefixed with 'sub_')
         if (strpos($storeIdentifier, 'sub_') === 0) {
-            // Sub-store: get items from store allocations
-            $subStoreId = (int) str_replace('sub_', '', $storeIdentifier);
-            
+            $storeType = 'sub_store';
+            $storeId = (int) str_replace('sub_', '', $storeIdentifier);
+
             // Get items with their allocated quantities and store-specific rate (weighted avg unit_price)
             $allocatedItems = DB::table('mess_store_allocation_items as sai')
                 ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
-                ->where('sa.sub_store_id', $subStoreId)
+                ->where('sa.sub_store_id', $storeId)
                 ->select(
                     'sai.item_subcategory_id',
                     DB::raw('SUM(sai.quantity) as total_quantity'),
@@ -619,13 +628,15 @@ class SellingVoucherDateRangeController extends Controller
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
-            
+
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
             if ($allocatedItems->isNotEmpty()) {
                 $itemIds = $allocatedItems->keys();
                 $items = ItemSubcategory::whereIn('id', $itemIds)
                     ->active()
                     ->get()
-                    ->map(function ($s) use ($allocatedItems) {
+                    ->map(function ($s) use ($allocatedItems, $availableMap) {
                         $allocated = $allocatedItems->get($s->id);
                         $storeRate = $allocated && isset($allocated->avg_unit_price) ? (float) $allocated->avg_unit_price : null;
                         return [
@@ -633,15 +644,12 @@ class SellingVoucherDateRangeController extends Controller
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
                             'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
-                            'available_quantity' => $allocated ? (float) $allocated->total_quantity : 0,
+                            'available_quantity' => (float) ($availableMap[$s->id] ?? 0),
                         ];
                     });
             }
         } else {
             // Main store: get items from purchase orders
-            $storeId = (int) $storeIdentifier;
-            
-            // Get items with their purchased quantities and store-specific rate (weighted avg unit_price from POs)
             $purchasedItems = DB::table('mess_purchase_order_items as poi')
                 ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
                 ->where('po.store_id', $storeId)
@@ -654,13 +662,15 @@ class SellingVoucherDateRangeController extends Controller
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
-            
+
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
             if ($purchasedItems->isNotEmpty()) {
                 $itemIds = $purchasedItems->keys();
                 $items = ItemSubcategory::whereIn('id', $itemIds)
                     ->active()
                     ->get()
-                    ->map(function ($s) use ($purchasedItems) {
+                    ->map(function ($s) use ($purchasedItems, $availableMap) {
                         $purchased = $purchasedItems->get($s->id);
                         $storeRate = $purchased && isset($purchased->avg_unit_price) ? (float) $purchased->avg_unit_price : null;
                         return [
@@ -668,45 +678,12 @@ class SellingVoucherDateRangeController extends Controller
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
                             'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
-                            'available_quantity' => $purchased ? (float) $purchased->total_quantity : 0,
+                            'available_quantity' => (float) ($availableMap[$s->id] ?? 0),
                         ];
                     });
             }
         }
-        
+
         return response()->json($items->values());
-    }
-
-    /**
-     * Get available quantities by item_subcategory_id for a store/sub-store.
-     * Mirrors the logic used by getStoreItems() (server-side authoritative check).
-     *
-     * @return array<int, float> [item_subcategory_id => available_quantity]
-     */
-    private function availableQuantitiesForStore(string $storeType, int $storeId): array
-    {
-        if ($storeType === 'sub_store') {
-            $rows = DB::table('mess_store_allocation_items as sai')
-                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
-                ->where('sa.sub_store_id', $storeId)
-                ->select('sai.item_subcategory_id', DB::raw('SUM(sai.quantity) as total_quantity'))
-                ->groupBy('sai.item_subcategory_id')
-                ->get();
-        } else {
-            $rows = DB::table('mess_purchase_order_items as poi')
-                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
-                ->where('po.store_id', $storeId)
-                ->where('po.status', 'approved')
-                ->select('poi.item_subcategory_id', DB::raw('SUM(poi.quantity) as total_quantity'))
-                ->groupBy('poi.item_subcategory_id')
-                ->get();
-        }
-
-        $map = [];
-        foreach ($rows as $r) {
-            $id = (int) ($r->item_subcategory_id ?? 0);
-            if ($id > 0) $map[$id] = (float) ($r->total_quantity ?? 0);
-        }
-        return $map;
     }
 }
