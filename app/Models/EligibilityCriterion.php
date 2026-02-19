@@ -13,11 +13,15 @@ class EligibilityCriterion extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['pay_scale_master_pk', 'estate_unit_type_master_pk', 'estate_unit_sub_type_master_pk'];
+    // salary_grade_master_pk maps to salary_grade_master.pk
+    protected $fillable = ['salary_grade_master_pk', 'estate_unit_type_master_pk', 'estate_unit_sub_type_master_pk'];
 
+    /**
+     * Backwards-compatible accessor name: payScale (actually salary grade).
+     */
     public function payScale(): BelongsTo
     {
-        return $this->belongsTo(PayScale::class, 'pay_scale_master_pk', 'pk');
+        return $this->belongsTo(SalaryGrade::class, 'salary_grade_master_pk', 'pk');
     }
 
     public function unitType(): BelongsTo
