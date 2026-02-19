@@ -1082,13 +1082,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
         // Estate Reports
         Route::prefix('reports')->name('reports.')->group(function () {
-            Route::get('pending-meter-reading', function () {
-                return view('admin.estate.pending_meter_reading');
-            })->name('pending-meter-reading');
+            Route::get('pending-meter-reading/data', [EstateController::class, 'getPendingMeterReadingData'])->name('pending-meter-reading.data');
+            Route::get('pending-meter-reading', [EstateController::class, 'pendingMeterReading'])->name('pending-meter-reading');
             
-            Route::get('house-status', function () {
-                return view('admin.estate.house_status');
-            })->name('house-status');
+            Route::get('house-status/data', [EstateController::class, 'getHouseStatusData'])->name('house-status.data');
+            Route::get('house-status', [EstateController::class, 'houseStatus'])->name('house-status');
             
             Route::get('bill-report-grid', function () {
                 return view('admin.estate.estate_bill_report_grid');
