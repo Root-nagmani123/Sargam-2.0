@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin\Estate;
 
-use App\DataTables\EstateBlockDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateBlock;
 use Illuminate\Http\Request;
 
 class EstateBlockController extends Controller
 {
-    public function index(EstateBlockDataTable $dataTable)
+    public function index()
     {
-        return $dataTable->render('admin.estate.define_block_building.index');
+        $items = EstateBlock::orderBy('block_name')->paginate(request('per_page', 10));
+        return view('admin.estate.define_block_building.index', compact('items'));
     }
 
     public function create()
