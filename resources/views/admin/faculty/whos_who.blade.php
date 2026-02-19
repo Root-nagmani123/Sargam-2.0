@@ -4,57 +4,56 @@
 
 @section('setup_content')
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-3 py-md-4 px-3 px-md-4">
     <x-breadcrum title="Who's Who"></x-breadcrum>
 
     <!-- Filter Section -->
-    <div class="card shadow-sm mb-4">
+    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
         <div class="card-body p-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-2">
-                    <label for="courseTypeFilter" class="form-label fw-semibold">Course Status</label>
-                    <select class="form-select" id="courseTypeFilter">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-6 g-3 align-items-end">
+                <div class="col">
+                    <label for="courseTypeFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Course Status</label>
+                    <select class="form-select form-select-sm rounded-2 border-secondary-subtle" id="courseTypeFilter">
                         <option value="active" selected>Active</option>
                         <option value="archive">Archive</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label for="nameFilter" class="form-label fw-semibold">Name</label>
-                    <input type="text" class="form-control" id="nameFilter" placeholder="Enter name to search">
+                <div class="col">
+                    <label for="nameFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Name</label>
+                    <input type="text" class="form-control form-control-sm rounded-2 border-secondary-subtle" id="nameFilter" placeholder="Search by name">
                 </div>
-                <div class="col-md-2">
-                    <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
-                    <select class="form-select" id="courseFilter" data-loaded-type="active">
+                <div class="col">
+                    <label for="courseFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Course Name</label>
+                    <select class="form-select form-select-sm rounded-2 border-secondary-subtle" id="courseFilter" data-loaded-type="active">
                         <option value="">All Courses</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label for="cadreFilter" class="form-label fw-semibold">Cadre</label>
-                    <select class="form-select" id="cadreFilter">
+                <div class="col">
+                    <label for="cadreFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Cadre</label>
+                    <select class="form-select form-select-sm rounded-2 border-secondary-subtle" id="cadreFilter">
                         <option value="">All Cadres</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label for="counsellorFilter" class="form-label fw-semibold">Counsellor</label>
-                    <select class="form-select" id="counsellorFilter">
+                <div class="col">
+                    <label for="counsellorFilter" class="form-label fw-semibold small text-body-secondary text-uppercase">Counsellor</label>
+                    <select class="form-select form-select-sm rounded-2 border-secondary-subtle" id="counsellorFilter">
                         <option value="">All Counsellors</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-outline-secondary w-100" id="resetFilters">
+                <div class="col">
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 rounded-2 fw-medium" id="resetFilters">
                         <i class="bi bi-arrow-clockwise me-1"></i> Reset
                     </button>
                 </div>
             </div>
-            
-            <!-- Sorting and Per Page Controls -->
-            <div class="row g-3 align-items-end mt-3 pt-3 border-top">
-                <div class="col-md-4">
-                    <label for="sortBy" class="form-label fw-semibold">Sort By</label>
-                    <select class="form-select" id="sortBy">
+
+            <div class="row row-cols-1 row-cols-md-3 g-3 align-items-end mt-3 pt-3 border-top border-secondary-subtle">
+                <div class="col">
+                    <label for="sortBy" class="form-label fw-semibold small text-body-secondary text-uppercase">Sort By</label>
+                    <select class="form-select form-select-sm rounded-2 border-secondary-subtle" id="sortBy">
                         <option value="name_asc">Name (A-Z)</option>
                         <option value="name_desc">Name (Z-A)</option>
                         <option value="roll_asc">Roll Number (Low to High)</option>
@@ -65,9 +64,9 @@
                         <option value="course_desc">Course (Z-A)</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="perPage" class="form-label fw-semibold">Items Per Page</label>
-                    <select class="form-select" id="perPage">
+                <div class="col">
+                    <label for="perPage" class="form-label fw-semibold small text-body-secondary text-uppercase">Items Per Page</label>
+                    <select class="form-select form-select-sm rounded-2 border-secondary-subtle w-auto" id="perPage">
                         <option value="5">5</option>
                         <option value="10" selected>10</option>
                         <option value="25">25</option>
@@ -75,45 +74,47 @@
                         <option value="100">100</option>
                     </select>
                 </div>
-                <div class="col-md-5">
-                    <div class="d-flex align-items-end h-100">
-                        <div class="text-muted small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Use filters above and sorting options to find students
-                        </div>
-                    </div>
+                <div class="col col-md-6 d-flex align-items-end">
+                    <p class="text-body-secondary small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Use filters and sorting to find students
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Static Information Row -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">TUTOR GROUP</span>
-                        <span class="fs-6 fw-bold text-dark" id="tutorGroup">0</span>
-                    </div>
+    <!-- Static Information Row - Stat cards -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
+        <div class="col">
+            <div class="card border-0 rounded-3 h-100 shadow-sm bg-primary bg-opacity-10 border-start border-4 border-primary">
+                <div class="card-body py-3 px-4">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary mb-1">Tutor Group</span>
+                    <span class="fs-5 fw-bold text-body-emphasis" id="tutorGroup">0</span>
                 </div>
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">TUTOR NAME</span>
-                        <span class="fs-6 fw-bold text-dark" id="tutorName">Prem Kumar V R & Sachiv Kumar</span>
-                    </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 rounded-3 h-100 shadow-sm bg-success bg-opacity-10 border-start border-4 border-success">
+                <div class="card-body py-3 px-4">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary mb-1">Tutor Name</span>
+                    <span class="fs-6 fw-semibold text-body-emphasis" id="tutorName">Prem Kumar V R & Sachiv Kumar</span>
                 </div>
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">HOUSE NAME</span>
-                        <span class="fs-6 fw-bold text-dark" id="houseName">Stok Kangri</span>
-                    </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 rounded-3 h-100 shadow-sm bg-info bg-opacity-10 border-start border-4 border-info">
+                <div class="card-body py-3 px-4">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary mb-1">House Name</span>
+                    <span class="fs-5 fw-bold text-body-emphasis" id="houseName">Stok Kangri</span>
                 </div>
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">HOUSE TUTORS</span>
-                        <span class="fs-6 fw-bold text-dark" id="houseTutors">Shelesh Nawal</span>
-                    </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 rounded-3 h-100 shadow-sm bg-warning bg-opacity-10 border-start border-4 border-warning">
+                <div class="card-body py-3 px-4">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary mb-1">House Tutors</span>
+                    <span class="fs-6 fw-semibold text-body-emphasis" id="houseTutors">Shelesh Nawal</span>
                 </div>
             </div>
         </div>
@@ -121,29 +122,27 @@
 
     <!-- Students List Container -->
     <div id="studentsContainer">
-        <!-- Students will be dynamically loaded here -->
         <div class="d-flex justify-content-center align-items-center py-5" id="loadingSpinner">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-2" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-body-secondary small mb-0">Loading students…</p>
             </div>
         </div>
     </div>
 
     <!-- Pagination Container -->
     <div id="paginationContainer" class="d-none mt-4 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-body py-3">
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="card-body py-3 px-4">
                 <div class="row align-items-center g-3">
-                    <div class="col-md-6 col-lg-5">
-                        <div id="paginationInfo" class="d-flex align-items-center">
-                            <!-- Pagination info will be added here -->
-                        </div>
+                    <div class="col-12 col-md-6 col-lg-5">
+                        <div id="paginationInfo" class="d-flex align-items-center"></div>
                     </div>
-                    <div class="col-md-6 col-lg-7">
-                        <nav aria-label="Students pagination" class="d-flex justify-content-end">
-                            <ul class="pagination mb-0" id="paginationList">
-                                <!-- Pagination will be dynamically generated here -->
-                            </ul>
+                    <div class="col-12 col-md-6 col-lg-7">
+                        <nav aria-label="Students pagination" class="d-flex justify-content-md-end justify-content-center">
+                            <ul class="pagination pagination-sm mb-0 flex-wrap justify-content-center" id="paginationList"></ul>
                         </nav>
                     </div>
                 </div>
@@ -154,142 +153,167 @@
 
 <!-- Profile Template (Hidden) -->
 <template id="profileTemplate">
-    <div class="card shadow-lg mb-4">
+    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
         <!-- Profile Header -->
-        <div class="card-header bg-primary text-white p-4">
-            <div class="row align-items-center g-3">
-                <div class="col-md-4">
-                    <h3 class="h4 mb-0 fw-bold text-white" id="profileName">Aakash Garg</h3>
+        <div class="card-header text-bg-primary border-0 py-3 py-md-4 px-4 rounded-0">
+            <div class="row align-items-center g-2 g-md-3">
+                <div class="col-12 col-md-3">
+                    <h2 class="h5 mb-0 fw-bold text-white" id="profileName">Aakash Garg</h2>
                 </div>
-                <div class="col-md-4 text-center">
-                    <div class="fs-5 fw-semibold" id="profileRoll">Roll 5</div>
+                <div class="col-6 col-md-3 text-center">
+                    <span class="badge bg-light text-primary fs-6 px-3 py-2 rounded-2 fw-semibold" id="profileRoll">Roll 5</span>
                 </div>
-                <div class="col-md-4 text-md-end">
-                    <div class="small fw-medium opacity-90" id="profileService">INDIAN ADMINISTRATIVE SERVICE</div>
+                <div class="col-6 col-md-3 text-md-end">
+                    <span class="fw-medium opacity-90 small" id="profileService">INDIAN ADMINISTRATIVE SERVICE</span>
+                </div>
+                <div class="col-12 col-md-3 text-md-end mt-2 mt-md-0">
+                    <a href="#" class="btn btn-light btn-sm rounded-2 fw-semibold" id="profileHistoryBtn" title="View participant history">
+                        <i class="bi bi-clock-history me-1"></i> History
+                    </a>
                 </div>
             </div>
         </div>
-        
+
         <!-- Profile Body -->
         <div class="card-body p-4">
+            <!-- Tutor & House info (on every participant card) -->
+            <div class="row row-cols-2 row-cols-md-4 g-2 g-md-3 mb-4 pb-3 border-bottom border-secondary-subtle">
+                <div class="col">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary">Tutor Group</span>
+                    <span class="fw-semibold text-body-emphasis" id="profileTutorGroup">0</span>
+                </div>
+                <div class="col">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary">Tutor Name</span>
+                    <span class="fw-semibold text-body-emphasis small" id="profileTutorName">N/A</span>
+                </div>
+                <div class="col">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary">House Name</span>
+                    <span class="fw-semibold text-body-emphasis" id="profileHouseName">N/A</span>
+                </div>
+                <div class="col">
+                    <span class="d-block small text-uppercase fw-semibold text-body-secondary">House Tutors</span>
+                    <span class="fw-semibold text-body-emphasis small" id="profileHouseTutors">N/A</span>
+                </div>
+            </div>
+
             <div class="row g-4">
                 <!-- Profile Image Section -->
-                <div class="col-md-3 col-lg-2">
-                    <div class="d-flex flex-column align-items-center gap-3">
-                        <div class="ratio ratio-1x1 w-75 mx-auto">
-                            <img src="" alt="Profile Image" class="img-fluid rounded border border-3 border-light shadow-sm object-fit-cover" id="profileImage">
+                <div class="col-12 col-md-3 col-lg-2">
+                    <div class="d-flex flex-column align-items-center gap-2">
+                        <div class="ratio ratio-1x1 rounded-3 overflow-hidden bg-body-secondary" style="max-width: 140px;">
+                            <img src="" alt="Profile Image" class="img-fluid object-fit-cover" id="profileImage">
                         </div>
-                        <div class="badge bg-danger fs-6 px-3 py-2" id="profileIdBadge">O30</div>
+                        <span class="badge text-bg-danger rounded-2 px-3 py-2 fw-semibold" id="profileIdBadge">O30</span>
                     </div>
                 </div>
-                
+
                 <!-- Profile Content -->
-                <div class="col-md-9 col-lg-10">
+                <div class="col-12 col-md-9 col-lg-10">
                     <div class="row g-4">
                         <!-- Left Column -->
                         <div class="col-lg-6">
                             <!-- Course Information -->
                             <div class="mb-4">
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Course Information</h4>
-                                <div class="d-flex flex-column gap-3">
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Course Name</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileCourseName">FC-100</span>
+                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 pb-2 border-bottom border-2 border-primary-subtle">Course Information</h3>
+                                <div class="d-flex flex-column gap-2">
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Course Name</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileCourseName">FC-100</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Course Code</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileCourseCode">FC-100</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Course Code</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileCourseCode">FC-100</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Batch</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileBatch">2024-2025</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Batch</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileBatch">2024-2025</span>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Basic Information -->
                             <div class="mb-4">
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Basic Information</h4>
-                                <div class="d-flex flex-column gap-3">
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Date of Birth</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileDob">9/22/2000</span>
+                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 pb-2 border-bottom border-2 border-primary-subtle">Basic Information</h3>
+                                <div class="d-flex flex-column gap-2">
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Date of Birth</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileDob">9/22/2000</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Domicile State</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileDomicile">DELHI</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Domicile State</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileDomicile">DELHI</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">No. of Attempts</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileAttempts">2</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">No. of Attempts</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileAttempts">2</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Highest Stream</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileStream">Engineering</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Highest Stream</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileStream">Engineering</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Room No.</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileRoom">SW-309</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Room No.</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileRoom">SW-309</span>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Hobbies & Interests -->
                             <div>
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Hobbies & Interests</h4>
-                                <ul class="list-unstyled d-flex flex-column gap-2" id="profileHobbies">
-                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
-                                        <span class="small text-dark">Formula 1 Racing</span>
+                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 pb-2 border-bottom border-2 border-primary-subtle">Hobbies & Interests</h3>
+                                <ul class="list-unstyled d-flex flex-column gap-2 mb-0" id="profileHobbies">
+                                    <li class="p-2 rounded-2 bg-body-tertiary border-start border-primary border-3">
+                                        <span class="small text-body-emphasis">Formula 1 Racing</span>
                                     </li>
-                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
-                                        <span class="small text-dark">Science Fiction</span>
+                                    <li class="p-2 rounded-2 bg-body-tertiary border-start border-primary border-3">
+                                        <span class="small text-body-emphasis">Science Fiction</span>
                                     </li>
-                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
-                                        <span class="small text-dark">Movies</span>
+                                    <li class="p-2 rounded-2 bg-body-tertiary border-start border-primary border-3">
+                                        <span class="small text-body-emphasis">Movies</span>
                                     </li>
                                 </ul>
                             </div>
                         </div>
-                        
+
                         <!-- Right Column -->
                         <div class="col-lg-6">
                             <!-- Contact Information -->
                             <div class="mb-4">
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Contact Information</h4>
-                                <div class="d-flex flex-column gap-3">
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">EMAIL ADDRESS</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileEmail">aakashgarg01@gmail.com</span>
+                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 pb-2 border-bottom border-2 border-primary-subtle">Contact Information</h3>
+                                <div class="d-flex flex-column gap-2">
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Email Address</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileEmail">aakashgarg01@gmail.com</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">CONTACT NUMBER</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileContact">8800372932</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Contact Number</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileContact">8800372932</span>
                                     </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">LAST SERVICE</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileLastService">N/A</span>
+                                    <div>
+                                        <span class="d-block small text-uppercase fw-semibold text-body-secondary">Last Service</span>
+                                        <span class="fw-medium text-body-emphasis" id="profileLastService">N/A</span>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Educational Qualifications -->
                             <div>
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Educational Qualifications</h4>
-                                <ul class="list-unstyled d-flex flex-column gap-3" id="profileEducation">
-                                    <li class="p-3 bg-light rounded border-start border-success border-3">
-                                        <div class="fw-bold text-dark mb-1">Bachelors of Technology(B.Tech)</div>
-                                        <div class="small text-secondary">Maharaja Agrasen Institute of Technology</div>
-                                        <div class="small text-secondary fst-italic mt-1">To year 2022</div>
+                                <h3 class="h6 fw-bold text-primary text-uppercase mb-3 pb-2 border-bottom border-2 border-primary-subtle">Educational Qualifications</h3>
+                                <ul class="list-unstyled d-flex flex-column gap-2 mb-0" id="profileEducation">
+                                    <li class="p-3 rounded-2 bg-body-tertiary border-start border-success border-3">
+                                        <div class="fw-semibold text-body-emphasis mb-1">Bachelors of Technology (B.Tech)</div>
+                                        <div class="small text-body-secondary">Maharaja Agrasen Institute of Technology</div>
+                                        <div class="small text-body-secondary fst-italic mt-1">To year 2022</div>
                                     </li>
-                                    <li class="p-3 bg-light rounded border-start border-success border-3">
-                                        <div class="fw-bold text-dark mb-1">Senior Secondary(12th)</div>
-                                        <div class="small text-secondary">CRPF Public School, Rohini</div>
-                                        <div class="small text-secondary fst-italic mt-1">To year 2018</div>
+                                    <li class="p-3 rounded-2 bg-body-tertiary border-start border-success border-3">
+                                        <div class="fw-semibold text-body-emphasis mb-1">Senior Secondary (12th)</div>
+                                        <div class="small text-body-secondary">CRPF Public School, Rohini</div>
+                                        <div class="small text-body-secondary fst-italic mt-1">To year 2018</div>
                                     </li>
-                                    <li class="p-3 bg-light rounded border-start border-success border-3">
-                                        <div class="fw-bold text-dark mb-1">Higher Secondary(10th)</div>
-                                        <div class="small text-secondary">Gitarattan Jindal Public School, Rohini</div>
-                                        <div class="small text-secondary fst-italic mt-1">To year 2016</div>
+                                    <li class="p-3 rounded-2 bg-body-tertiary border-start border-success border-3">
+                                        <div class="fw-semibold text-body-emphasis mb-1">Higher Secondary (10th)</div>
+                                        <div class="small text-body-secondary">Gitarattan Jindal Public School, Rohini</div>
+                                        <div class="small text-body-secondary fst-italic mt-1">To year 2016</div>
                                     </li>
                                 </ul>
                             </div>
@@ -326,6 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let totalStudents = 0;
     let allProfiles = [];
     let currentSort = 'name_asc';
+    // Static tutor/house info shown on each participant card (updated by loadStaticInfo)
+    let lastStaticInfo = { tutorGroup: '0', tutorName: 'N/A', houseName: 'N/A', houseTutors: 'N/A' };
+    let lastRenderedStudents = [];
+    let lastRenderedPagination = null;
 
     // Function to render all students
     function renderStudents(students, pagination, customMessage = null) {
@@ -333,20 +361,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const message = customMessage || 'Please adjust your filters to find students.';
             studentsContainer.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="bi bi-person-x display-1 text-secondary opacity-50"></i>
-                    <h4 class="mt-3">No Students Found</h4>
-                    <p class="text-secondary">${message}</p>
+                    <div class="rounded-3 bg-body-tertiary d-inline-flex p-4 mb-3">
+                        <i class="bi bi-person-x display-4 text-body-secondary"></i>
+                    </div>
+                    <h4 class="mt-2 fw-semibold text-body-emphasis">No Students Found</h4>
+                    <p class="text-body-secondary mb-0">${message}</p>
                 </div>
             `;
             paginationContainer.classList.add('d-none');
             return;
         }
 
-        // Update pagination info
+        // Update pagination info and cache for re-render when static info loads
         if (pagination) {
             currentPage = pagination.current_page;
             totalPages = pagination.total_pages;
             totalStudents = pagination.total;
+            lastRenderedStudents = students;
+            lastRenderedPagination = pagination;
         }
 
         // Clear container
@@ -375,6 +407,14 @@ document.addEventListener('DOMContentLoaded', function() {
             clone.getElementById('profileEmail').textContent = profile.email;
             clone.getElementById('profileContact').textContent = profile.contact;
             clone.getElementById('profileLastService').textContent = profile.lastService;
+            // Tutor & House info on every card (from lastStaticInfo)
+            clone.getElementById('profileTutorGroup').textContent = lastStaticInfo.tutorGroup;
+            clone.getElementById('profileTutorName').textContent = lastStaticInfo.tutorName;
+            clone.getElementById('profileHouseName').textContent = lastStaticInfo.houseName;
+            clone.getElementById('profileHouseTutors').textContent = lastStaticInfo.houseTutors;
+            // History button – link to participant history
+            const historyBtn = clone.getElementById('profileHistoryBtn');
+            historyBtn.href = profile.historyUrl || '#';
 
             // Render hobbies
             const hobbiesList = clone.getElementById('profileHobbies');
@@ -382,12 +422,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (profile.hobbies && profile.hobbies.length > 0) {
                 profile.hobbies.forEach(hobby => {
                     const li = document.createElement('li');
-                    li.className = 'p-2 bg-light rounded border-start border-primary border-3';
-                    li.innerHTML = `<span class="small text-dark">${hobby}</span>`;
+                    li.className = 'p-2 rounded-2 bg-body-tertiary border-start border-primary border-3';
+                    li.innerHTML = `<span class="small text-body-emphasis">${hobby}</span>`;
                     hobbiesList.appendChild(li);
                 });
             } else {
-                hobbiesList.innerHTML = '<li class="p-2 text-muted small">No hobbies listed</li>';
+                hobbiesList.innerHTML = '<li class="p-2 text-body-secondary small">No hobbies listed</li>';
             }
 
             // Render education
@@ -396,16 +436,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (profile.education && profile.education.length > 0) {
                 profile.education.forEach(edu => {
                     const li = document.createElement('li');
-                    li.className = 'p-3 bg-light rounded border-start border-success border-3';
+                    li.className = 'p-3 rounded-2 bg-body-tertiary border-start border-success border-3';
                     li.innerHTML = `
-                        <div class="fw-bold text-dark mb-1">${edu.degree}</div>
-                        <div class="small text-secondary">${edu.institution}</div>
-                        <div class="small text-secondary fst-italic mt-1">${edu.year}</div>
+                        <div class="fw-semibold text-body-emphasis mb-1">${edu.degree}</div>
+                        <div class="small text-body-secondary">${edu.institution}</div>
+                        <div class="small text-body-secondary fst-italic mt-1">${edu.year}</div>
                     `;
                     educationList.appendChild(li);
                 });
             } else {
-                educationList.innerHTML = '<li class="p-3 text-muted small">No education details available</li>';
+                educationList.innerHTML = '<li class="p-3 text-body-secondary small">No education details available</li>';
             }
 
             studentsContainer.appendChild(clone);
@@ -431,9 +471,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Pagination Info with Bootstrap 5 styling
         paginationInfo.innerHTML = `
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 small">
                 <i class="bi bi-info-circle text-primary"></i>
-                <span class="text-muted">Showing <strong class="text-dark">${pagination.from}</strong> to <strong class="text-dark">${pagination.to}</strong> of <strong class="text-dark">${pagination.total}</strong> students</span>
+                <span class="text-body-secondary">Showing <strong class="text-body-emphasis">${pagination.from}</strong> to <strong class="text-body-emphasis">${pagination.to}</strong> of <strong class="text-body-emphasis">${pagination.total}</strong> students</span>
             </div>
         `;
 
@@ -588,9 +628,11 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching students:', error);
             studentsContainer.innerHTML = `
                 <div class="text-center py-5">
-                    <i class="bi bi-exclamation-triangle display-1 text-danger opacity-50"></i>
-                    <h4 class="mt-3">Error Loading Data</h4>
-                    <p class="text-secondary">Please try again later.</p>
+                    <div class="rounded-3 bg-danger bg-opacity-10 d-inline-flex p-4 mb-3">
+                        <i class="bi bi-exclamation-triangle display-4 text-danger"></i>
+                    </div>
+                    <h4 class="mt-2 fw-semibold text-body-emphasis">Error Loading Data</h4>
+                    <p class="text-body-secondary">Please try again later.</p>
                     <p class="text-danger small mt-2">${error.message}</p>
                 </div>
             `;
@@ -768,10 +810,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.success && data.data) {
-                if (data.data.tutorGroup !== undefined) document.getElementById('tutorGroup').textContent = data.data.tutorGroup;
-                if (data.data.tutorName !== undefined) document.getElementById('tutorName').textContent = data.data.tutorName;
-                if (data.data.houseName !== undefined) document.getElementById('houseName').textContent = data.data.houseName;
-                if (data.data.houseTutors !== undefined) document.getElementById('houseTutors').textContent = data.data.houseTutors;
+                lastStaticInfo = {
+                    tutorGroup: data.data.tutorGroup !== undefined ? String(data.data.tutorGroup) : 'N/A',
+                    tutorName: data.data.tutorName !== undefined ? String(data.data.tutorName) : 'N/A',
+                    houseName: data.data.houseName !== undefined ? String(data.data.houseName) : 'N/A',
+                    houseTutors: data.data.houseTutors !== undefined ? String(data.data.houseTutors) : 'N/A'
+                };
+                document.getElementById('tutorGroup').textContent = lastStaticInfo.tutorGroup;
+                document.getElementById('tutorName').textContent = lastStaticInfo.tutorName;
+                document.getElementById('houseName').textContent = lastStaticInfo.houseName;
+                document.getElementById('houseTutors').textContent = lastStaticInfo.houseTutors;
+                // Re-render current student cards so they show updated tutor/house info
+                if (lastRenderedStudents.length > 0 && lastRenderedPagination) {
+                    renderStudents(lastRenderedStudents, lastRenderedPagination);
+                }
             }
         } catch (error) {
             console.error('Error loading static info:', error);
