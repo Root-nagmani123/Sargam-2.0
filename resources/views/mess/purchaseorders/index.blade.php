@@ -614,10 +614,12 @@
         });
     }
 
-    // View button: fetch PO and open view modal (read-only)
-    document.querySelectorAll('.btn-view-po').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const poId = this.getAttribute('data-po-id');
+    // View button: fetch PO and open view modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-view-po');
+        if (!btn) return;
+        e.preventDefault();
+        const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(data => {
@@ -653,7 +655,6 @@
                     new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-        });
     });
 
     function escapeHtml(text) {
@@ -695,10 +696,12 @@
         });
     }
 
-    // Edit button: fetch PO and open modal; use vendor-mapped items for dropdowns
-    document.querySelectorAll('.btn-edit-po').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const poId = this.getAttribute('data-po-id');
+    // Edit button: fetch PO and open modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-edit-po');
+        if (!btn) return;
+        e.preventDefault();
+        const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(data => {
@@ -751,7 +754,6 @@
                     }
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-        });
     });
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
