@@ -16,7 +16,7 @@
                         <h4 class="fw-semibold text-dark mb-1">Employee Group Master</h4>
                         <p class="text-muted small mb-0">Manage and organize employee group categories</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
                         <button type="button" 
                                 class="btn btn-primary px-4 py-2 rounded-1 shadow-sm d-flex align-items-center gap-2 transition-all"
                                 data-bs-toggle="modal" 
