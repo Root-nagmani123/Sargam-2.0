@@ -865,13 +865,21 @@ class EstateController extends Controller
         $employeePk = $request->get('employee_pk');
         $bill = null;
 
-        // Filter dropdown data
+        // Filter dropdown data from estate_month_reading_details (and related tables)
         $years = DB::table('estate_month_reading_details')
+            ->whereNotNull('bill_year')
+            ->where('bill_year', '!=', '')
             ->distinct()
             ->orderByDesc('bill_year')
             ->pluck('bill_year');
 
+        if ($years->isEmpty()) {
+            $years = collect([(string) date('Y')]);
+        }
+
         $months = DB::table('estate_month_reading_details')
+            ->whereNotNull('bill_month')
+            ->where('bill_month', '!=', '')
             ->distinct()
             ->orderByRaw("FIELD(bill_month, 'January','February','March','April','May','June','July','August','September','October','November','December')")
             ->pluck('bill_month');
@@ -887,6 +895,7 @@ class EstateController extends Controller
         $employees = DB::table('estate_month_reading_details as emrd')
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->whereNotNull('ehrd.pk')
             ->select('ehrd.pk', 'ehrd.emp_name', 'ehrd.employee_id')
             ->distinct()
             ->orderBy('ehrd.emp_name')
@@ -907,6 +916,8 @@ class EstateController extends Controller
                     'emrd.to_date',
                     'emrd.last_month_elec_red',
                     'emrd.curr_month_elec_red',
+                    'emrd.last_month_elec_red2',
+                    'emrd.curr_month_elec_red2',
                     'emrd.electricty_charges',
                     'emrd.water_charges',
                     'emrd.licence_fees',
@@ -914,6 +925,9 @@ class EstateController extends Controller
                     'emrd.meter_one',
                     'emrd.meter_one_elec_charge',
                     'emrd.meter_one_consume_unit',
+                    'emrd.meter_two',
+                    'emrd.meter_two_elec_charge',
+                    'emrd.meter_two_consume_unit',
                     'ehrd.emp_name',
                     'ehrd.employee_id',
                     'ehrd.emp_designation',
@@ -1087,5 +1101,179 @@ class EstateController extends Controller
     {
         $nextPk = (int) EstateOtherRequest::max('pk') + 1;
         return 'oth-req-' . $nextPk;
+    }
+
+    /**
+     * Pending Meter Reading report - view with bill month filter.
+     * Tables: estate_possession_details, estate_house_master, estate_home_request_details, estate_month_reading_details.
+     */
+    public function pendingMeterReading()
+    {
+        return view('admin.estate.pending_meter_reading');
+    }
+
+    /**
+     * API: Get pending meter reading list for selected bill month.
+     * Returns possessions that do NOT have estate_month_reading_details for the given bill_month/bill_year.
+     */
+    public function getPendingMeterReadingData(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $billYear = $request->get('bill_year');
+
+        if (!$billMonth || !$billYear) {
+            return response()->json(['status' => true, 'data' => [], 'message' => 'Please select bill month and year.']);
+        }
+
+        // Parse Y-m format to month number and year (DB stores bill_month as 1-12, bill_year as 4-digit)
+        $parts = explode('-', $billMonth);
+        $year = count($parts) === 2 ? (int) $parts[0] : (int) $billYear;
+        $month = count($parts) === 2 ? (int) $parts[1] : (int) $billMonth;
+        $billYearStr = (string) $year;
+        $billMonthStr = (string) $month;
+        if ($month < 1 || $month > 12) {
+            return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
+        }
+
+        $pending = DB::table('estate_possession_details as epd')
+            ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('estate_month_reading_details as emrd', function ($join) use ($billMonthStr, $billYearStr) {
+                $join->on('emrd.estate_possession_details_pk', '=', 'epd.pk')
+                    ->where('emrd.bill_month', '=', $billMonthStr)
+                    ->where('emrd.bill_year', '=', $billYearStr);
+            })
+            ->whereNotNull('epd.estate_house_master_pk')
+            ->where('epd.return_home_status', 0)
+            ->whereNull('emrd.pk')
+            ->select([
+                'epd.pk as possession_pk',
+                'ehm.house_no',
+                'ehrd.emp_name',
+                'ehrd.emp_designation as employee_type',
+            ])
+            ->orderBy('ehm.house_no')
+            ->get();
+
+        $possessionIds = $pending->pluck('possession_pk')->unique()->values()->all();
+
+        $lastReadings = [];
+        if (!empty($possessionIds)) {
+            $previousReadings = DB::table('estate_month_reading_details as emrd')
+                ->whereIn('emrd.estate_possession_details_pk', $possessionIds)
+                ->where(function ($q) use ($billYearStr, $billMonthStr) {
+                    $q->where('emrd.bill_year', '<', $billYearStr)
+                        ->orWhere(function ($q2) use ($billYearStr, $billMonthStr) {
+                            $q2->where('emrd.bill_year', '=', $billYearStr)
+                                ->whereRaw('CAST(emrd.bill_month AS UNSIGNED) < ?', [(int) $billMonthStr]);
+                        });
+                })
+                ->select('emrd.estate_possession_details_pk', 'emrd.curr_month_elec_red', 'emrd.curr_month_elec_red2', 'emrd.to_date')
+                ->orderByRaw('CAST(emrd.bill_year AS UNSIGNED) DESC, CAST(emrd.bill_month AS UNSIGNED) DESC')
+                ->get();
+
+            foreach ($previousReadings as $row) {
+                $pk = $row->estate_possession_details_pk;
+                if (!isset($lastReadings[$pk])) {
+                    $lastReadings[$pk] = [
+                        'reading' => $row->curr_month_elec_red ?? $row->curr_month_elec_red2 ?? 'N/A',
+                        'date' => $row->to_date ? \Carbon\Carbon::parse($row->to_date)->format('d/m/Y') : 'N/A',
+                    ];
+                }
+            }
+        }
+
+        $expectedReadingDate = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('d/m/Y');
+
+        $rows = [];
+        $sno = 1;
+        foreach ($pending as $row) {
+            $last = $lastReadings[$row->possession_pk] ?? ['reading' => 'N/A', 'date' => 'N/A'];
+            $rows[] = [
+                'sno' => $sno++,
+                'employee_type' => $row->employee_type ?? 'N/A',
+                'name' => $row->emp_name ?? 'N/A',
+                'house_no' => $row->house_no ?? 'N/A',
+                'meter_reading_date' => $expectedReadingDate,
+                'last_meter_reading' => is_numeric($last['reading']) ? (string) $last['reading'] : $last['reading'],
+            ];
+        }
+
+        return response()->json(['status' => true, 'data' => $rows]);
+    }
+
+    /**
+     * House Status report - view.
+     * Tables: estate_unit_sub_type_master, estate_house_master, estate_eligibility_mapping,
+     * salary_grade_master, estate_possession_details, estate_possession_other.
+     */
+    public function houseStatus()
+    {
+        return view('admin.estate.house_status');
+    }
+
+    /**
+     * API: Get house status data (dynamic from DB).
+     * Per unit sub type: Types, Grade Pay, House Available, Under Construction, Total Projected,
+     * Allotted to LBSNAA, Other, Vacant.
+     */
+    public function getHouseStatusData(Request $request)
+    {
+        $unitTypes = DB::table('estate_unit_sub_type_master as ust')
+            ->select('ust.pk', 'ust.unit_sub_type')
+            ->orderBy('ust.unit_sub_type')
+            ->get();
+
+        $houseCountsBySubType = DB::table('estate_house_master as ehm')
+            ->whereNotNull('ehm.estate_unit_sub_type_master_pk')
+            ->select('ehm.estate_unit_sub_type_master_pk', DB::raw('COUNT(*) as total'))
+            ->groupBy('ehm.estate_unit_sub_type_master_pk')
+            ->pluck('total', 'estate_unit_sub_type_master_pk');
+
+        $allottedLbsnaaBySubType = DB::table('estate_possession_details as epd')
+            ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('epd.return_home_status', 0)
+            ->whereNotNull('epd.estate_house_master_pk')
+            ->select('ehm.estate_unit_sub_type_master_pk', DB::raw('COUNT(DISTINCT ehm.pk) as cnt'))
+            ->groupBy('ehm.estate_unit_sub_type_master_pk')
+            ->pluck('cnt', 'estate_unit_sub_type_master_pk');
+
+        $otherBySubType = DB::table('estate_possession_other as epo')
+            ->join('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('epo.return_home_status', 0)
+            ->select('ehm.estate_unit_sub_type_master_pk', DB::raw('COUNT(DISTINCT ehm.pk) as cnt'))
+            ->groupBy('ehm.estate_unit_sub_type_master_pk')
+            ->pluck('cnt', 'estate_unit_sub_type_master_pk');
+
+        $gradePayBySubType = DB::table('estate_eligibility_mapping as eem')
+            ->join('salary_grade_master as sgm', 'eem.salary_grade_master_pk', '=', 'sgm.pk')
+            ->whereNotNull('eem.estate_unit_sub_type_master_pk')
+            ->select('eem.estate_unit_sub_type_master_pk', DB::raw('GROUP_CONCAT(DISTINCT sgm.salary_grade ORDER BY sgm.salary_grade SEPARATOR ", ") as grade_pay'))
+            ->groupBy('eem.estate_unit_sub_type_master_pk')
+            ->pluck('grade_pay', 'estate_unit_sub_type_master_pk');
+
+        $rows = [];
+        foreach ($unitTypes as $ut) {
+            $pk = $ut->pk;
+            $total = (int) ($houseCountsBySubType[$pk] ?? 0);
+            $underConstruction = 0;
+            $allottedLbsnaa = (int) ($allottedLbsnaaBySubType[$pk] ?? 0);
+            $other = (int) ($otherBySubType[$pk] ?? 0);
+            $vacant = max(0, $total - $allottedLbsnaa - $other);
+            $gradePay = $gradePayBySubType[$pk] ?? '-';
+
+            $rows[] = [
+                'types' => $ut->unit_sub_type ?? 'N/A',
+                'grade_pay' => $gradePay,
+                'house_available' => $total,
+                'house_under_construction' => $underConstruction,
+                'total_projected' => $total + $underConstruction,
+                'allotted_lbsnaa' => $allottedLbsnaa,
+                'other' => $other,
+                'vacant' => $vacant,
+            ];
+        }
+
+        return response()->json(['status' => true, 'data' => $rows]);
     }
 }

@@ -284,6 +284,15 @@
                             <td class="text-right">{{ $bill->meter_one_consume_unit ?? '—' }}</td>
                             <td class="amount">₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</td>
                         </tr>
+                        @if(isset($bill->meter_two) && ($bill->meter_two !== '' && $bill->meter_two !== null) || isset($bill->meter_two_elec_charge) || isset($bill->meter_two_consume_unit))
+                        <tr>
+                            <td>{{ $bill->meter_two ?? '—' }}</td>
+                            <td class="text-right">{{ $bill->last_month_elec_red2 ?? '—' }}</td>
+                            <td class="text-right">{{ $bill->curr_month_elec_red2 ?? '—' }}</td>
+                            <td class="text-right">{{ $bill->meter_two_consume_unit ?? '—' }}</td>
+                            <td class="amount">₹ {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</td>
+                        </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>

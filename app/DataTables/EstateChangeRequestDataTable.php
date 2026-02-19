@@ -77,16 +77,42 @@ class EstateChangeRequestDataTable extends DataTable
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (!empty($searchValue)) {
-                    $query->whereHas('estateHomeRequestDetails', function ($q) use ($searchValue) {
-                        $q->where('estate_home_request_details.emp_name', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.employee_id', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.emp_designation', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.pay_scale', 'like', "%{$searchValue}%");
-                    })->orWhere('estate_change_home_req_details.estate_change_req_ID', 'like', "%{$searchValue}%")
-                      ->orWhere('estate_change_home_req_details.change_house_no', 'like', "%{$searchValue}%")
-                      ->orWhere('estate_change_home_req_details.remarks', 'like', "%{$searchValue}%");
+                    $query->where(function ($q) use ($searchValue) {
+                        $q->whereHas('estateHomeRequestDetails', function ($sub) use ($searchValue) {
+                            $sub->where('estate_home_request_details.emp_name', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.employee_id', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.emp_designation', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.pay_scale', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhere('estate_change_home_req_details.estate_change_req_ID', 'like', "%{$searchValue}%")
+                        ->orWhere('estate_change_home_req_details.change_house_no', 'like', "%{$searchValue}%")
+                        ->orWhere('estate_change_home_req_details.remarks', 'like', "%{$searchValue}%");
+                    });
                 }
             }, true)
+            ->filterColumn('emp_name', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.emp_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('employee_id', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.employee_id', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('emp_designation', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.emp_designation', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('pay_scale', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.pay_scale', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('availability_as_per_request', function ($query, $keyword) {
+                $query->where('estate_change_home_req_details.change_house_no', 'like', "%{$keyword}%");
+            })
             ->setRowId('pk');
     }
 
