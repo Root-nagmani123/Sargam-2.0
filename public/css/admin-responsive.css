@@ -1676,19 +1676,6 @@
     padding-right: 0.5rem;
   }
 
-  /* MDO duty type index - header and Add button aligned on mobile */
-  .mdo-duty-type-index .mdo-duty-type-header-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
-    width: 100%;
-    justify-content: center;
-  }
-  .mdo-duty-type-index .mdo-duty-type-card .card-body {
-    padding: 1rem !important;
-  }
-
   /* Caste category index - header and actions */
   .caste-category-index .caste-category-header-row {
     flex-direction: column;

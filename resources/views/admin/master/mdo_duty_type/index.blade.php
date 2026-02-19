@@ -3,24 +3,37 @@
 @section('title', 'MDO Duty Type')
 
 @section('setup_content')
-<div class="container-fluid mdo-duty-type-index py-3">
+<div class="container-fluid mdo-duty-type-index">
     <x-breadcrum title="MDO Duty Type"></x-breadcrum>
     <div class="datatables">
-        <div class="card mdo-duty-type-card border-0 border-start border-4 border-primary shadow-sm rounded-3 overflow-hidden">
-            <div class="card-body p-4">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom mdo-duty-type-header-row">
-                    <h5 class="h5 fw-semibold text-body-emphasis mb-0">MDO Duty Type</h5>
-                    <a href="{{ route('master.mdo_duty_type.create') }}"
-                        class="btn btn-primary add-btn d-inline-flex align-items-center gap-2 rounded-2 px-3">
-                        <i class="material-icons material-symbols-rounded" style="font-size: 1.25rem;">add</i>
-                        <span>Add MDO Duty Type</span>
-                    </a>
-                </div>
-                <div class="table-responsive mt-3">
-                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100']) !!}
+        <!-- start Zero Configuration -->
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row mdo-duty-type-header-row">
+                        <div class="col-6">
+                            <!-- left column empty or header title above -->
+                            <h4>MDO Duty Type</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                <!-- Add Group Mapping -->
+                                <a href="{{ route('master.mdo_duty_type.create') }}" 
+                                    class="btn btn-primary add-btn d-flex align-items-center">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">add</i>
+                                    Add MDO Duty Type
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+
+                    {!! $dataTable->table(['class' => 'table']) !!}
                 </div>
             </div>
         </div>
+        <!-- end Zero Configuration -->
     </div>
 </div>
 
@@ -292,14 +305,14 @@
 </script>
 @endif
 <!-- Modal -->
-<div class="modal fade" id="dutyTypeModal" tabindex="-1" aria-labelledby="dutyTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-3 border-0 shadow-lg">
-            <div class="modal-header border-bottom py-3">
-                <h5 class="modal-title fw-semibold" id="dutyTypeModalLabel">MDO Duty Type</h5>
+<div class="modal fade" id="dutyTypeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">MDO Duty Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body">
                 <!-- Form content will be loaded here via fetch -->
             </div>
         </div>
