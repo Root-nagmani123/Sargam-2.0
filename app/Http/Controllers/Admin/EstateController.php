@@ -1704,6 +1704,106 @@ class EstateController extends Controller
     }
 
     /**
+     * List Meter Reading - view with Bill Month and Building Name filters.
+     */
+    public function listMeterReading()
+    {
+        $billMonths = EstateMonthReadingDetails::select('bill_year', 'bill_month')
+            ->whereNotNull('bill_year')
+            ->whereNotNull('bill_month')
+            ->groupBy('bill_year', 'bill_month')
+            ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC, CAST(bill_month AS UNSIGNED) DESC')
+            ->limit(24)
+            ->get();
+        $blocks = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->select('b.pk', 'b.block_name')
+            ->distinct()
+            ->orderBy('b.block_name')
+            ->get();
+        return view('admin.estate.list_meter_reading', compact('billMonths', 'blocks'));
+    }
+
+    /**
+     * API: Get list meter reading data (filtered by bill month and building).
+     */
+    public function getListMeterReadingData(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $blockId = $request->get('block_id');
+
+        if (!$billMonth) {
+            return response()->json(['status' => true, 'data' => [], 'message' => 'Please select Bill Month.']);
+        }
+        $parts = explode('-', $billMonth);
+        $billYearStr = count($parts) >= 1 ? (string) ((int) $parts[0]) : date('Y');
+        $billMonthStr = count($parts) >= 2 ? (string) ((int) $parts[1]) : date('n');
+
+        $query = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->leftJoin('estate_block_master as b', 'ehm.estate_block_master_pk', '=', 'b.pk')
+            ->leftJoin('estate_unit_type_master as ut', 'ehm.estate_unit_master_pk', '=', 'ut.pk')
+            ->leftJoin('estate_unit_sub_type_master as ust', 'ehm.estate_unit_sub_type_master_pk', '=', 'ust.pk')
+            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.pk')
+            ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
+            ->leftJoin('department_master as dm', 'em.department_master_pk', '=', 'dm.pk')
+            ->where('emrd.bill_month', $billMonthStr)
+            ->where('emrd.bill_year', $billYearStr)
+            ->where('epd.return_home_status', 0)
+            ->whereNotNull('epd.estate_house_master_pk')
+            ->select([
+                'emrd.pk',
+                'emrd.house_no',
+                'emrd.curr_month_elec_red',
+                'emrd.curr_month_elec_red2',
+                'emrd.last_month_elec_red',
+                'emrd.last_month_elec_red2',
+                'ehrd.emp_name',
+                'ehrd.emp_designation',
+                'etm.category_type_name as employee_type',
+                'dm.department_name as section',
+                'ut.unit_type',
+                'ust.unit_sub_type',
+                'b.block_name as building_name',
+                'epd.pk as possession_pk',
+            ])
+            ->orderBy('b.block_name')
+            ->orderBy('emrd.house_no');
+
+        if ($blockId && $blockId !== 'all' && $blockId !== '') {
+            $query->where('ehm.estate_block_master_pk', $blockId);
+        }
+
+        $rows = $query->get();
+
+        $data = [];
+        $sno = 1;
+        foreach ($rows as $r) {
+            $m1 = $r->curr_month_elec_red ?? $r->last_month_elec_red;
+            $m2 = $r->curr_month_elec_red2 ?? $r->last_month_elec_red2;
+            $data[] = [
+                'sno' => $sno++,
+                'name' => $r->emp_name ?? 'N/A',
+                'employee_type' => $r->employee_type ?? $r->emp_designation ?? 'N/A',
+                'section' => $r->section ?? 'N/A',
+                'unit_type' => $r->unit_type ?? 'N/A',
+                'unit_sub_type' => $r->unit_sub_type ?? 'N/A',
+                'building_name' => $r->building_name ?? 'N/A',
+                'house_no' => $r->house_no ?? 'N/A',
+                'meter1_reading' => $m1 !== null && $m1 !== '' ? (string) $m1 : 'N/A',
+                'meter2_reading' => $m2 !== null && $m2 !== '' ? (string) $m2 : 'N/A',
+                'edit_url' => route('admin.estate.update-meter-reading') . '?possession_pk=' . $r->possession_pk . '&bill_month=' . urlencode($billMonth),
+            ];
+        }
+
+        return response()->json(['status' => true, 'data' => $data]);
+    }
+
+    /**
      * Pending Meter Reading report - view with bill month filter.
      * Tables: estate_possession_details, estate_house_master, estate_home_request_details, estate_month_reading_details.
      */
