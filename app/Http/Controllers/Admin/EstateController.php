@@ -6,6 +6,7 @@ use App\DataTables\EstateChangeRequestDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\EstateHouse;
 use App\Models\EstateMonthReadingDetails;
 use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
@@ -161,6 +162,7 @@ class EstateController extends Controller
 
     /**
      * Estate Possession View - Add possession form.
+     * Unit types per campus from DB engineer query: campus + house_master + unit_type_master join.
      */
     public function possessionView(Request $request)
     {
@@ -171,9 +173,18 @@ class EstateController extends Controller
             ->orderBy('campus_name')
             ->get(['pk', 'campus_name']);
 
-        $unitTypes = DB::table('estate_unit_type_master')
-            ->orderBy('unit_type')
-            ->get(['pk', 'unit_type']);
+        // Unit types per campus: estate_campus_master a inner join estate_house_master b on a.pk=b.estate_campus_master_pk inner join estate_unit_type_master c on b.estate_unit_master_pk=c.pk
+        $unitTypesByCampus = DB::table('estate_campus_master as a')
+            ->join('estate_house_master as b', 'a.pk', '=', 'b.estate_campus_master_pk')
+            ->join('estate_unit_type_master as c', 'b.estate_unit_master_pk', '=', 'c.pk')
+            ->select('a.pk as campus_pk', 'c.pk as unit_type_pk', 'c.unit_type')
+            ->distinct()
+            ->orderBy('a.pk')
+            ->orderBy('c.unit_type')
+            ->get()
+            ->groupBy('campus_pk')
+            ->map(fn ($rows) => $rows->map(fn ($r) => ['pk' => $r->unit_type_pk, 'unit_type' => $r->unit_type])->values()->all())
+            ->all();
 
         $record = null;
         $preselectedRequester = null;
@@ -185,7 +196,7 @@ class EstateController extends Controller
         }
 
         return view('admin.estate.estate_possession_view', compact(
-            'requesters', 'campuses', 'unitTypes', 'record', 'preselectedRequester'
+            'requesters', 'campuses', 'unitTypesByCampus', 'record', 'preselectedRequester'
         ));
     }
 
@@ -197,7 +208,6 @@ class EstateController extends Controller
         $validated = $request->validate([
             'estate_other_req_pk' => 'required|exists:estate_other_req,pk',
             'estate_campus_master_pk' => 'required|integer',
-            'estate_unit_type_master_pk' => 'required|integer',
             'estate_block_master_pk' => 'required|integer',
             'estate_unit_sub_type_master_pk' => 'required|integer',
             'estate_house_master_pk' => 'required|integer',
@@ -211,10 +221,14 @@ class EstateController extends Controller
             ->where('pk', $validated['estate_house_master_pk'])
             ->first();
 
+        // Derive unit type from selected house (estate_house_master.estate_unit_master_pk)
+        $derivedUnitTypePk = $house?->estate_unit_master_pk;
+
         $data = [
             'estate_other_req_pk' => $validated['estate_other_req_pk'],
             'estate_campus_master_pk' => $validated['estate_campus_master_pk'],
-            'estate_unit_type_master_pk' => $validated['estate_unit_type_master_pk'],
+            // Always trust house → unit type mapping
+            'estate_unit_type_master_pk' => $derivedUnitTypePk,
             'estate_block_master_pk' => $validated['estate_block_master_pk'],
             'estate_unit_sub_type_master_pk' => $validated['estate_unit_sub_type_master_pk'],
             'estate_house_master_pk' => $validated['estate_house_master_pk'],
@@ -242,11 +256,12 @@ class EstateController extends Controller
     }
 
     /**
-     * API: Get blocks for estate possession (by campus).
+     * API: Get blocks for estate possession (by campus + optional unit type).
      */
     public function getPossessionBlocks(Request $request)
     {
         $campusId = $request->get('campus_id');
+        $unitTypeId = $request->get('unit_type_id');
         if (!$campusId) {
             return response()->json(['status' => true, 'data' => []]);
         }
@@ -254,6 +269,9 @@ class EstateController extends Controller
         $blocks = DB::table('estate_house_master as h')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->where('h.estate_campus_master_pk', $campusId)
+            ->when($unitTypeId, function ($q) use ($unitTypeId) {
+                $q->where('h.estate_unit_master_pk', $unitTypeId);
+            })
             ->select('b.pk', 'b.block_name')
             ->distinct()
             ->orderBy('b.block_name')
@@ -263,12 +281,298 @@ class EstateController extends Controller
     }
 
     /**
+     * Define House - index page with Add Estate House modal.
+     * Tables: estate_house_master, estate_campus_master, estate_block_master,
+     * estate_unit_type_master, estate_unit_sub_type_master.
+     */
+    public function defineHouse()
+    {
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+
+        $unitTypes = DB::table('estate_unit_type_master')
+            ->orderBy('unit_type')
+            ->get(['pk', 'unit_type']);
+
+        $unitSubTypes = DB::table('estate_unit_sub_type_master')
+            ->orderBy('unit_sub_type')
+            ->get(['pk', 'unit_sub_type']);
+
+        return view('admin.estate.define_house', compact(
+            'campuses', 'unitTypes', 'unitSubTypes'
+        ));
+    }
+
+    /**
+     * API: Get blocks for Define House form (all blocks; optional campus filter for existing houses).
+     */
+    public function getDefineHouseBlocks(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        if ($campusId) {
+            $blocks = DB::table('estate_house_master as h')
+                ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+                ->where('h.estate_campus_master_pk', $campusId)
+                ->select('b.pk', 'b.block_name')
+                ->distinct()
+                ->orderBy('b.block_name')
+                ->get();
+        } else {
+            $blocks = DB::table('estate_block_master')
+                ->orderBy('block_name')
+                ->get(['pk', 'block_name']);
+        }
+
+        return response()->json(['status' => true, 'data' => $blocks]);
+    }
+
+    /**
+     * Store new estate house(s) (estate_house_master).
+     * Accepts multiple house rows: house_no[], meter_one[], meter_two[], licence_fee[], vacant_renovation_status[].
+     * Common fields: estate_campus_master_pk, estate_unit_master_pk, estate_block_master_pk,
+     * estate_unit_sub_type_master_pk, water_charge, electric_charge, remarks.
+     */
+    public function storeDefineHouse(Request $request)
+    {
+        $validated = $request->validate([
+            'estate_campus_master_pk' => 'required|integer|exists:estate_campus_master,pk',
+            'estate_unit_type_master_pk' => 'required|integer|exists:estate_unit_type_master,pk',
+            'estate_block_master_pk' => 'required|integer|exists:estate_block_master,pk',
+            'estate_unit_sub_type_master_pk' => 'required|integer|exists:estate_unit_sub_type_master,pk',
+            'water_charge' => 'nullable|numeric|min:0',
+            'electric_charge' => 'nullable|numeric|min:0',
+            'remarks' => 'nullable|string|max:200',
+            'house_no' => 'required|array',
+            'house_no.*' => 'required|string|max:20',
+            'meter_one' => 'nullable|array',
+            'meter_one.*' => 'nullable|string|max:30',
+            'meter_two' => 'nullable|array',
+            'meter_two.*' => 'nullable|string|max:30',
+            'licence_fee' => 'nullable|array',
+            'licence_fee.*' => 'nullable|numeric|min:0',
+            'vacant_renovation_status' => 'required|array',
+            'vacant_renovation_status.*' => 'required|in:0,1',
+        ]);
+
+        $userId = Auth::id();
+        $now = now();
+        $houseNos = $validated['house_no'] ?? [];
+        $count = count($houseNos);
+        if ($count === 0) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'At least one house entry is required.'], 422);
+            }
+            return redirect()->back()->withInput()->withErrors(['house_no' => 'At least one house entry is required.']);
+        }
+
+        $meterOnes = array_pad($validated['meter_one'] ?? [], $count, '');
+        $meterTwos = array_pad($validated['meter_two'] ?? [], $count, '');
+        $licenceFees = array_pad($validated['licence_fee'] ?? [], $count, 0);
+        $statuses = array_pad($validated['vacant_renovation_status'] ?? [], $count, 1);
+
+        $waterCharge = (float) ($validated['water_charge'] ?? 0);
+        $electricCharge = (float) ($validated['electric_charge'] ?? 0);
+        $remarks = $validated['remarks'] ?? '';
+
+        for ($i = 0; $i < $count; $i++) {
+            $data = [
+                'estate_campus_master_pk' => $validated['estate_campus_master_pk'],
+                'estate_unit_master_pk' => $validated['estate_unit_type_master_pk'],
+                'estate_block_master_pk' => $validated['estate_block_master_pk'],
+                'estate_unit_sub_type_master_pk' => $validated['estate_unit_sub_type_master_pk'],
+                'house_no' => $houseNos[$i],
+                'water_charge' => $waterCharge,
+                'electric_charge' => $electricCharge,
+                'licence_fee' => (float) ($licenceFees[$i] ?? 0),
+                'meter_one' => (int) preg_replace('/\D/', '', $meterOnes[$i] ?? '') ?: 0,
+                'meter_two' => (int) preg_replace('/\D/', '', $meterTwos[$i] ?? '') ?: 0,
+                'vacant_renovation_status' => (int) ($statuses[$i] ?? 1),
+                'remarks' => $remarks,
+                'used_home_status' => 0,
+                'created_date' => $now,
+                'created_by' => $userId,
+            ];
+            EstateHouse::create($data);
+        }
+
+        $message = $count === 1 ? 'Estate house added successfully.' : $count . ' estate houses added successfully.';
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+        return redirect()->route('admin.estate.define-house')->with('success', $message);
+    }
+
+    /**
+     * Define House list data for DataTable (server-side).
+     */
+    public function getDefineHouseData(Request $request)
+    {
+        $query = DB::table('estate_house_master as h')
+            ->leftJoin('estate_campus_master as c', 'h.estate_campus_master_pk', '=', 'c.pk')
+            ->leftJoin('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->leftJoin('estate_unit_type_master as ut', 'h.estate_unit_master_pk', '=', 'ut.pk')
+            ->leftJoin('estate_unit_sub_type_master as ust', 'h.estate_unit_sub_type_master_pk', '=', 'ust.pk')
+            ->select(
+                'h.pk',
+                'c.campus_name as estate_name',
+                'ut.unit_type',
+                'b.block_name as building_name',
+                'ust.unit_sub_type',
+                'h.house_no',
+                'h.water_charge',
+                'h.electric_charge',
+                'h.licence_fee',
+                'h.vacant_renovation_status',
+                'h.remarks'
+            )
+            ->orderBy('h.pk', 'desc');
+
+        $total = $query->count();
+
+        if ($request->filled('search.value')) {
+            $term = $request->get('search')['value'];
+            $query->where(function ($q) use ($term) {
+                $q->where('c.campus_name', 'like', "%{$term}%")
+                    ->orWhere('b.block_name', 'like', "%{$term}%")
+                    ->orWhere('ut.unit_type', 'like', "%{$term}%")
+                    ->orWhere('ust.unit_sub_type', 'like', "%{$term}%")
+                    ->orWhere('h.house_no', 'like', "%{$term}%");
+            });
+        }
+
+        $filtered = $query->count();
+
+        $start = (int) $request->get('start', 0);
+        $length = (int) $request->get('length', 10);
+        if ($length > 0) {
+            $query->offset($start)->limit($length);
+        }
+
+        $rows = $query->get();
+
+        return response()->json([
+            'draw' => (int) $request->get('draw', 1),
+            'recordsTotal' => $total,
+            'recordsFiltered' => $filtered,
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * Get single estate house for edit (JSON).
+     */
+    public function showDefineHouse($id)
+    {
+        $row = DB::table('estate_house_master as h')
+            ->leftJoin('estate_campus_master as c', 'h.estate_campus_master_pk', '=', 'c.pk')
+            ->leftJoin('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->leftJoin('estate_unit_type_master as ut', 'h.estate_unit_master_pk', '=', 'ut.pk')
+            ->leftJoin('estate_unit_sub_type_master as ust', 'h.estate_unit_sub_type_master_pk', '=', 'ust.pk')
+            ->where('h.pk', $id)
+            ->select(
+                'h.pk',
+                'h.estate_campus_master_pk',
+                'h.estate_unit_master_pk',
+                'h.estate_block_master_pk',
+                'h.estate_unit_sub_type_master_pk',
+                'c.campus_name as estate_name',
+                'b.block_name as building_name',
+                'h.house_no',
+                'h.water_charge',
+                'h.electric_charge',
+                'h.licence_fee',
+                'h.meter_one',
+                'h.meter_two',
+                'h.vacant_renovation_status',
+                'h.remarks'
+            )
+            ->first();
+
+        if (!$row) {
+            return response()->json(['message' => 'House not found.'], 404);
+        }
+
+        return response()->json($row);
+    }
+
+    /**
+     * Update estate house (single record).
+     */
+    public function updateDefineHouse(Request $request, $id)
+    {
+        $house = EstateHouse::find($id);
+        if (!$house) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'House not found.'], 404);
+            }
+            return redirect()->route('admin.estate.define-house')->with('error', 'House not found.');
+        }
+
+        $validated = $request->validate([
+            'estate_campus_master_pk' => 'required|integer|exists:estate_campus_master,pk',
+            'estate_unit_type_master_pk' => 'required|integer|exists:estate_unit_type_master,pk',
+            'estate_block_master_pk' => 'required|integer|exists:estate_block_master,pk',
+            'estate_unit_sub_type_master_pk' => 'required|integer|exists:estate_unit_sub_type_master,pk',
+            'water_charge' => 'nullable|numeric|min:0',
+            'electric_charge' => 'nullable|numeric|min:0',
+            'remarks' => 'nullable|string|max:200',
+            'house_no' => 'required|array',
+            'house_no.0' => 'required|string|max:20',
+            'meter_one' => 'nullable|array',
+            'meter_one.0' => 'nullable|string|max:30',
+            'meter_two' => 'nullable|array',
+            'meter_two.0' => 'nullable|string|max:30',
+            'licence_fee' => 'nullable|array',
+            'licence_fee.0' => 'nullable|numeric|min:0',
+            'vacant_renovation_status' => 'required|array',
+            'vacant_renovation_status.0' => 'required|in:0,1',
+        ]);
+
+        $house->estate_campus_master_pk = $validated['estate_campus_master_pk'];
+        $house->estate_unit_master_pk = $validated['estate_unit_type_master_pk'];
+        $house->estate_block_master_pk = $validated['estate_block_master_pk'];
+        $house->estate_unit_sub_type_master_pk = $validated['estate_unit_sub_type_master_pk'];
+        $house->house_no = $validated['house_no'][0];
+        $house->water_charge = (float) ($validated['water_charge'] ?? 0);
+        $house->electric_charge = (float) ($validated['electric_charge'] ?? 0);
+        $house->licence_fee = (float) (($validated['licence_fee'] ?? [])[0] ?? 0);
+        $house->meter_one = (int) preg_replace('/\D/', '', ($validated['meter_one'] ?? [])[0] ?? '') ?: 0;
+        $house->meter_two = (int) preg_replace('/\D/', '', ($validated['meter_two'] ?? [])[0] ?? '') ?: 0;
+        $house->vacant_renovation_status = (int) (($validated['vacant_renovation_status'] ?? [])[0] ?? 1);
+        $house->remarks = $validated['remarks'] ?? '';
+        $house->modify_date = now();
+        $house->modify_by = Auth::id();
+        $house->save();
+
+        $message = 'Estate house updated successfully.';
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+        return redirect()->route('admin.estate.define-house')->with('success', $message);
+    }
+
+    /**
+     * Delete estate house.
+     */
+    public function destroyDefineHouse($id)
+    {
+        $house = EstateHouse::find($id);
+        if (!$house) {
+            return response()->json(['success' => false, 'message' => 'House not found.'], 404);
+        }
+        $house->delete();
+        return response()->json(['success' => true, 'message' => 'Estate house deleted successfully.']);
+    }
+
+    /**
      * API: Get unit sub types for estate possession (by campus + block).
      */
     public function getPossessionUnitSubTypes(Request $request)
     {
         $campusId = $request->get('campus_id');
         $blockId = $request->get('block_id');
+        $unitTypeId = $request->get('unit_type_id');
         if (!$campusId || !$blockId) {
             return response()->json(['status' => true, 'data' => []]);
         }
@@ -277,6 +581,9 @@ class EstateController extends Controller
             ->join('estate_unit_sub_type_master as u', 'h.estate_unit_sub_type_master_pk', '=', 'u.pk')
             ->where('h.estate_campus_master_pk', $campusId)
             ->where('h.estate_block_master_pk', $blockId)
+            ->when($unitTypeId, function ($q) use ($unitTypeId) {
+                $q->where('h.estate_unit_master_pk', $unitTypeId);
+            })
             ->select('u.pk', 'u.unit_sub_type')
             ->distinct()
             ->orderBy('u.unit_sub_type')
@@ -293,6 +600,7 @@ class EstateController extends Controller
         $campusId = $request->get('campus_id');
         $blockId = $request->get('block_id');
         $unitSubTypeId = $request->get('unit_sub_type_id');
+        $unitTypeId = $request->get('unit_type_id');
         if (!$campusId || !$blockId || !$unitSubTypeId) {
             return response()->json(['status' => true, 'data' => []]);
         }
@@ -301,6 +609,9 @@ class EstateController extends Controller
             ->where('estate_campus_master_pk', $campusId)
             ->where('estate_block_master_pk', $blockId)
             ->where('estate_unit_sub_type_master_pk', $unitSubTypeId)
+            ->when($unitTypeId, function ($q) use ($unitTypeId) {
+                $q->where('estate_unit_master_pk', $unitTypeId);
+            })
             ->select('pk', 'house_no')
             ->orderBy('house_no')
             ->get();

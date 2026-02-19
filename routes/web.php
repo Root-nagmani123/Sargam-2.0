@@ -1027,9 +1027,13 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         })->name('return-house');
 
         // Define House
-        Route::get('define-house', function () {
-            return view('admin.estate.define_house');
-        })->name('define-house');
+        Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
+        Route::post('define-house', [EstateController::class, 'storeDefineHouse'])->name('define-house.store');
+        Route::get('define-house/data', [EstateController::class, 'getDefineHouseData'])->name('define-house.data');
+        Route::get('define-house/blocks', [EstateController::class, 'getDefineHouseBlocks'])->name('define-house.blocks');
+        Route::get('define-house/{id}', [EstateController::class, 'showDefineHouse'])->name('define-house.show');
+        Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
+        Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
 
         // Define Estate/Campus
         Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
