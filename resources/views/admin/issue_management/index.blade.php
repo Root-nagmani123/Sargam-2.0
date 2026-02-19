@@ -3,6 +3,7 @@
 @section('title', 'All Issues - Sargam | Lal Bahadur')
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 @section('css')
 <style>
@@ -97,107 +98,53 @@
 @endsection
 
 >>>>>>> 1a2c46f4 (estate datatable)
+=======
+>>>>>>> 29f034b4 (issue managament)
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="All Issues" />
     <div class="datatables">
-        <div class="card issue-card">
+        <div class="card">
             <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <div class="d-flex align-items-center gap-2">
-                    <span class="rounded-circle d-flex align-items-center justify-content-center bg-white bg-opacity-25" style="width: 2.5rem; height: 2.5rem;">
-                        <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-5"></iconify-icon>
-                    </span>
-                    <span>Issue Management - All Issues</span>
+                    <h1 class="h4 fw-semibold mb-1">Issue Management - All Issues</h1>
                 </div>
-                <a href="{{ route('admin.issue-management.create') }}" class="btn btn-light btn-sm d-flex align-items-center gap-2 shadow-sm">
-                    <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
-                    Log New Issue
+                <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm">
+                    <i class="material-icons material-symbols-rounded">add</i>
+                    Add New Issue
                 </a>
             </div>
-            <div class="card-body p-0">
+            <hr class="my-2">
+            <div class="card-body">
                 <!-- Filters -->
-                <div class="p-4 pb-0">
-                    <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4">
-                        <div class="d-flex align-items-center gap-2 mb-3">
-                            <iconify-icon icon="solar:filter-bold-duotone" class="text-primary"></iconify-icon>
-                            <span class="fw-semibold small text-body-secondary">Filters</span>
+                <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4">
+                    <div class="row">
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label small fw-medium text-body-secondary">Show</label>
+                            <select name="raised_by" class="form-select form-select-sm">
+                                <option value="all" {{ request('raised_by', 'all') == 'all' ? 'selected' : '' }}>All issues (raised by me or others)</option>
+                                <option value="self" {{ request('raised_by') == 'self' ? 'selected' : '' }}>Raised by me only</option>
+                            </select>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6 col-lg-2">
-                                <label class="form-label small fw-medium text-body-secondary">Show</label>
-                                <select name="raised_by" class="form-select form-select-sm">
-                                    <option value="all" {{ request('raised_by', 'all') == 'all' ? 'selected' : '' }}>All issues (raised by me or others)</option>
-                                    <option value="self" {{ request('raised_by') == 'self' ? 'selected' : '' }}>Raised by me only</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-6 col-lg-2">
-                                <label class="form-label small fw-medium text-body-secondary">Search</label>
-                                <input type="text" name="search" class="form-control form-control-sm" placeholder="ID, description, category..." value="{{ request('search') }}">
-                            </div>
-                            <div class="col-12 col-md-2 col-lg-2">
-                                <label class="form-label small fw-medium text-body-secondary">Status</label>
-                                <select name="status" class="form-select form-select-sm">
-                                    <option value="">All Status</option>
-                                    <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Reported</option>
-                                    <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>In Progress</option>
-                                    <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Completed</option>
-                                    <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Pending</option>
-                                    <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-3 col-lg-3">
-                                <label class="form-label small fw-medium text-body-secondary">Category</label>
-                                <select name="category" class="form-select form-select-sm">
-                                    <option value="">All Categories</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->pk }}" {{ request('category') == $category->pk ? 'selected' : '' }}>
-                                            {{ $category->issue_category }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-3 col-lg-2">
-                                <label class="form-label small fw-medium text-body-secondary">Date From</label>
-                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
-                            </div>
-                            <div class="col-12 col-md-3 col-lg-2">
-                                <label class="form-label small fw-medium text-body-secondary">Date To</label>
-                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
-                            </div>
-                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2 flex-wrap">
-                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2">
-                                    <iconify-icon icon="solar:magnifer-bold"></iconify-icon>
-                                    Apply
-                                </button>
-                                <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">
-                                    Clear Filters
-                                </a>
-                                @php
-                                    $exportParams = array_filter([
-                                        'search' => request('search'),
-                                        'status' => request('status'),
-                                        'category' => request('category'),
-                                        'priority' => request('priority'),
-                                        'date_from' => request('date_from'),
-                                        'date_to' => request('date_to'),
-                                        'raised_by' => request('raised_by'),
-                                    ]);
-                                @endphp
-                                <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Export to Excel">
-                                    <iconify-icon icon="solar:document-bold-duotone"></iconify-icon>
-                                    <span class="d-none d-md-inline">Excel</span>
-                                </a>
-                                <a href="{{ route('admin.issue-management.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm d-flex align-items-center gap-1" title="Export to PDF">
-                                    <iconify-icon icon="solar:document-text-bold-duotone"></iconify-icon>
-                                    <span class="d-none d-md-inline">PDF</span>
-                                </a>
-                            </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <label class="form-label small fw-medium text-body-secondary">Status</label>
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">All Status</option>
+                                <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Reported</option>
+                                <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>In Progress</option>
+                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Completed</option>
+                                <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Pending</option>
+                                <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
+                            </select>
                         </div>
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
 >>>>>>> 9b058492 (estate datatable)
+=======
+>>>>>>> 29f034b4 (issue managament)
                         <div class="col-12 col-md-6 col-lg-3">
                             <label class="form-label small fw-medium text-body-secondary">Category</label>
                             <select name="category" class="form-select form-select-sm">
@@ -251,6 +198,7 @@
                         </div>
                     </div>
                 </form>
+<<<<<<< HEAD
 <<<<<<< HEAD
 
                 <!-- Issues DataTable -->
@@ -339,9 +287,12 @@
                     </form>
 >>>>>>> 8cac3c3c (Revert "estate datatable")
                 </div>
+=======
+>>>>>>> 29f034b4 (issue managament)
 
-                <!-- Issues Table -->
-                <div class="table-responsive">
+                <!-- Issues DataTable -->
+              <!-- Issues Table -->
+              <div class="table-responsive">
                     <table class="table mb-0">
                         <thead>
                             <tr>
@@ -424,6 +375,7 @@
     </div>
 </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
 @endsection
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -444,3 +396,6 @@
 >>>>>>> 9b058492 (estate datatable)
 =======
 >>>>>>> 8cac3c3c (Revert "estate datatable")
+=======
+@endsection
+>>>>>>> 29f034b4 (issue managament)
