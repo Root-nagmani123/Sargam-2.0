@@ -993,6 +993,12 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
+        Route::get('change-request-hac-approved', function () {
+            return view('admin.estate.change-request-hac-approved');
+        })->name('change-request-hac-approved');
+
+
+
         // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
