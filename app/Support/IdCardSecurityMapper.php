@@ -19,8 +19,8 @@ class IdCardSecurityMapper
     public static function toEmployeeRequestDto(SecurityParmIdApply $row): stdClass
     {
         $dto = new stdClass();
-        $dto->id = $row->pk;
-        $dto->pk = $row->pk;
+        $dto->id = $row->emp_id_apply;
+        $dto->pk = $row->emp_id_apply;
         $dto->emp_id_apply = $row->emp_id_apply;
         $dto->name = $row->employee ? trim($row->employee->first_name . ' ' . ($row->employee->last_name ?? '')) : '--';
         $dto->designation = $row->employee && $row->employee->designation ? ($row->employee->designation->designation_name ?? '--') : '--';
@@ -85,6 +85,24 @@ class IdCardSecurityMapper
             ? (\Carbon\Carbon::parse($row->employee->doj)->format('Y-m-d'))
             : null;
         $dto->section = null;
+        $dto->requested_by = null;
+        $dto->requested_section = null;
+        if ($row->relationLoaded('creator') && $row->creator) {
+            $dto->requested_by = trim($row->creator->first_name . ' ' . ($row->creator->last_name ?? ''));
+            if ($row->creator->relationLoaded('department') && $row->creator->department) {
+                $dto->requested_section = $row->creator->department->department_name ?? null;
+            }
+        }
+        if ($dto->requested_by === null && !empty($row->created_by)) {
+            $creator = DB::table('employee_master')->where('pk', $row->created_by)->first();
+            if ($creator) {
+                $dto->requested_by = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
+                if (!empty($creator->department_master_pk)) {
+                    $dept = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                    $dto->requested_section = $dept;
+                }
+            }
+        }
         $dto->approval_authority = null;
         $dto->vendor_organization_name = null;
         $dto->fir_receipt = null;
@@ -169,9 +187,21 @@ class IdCardSecurityMapper
         $dto->academy_joining = null;
         // section in table is bigint (department_master_pk). Resolve to department name for edit dropdown (value=name).
         $dto->section = null;
+        $dto->requested_by = null;
+        $dto->requested_section = null;
         if (!empty($row->section)) {
             $deptName = DB::table('department_master')->where('pk', $row->section)->value('department_name');
             $dto->section = $deptName ?? (string) $row->section;
+            $dto->requested_section = $dto->section;
+        }
+        if (!empty($row->created_by)) {
+            $creator = DB::table('employee_master')->where('pk', $row->created_by)->first();
+            if ($creator) {
+                $dto->requested_by = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''));
+                if (!empty($creator->department_master_pk)) {
+                    $dto->requested_section = DB::table('department_master')->where('pk', $creator->department_master_pk)->value('department_name');
+                }
+            }
         }
         // Contractual table: department_approval_emp_pk = Approval Authority (employee pk)
         $dto->approval_authority = isset($row->department_approval_emp_pk) ? (int) $row->department_approval_emp_pk : null;

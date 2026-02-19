@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\{
     CourseRepositoryController,
     EmployeeIDCardRequestController,
     FamilyIDCardRequestController,
+    DuplicateIDCardRequestController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -342,6 +343,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Duplicate / Extended Vehicle Pass Routes
+    Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
     });
 
     // Vehicle Pass Approval Routes
@@ -661,6 +673,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/restore/{id}', 'restore')->name('restore');
         Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
         Route::post('/duplicate/{id}', 'duplicateRequest')->name('duplicate');
+    });
+
+    // Duplicate ID Card Request Routes (mapped to security_dup_perm_id_apply + security_dup_other_id_apply)
+    Route::prefix('admin/duplicate-idcard')->name('admin.duplicate_idcard.')->controller(DuplicateIDCardRequestController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
     });
 
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {

@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Admin\Security;
 use App\Http\Controllers\Controller;
 use App\Exports\VehiclePassExport;
 use App\Models\VehiclePassTWApply;
-use App\Models\VehiclePassTWApplyApproval;
 use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
+use App\Models\SecurityParmIdApply;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 class VehiclePassController extends Controller
@@ -121,10 +122,12 @@ class VehiclePassController extends Controller
             'department' => ['nullable', 'string', 'max:255'],
             'emp_master_pk' => ['nullable', 'exists:employee_master,pk'],
             'vehicle_type' => ['required', 'exists:sec_vehicle_type,pk'],
-            'vehicle_no' => ['required', 'string', 'max:50'],
+            'vehicle_no' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\s\-]{3,20}$/'],
             'doc_upload' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'veh_card_valid_from' => ['required', 'date'],
             'vech_card_valid_to' => ['required', 'date', 'after_or_equal:veh_card_valid_from'],
+        ], [
+            'vehicle_no.regex' => 'Vehicle number must be 3–20 characters (letters, numbers, spaces or hyphens only).',
         ]);
 
         $user = Auth::user();
@@ -151,6 +154,21 @@ class VehiclePassController extends Controller
                 $designation = $designation ?: ($emp->designation->designation_name ?? null);
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
+            }
+
+            // Employee ID card must be valid (approved, not expired) for employee/government_vehicle applicants
+            $validIdCard = DB::table('security_parm_id_apply')
+                ->where('employee_master_pk', $empMasterPk)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->where(function ($q) {
+                    $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
+                })
+                ->exists();
+
+            if (!$validIdCard) {
+                throw ValidationException::withMessages([
+                    'applicant_type' => ['A valid (approved and not expired) Employee ID Card is required to apply for Vehicle Pass.'],
+                ]);
             }
         }
 
@@ -186,13 +204,9 @@ class VehiclePassController extends Controller
         $vehiclePass->created_date = now();
         $vehiclePass->save();
 
-        // Create initial approval record (SQL: vehicle_TW_pk varchar, created_by)
-        $approval = new VehiclePassTWApplyApproval();
-        $approval->vehicle_TW_pk = $vehiclePass->vehicle_tw_pk;
-        $approval->status = 0; // Pending
-        $approval->created_by = $employeePk;
-        $approval->created_date = now();
-        $approval->save();
+        // Case 6 - Vehicle Pass Request (Two Wheeler): Only vehicle_pass_tw_apply at request time.
+        // vehicle_pass_tw_apply_approval rows are inserted when approvers approve (VehiclePassApprovalController).
+        // Condition: Employee ID card must be valid (not expired), vehicle no must be valid.
 
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application submitted successfully');
     }
@@ -254,10 +268,12 @@ class VehiclePassController extends Controller
             'department' => ['nullable', 'string', 'max:255'],
             'emp_master_pk' => ['nullable', 'exists:employee_master,pk'],
             'vehicle_type' => ['required', 'exists:sec_vehicle_type,pk'],
-            'vehicle_no' => ['required', 'string', 'max:50'],
+            'vehicle_no' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\s\-]{3,20}$/'],
             'doc_upload' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
             'veh_card_valid_from' => ['required', 'date'],
             'vech_card_valid_to' => ['required', 'date', 'after_or_equal:veh_card_valid_from'],
+        ], [
+            'vehicle_no.regex' => 'Vehicle number must be 3–20 characters (letters, numbers, spaces or hyphens only).',
         ]);
 
         $user = Auth::user();
@@ -284,6 +300,21 @@ class VehiclePassController extends Controller
                 $designation = $designation ?: ($emp->designation->designation_name ?? null);
                 $department = $department ?: ($emp->department->department_name ?? null);
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
+            }
+
+            // Employee ID card must be valid (approved, not expired) for employee/government_vehicle applicants
+            $validIdCard = DB::table('security_parm_id_apply')
+                ->where('employee_master_pk', $empMasterPk)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->where(function ($q) {
+                    $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
+                })
+                ->exists();
+
+            if (!$validIdCard) {
+                throw ValidationException::withMessages([
+                    'applicant_type' => ['A valid (approved and not expired) Employee ID Card is required to apply for Vehicle Pass.'],
+                ]);
             }
         }
 

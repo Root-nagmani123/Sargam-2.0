@@ -71,6 +71,12 @@ class SecurityParmIdApply extends Model
         return $this->hasMany(SecurityParmIdApplyApproval::class, 'security_parm_id_apply_pk', 'emp_id_apply');
     }
 
+    /** Person who submitted the request (created_by = employee_master_pk). */
+    public function creator()
+    {
+        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
+    }
+
     /** Approval I = status 1, Approval II = status 2, Rejected = status 3 */
     public function approval1Row()
     {
