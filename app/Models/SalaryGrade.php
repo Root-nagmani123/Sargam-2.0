@@ -16,9 +16,7 @@ class SalaryGrade extends Model
 
     public $timestamps = false;
 
-    protected $fillable = [
-        'salary_grade',
-    ];
+    protected $fillable = ['salary_grade'];
 
     protected $appends = ['display_label_text'];
 
@@ -27,4 +25,3 @@ class SalaryGrade extends Model
         return $this->salary_grade ?? '';
     }
 }
-
