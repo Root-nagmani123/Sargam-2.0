@@ -301,18 +301,26 @@ class SellingVoucherDateRangeController extends Controller
                 'updated_at' => $report->updated_at ? $report->updated_at->format('d/m/Y H:i') : null,
             ];
             $items = $report->items->map(function ($item) use ($issueDateFormatted) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                $rate = (float) $item->rate;
+                $amount = max(0, $qty - $retQty) * $rate;
                 return [
                     'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                     'unit' => $item->unit ?? '—',
-                    'quantity' => (float) $item->quantity,
+                    'quantity' => $qty,
                     'available_quantity' => (float) ($item->available_quantity ?? 0),
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
+                    'return_quantity' => $retQty,
                     'issue_date' => $issueDateFormatted,
                     'rate' => number_format($item->rate, 2),
-                    'amount' => number_format($item->amount, 2),
+                    'amount' => number_format($amount, 2),
                 ];
             })->values()->toArray();
-            $grand_total = $report->items->sum('amount');
+            $grand_total = $report->items->sum(function ($item) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                return max(0, $qty - $retQty) * (float) $item->rate;
+            });
             return response()->json([
                 'voucher' => $voucher,
                 'items' => $items,
