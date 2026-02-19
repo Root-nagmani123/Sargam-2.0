@@ -77,7 +77,7 @@ body:has(.group-mapping-index) .select2-results__options { max-height: 300px; }
                                 <select id="courseFilter" class="form-select shadow-sm rounded-2 border">
                                     <option value="">All Courses</option>
                                     @foreach($courses ?? [] as $pk => $name)
-                                    <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                    <option value="{{ $pk }}">{{ $name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -210,7 +210,7 @@ body:has(.group-mapping-index) .select2-results__options { max-height: 300px; }
                             data-bs-keyboard="false">
 
                             <div class="modal-dialog modal-xl modal-dialog-centered">
-                                <div class="modal-content border-0 shadow-lg rounded-3"> 
+                                <div class="modal-content border-0 shadow-lg rounded-3">
                                     <form method="POST" enctype="multipart/form-data" id="importExcelForm">
                                         @csrf
 
@@ -222,7 +222,7 @@ body:has(.group-mapping-index) .select2-results__options { max-height: 300px; }
                                             </h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
-                                     
+
                                         <!-- Dropdown Section -->
                                         <div class="modal-body pt-3">
 
@@ -504,12 +504,16 @@ body:has(.group-mapping-index) .select2-results__options { max-height: 300px; }
                 $('#filterGroupActive').on('click', function() {
                     setActiveButton($(this));
                     window.groupMappingCurrentFilter = 'active';
+
+                    loadCoursesByStatus('active');
                     table.ajax.reload();
                 });
 
                 $('#filterGroupArchive').on('click', function() {
                     setActiveButton($(this));
                     window.groupMappingCurrentFilter = 'archive';
+
+                    loadCoursesByStatus('archive');
                     table.ajax.reload();
                 });
 
@@ -704,6 +708,47 @@ body:has(.group-mapping-index) .select2-results__options { max-height: 300px; }
                 $('#addStudentForm')[0].reset();
                 $('#addStudentAlert').addClass('d-none');
             });
+
+
+
+        function loadCoursesByStatus(status) {
+    $.ajax({
+        url: "{{ route('group.mapping.get.courses.by.status') }}",
+        type: "POST",
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            status: status
+        },
+        success: function(response) {
+
+            let courseSelect = $('#courseFilter');
+
+            // Clear old options
+            courseSelect.html('<option value="">All Courses</option>');
+
+            // Loop through array response
+            $.each(response, function(index, course) {
+                courseSelect.append(
+                    $('<option>', {
+                        value: course.pk,
+                        text: course.course_name
+                    })
+                );
+            });
+
+            courseSelect.val('');
+        }
+    });
+}
+
+
+
         });
+
+
+
+
+
+
     </script>
     @endpush
