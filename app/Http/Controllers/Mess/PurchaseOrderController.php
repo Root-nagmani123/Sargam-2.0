@@ -29,7 +29,7 @@ class PurchaseOrderController extends Controller
                 'unit_measurement' => $s->unit_measurement ?? '—',
             ]);
         $po_number = $this->generatePoNumber();
-        $paymentModes = ['Cash' => 'Cash', 'Card' => 'Card', 'UPI' => 'UPI', 'Bank Transfer' => 'Bank Transfer', 'Credit' => 'Credit'];
+        $paymentModes = ['Cash' => 'Cash', 'Card' => 'Card', 'UPI' => 'UPI', 'Bank Transfer' => 'Bank Transfer', 'Credit' => 'Credit', 'Other' => 'Other'];
         return view('mess.purchaseorders.index', compact('purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes'));
     }
 
