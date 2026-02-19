@@ -392,7 +392,10 @@
     @endif
 
     <!-- Back Button -->
-    <div class="mb-4">
+    <div class="mb-4 d-flex gap-2">
+        <a href="{{ route('admin.dashboard.students.history', encrypt($student->pk)) }}" class="btn btn-info">
+            <i class="fas fa-history me-2"></i>View Full Participant History
+        </a>
         <a href="{{ route('admin.dashboard.students') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left me-2"></i>Back to Student List
         </a>

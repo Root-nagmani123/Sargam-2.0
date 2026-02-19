@@ -496,6 +496,7 @@ class WhosWhoController extends Controller
                     'name' => $student->display_name ?? (trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))),
                     'roll' => 'Roll ' . ($student->rank ?? 'N/A'),
                     'service' => $student->service->service_name ?? 'N/A',
+                    'historyUrl' => route('admin.dashboard.students.history', ['id' => encrypt($student->pk)]),
                     'courseName' => $course->course_name ?? 'N/A',
                     'courseCode' => $course->couse_short_name ?? $course->course_name ?? 'N/A',
                     'batch' => $batch,
