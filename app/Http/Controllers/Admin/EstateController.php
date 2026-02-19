@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\EstateApprovalSettingDataTable;
 use App\DataTables\EstateChangeRequestDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
@@ -10,8 +11,10 @@ use App\Http\Controllers\Controller;
 use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
 use App\Models\EstateHomeRequestDetails;
+use App\Models\EstateHomeReqApprovalMgmt;
 use App\Models\EstateOtherRequest;
 use App\Models\EstatePossessionOther;
+use App\Models\EmployeeMaster;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +36,69 @@ class EstateController extends Controller
     public function requestForEstate(EstateRequestForEstateDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.request_for_estate');
+    }
+
+    /**
+     * Estate Approval Setting - Listing of approval management (requested by / approved by).
+     */
+    public function estateApprovalSetting(EstateApprovalSettingDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.estate_approval_setting');
+    }
+
+    /**
+     * Add Approved Request House - Form to assign employees to an approver (dual list).
+     */
+    public function addApprovedRequestHouse(Request $request)
+    {
+        $approverPk = $request->query('approver');
+        $approvers = EmployeeMaster::query()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->mapWithKeys(fn ($e) => [$e->pk => trim($e->first_name . ' ' . $e->last_name) ?: ('ID ' . $e->pk)]);
+        $allEmployees = EmployeeMaster::query()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get();
+        $selectedPks = collect();
+        $selectedApproverPk = null;
+        if ($approverPk) {
+            $selectedApproverPk = (int) $approverPk;
+            $selectedPks = EstateHomeReqApprovalMgmt::where('employees_pk', $selectedApproverPk)
+                ->pluck('employee_master_pk');
+        }
+        return view('admin.estate.add_approved_request_house', [
+            'approvers' => $approvers,
+            'allEmployees' => $allEmployees,
+            'selectedApproverPk' => $selectedApproverPk,
+            'selectedPks' => $selectedPks,
+        ]);
+    }
+
+    /**
+     * Store Approved Request House - Save approver and assigned employees.
+     */
+    public function storeApprovedRequestHouse(Request $request)
+    {
+        $request->validate([
+            'approver_pk' => 'required|integer|exists:employee_master,pk',
+            'employee_pks' => 'nullable|array',
+            'employee_pks.*' => 'integer|exists:employee_master,pk',
+        ]);
+        $approverPk = (int) $request->approver_pk;
+        $employeePks = $request->filled('employee_pks') ? array_map('intval', (array) $request->employee_pks) : [];
+        EstateHomeReqApprovalMgmt::where('employees_pk', $approverPk)->delete();
+        foreach ($employeePks as $empPk) {
+            EstateHomeReqApprovalMgmt::create([
+                'employee_master_pk' => $empPk,
+                'employees_pk' => $approverPk,
+                'is_forword' => 0,
+            ]);
+        }
+        return redirect()
+            ->route('admin.estate.estate-approval-setting')
+            ->with('success', 'Approved request house settings saved successfully.');
     }
 
     /**
