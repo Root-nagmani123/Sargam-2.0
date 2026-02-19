@@ -20,7 +20,8 @@ class EligibilityCriteriaController extends Controller
     public function create()
     {
         $item = null;
-        $salaryGrades = SalaryGrade::orderBy('salary_grade')->get()->mapWithKeys(fn ($s) => [$s->pk => $s->display_label_text]);
+        $payScales = SalaryGrade::orderBy('salary_grade')->get()
+            ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
         return view('admin.estate.eligibility_criteria.form', compact('item', 'salaryGrades', 'unitTypes', 'unitSubTypes'));
@@ -42,7 +43,6 @@ class EligibilityCriteriaController extends Controller
         $item = EligibilityCriterion::findOrFail($id);
         $payScales = SalaryGrade::orderBy('salary_grade')->get()
             ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
-        $salaryGrades = SalaryGrade::orderBy('salary_grade')->get()->mapWithKeys(fn ($s) => [$s->pk => $s->display_label_text]);
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
         return view('admin.estate.eligibility_criteria.form', compact('item', 'salaryGrades', 'unitTypes', 'unitSubTypes'));

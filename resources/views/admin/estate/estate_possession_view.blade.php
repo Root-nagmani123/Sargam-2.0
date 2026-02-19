@@ -57,9 +57,9 @@
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_type_master_pk" class="form-label">Unit type <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
-                            <option value="">---select---</option>
+                            <option value="">Select</option>
                         </select>
-                        <div class="form-text">Select Unit type</div>
+                        <small class="text-muted"><i class="bi bi-info-circle"></i> Select Estate first, then Unit Type</small>
                     </div>
                 </div>
 

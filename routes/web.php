@@ -876,14 +876,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
         Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
 
-        // Define Electric Slab
-        Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
-        Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
-        Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
-        Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
-        Route::put('define-electric-slab/{id}', [EstateElectricSlabController::class, 'update'])->name('define-electric-slab.update');
-        Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
-
         // Define Estate/Campus
         Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
         Route::get('define-campus/create', [EstateCampusController::class, 'create'])->name('define-campus.create');
