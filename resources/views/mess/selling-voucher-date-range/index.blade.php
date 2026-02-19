@@ -1276,10 +1276,12 @@
         }
     });
 
-    // View report
-    document.querySelectorAll('.btn-view-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // View report (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-view-report');
+        if (!btn) return;
+        e.preventDefault();
+        const reportId = btn.getAttribute('data-report-id');
             fetch(baseUrl + '/' + reportId, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(function(data) {
@@ -1320,13 +1322,14 @@
                     new bootstrap.Modal(document.getElementById('viewReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report.'); });
-        });
     });
 
-    // Return item modal
-    document.querySelectorAll('.btn-return-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // Return item modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-return-report');
+        if (!btn) return;
+        e.preventDefault();
+        const reportId = btn.getAttribute('data-report-id');
             fetch(baseUrl + '/' + reportId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(function(data) {
@@ -1351,7 +1354,6 @@
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load return data.'); });
-        });
     });
 
     function enforceReturnQtyWithinIssued(inputEl) {
@@ -1417,10 +1419,12 @@
         }, true);
     }
 
-    // Edit report
-    document.querySelectorAll('.btn-edit-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // Edit report (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-edit-report');
+        if (!btn) return;
+        e.preventDefault();
+        const reportId = btn.getAttribute('data-report-id');
             document.getElementById('editReportForm').action = baseUrl + '/' + reportId;
             fetch(baseUrl + '/' + reportId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
@@ -1503,7 +1507,6 @@
                     new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report for edit.'); });
-        });
     });
 
     // Reset add modal when opened

@@ -390,16 +390,24 @@ class KitchenIssueController extends Controller
                 'updated_at' => $kitchenIssue->updated_at ? $kitchenIssue->updated_at->format('d/m/Y H:i') : null,
             ];
             $items = $kitchenIssue->items->map(function ($item) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                $rate = (float) $item->rate;
+                $amount = max(0, $qty - $retQty) * $rate;
                 return [
                     'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? '—'),
                     'unit' => $item->unit ?? '—',
-                    'quantity' => (float) $item->quantity,
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
+                    'quantity' => $qty,
+                    'return_quantity' => $retQty,
                     'rate' => number_format($item->rate, 2),
-                    'amount' => number_format($item->amount, 2),
+                    'amount' => number_format($amount, 2),
                 ];
             })->values()->toArray();
-            $grand_total = $kitchenIssue->items->sum('amount');
+            $grand_total = $kitchenIssue->items->sum(function ($item) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                return max(0, $qty - $retQty) * (float) $item->rate;
+            });
             $has_items = $kitchenIssue->items->isNotEmpty();
             return response()->json([
                 'voucher' => $voucher,
