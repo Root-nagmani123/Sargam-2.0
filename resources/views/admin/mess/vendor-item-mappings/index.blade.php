@@ -26,6 +26,7 @@
                     </div>
                 </div>
                 <hr>
+<<<<<<< HEAD
                 <table class="table w-100 text-nowrap">
                     <thead>
                         <tr>
@@ -64,6 +65,11 @@
                     </tbody>
                 </table>
                 <div class="d-flex justify-content-center mt-3">{{ $mappings->links() }}</div>
+=======
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-bordered table-hover align-middle w-100']) !!}
+                </div>
+>>>>>>> 051cf8b3 (vendor-mapping)
             </div>
         </div>
     </div>
@@ -85,9 +91,14 @@
         </div>
     </div>
 </div>
+<<<<<<< HEAD
+=======
+
+>>>>>>> 051cf8b3 (vendor-mapping)
 @endsection
 
 @push('scripts')
+{!! $dataTable->scripts() !!}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var modalEl = document.getElementById('vendorMappingModal');

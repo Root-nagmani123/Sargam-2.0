@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\DataTables\Mess\VendorItemMappingDataTable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use App\Models\Mess\VendorItemMapping;
@@ -11,8 +12,9 @@ use App\Models\Mess\ItemSubcategory;
 
 class VendorItemMappingController extends Controller
 {
-    public function index()
+    public function index(VendorItemMappingDataTable $dataTable)
     {
+<<<<<<< HEAD
         $mappings = VendorItemMapping::with(['vendor', 'itemCategory', 'itemSubcategory'])
             ->orderBy('vendor_id')
             ->orderBy('id')
@@ -26,6 +28,9 @@ class VendorItemMappingController extends Controller
         return view('admin.mess.vendor-item-mappings.index', compact(
             'mappings', 'vendors', 'itemSubcategories'
         ));
+=======
+        return $dataTable->render('admin.mess.vendor-item-mappings.index');
+>>>>>>> 051cf8b3 (vendor-mapping)
     }
 
     public function create(Request $request)
