@@ -122,18 +122,18 @@ class ItemSubcategoryController extends Controller
         $hasItemCode = Schema::hasColumn('mess_item_subcategories', 'item_code');
         $hasSubcategoryCode = Schema::hasColumn('mess_item_subcategories', 'subcategory_code');
         
-        $code = 'ITM' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+        $code = 'ITEM/' . $next . '/CODE';
 
         // Check for uniqueness based on which column exists
         if ($hasItemCode) {
             while (ItemSubcategory::where('item_code', $code)->exists()) {
                 $next++;
-                $code = 'ITM' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+                $code = 'ITEM/' . $next . '/CODE';
             }
         } elseif ($hasSubcategoryCode) {
             while (ItemSubcategory::where('subcategory_code', $code)->exists()) {
                 $next++;
-                $code = 'ITM' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+                $code = 'ITEM/' . $next . '/CODE';
             }
         }
 
