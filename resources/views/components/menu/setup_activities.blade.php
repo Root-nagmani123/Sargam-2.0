@@ -301,12 +301,6 @@
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-electric-slab.*') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.define-electric-slab.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.define-pay-scale.*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.define-pay-scale.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Pay Scale</span>
