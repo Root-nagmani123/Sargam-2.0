@@ -140,30 +140,35 @@ HTML;
                 });
             })
             ->filterColumn('group_name', function ($query, $keyword) {
-              
+
                 $query->where('group_name', 'like', "%{$keyword}%");
             })
 
-            ->filter(function ($query) {
-    $searchValue = request()->input('search.value');
+           ->filter(function ($query) {
+
+    $searchValue = request('search.value');
 
     if (!empty($searchValue)) {
-        $query->where(function ($subQuery) use ($searchValue) {
 
-            $subQuery->where('group_name', 'like', "%{$searchValue}%")
+        $query->where(function ($q) use ($searchValue) {
 
-                ->orWhereHas('courseGroup', function ($courseQuery) use ($searchValue) {
-                    $courseQuery->where('course_name', 'like', "%{$searchValue}%");
-                })
+            $q->where('group_name', 'like', "%{$searchValue}%")
 
-                        ->orWhereExists(function ($existsQuery) use ($searchValue) {
-                            $existsQuery->select(DB::raw(1))
-                                ->from('course_group_type_master')
-                                ->where('type_name', 'like', "%{$searchValue}%");
-                        });
-                });
-            }
-        })
+            ->orWhereHas('courseGroup', function ($cq) use ($searchValue) {
+                $cq->where('course_name', 'like', "%{$searchValue}%");
+            })
+
+            ->orWhereHas('courseGroupType', function ($tq) use ($searchValue) {
+                $tq->where('type_name', 'like', "%{$searchValue}%");
+            })
+
+            ->orWhereHas('Faculty', function ($fq) use ($searchValue) {
+                $fq->where('full_name', 'like', "%{$searchValue}%");
+            });
+
+        });
+    }
+})
 
         ->rawColumns(['course_name', 'group_name', 'type_name', 'view_download', 'action', 'status']);
     }
@@ -177,14 +182,14 @@ HTML;
 
         // Check if any filter is explicitly set
         $hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter);
-        
+
         // If no filters are applied, show active courses by default
         if (!$hasAnyFilter) {
             $statusFilter = 'active'; // Set default to active
         }
 
         $data_course_id =  get_Role_by_course();
-        
+
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
                 ->with(['courseGroup', 'courseGroupType', 'Faculty'])
@@ -196,7 +201,7 @@ HTML;
                         });
                     });
                 })
-                
+
                 ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
                     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
                         $courseQuery->whereNotNull('end_date')
