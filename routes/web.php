@@ -986,6 +986,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             return view('admin.estate.add_other_estate_request');
         })->name('add-other-estate-request');
 
+        Route::get('change-request-hac-approved', function () {
+            return view('admin.estate.change-request-hac-approved');
+        })->name('change-request-hac-approved');
+
+
+
         // Estate Possession
         Route::get('possession-for-others', function () {
             return view('admin.estate.estate_possession_for_others');
