@@ -57,7 +57,6 @@ use App\Http\Controllers\Admin\Estate\{
     UnitTypeController,
     UnitSubTypeController,
     EstateBlockController,
-    EstateElectricSlabController,
     PayScaleController,
     EligibilityCriteriaController
 };
@@ -1072,14 +1071,6 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('define-block-building/{id}/edit', [EstateBlockController::class, 'edit'])->name('define-block-building.edit');
         Route::put('define-block-building/{id}', [EstateBlockController::class, 'update'])->name('define-block-building.update');
         Route::delete('define-block-building/{id}', [EstateBlockController::class, 'destroy'])->name('define-block-building.destroy');
-
-        // Define Electric Slab
-        Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
-        Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
-        Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
-        Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
-        Route::put('define-electric-slab/{id}', [EstateElectricSlabController::class, 'update'])->name('define-electric-slab.update');
-        Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
 
         // Define Pay Scale (for eligibility)
         Route::get('define-pay-scale', [PayScaleController::class, 'index'])->name('define-pay-scale.index');
