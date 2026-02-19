@@ -253,6 +253,7 @@
                         </ul>
                     </div>
 
+<<<<<<< HEAD
                     <!-- Logout Button - Enhanced -->
                     <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
                         @csrf
@@ -265,6 +266,122 @@
                             <span class="tooltip-text visually-hidden">Sign out from system</span>
                         </button>
                     </form>
+=======
+    <!-- Notifications (visible on both desktop and mobile) -->
+    <div class="dropdown position-relative d-none d-lg-block">
+        <button type="button"
+            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
+            id="notificationDropdown"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            aria-label="Notifications">
+
+            <i class="material-icons material-symbols-rounded fs-5">
+                notifications
+            </i>
+
+            @php
+                $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+            @endphp
+
+            @if($unreadCount > 0)
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                </span>
+            @endif
+        </button>
+
+        <!-- Dropdown -->
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
+            aria-labelledby="notificationDropdown">
+
+            <!-- Header -->
+            <li class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                <span class="fw-semibold">Notifications</span>
+                @if($unreadCount > 0)
+                    <button type="button"
+                        class="btn btn-sm btn-link text-primary p-0"
+                        onclick="markAllAsRead()">
+                        Mark all as read
+                    </button>
+                @endif
+            </li>
+
+            <div id="notificationList" class="notification-list">
+                @php
+                    $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                @endphp
+
+                @if($notifications->count() > 0)
+                    @foreach($notifications as $notification)
+                        <li>
+                            <a class="dropdown-item px-3 py-3 d-flex gap-2 notification-item
+                                {{ $notification->is_read ? '' : 'unread' }}"
+                               href="javascript:void(0)"
+                               onclick="markAsRead({{ $notification->pk }})">
+
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold small">
+                                        {{ $notification->title ?? 'Notification' }}
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        {{ Str::limit($notification->message ?? '', 60) }}
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size: 11px;">
+                                        {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                    @endforeach
+                @else
+                    <li class="text-center px-4 py-5 text-muted">
+                        <i class="material-icons material-symbols-rounded fs-1 opacity-25">
+                            notifications_none
+                        </i>
+                        <div class="mt-2 small">No notifications</div>
+                    </li>
+                @endif
+            </div>
+        </ul>
+    </div>
+
+    <!-- Logout -->
+    <form action="{{ route('logout') }}" method="POST" class="m-0">
+        @csrf
+        <button type="submit"
+            class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
+            aria-label="Sign out">
+            <i class="material-icons material-symbols-rounded fs-6">logout</i>
+            <span class="small fw-medium">Logout</span>
+        </button>
+    </form>
+
+    <!-- Last Login -->
+    <div class="d-flex align-items-center gap-1 small">
+        <i class="material-icons material-symbols-rounded fs-6">
+            history
+        </i>
+        <span class="fw-semibold">Last login:</span>
+
+        @php
+            $lastLogin = Auth::user()->last_login ?? null;
+            if ($lastLogin) {
+                $date = \Carbon\Carbon::parse($lastLogin);
+                $formattedDate = $date->format('Y-m-d H:i:s');
+                $isoDate = $date->toIso8601String();
+            } else {
+                $formattedDate = 'Never';
+                $isoDate = '';
+            }
+        @endphp
+
+        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}" class="fw-medium">
+            {{ $formattedDate }}
+        </time>
+    </div>
+</div>
+>>>>>>> ccdab091 (request for other)
 
                     <!-- Last Login - Enhanced -->
                     <div class="d-flex flex-column align-items-end">

@@ -60,7 +60,7 @@
                         <tr>
                             <td class="text-center"><input type="checkbox" class="form-check-input row-check" value="{{ $row->pk }}"></td>
                             <td class="text-center">{{ $items->firstItem() + $index }}</td>
-                            <td>{{ $row->payScale ? $row->payScale->display_label_text : '-' }}</td>
+                            <td>{{ $row->salaryGrade ? $row->salaryGrade->display_label_text : '-' }}</td>
                             <td>{{ $row->unitType->name ?? '-' }}</td>
                             <td>{{ $row->unitSubType->name ?? '-' }}</td>
                             <td class="text-center">

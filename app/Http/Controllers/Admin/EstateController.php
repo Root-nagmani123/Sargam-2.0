@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\DataTables\EstateChangeRequestDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
+use App\DataTables\EstateRequestForEstateDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
+use App\Models\EstateHomeRequestDetails;
 use App\Models\EstateOtherRequest;
 use App\Models\EstatePossessionOther;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,6 +25,220 @@ class EstateController extends Controller
     public function requestForOthers(EstateOtherRequestDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.estate_request_for_others');
+    }
+
+    /**
+     * Request For Estate - Listing from estate_home_request_details with possession details.
+     */
+    public function requestForEstate(EstateRequestForEstateDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.request_for_estate');
+    }
+
+    /**
+     * Store or update Request For Estate (estate_home_request_details).
+     */
+    public function storeRequestForEstate(Request $request)
+    {
+        $rules = [
+            'req_id' => 'nullable|string|max:50',
+            'req_date' => 'required|date',
+            'emp_name' => 'required|string|max:50',
+            'employee_id' => 'required|string|max:50',
+            'emp_designation' => 'required|string|max:50',
+            'pay_scale' => 'required|string|max:50',
+            'doj_pay_scale' => 'required|date',
+            'doj_academic' => 'required|date',
+            'doj_service' => 'required|date',
+            'eligibility_type_pk' => 'required|integer',
+            'status' => 'required|integer|in:0,1,2',
+            'remarks' => 'nullable|string|max:500',
+            'current_alot' => 'nullable|string|max:100',
+            'pos_from' => 'nullable|date',
+            'pos_to' => 'nullable|date',
+            'extension' => 'nullable|string|max:255',
+        ];
+        $validated = $request->validate($rules);
+
+        // Generate / resolve Request ID
+        if ($request->filled('id')) {
+            // Editing: keep existing ID if none provided, otherwise use given one
+            $reqId = $validated['req_id'] ?? null;
+            if ($reqId === null || $reqId === '') {
+                $existing = EstateHomeRequestDetails::findOrFail($request->id);
+                $reqId = $existing->req_id;
+            }
+        } else {
+            // Creating: always auto-generate in the format home-req-{number}
+            $latestReqId = EstateHomeRequestDetails::whereNotNull('req_id')
+                ->where('req_id', 'like', 'home-req-%')
+                ->orderBy('pk', 'desc')
+                ->value('req_id');
+
+            $nextNumber = 1;
+            if ($latestReqId && preg_match('/home-req-(\d+)/', $latestReqId, $m)) {
+                $nextNumber = ((int) $m[1]) + 1;
+            }
+            $reqId = 'home-req-' . $nextNumber;
+        }
+
+        $data = [
+            'req_id' => $reqId,
+            'req_date' => $validated['req_date'],
+            'emp_name' => $validated['emp_name'],
+            'employee_id' => $validated['employee_id'],
+            'emp_designation' => $validated['emp_designation'],
+            'pay_scale' => $validated['pay_scale'],
+            'doj_pay_scale' => $validated['doj_pay_scale'],
+            'doj_academic' => $validated['doj_academic'],
+            'doj_service' => $validated['doj_service'],
+            'eligibility_type_pk' => (int) $validated['eligibility_type_pk'],
+            'status' => (int) $validated['status'],
+            'remarks' => $validated['remarks'] ?? null,
+            'current_alot' => $validated['current_alot'] ?? null,
+            'pos_from' => $validated['pos_from'] ?? null,
+            'pos_to' => $validated['pos_to'] ?? null,
+            'extension' => $validated['extension'] ?? null,
+            'employee_pk' => (int) ($request->input('employee_pk', 0)),
+            'app_status' => (int) ($request->input('app_status', 0)),
+            'hac_status' => (int) ($request->input('hac_status', 0)),
+            'f_status' => (int) ($request->input('f_status', 0)),
+            'change_status' => (int) ($request->input('change_status', 0)),
+        ];
+
+        if ($request->filled('id')) {
+            $record = EstateHomeRequestDetails::findOrFail($request->id);
+            $record->update($data);
+            $message = 'Estate request updated successfully.';
+        } else {
+            $data['employee_pk'] = $data['employee_pk'] ?: 0;
+            EstateHomeRequestDetails::create($data);
+            $message = 'Estate request created successfully.';
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+        return redirect()->route('admin.estate.request-for-estate')->with('success', $message);
+    }
+
+    /**
+     * Get employees list for Request For Estate dropdown (distinct by employee_id from estate_home_request_details).
+     * Optional query: include_pk = ensure this pk is in the list (for edit mode).
+     */
+    public function getRequestForEstateEmployees(Request $request)
+    {
+        $rows = EstateHomeRequestDetails::query()
+            ->select('pk', 'emp_name', 'employee_id')
+            ->orderBy('pk', 'desc')
+            ->get();
+        $unique = $rows->unique('employee_id')->values();
+        $includePk = (int) $request->query('include_pk', 0);
+        if ($includePk && ! $unique->contains(fn ($r) => (int) $r->pk === $includePk)) {
+            $extra = EstateHomeRequestDetails::find($includePk);
+            if ($extra) {
+                $unique = $unique->prepend($extra)->values();
+            }
+        }
+        $list = $unique->map(function ($row) {
+            return [
+                'pk' => (int) $row->pk,
+                'emp_name' => $row->emp_name ?? '',
+                'employee_id' => $row->employee_id ?? '',
+                'label' => trim(($row->emp_name ?? '') . ' (' . ($row->employee_id ?? '') . ')'),
+            ];
+        })->values()->all();
+        return response()->json($list);
+    }
+
+    /**
+     * Get one employee's details for Request For Estate form (by estate_home_request_details pk).
+     */
+    public function getRequestForEstateEmployeeDetails($pk)
+    {
+        $row = EstateHomeRequestDetails::find($pk);
+        if (! $row) {
+            return response()->json(['error' => 'Not found'], 404);
+        }
+        return response()->json([
+            'emp_name' => $row->emp_name ?? '',
+            'employee_id' => $row->employee_id ?? '',
+            'emp_designation' => $row->emp_designation ?? '',
+            'pay_scale' => $row->pay_scale ?? '',
+            'doj_pay_scale' => $row->doj_pay_scale ? \Carbon\Carbon::parse($row->doj_pay_scale)->format('Y-m-d') : '',
+            'doj_academic' => $row->doj_academic ? \Carbon\Carbon::parse($row->doj_academic)->format('Y-m-d') : '',
+            'doj_service' => $row->doj_service ? \Carbon\Carbon::parse($row->doj_service)->format('Y-m-d') : '',
+            'eligibility_type_pk' => (int) ($row->eligibility_type_pk ?? 62),
+        ]);
+    }
+
+    /**
+     * Get vacant houses for Request For Estate by eligibility type.
+     * eligibility_type_pk is used as estate_unit_sub_type_master_pk (Type I=61, II=62, etc.).
+     * Excludes houses already in estate_possession_details or estate_possession_other.
+     */
+    public function getVacantHousesForEstateRequest(Request $request)
+    {
+        $eligibilityTypePk = (int) $request->query('eligibility_type_pk', 0);
+        if (! $eligibilityTypePk) {
+            return response()->json(['data' => []]);
+        }
+
+        $occupiedHousePks = DB::table('estate_possession_details')
+            ->whereNotNull('estate_house_master_pk')
+            ->pluck('estate_house_master_pk')
+            ->merge(
+                DB::table('estate_possession_other')
+                    ->whereNotNull('estate_house_master_pk')
+                    ->pluck('estate_house_master_pk')
+            )
+            ->unique()
+            ->values();
+
+        $query = DB::table('estate_house_master as h')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
+            ->select('h.pk', 'h.house_no', 'b.block_name')
+            ->orderBy('b.block_name')
+            ->orderBy('h.house_no');
+
+        if ($occupiedHousePks->isNotEmpty()) {
+            $query->whereNotIn('h.pk', $occupiedHousePks->toArray());
+        }
+
+        $houses = $query->get()->map(function ($row) {
+            $label = trim(($row->block_name ?? '') . ' - ' . ($row->house_no ?? ''));
+            if ($label === '-') {
+                $label = $row->house_no ?? (string) $row->pk;
+            }
+            return [
+                'pk' => (int) $row->pk,
+                'house_no' => $row->house_no ?? '',
+                'block_name' => $row->block_name ?? '',
+                'label' => $label,
+            ];
+        });
+
+        return response()->json(['data' => $houses]);
+    }
+
+    /**
+     * Delete Request For Estate.
+     */
+    public function destroyRequestForEstate(Request $request, $id)
+    {
+        $record = EstateHomeRequestDetails::find($id);
+        if (! $record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.request-for-estate')->with('error', 'Record not found.');
+        }
+        $record->delete();
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Estate request deleted successfully.']);
+        }
+        return redirect()->route('admin.estate.request-for-estate')->with('success', 'Estate request deleted successfully.');
     }
 
     /**
