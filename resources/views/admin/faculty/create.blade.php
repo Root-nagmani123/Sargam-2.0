@@ -8,26 +8,32 @@ input.is-invalid {
     border-color: var(--bs-danger);
 }
 
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+}
+
 .mobile-duplicate {
     border: 2px solid var(--bs-danger) !important;
     background-color: rgba(var(--bs-danger-rgb), 0.05);
 }
 
 #suggestionList {
-    max-height: 220px;
+    max-height: 280px;
     overflow-y: auto;
-    box-shadow: var(--bs-box-shadow);
-    border-radius: var(--bs-border-radius);
-    border: 1px solid var(--bs-border-color);
+    box-shadow: var(--bs-box-shadow-lg);
+    border-radius: var(--bs-border-radius-lg);
+    border: 1px solid var(--bs-border-color-translucent);
 }
 
 #suggestionList a {
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 #suggestionList a:hover:not(.disabled) {
     background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
 }
 
 #suggestionList .list-group-item.disabled {
@@ -36,13 +42,36 @@ input.is-invalid {
 
 .degree-row-wrapper,
 .experience-row-wrapper {
-    border-left: 3px solid var(--bs-primary) !important;
+    border-left: 4px solid var(--bs-primary) !important;
+    border-radius: 0 var(--bs-border-radius) var(--bs-border-radius) 0;
     transition: box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .degree-row-wrapper:hover,
 .experience-row-wrapper:hover {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    box-shadow: var(--bs-box-shadow-sm);
+    background-color: var(--bs-body-tertiary);
+}
+
+.upload-zone {
+    border: 2px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    padding: 1rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.upload-zone:hover {
+    border-color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.03);
+}
+
+#photoPreview {
+    object-fit: cover;
+    aspect-ratio: 1;
+}
+
+.sector-toggle .btn-check:checked + .btn {
+    font-weight: 600;
 }
 
 @media print {
@@ -91,26 +120,20 @@ input.is-invalid {
 <div class="container-fluid py-3 py-md-4" id="printFacultyFormData">
     <x-breadcrum title="Faculty" />
     <x-session_message />
-    <!-- start Vertical Steps Example -->
-    {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}"
-    data-index-url="{{ route('faculty.index') }}">
-    <div class="card-body"> --}}
-
-        <form class="facultyForm">
-            @csrf
-            <input type="hidden" name="faculty_id" id="faculty_id" value="">
-            <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-                <div class="card-header bg-body-secondary border-0 py-3">
-                    <h5 class="card-title mb-0 fw-semibold text-body d-flex align-items-center gap-2">
-                        <span
-                            class="rounded-2 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
-                            <i class="material-icons menu-icon" style="font-size: 1.25rem;">person</i>
-                        </span>
-                        Personal Information
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row g-3">
+    <form class="facultyForm">
+        @csrf
+        <input type="hidden" name="faculty_id" id="faculty_id" value="">
+        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden border-start border-primary border-3">
+            <div class="card-header bg-body-tertiary border-bottom border-secondary border-opacity-25 py-3 px-4">
+                <h5 class="card-title mb-0 fw-semibold text-body-emphasis d-flex align-items-center gap-2">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
+                        <i class="material-icons menu-icon" style="font-size: 1.25rem;">person</i>
+                    </span>
+                    Personal Information
+                </h5>
+            </div>
+            <div class="card-body p-4 p-md-4">
+                    <div class="row g-3 g-md-4">
                         <div class="col-12 col-md-6">
                             <div class="mb-3">
 
@@ -146,7 +169,7 @@ input.is-invalid {
                                     formLabelClass="form-label" required="true" labelRequired="true"
                                     title="Only letters and spaces are allowed" id="firstName"
                                     formInputClass="letters-with-space" />
-                                <div id="suggestionList" class="list-group position-absolute start-0 end-0 mt-1"
+                                <div id="suggestionList" class="list-group position-absolute start-0 end-0 mt-1 rounded-3 shadow-lg"
                                     style="z-index: 1050; display:none;"></div>
                             </div>
                         </div>
@@ -179,7 +202,7 @@ input.is-invalid {
                         <div class="col-12 col-md-6 col-lg-3">
                             <div class="mb-3">
                                 <x-input name="faculty_code" label="Faculty Code :" placeholder="Faculty Code"
-                                    formLabelClass="form-label" class="bg-light" readonly />
+                                    formLabelClass="form-label" class="bg-body-secondary" readonly />
                             </div>
                         </div>
 
@@ -326,32 +349,29 @@ input.is-invalid {
 
                         </div>
                         <div class="col-12 col-md-6">
-                            <x-input type="file" name="photo" label="Photo Upload:" placeholder="Photo Upload:"
-                                formLabelClass="form-label"
-                                helperSmallText="Please upload a recent passport-sized photo" />
-
-                            <!-- Preview Container -->
-                            <div class="mt-2">
-                                <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail rounded d-none"
-                                    style="max-width: 200px;">
+                            <div class="upload-zone">
+                                <x-input type="file" name="photo" label="Photo Upload:" placeholder="Photo Upload:"
+                                    formLabelClass="form-label fw-medium"
+                                    helperSmallText="Please upload a recent passport-sized photo" />
+                                <div class="mt-2">
+                                    <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail rounded-3 d-none"
+                                        style="max-width: 200px; height: 200px;">
+                                </div>
+                                <div class="existing-photo"></div>
                             </div>
-                            <div class="existing-photo"></div>
                         </div>
 
                         <div class="col-12 col-md-6">
-
-                            <x-input type="file" name="document" label="Document upload :"
-                                placeholder="Document upload :" formLabelClass="form-label"
-                                helperSmallText="CV or any other supporting document" />
-
-                            <!-- PDF Preview -->
-                            <div class="d-flex align-items-start mt-2">
-                                <iframe id="documentPreviewPDF" class="d-none border rounded"
-                                    style="width: 200px; height: 200px;"></iframe>
+                            <div class="upload-zone">
+                                <x-input type="file" name="document" label="Document upload :"
+                                    placeholder="Document upload :" formLabelClass="form-label fw-medium"
+                                    helperSmallText="CV or any other supporting document" />
+                                <div class="d-flex align-items-start mt-2">
+                                    <iframe id="documentPreviewPDF" class="d-none border rounded-3"
+                                        style="width: 200px; height: 200px;"></iframe>
+                                </div>
+                                <div class="existing-document mt-2"></div>
                             </div>
-
-                            <!-- Existing Document Link -->
-                            <div class="existing-document mt-2"></div>
                         </div>
 
 
@@ -359,20 +379,18 @@ input.is-invalid {
                 </div>
             </div>
 
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-        <div class="card-header bg-body-secondary border-0 py-3">
-            <h5 class="card-title mb-0 fw-semibold text-body d-flex align-items-center gap-2">
-                <span
-                    class="rounded-2 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
-                    <i class="material-icons menu-icon" style="font-size: 1.25rem;">school</i>
-                </span>
-                Qualification Details
-            </h5>
-        </div>
-                    <div class="card-body p-4">
-                        <div>
-                            <div id="education_fields">
-                                <div class="row degree-row g-3">
+        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden border-start border-primary border-3">
+            <div class="card-header bg-body-tertiary border-bottom border-secondary border-opacity-25 py-3 px-4">
+                <h5 class="card-title mb-0 fw-semibold text-body-emphasis d-flex align-items-center gap-2">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
+                        <i class="material-icons menu-icon" style="font-size: 1.25rem;">school</i>
+                    </span>
+                    Qualification Details
+                </h5>
+            </div>
+            <div class="card-body p-4 p-md-4">
+                <div id="education_fields">
+                    <div class="row degree-row g-3 g-md-4">
                     <div class="col-12 col-md-6 col-lg-3">
 
                         <x-input name="degree[]" label="Degree :" placeholder="Degree Name" formLabelClass="form-label"
@@ -412,30 +430,27 @@ input.is-invalid {
                     </div>
                     <div class="existing-certificate col-12"></div>
                     <div class="col-12 col-lg-9 d-flex align-items-end justify-content-end">
-                        <button onclick="education_fields();" class="btn btn-success fw-medium rounded-pill px-3"
-                            type="button">
-                            <i class="material-icons menu-icon me-1" style="font-size: 1.1rem;">add</i>
+                        <button onclick="education_fields();" class="btn btn-success fw-medium rounded-1 px-4 py-2 d-inline-flex align-items-center gap-2" type="button">
+                            <i class="material-icons menu-icon" style="font-size: 1.1rem;">add</i>
                             Add Qualification
                         </button>
                     </div>
                 </div>
-                            </div>
-                        </div>
-                    </div>
-    </div>
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-        <div class="card-header bg-body-secondary border-0 py-3">
-            <h5 class="card-title mb-0 fw-semibold text-body d-flex align-items-center gap-2">
-                <span
-                    class="rounded-2 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
-                    <i class="material-icons menu-icon" style="font-size: 1.25rem;">work</i>
-                </span>
-                Experience Details
-            </h5>
+                </div>
+            </div>
         </div>
-        <div class="card-body p-4">
-            <div id="experience_fields">
-                <div class="row experience-row g-3">
+        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden border-start border-primary border-3">
+            <div class="card-header bg-body-tertiary border-bottom border-secondary border-opacity-25 py-3 px-4">
+                <h5 class="card-title mb-0 fw-semibold text-body-emphasis d-flex align-items-center gap-2">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
+                        <i class="material-icons menu-icon" style="font-size: 1.25rem;">work</i>
+                    </span>
+                    Experience Details
+                </h5>
+            </div>
+            <div class="card-body p-4 p-md-4">
+                <div id="experience_fields">
+                    <div class="row experience-row g-3 g-md-4">
                 <div class="col-12 col-md-6 col-lg-3">
                     <x-input name="experience[]" label="Years of Experience :" placeholder="Years of Experience"
                         formLabelClass="form-label" />
@@ -461,29 +476,26 @@ input.is-invalid {
                         formLabelClass="form-label" />
                 </div>
                 <div class="col-12 col-lg-6 d-flex align-items-end justify-content-end">
-                    <button onclick="experience_fields();" class="btn btn-success rounded-pill px-3" type="button">
-                        <i class="material-icons menu-icon me-1" style="font-size: 1.1rem;">add</i>
+                    <button onclick="experience_fields();" class="btn btn-success fw-medium rounded-1 px-4 py-2 d-inline-flex align-items-center gap-2" type="button">
+                        <i class="material-icons menu-icon" style="font-size: 1.1rem;">add</i>
                         Add Experience
                     </button>
                 </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-        <div class="card-header bg-body-secondary border-0 py-3">
-            <h5 class="card-title mb-0 fw-semibold text-body d-flex align-items-center gap-2">
-                <span
-                    class="rounded-2 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
-                    <i class="material-icons menu-icon" style="font-size: 1.25rem;">account_balance</i>
-                </span>
-                Bank Details
-            </h5>
-        </div>
-        <div class="card-body p-4">
-            <div>
-                <div class="row g-3">
+        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden border-start border-primary border-3">
+            <div class="card-header bg-body-tertiary border-bottom border-secondary border-opacity-25 py-3 px-4">
+                <h5 class="card-title mb-0 fw-semibold text-body-emphasis d-flex align-items-center gap-2">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
+                        <i class="material-icons menu-icon" style="font-size: 1.25rem;">account_balance</i>
+                    </span>
+                    Bank Details
+                </h5>
+            </div>
+            <div class="card-body p-4 p-md-4">
+                <div class="row g-3 g-md-4">
                     <div class="col-12 col-md-6">
                         <x-input name="bankname" label="Bank Name :" placeholder="Bank Name"
                             formLabelClass="form-label" />
@@ -503,50 +515,53 @@ input.is-invalid {
                 </div>
             </div>
         </div>
-    </div>
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-        <div class="card-header bg-body-secondary border-0 py-3">
-            <h5 class="card-title mb-0 fw-semibold text-body d-flex align-items-center gap-2">
-                <span
-                    class="rounded-2 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
-                    <i class="material-icons menu-icon" style="font-size: 1.25rem;">info</i>
-                </span>
-                Other information
-            </h5>
-        </div>
-        <div class="card-body p-4">
-            <div>
-                <div class="row g-3">
+        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden border-start border-primary border-3">
+            <div class="card-header bg-body-tertiary border-bottom border-secondary border-opacity-25 py-3 px-4">
+                <h5 class="card-title mb-0 fw-semibold text-body-emphasis d-flex align-items-center gap-2">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
+                        <i class="material-icons menu-icon" style="font-size: 1.25rem;">info</i>
+                    </span>
+                    Other information
+                </h5>
+            </div>
+            <div class="card-body p-4 p-md-4">
+                <div class="row g-3 g-md-4">
                     <div class="col-12 col-md-6">
-                        <x-input type="file" name="researchpublications" label="Research Publications :"
-                            placeholder="Research Publications" formLabelClass="form-label"
-                            helperSmallText="Please upload your research publications, if any" />
-                        <div class="research_publications"></div>
-                        <div class="mt-2">
-                            <iframe id="researchPreview" class="d-none rounded border"
-                                style="width:100%; height:250px;"></iframe>
+                        <div class="upload-zone h-100">
+                            <x-input type="file" name="researchpublications" label="Research Publications :"
+                                placeholder="Research Publications" formLabelClass="form-label fw-medium"
+                                helperSmallText="Please upload your research publications, if any" />
+                            <div class="research_publications"></div>
+                            <div class="mt-2">
+                                <iframe id="researchPreview" class="d-none rounded-3 border"
+                                    style="width:100%; height:250px;"></iframe>
+                            </div>
+                            <div class="existing-research mt-2"></div>
                         </div>
-                        <div class="existing-research mt-2"></div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <x-input type="file" name="professionalmemberships" label="Professional Memberships :"
-                            placeholder="Professional Memberships" formLabelClass="form-label"
-                            helperSmallText="Please upload your professional memberships, if any" />
-                        <div class="mt-2">
-                            <iframe id="membershipPreview" class="d-none rounded border"
-                                style="width:100%; height:250px;"></iframe>
+                        <div class="upload-zone h-100">
+                            <x-input type="file" name="professionalmemberships" label="Professional Memberships :"
+                                placeholder="Professional Memberships" formLabelClass="form-label fw-medium"
+                                helperSmallText="Please upload your professional memberships, if any" />
+                            <div class="mt-2">
+                                <iframe id="membershipPreview" class="d-none rounded-3 border"
+                                    style="width:100%; height:250px;"></iframe>
+                            </div>
+                            <div class="existing-membership mt-2"></div>
                         </div>
-                        <div class="existing-membership mt-2"></div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <x-input type="file" name="recommendationdetails" label="Reference/Recommendation Details :"
-                            placeholder="Reference/Recommendation Details" formLabelClass="form-label"
-                            helperSmallText="Please upload your reference/recommendation details, if any" />
-                        <div class="mt-2">
-                            <iframe id="referencePreview" class="d-none rounded border"
-                                style="width:100%; height:250px;"></iframe>
+                        <div class="upload-zone h-100">
+                            <x-input type="file" name="recommendationdetails" label="Reference/Recommendation Details :"
+                                placeholder="Reference/Recommendation Details" formLabelClass="form-label fw-medium"
+                                helperSmallText="Please upload your reference/recommendation details, if any" />
+                            <div class="mt-2">
+                                <iframe id="referencePreview" class="d-none rounded-3 border"
+                                    style="width:100%; height:250px;"></iframe>
+                            </div>
+                            <div class="existing-reference mt-2"></div>
                         </div>
-                        <div class="existing-reference mt-2"></div>
                     </div>
                     <div class="col-12 col-md-6">
                         <x-input type="date" name="joiningdate" label="Joining Date :" placeholder="Joining Date"
@@ -555,60 +570,45 @@ input.is-invalid {
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden">
-        <div class="card-header bg-body-secondary border-0 py-3">
-            <h5 class="card-title mb-0 fw-semibold text-body d-flex align-items-center gap-2">
-                <span
-                    class="rounded-2 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
-                    <i class="material-icons menu-icon" style="font-size: 1.25rem;">category</i>
-                </span>
-                Sector &amp; Expertise
-            </h5>
-        </div>
-        <div class="card-body p-4">
-            <div class="row g-3">
-                <div class="col-12">
-                    <label for="sector" class="form-label fw-medium">Current Sector :</label>
-                    <div class="mb-3">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input success" type="radio" name="current_sector"
-                                id="success-radio" value="1">
-                            <label class="form-check-label" for="success-radio">Government Sector</label>
+        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden border-start border-primary border-3">
+            <div class="card-header bg-body-tertiary border-bottom border-secondary border-opacity-25 py-3 px-4">
+                <h5 class="card-title mb-0 fw-semibold text-body-emphasis d-flex align-items-center gap-2">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-inline-flex align-items-center justify-content-center">
+                        <i class="material-icons menu-icon" style="font-size: 1.25rem;">category</i>
+                    </span>
+                    Sector &amp; Expertise
+                </h5>
+            </div>
+            <div class="card-body p-4 p-md-4">
+                <div class="row g-3 g-md-4">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold text-body-emphasis">Current Sector</label>
+                        <div class="sector-toggle btn-group d-flex flex-wrap gap-2" role="group">
+                            <input class="btn-check" type="radio" name="current_sector" id="success-radio" value="1">
+                            <label class="btn btn-outline-primary rounded-1 px-4 py-2" for="success-radio">Government Sector</label>
+                            <input class="btn-check" type="radio" name="current_sector" id="success2-radio" value="2">
+                            <label class="btn btn-outline-primary rounded-1 px-4 py-2" for="success2-radio">Private Sector</label>
                         </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input success" type="radio" name="current_sector"
-                                id="success2-radio" value="2">
-                            <label class="form-check-label" for="success2-radio">Private Sector</label>
+                    </div>
+                    <div class="col-12">
+                        <label for="expertise" class="form-label fw-semibold text-body-emphasis">Area of Expertise</label>
+                        <div class="mb-0 expertise-row">
+                            <x-checkbox name="faculties[]" label="Area of Expertise :" formLabelClass="form-label"
+                                :options="$faculties" />
                         </div>
                     </div>
                 </div>
-                <div class="col-12">
-                    <label for="expertise" class="form-label fw-medium">Area of Expertise :</label>
-                    <div class="mb-0 expertise-row">
-                        <x-checkbox name="faculties[]" label="Area of Expertise :" formLabelClass="form-label"
-                            :options="$faculties" />
-                    </div>
+                <hr class="my-4 border-secondary border-opacity-25">
+                <div class="d-flex flex-wrap justify-content-end align-items-center gap-3 py-2 d-print-none">
+                    <button class="btn btn-primary d-inline-flex align-items-center gap-2 rounded-1 px-4 py-2 fw-medium" type="button" id="saveFacultyForm">
+                        Save
+                    </button>
+                    <a href="{{ route('faculty.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 rounded-1 px-4 py-2 fw-medium">
+                        Back
+                    </a>
                 </div>
             </div>
-            <hr class="my-4">
-            <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
-
-                <button class="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-4" type="button"
-                    id="saveFacultyForm">
-                    <i class="material-icons menu-icon" style="font-size: 1.1rem;">save</i>
-                    Save
-                </button>
-                <a href="{{ route('faculty.index') }}"
-                    class="btn btn-outline-secondary d-flex align-items-center gap-2 rounded-pill px-4">
-                    <i class="material-icons menu-icon" style="font-size: 1.1rem;">arrow_back</i>
-                    Back
-                </a>
-            </div>
         </div>
-    </div>
-
     </form>
     {{-- </div>
     </div> --}}

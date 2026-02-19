@@ -29,16 +29,47 @@ class IssueCategoryController extends Controller
      */
     public function store(Request $request)
     {
+        // Handle multiple categories if submitted
+        if ($request->has('categories') && is_array($request->categories)) {
+            $request->validate([
+                'categories.*.issue_category' => 'required|string|max:255',
+                'categories.*.description' => 'nullable|string',
+            ]);
+
+            $userId = Auth::user()->user_id ?? Auth::id();
+            $createdCount = 0;
+
+            foreach ($request->categories as $categoryData) {
+                if (!empty($categoryData['issue_category'])) {
+                    IssueCategoryMaster::create([
+                        'issue_category' => $categoryData['issue_category'],
+                        'description' => $categoryData['description'] ?? null,
+                        'created_by' => $userId,
+                        'status' => 1,
+                    ]);
+                    $createdCount++;
+                }
+            }
+
+            $message = $createdCount > 1 
+                ? "$createdCount categories created successfully." 
+                : 'Category created successfully.';
+
+            return redirect()->route('admin.issue-categories.index')
+                ->with('success', $message);
+        }
+
+        // Handle single category (backward compatibility)
         $request->validate([
             'issue_category' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
 
+        $userId = Auth::user()->user_id ?? Auth::id();
         IssueCategoryMaster::create([
             'issue_category' => $request->issue_category,
             'description' => $request->description,
-            'created_by' => Auth::id(),
-            'created_date' => now(),
+            'created_by' => $userId,
             'status' => 1,
         ]);
 
@@ -59,12 +90,12 @@ class IssueCategoryController extends Controller
             'status' => 'required|in:0,1',
         ]);
 
+        $userId = Auth::user()->user_id ?? Auth::id();
         $category->update([
             'issue_category' => $request->issue_category,
             'description' => $request->description,
             'status' => $request->status,
-            'modified_by' => Auth::id(),
-            'modified_date' => now(),
+            'modified_by' => $userId,
         ]);
 
         return redirect()->route('admin.issue-categories.index')
@@ -77,8 +108,11 @@ class IssueCategoryController extends Controller
     public function destroy($id)
     {
         $category = IssueCategoryMaster::findOrFail($id);
-        
-        // Check if category has associated issues
+
+        if ($category->status == 1) {
+            return back()->with('error', 'Cannot delete an active category. Please set it to Inactive first.');
+        }
+
         if ($category->issueLogs()->count() > 0) {
             return back()->with('error', 'Cannot delete category with associated issues.');
         }

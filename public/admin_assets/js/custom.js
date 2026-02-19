@@ -325,6 +325,9 @@ document.addEventListener('DOMContentLoaded', function () {
     $('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
 
     $('#saveFacultyForm').click(function (e) {
+        const $btn = $(this);
+        if ($btn.prop('disabled')) return;
+        $btn.prop('disabled', true);
 
         const formData = new FormData();
         // remove all error class
@@ -542,6 +545,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 } else {
                     toastr.error(response.message);
+                    $btn.prop('disabled', false);
                 }
             },
             error: function (error) {
@@ -576,6 +580,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     toastr.error('Something went wrong. Please try again.');
                 }
+                $btn.prop('disabled', false);
             },
             complete: function () {
                 hideLoader();
@@ -1693,9 +1698,9 @@ $(document).on('click', '#resetAttendance', function () {
         $('#manual_session').val('');
     }
     
-    // Hide session containers
-    $('#normal_session_container').hide();
-    $('#manual_session_container').hide();
+    // Hide session containers (Bootstrap d-none)
+    $('#normal_session_container').addClass('d-none');
+    $('#manual_session_container').addClass('d-none');
     
     // Destroy DataTable if it exists
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
@@ -1757,21 +1762,20 @@ function drawAttendanceTable() {
 
 $(document).ready(function() {
 
-    $('#normal_session_container').hide();
-    $('#manual_session_container').hide();
-
+    $('#normal_session_container').addClass('d-none');
+    $('#manual_session_container').addClass('d-none');
 
     $('input[name="attendance_type"]').change(function() {
-        $('#normal_session_container').hide();
-        $('#manual_session_container').hide();
+        $('#normal_session_container').addClass('d-none');
+        $('#manual_session_container').addClass('d-none');
 
         $('#session').val('').trigger('change');
         $('#manual_session').val('').trigger('change');
 
         if ($(this).val() === 'normal') {
-            $('#normal_session_container').show();
+            $('#normal_session_container').removeClass('d-none');
         } else if ($(this).val() === 'manual') {
-            $('#manual_session_container').show();
+            $('#manual_session_container').removeClass('d-none');
         }
         // For 'full_day', both remain hidden
     });

@@ -3,244 +3,14 @@
 @section('title', 'Course Master - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<style>
-/* Programme Index - Bootstrap 5.3 enhanced UI */
-:root {
-    --programme-primary: #004a93;
-    --programme-primary-subtle: rgba(0, 74, 147, 0.08);
-}
-
-/* Fix dropdown visibility in table */
-.table-responsive {
-    overflow: visible !important;
-}
-
-.table td {
-    overflow: visible !important;
-    vertical-align: middle;
-}
-
-.action-dropdown { position: static; }
-
-.dropdown-menu {
-    z-index: 1050 !important;
-    position: fixed !important;
-    border-radius: 0.5rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.dropdown-item { cursor: pointer; }
-
-.btn-group[role="group"] .btn {
-    transition: all 0.25s ease;
-    border-radius: 0;
-}
-
-.btn-group[role="group"] .btn:first-child {
-    border-top-left-radius: 50rem !important;
-    border-bottom-left-radius: 50rem !important;
-}
-
-.btn-group[role="group"] .btn:last-child {
-    border-top-right-radius: 50rem !important;
-    border-bottom-right-radius: 50rem !important;
-}
-
-.btn-group .btn:hover { transform: translateY(-1px); }
-
-.btn-group .btn.active {
-    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 74, 147, 0.25);
-}
-
-.btn:focus-visible {
-    outline: 3px solid var(--programme-primary);
-    outline-offset: 2px;
-}
-
-/* Table enhancements */
-#coursemaster-table_wrapper .dataTables_wrapper {
-    padding: 0;
-}
-
-#coursemaster-table thead th {
-    background: linear-gradient(180deg, var(--programme-primary) 0%, #003d7a 100%);
-    color: #fff !important;
-    font-weight: 600;
-    padding: 0.875rem 1rem;
-    border: none;
-    white-space: nowrap;
-}
-
-#coursemaster-table tbody tr:hover {
-    background-color: var(--programme-primary-subtle) !important;
-}
-
-#coursemaster-table .form-check-input:checked {
-    background-color: var(--programme-primary);
-    border-color: var(--programme-primary);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .btn-group .btn:hover { transform: none; }
-}
-
-/* Responsive - tablet and below */
-@media (max-width: 991.98px) {
-    .programme-index.container-fluid { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
-    .programme-index .card-body.p-4.p-lg-5 { padding: 1rem 1.25rem !important; }
-    .programme-index .datatables .row.g-3 > [class*="col-"] { margin-bottom: 0.5rem; }
-}
-
-@media (max-width: 767.98px) {
-    .programme-index.container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-    .programme-index .card-body.p-4.p-lg-5 { padding: 1rem !important; }
-    /* DataTables: Stack Show entries + Search to prevent overlap */
-    .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:first-child {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.75rem;
-    }
-    .programme-index #coursemaster-table_wrapper .row:first-child > [class*="col-"] {
-        flex: 0 0 auto;
-        max-width: 100%;
-        display: block;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_length,
-    .programme-index #coursemaster-table_wrapper .dataTables_filter {
-        text-align: left !important;
-        margin-bottom: 0;
-        display: block;
-        width: 100%;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_length label,
-    .programme-index #coursemaster-table_wrapper .dataTables_filter label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 0;
-        flex-wrap: wrap;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_length select {
-        margin: 0;
-        min-width: 70px;
-        max-width: 100%;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_filter input {
-        margin-left: 0 !important;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-    /* DataTables: Stack count + pagination to prevent overlap */
-    .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:last-child {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.75rem;
-    }
-    .programme-index #coursemaster-table_wrapper .row:last-child > [class*="col-"] {
-        flex: 0 0 auto;
-        max-width: 100%;
-        text-align: center !important;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_info,
-    .programme-index #coursemaster-table_wrapper .dataTables_paginate {
-        margin-top: 0;
-        margin-bottom: 0;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_paginate ul.pagination {
-        justify-content: center !important;
-        flex-wrap: wrap;
-    }
-    .programme-index .btn-group[role="group"] .btn span { display: inline; }
-    /* Stack header: title above actions */
-    .programme-index section[role="region"] .col-12.col-md-4 { margin-bottom: 0.75rem; }
-    .programme-index section[role="region"] .d-flex.flex-wrap { justify-content: flex-start !important; }
-    /* Active/Archived + Add Course: compact on tablet */
-    .programme-index .btn-group[role="group"] .btn { padding: 0.4rem 0.75rem !important; font-size: 0.8125rem; }
-    .programme-index a.btn.btn-primary[href*="programme.create"] { padding: 0.4rem 0.75rem; font-size: 0.8125rem; }
-    /* Filter row: compact reset button */
-    .programme-index .row.g-3.mb-4.align-items-end .col-12 { margin-bottom: 0.5rem; }
-    .programme-index .row.g-3.mb-4 .btn-outline-secondary {
-        padding: 0.4rem 0.75rem; font-size: 0.8125rem;
-        width: auto; max-width: 100%; justify-content: center;
-    }
-    /* Table horizontal scroll */
-    .programme-index .table-responsive { overflow-x: auto !important; overflow-y: visible; -webkit-overflow-scrolling: touch; margin: 0 -0.5rem; }
-    .programme-index .table-responsive .table { min-width: 600px; margin-bottom: 0; }
-    .programme-index #coursemaster-table thead th { padding: 0.625rem 0.75rem; font-size: 0.8125rem; }
-    .programme-index #coursemaster-table tbody td { padding: 0.625rem 0.75rem; font-size: 0.875rem; }
-}
-
-@media (max-width: 575.98px) {
-    .programme-index.container-fluid { padding-left: 0.375rem !important; padding-right: 0.375rem !important; }
-    .programme-index .card-body.p-4.p-lg-5 { padding: 0.75rem !important; }
-    /* Active/Archived: compact inline, smaller text */
-    .programme-index .btn-group[role="group"] { flex-direction: row; width: auto; }
-    .programme-index .btn-group[role="group"] .btn {
-        width: auto; border-radius: 0.375rem !important;
-        padding: 0.35rem 0.5rem !important;
-        font-size: 0.75rem;
-    }
-    .programme-index .btn-group[role="group"] .btn:first-child,
-    .programme-index .btn-group[role="group"] .btn:last-child { border-radius: 0.375rem !important; }
-    .programme-index .btn-group[role="group"] .btn i { margin-right: 0.25rem !important; }
-    /* Add Course: compact */
-    .programme-index a.btn.btn-primary[href*="programme.create"] {
-        width: auto; padding: 0.35rem 0.5rem; font-size: 0.75rem;
-    }
-    .programme-index .d-flex.flex-wrap.gap-3 { gap: 0.375rem !important; }
-    /* Reset Filters: compact */
-    .programme-index .row.g-3.mb-4 .btn-outline-secondary {
-        padding: 0.35rem 0.5rem !important; font-size: 0.75rem;
-    }
-    .programme-index .row.g-3.mb-4 .btn-outline-secondary span { font-size: inherit; }
-    /* DataTables: compact stacked layout, no overlap */
-    .programme-index #coursemaster-table_wrapper .dataTables_wrapper .row:first-child {
-        gap: 0.5rem;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_length,
-    .programme-index #coursemaster-table_wrapper .dataTables_filter {
-        font-size: 0.8125rem;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_length select {
-        max-width: 90px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8125rem;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_filter input {
-        width: 100% !important;
-        max-width: 100%;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8125rem;
-        box-sizing: border-box;
-    }
-    .programme-index #coursemaster-table_wrapper .dataTables_paginate .paginate_button {
-        padding: 0.35rem 0.5rem;
-        font-size: 0.8125rem;
-    }
-    #viewCourseModal .modal-dialog { margin: 0.5rem; max-width: calc(100% - 1rem); }
-    #viewCourseModal .modal-body .row.g-3 .col-md-6 { flex: 0 0 100%; max-width: 100%; }
-    #viewCourseModal .modal-body .d-flex.align-items-center { flex-wrap: wrap; }
-}
-
-/* Extra small phones - minimal footprint */
-@media (max-width: 400px) {
-    .programme-index .btn-group[role="group"] .btn { padding: 0.3rem 0.4rem !important; font-size: 0.7rem; }
-    .programme-index a.btn.btn-primary[href*="programme.create"] { padding: 0.3rem 0.4rem; font-size: 0.7rem; }
-    .programme-index .row.g-3.mb-4 .btn-outline-secondary { padding: 0.3rem 0.4rem !important; font-size: 0.7rem; }
-    .programme-index .d-flex.flex-wrap.gap-3 { gap: 0.25rem !important; }
-    .programme-index #coursemaster-table_wrapper .dataTables_length,
-    .programme-index #coursemaster-table_wrapper .dataTables_filter { font-size: 0.75rem; }
-    .programme-index #coursemaster-table_wrapper .dataTables_paginate .paginate_button { padding: 0.3rem 0.4rem; font-size: 0.75rem; }
-}
-</style>
-<div class="container-fluid px-3 px-md-4 py-3 programme-index">
+{{-- Minimal overrides: DataTables dropdown, avatar sizing, table header, responsive layout --}}
+<div class="container-fluid px-3 px-md-4 px-lg-5 py-3 py-md-4 programme-index">
     <x-breadcrum title="Course Master" />
     <div class="datatables">
         <div class="card border-0 shadow-sm rounded-3 overflow-hidden border-start border-4 border-primary">
             <div class="card-body p-4 p-lg-5">
 
-                <section class="row align-items-center mb-4 g-3" role="region" aria-labelledby="courseMasterHeading">
+                <section class="row align-items-center mb-4 g-3 row-gap-2" role="region" aria-labelledby="courseMasterHeading">
                     <div class="col-12 col-md-4 col-lg-3">
                         <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0 d-flex align-items-center gap-2">
                             <span class="rounded-2 p-2 bg-primary bg-opacity-10">
@@ -250,21 +20,21 @@
                         </h1>
                     </div>
                     <div class="col-12 col-md-8 col-lg-9">
-                        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
-                            <div class="btn-group shadow-sm rounded-pill" role="group" aria-label="Filter courses by status">
-                                <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
+                        <div class="d-flex flex-wrap flex-md-nowrap justify-content-md-end align-items-stretch align-items-md-center gap-2 gap-md-3 w-100">
+                            <div class="btn-group shadow-sm rounded-pill w-100 w-md-auto" role="group" aria-label="Filter courses by status">
+                                <button type="button" class="btn btn-success px-3 px-md-4 fw-semibold active" id="filterActive"
                                     aria-pressed="true" aria-current="true">
                                     <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
                                     <span>Active</span>
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" id="filterArchive"
+                                <button type="button" class="btn btn-outline-secondary px-3 px-md-4 fw-semibold" id="filterArchive"
                                     aria-pressed="false">
                                     <i class="bi bi-archive me-1" aria-hidden="true"></i>
                                     <span>Archived</span>
                                 </button>
                             </div>
                             <a href="{{ route('programme.create') }}"
-                                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 shadow-sm"
+                                class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 px-3 px-md-4 shadow-sm w-100 w-md-auto"
                                 aria-label="Add a new course">
                                 <iconify-icon icon="ep:circle-plus-filled" aria-hidden="true"></iconify-icon>
                                 <span class="fw-semibold">Add Course</span>
@@ -287,15 +57,15 @@
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-4">
-                        <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="resetFilters">
+                        <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 px-md-4" id="resetFilters">
                             <i class="bi bi-arrow-counterclockwise"></i>
                             <span>Reset Filters</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="table-responsive">
-                    {!! $dataTable->table(['class' => 'table align-middle mb-0']) !!}
+                <div class="table-responsive table-programme">
+                    {!! $dataTable->table(['class' => 'table text-nowrap mb-0']) !!}
                 </div>
 
             </div>
@@ -303,11 +73,11 @@
     </div>
 </div>
 
-<!-- Course View Modal - Bootstrap 5.3 enhanced -->
-<div class="modal fade" id="viewCourseModal" tabindex="-1" aria-labelledby="viewCourseModalLabel" aria-hidden="true" data-bs-backdrop="static">
+<!-- Course View Modal - Bootstrap 5.3 -->
+<div class="modal fade" id="viewCourseModal" tabindex="-1" aria-labelledby="viewCourseModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
-            <div class="modal-header border-0 py-4 text-white" style="background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);">
+            <div class="modal-header border-0 py-4 bg-info bg-gradient text-white">
                 <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="viewCourseModalLabel">
                     <i class="bi bi-info-circle-fill"></i>
                     Course Details
@@ -317,7 +87,7 @@
             <div class="modal-body p-4">
                 <div id="courseDetailsContent">
                     <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <div class="spinner-border spinner-border-lg text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <p class="mt-3 text-body-secondary">Loading course details...</p>
@@ -554,8 +324,8 @@ $(document).ready(function() {
                                 </h6>
                                 <div class="d-flex align-items-center gap-3 p-3 bg-body-tertiary rounded-3">
                                     ${course.coordinator_photo ? 
-                                        `<img src="${course.coordinator_photo}" alt="Coordinator" class="rounded-circle object-fit-cover" style="width: 48px; height: 48px;">` : 
-                                        `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                                        `<img src="${course.coordinator_photo}" alt="Coordinator" class="rounded-circle object-fit-cover avatar-md">` : 
+                                        `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 avatar-md">
                                             <i class="bi bi-person text-white"></i>
                                         </div>`
                                     }
@@ -576,9 +346,9 @@ $(document).ready(function() {
                             content += `
                                     <div class="d-flex align-items-center gap-3 p-2 bg-body-tertiary rounded-3">
                                         ${photo ? 
-                                            `<img src="${photo}" alt="Assistant" class="rounded-circle object-fit-cover" style="width: 36px; height: 36px;">` : 
-                                            `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                                                <i class="bi bi-person text-white" style="font-size: 0.875rem;"></i>
+                                            `<img src="${photo}" alt="Assistant" class="rounded-circle object-fit-cover avatar-sm">` : 
+                                            `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 avatar-sm">
+                                                <i class="bi bi-person text-white small"></i>
                                             </div>`
                                         }
                                         <span>${coordinator}</span>

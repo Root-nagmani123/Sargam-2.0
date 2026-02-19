@@ -502,7 +502,7 @@
                                 <div class="table-section border rounded-3 p-3 bg-white shadow-sm">
 
                                     <div class="table-header enhanced-header d-flex align-items-center px-2 py-2 mb-2"
-                                        style="background:#af2910; border-bottom:2px solid #af2910; color:#ffffff;">
+                                        style="background:#004a93; border-bottom:2px solid #004a93; color:#ffffff;">
 
                                         <div class="select-all-box me-3">
                                             <input type="checkbox" id="selectAllAvailable" class="form-check-input"

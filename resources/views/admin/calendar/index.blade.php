@@ -72,9 +72,22 @@
     border: 0;
 }
 
+/* Responsive images and media */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+.logo-wrapper img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
 /* Calendar styling */
 .fc {
     font-size: 0.95rem;
+    max-width: 100%;
 }
 
 .fc-daygrid-day {
@@ -1036,6 +1049,653 @@
     }
 }
 
+/* Mobile view: FullCalendar - better small screen experience */
+@media (max-width: 767.98px) {
+    .fc .fc-toolbar-chunk .fc-button {
+        margin-left: 0.5rem !important;
+        margin-right: 0.5rem !important;
+    }
+    .fc .fc-toolbar-chunk .fc-button:first-child {
+        margin-left: 0 !important;
+    }
+    /* Toolbar: stack and wrap on narrow screens */
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+    }
+    .fc .fc-toolbar-title {
+        font-size: 1rem !important;
+        margin: 0.25rem 0;
+        text-align: center;
+        word-break: break-word;
+    }
+    .fc .fc-toolbar-chunk {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.35rem;
+        width: 100%;
+    }
+    .fc .fc-toolbar-chunk .fc-button {
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.8rem !important;
+        flex: 0 0 auto;
+        min-width: 44px;
+    }
+    
+    /* Better button text handling */
+    .fc .fc-button-group .fc-button {
+        white-space: nowrap;
+    }
+    
+    /* Ensure calendar doesn't overflow */
+    .fc-scroller-liquid-absolute {
+        overflow-x: hidden !important;
+    }
+    
+    .fc-scroller {
+        overflow-x: hidden !important;
+    }
+    /* Month view: more compact day cells */
+    .fc .fc-daygrid-day-frame {
+        min-height: 60px !important;
+    }
+    .fc .fc-daygrid-day-number {
+        font-size: 0.75rem !important;
+        padding: 0.25rem !important;
+    }
+    .fc .fc-daygrid-day-events {
+        min-height: 0;
+    }
+    /* List view: better mobile layout */
+    .fc .fc-list {
+        border-width: 1px;
+        font-size: 0.9rem;
+    }
+    .fc .fc-list-event:hover td {
+        background: rgba(0, 74, 147, 0.06);
+    }
+    .fc .fc-list-day-cushion {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem;
+    }
+    .fc .fc-list-event-dot {
+        width: 8px;
+        height: 8px;
+    }
+    .fc .fc-list-event-time {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.5rem;
+    }
+    .fc .fc-list-event-title {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.5rem;
+    }
+    /* Week view: narrower time column */
+    .fc .fc-timegrid-slot-label {
+        font-size: 0.7rem !important;
+    }
+    .fc .fc-timegrid-axis-cushion {
+        font-size: 0.7rem !important;
+    }
+    /* Calendar container: reduce padding on mobile */
+    .calendar-container .card-body {
+        padding: 0.75rem !important;
+    }
+}
+
+/* Extra small screens: further compact */
+@media (max-width: 575.98px) {
+    .fc .fc-toolbar-title {
+        font-size: 0.9rem !important;
+    }
+    .fc .fc-toolbar-chunk .fc-button {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+    .fc .fc-daygrid-day-frame {
+        min-height: 50px !important;
+    }
+    .fc .fc-list-day-cushion,
+    .fc .fc-list-event-time,
+    .fc .fc-list-event-title {
+        font-size: 0.8rem !important;
+    }
+}
+
+/* Mobile view: Add Event & Event Details modals - prevent cropping */
+@media (max-width: 767.98px) {
+    .modal {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    
+    #eventModal .modal-dialog,
+    #eventDetails .modal-dialog,
+    .modal-dialog {
+        margin: 0 !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
+        max-height: 100vh !important;
+        height: 100vh !important;
+        display: flex !important;
+        align-items: stretch !important;
+    }
+    
+    #eventModal .modal-content,
+    #eventDetails .modal-content,
+    .modal-content {
+        max-height: 100vh !important;
+        height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    #eventModal .modal-body,
+    #eventDetails .modal-body,
+    .modal-body {
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 1rem 0.75rem !important;
+        max-height: none !important;
+        min-height: 0 !important;
+    }
+    
+    #eventModal .modal-header,
+    #eventModal .modal-footer,
+    #eventDetails .modal-header,
+    #eventDetails .modal-footer,
+    .modal-header,
+    .modal-footer {
+        flex-shrink: 0 !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .modal-header .btn-close {
+        margin: 0 !important;
+        padding: 0.5rem !important;
+        z-index: 1051 !important;
+    }
+    
+    .modal-footer .btn {
+        flex: 1 !important;
+        min-width: 0 !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* Ensure modal backdrop doesn't interfere */
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.5) !important;
+    }
+}
+
+/* Extra small devices - further adjustments */
+@media (max-width: 575.98px) {
+    #eventModal .modal-dialog,
+    #eventDetails .modal-dialog {
+        margin: 0 !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
+    }
+    
+    #eventModal .modal-header,
+    #eventDetails .modal-header {
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    #eventModal .modal-body,
+    #eventDetails .modal-body {
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    #eventModal .modal-footer,
+    #eventDetails .modal-footer {
+        padding: 0.5rem !important;
+        flex-direction: column !important;
+    }
+    
+    .modal-footer .btn {
+        width: 100% !important;
+        margin: 0.25rem 0 !important;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 767.98px) and (orientation: landscape) {
+    #eventModal .modal-dialog,
+    #eventDetails .modal-dialog {
+        margin: 0.25rem !important;
+        max-width: calc(100vw - 0.5rem) !important;
+        width: calc(100vw - 0.5rem) !important;
+        max-height: calc(100vh - 0.5rem) !important;
+        height: calc(100vh - 0.5rem) !important;
+    }
+    
+    #eventModal .modal-content,
+    #eventDetails .modal-content {
+        max-height: calc(100vh - 0.5rem) !important;
+        height: calc(100vh - 0.5rem) !important;
+        border-radius: 0.5rem !important;
+    }
+    
+    #eventModal .modal-body,
+    #eventDetails .modal-body {
+        max-height: calc(100vh - 180px) !important;
+        padding: 0.75rem !important;
+    }
+    
+    #eventModal .modal-header,
+    #eventDetails .modal-header {
+        padding: 0.75rem !important;
+    }
+}
+
+/* Mobile view: List of events - proper layout */
+@media (max-width: 767.98px) {
+    .timetable-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+        width: 100%;
+    }
+    .timetable-container .table {
+        min-width: 100%;
+        width: max-content;
+    }
+    
+    /* Ensure table-responsive wrapper works properly */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+        width: 100%;
+        position: relative;
+    }
+    .week-cards .row {
+        flex-direction: column !important;
+    }
+    .week-cards .row > * {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Improved list event card mobile layout */
+    .list-event-card {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        padding: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    .list-event-card .title {
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+        margin-bottom: 0.5rem !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    .list-event-card .group-badge {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+        margin-bottom: 0.4rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+    }
+    
+    .list-event-card .meta {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.4rem 0.5rem !important;
+        margin-top: 0.25rem !important;
+        font-size: 0.8rem !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    .list-event-card .meta.d-flex {
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 0.35rem !important;
+    }
+    
+    .list-event-card .meta i {
+        font-size: 0.9rem !important;
+        margin-right: 0.4rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .list-event-card .event-tooltip {
+        min-width: calc(100vw - 2rem) !important;
+        max-width: calc(100vw - 2rem) !important;
+        left: 0 !important;
+        right: 0 !important;
+        font-size: 0.8rem !important;
+        padding: 0.75rem !important;
+    }
+    
+    /* Prevent hover effects on touch devices */
+    .list-event-card:hover {
+        transform: none !important;
+    }
+    
+    /* Table cell adjustments */
+    .timetable-grid td {
+        padding: 0.4rem 0.25rem !important;
+        vertical-align: top !important;
+    }
+    
+    .timetable-grid th {
+        padding: 0.5rem 0.35rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .timetable-grid .time-column {
+        min-width: 60px !important;
+        font-size: 0.7rem !important;
+        padding: 0.4rem 0.25rem !important;
+    }
+}
+
+/* Mobile Event Cards - Full Detail View */
+.mobile-event-cards-container {
+    padding: 0;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    min-height: 200px;
+}
+
+@media (max-width: 767.98px) {
+    .mobile-event-cards-container {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .timetable-container {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .mobile-event-cards-container {
+        display: none !important;
+    }
+    
+    .timetable-container {
+        display: block !important;
+    }
+}
+
+.mobile-day-section {
+    margin-bottom: 2rem;
+}
+
+.mobile-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #003366 100%);
+    border-radius: 0.75rem 0.75rem 0 0;
+    margin-bottom: 0;
+}
+
+.mobile-day-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.mobile-day-title i {
+    font-size: 1.2rem;
+}
+
+.mobile-day-date {
+    font-size: 0.85rem;
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.mobile-day-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.35rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.mobile-events-list {
+    background: #f8f9fa;
+    border-radius: 0 0 0.75rem 0.75rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mobile-event-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid var(--primary-color);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.mobile-event-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.mobile-event-card:active,
+.mobile-event-card:focus {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    transform: scale(0.98);
+}
+
+.mobile-event-card:active::before {
+    opacity: 1;
+}
+
+.mobile-card-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #003366 100%);
+    color: white;
+    padding: 0.4rem 0.85rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 6px rgba(0, 74, 147, 0.3);
+}
+
+.mobile-card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.mobile-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.mobile-card-time {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.mobile-card-time i {
+    font-size: 1.1rem;
+}
+
+.mobile-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.mobile-card-detail {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.65rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    transition: background 0.2s ease;
+}
+
+.mobile-card-detail i {
+    font-size: 1.2rem;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.mobile-card-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.mobile-card-detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mobile-card-detail-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* Responsive adjustments for mobile cards */
+@media (max-width: 575.98px) {
+    .mobile-day-header {
+        padding: 0.65rem 0.85rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .mobile-day-title {
+        font-size: 1rem;
+        width: 100%;
+    }
+
+    .mobile-day-badge {
+        align-self: flex-end;
+        font-size: 0.8rem;
+        padding: 0.3rem 0.65rem;
+    }
+
+    .mobile-event-card {
+        padding: 1rem;
+    }
+
+    .mobile-card-title {
+        font-size: 1rem;
+    }
+
+    .mobile-card-time {
+        font-size: 0.9rem;
+    }
+
+    .mobile-card-detail {
+        padding: 0.55rem;
+    }
+
+    .mobile-card-detail i {
+        font-size: 1.1rem;
+    }
+
+    .mobile-card-detail-label {
+        font-size: 0.7rem;
+    }
+
+    .mobile-card-detail-value {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 399.98px) {
+    .mobile-events-list {
+        padding: 0.75rem;
+        gap: 0.75rem;
+    }
+
+    .mobile-event-card {
+        padding: 0.85rem;
+    }
+
+    .mobile-card-title {
+        font-size: 0.95rem;
+    }
+
+    .mobile-card-detail {
+        padding: 0.5rem;
+        gap: 0.6rem;
+    }
+}
+
 /* Empty State Styling */
 .empty-state {
     padding: 3rem 2rem;
@@ -1389,6 +2049,143 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
 /* ========== COMPREHENSIVE RESPONSIVE DESIGN ========== */
 
+/* Very Small Devices (< 400px) - Ultra Compact */
+@media (max-width: 399.98px) {
+    .container-fluid {
+        padding: 0.25rem !important;
+    }
+
+    .course-header {
+        padding: 0.75rem 0.5rem !important;
+        border-radius: 0.5rem;
+    }
+
+    .course-header h1 {
+        font-size: 1rem !important;
+        line-height: 1.3;
+    }
+
+    .course-header p {
+        font-size: 0.7rem !important;
+    }
+
+    .course-header .badge {
+        font-size: 0.65rem !important;
+        padding: 0.2rem 0.4rem !important;
+    }
+
+    .control-panel {
+        padding: 0.75rem 0.5rem !important;
+        gap: 0.5rem !important;
+    }
+
+    .btn-group .btn {
+        font-size: 0.7rem !important;
+        padding: 0.35rem 0.4rem !important;
+    }
+
+    .btn-group .btn span {
+        display: none;
+    }
+
+    .btn-group .btn i {
+        margin-right: 0 !important;
+    }
+
+    #courseFilter {
+        font-size: 0.8rem !important;
+        padding: 0.4rem !important;
+    }
+
+    #createEventButton {
+        font-size: 0.75rem !important;
+        padding: 0.5rem !important;
+    }
+
+    #createEventButton span {
+        display: none;
+    }
+
+    .fc {
+        font-size: 0.7rem !important;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 0.85rem !important;
+    }
+
+    .fc .fc-toolbar-chunk .fc-button {
+        padding: 0.3rem 0.4rem !important;
+        font-size: 0.7rem !important;
+    }
+
+    .fc-col-header-cell {
+        padding: 0.4rem 0.15rem !important;
+        font-size: 0.65rem !important;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 0.65rem !important;
+        padding: 0.25rem !important;
+    }
+
+    .fc-event-card {
+        padding: 0.25rem 0.3rem !important;
+        font-size: 0.65rem !important;
+    }
+
+    .fc-event-card .event-title {
+        font-size: 0.7rem !important;
+    }
+
+    .timetable-header {
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    .timetable-header h1 {
+        font-size: 0.9rem !important;
+    }
+
+    .timetable-header p {
+        font-size: 0.7rem !important;
+    }
+
+    .logo-wrapper img {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .week-controls .btn {
+        font-size: 0.7rem !important;
+        padding: 0.35rem 0.4rem !important;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.4rem 0.25rem !important;
+        font-size: 0.7rem !important;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 60px !important;
+        font-size: 0.65rem !important;
+    }
+
+    .modal-dialog {
+        margin: 0.25rem !important;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    .modal-title {
+        font-size: 0.9rem !important;
+    }
+}
+
 /* Extra Small Devices (< 576px) */
 @media (max-width: 575.98px) {
     /* General Layout */
@@ -1580,12 +2377,13 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
     .week-controls .btn-group {
         margin-bottom: 0.75rem;
-        gap: 0.25rem;
+        gap: 0.5rem !important;
     }
 
     .week-controls .btn {
         font-size: 0.75rem;
         padding: 0.4rem 0.5rem;
+        margin: 0 0.15rem;
     }
 
     .week-badge .badge {
@@ -1596,14 +2394,25 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     /* Week Cards */
     .week-cards .row {
         gap: 0.75rem !important;
+        flex-wrap: wrap;
     }
 
     .week-cards .row > * {
-        flex: 0 0 calc(33.333% - 0.5rem);
+        flex: 0 0 calc(50% - 0.375rem);
+        max-width: calc(50% - 0.375rem);
     }
 
     .week-card {
         padding: 0.75rem !important;
+        min-width: 0;
+    }
+    
+    /* On very small screens, stack week cards */
+    @media (max-width: 399.98px) {
+        .week-cards .row > * {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
     }
 
     .week-card-date {
@@ -1637,6 +2446,26 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
     .timetable-grid td {
         max-height: 200px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* Ensure table is scrollable on very small screens */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+        width: 100%;
+    }
+
+    .timetable-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .timetable-container .table {
+        min-width: 100%;
+        width: max-content;
     }
 
     /* List Event Cards */
@@ -1644,25 +2473,49 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         padding: 0.65rem !important;
         border-radius: 0.5rem;
         margin-bottom: 0.5rem;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.4rem !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
     }
 
     .list-event-card .title {
-        font-size: 0.85rem;
+        font-size: 0.85rem !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        line-height: 1.4 !important;
     }
 
     .list-event-card .meta {
-        font-size: 0.75rem;
+        font-size: 0.75rem !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.3rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
     }
 
     .list-event-card .event-tooltip {
-        min-width: 200px;
+        min-width: calc(100vw - 2rem) !important;
+        max-width: calc(100vw - 2rem) !important;
         font-size: 0.75rem;
         padding: 0.65rem;
+        left: 0 !important;
+        right: 0 !important;
     }
 
     .list-event-card .group-badge {
-        font-size: 0.65rem;
-        padding: 0.1rem 0.35rem;
+        font-size: 0.65rem !important;
+        padding: 0.1rem 0.35rem !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
     }
 
     /* Form Elements */
@@ -1771,20 +2624,45 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     .control-panel {
         flex-direction: column;
         align-items: stretch !important;
+        gap: 1rem;
+    }
+
+    .control-panel > .d-flex {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
     }
 
     .view-toggle-section {
         flex-direction: column;
         width: 100%;
+        gap: 0.75rem;
     }
 
     .btn-group {
         width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .btn-group .btn {
         flex: 1;
+        min-width: 0;
         font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Ensure form elements are full width */
+    .form-floating {
+        width: 100%;
+    }
+    
+    .form-floating > .form-select,
+    .form-floating > .form-control {
+        width: 100%;
     }
 
     #courseFilter {
@@ -1960,8 +2838,37 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 }
 
-/* Desktop Devices (992px and up) - Keep Original Styling */
-@media (min-width: 992px) {
+/* Large Devices (992px to 1199px) */
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .course-header {
+        padding: 2.5rem 1.5rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.75rem;
+    }
+
+    .fc {
+        font-size: 0.93rem;
+    }
+
+    .fc-event-card {
+        padding: 0.95rem 1rem;
+    }
+
+    .fc-event-card .event-title {
+        font-size: 1.03rem;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.7rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Extra Large Devices (1200px and up) - Keep Original Styling */
+@media (min-width: 1200px) {
     .course-header {
         padding: 2.75rem 1.5rem;
     }
@@ -2027,6 +2934,134 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 }
 
+/* Touch-friendly improvements for all mobile devices */
+@media (hover: none) and (pointer: coarse) {
+    /* Increase touch target sizes */
+    .btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .fc .fc-button {
+        min-height: 44px;
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    .fc-event-card {
+        min-height: 44px;
+        padding: 0.75rem !important;
+    }
+
+    .form-control,
+    .form-select {
+        min-height: 44px;
+    }
+
+    /* Better spacing for touch */
+    .btn-group .btn {
+        margin: 0.25rem;
+    }
+}
+
+/* Landscape orientation on mobile devices */
+@media (max-width: 767.98px) and (orientation: landscape) {
+    .course-header {
+        padding: 1rem 1.5rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.2rem;
+    }
+
+    .control-panel {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .control-panel .btn-group {
+        width: auto;
+        flex: 0 0 auto;
+    }
+
+    #courseFilter {
+        width: auto;
+        min-width: 180px;
+    }
+
+    #createEventButton {
+        width: auto;
+    }
+
+    .fc .fc-toolbar {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .timetable-header .row {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .timetable-header .col-md-2,
+    .timetable-header .col-md-6,
+    .timetable-header .col-md-4 {
+        flex: 0 0 auto;
+    }
+}
+
+/* Ensure proper viewport handling */
+@media (max-width: 767.98px) {
+    /* Prevent horizontal scroll */
+    body {
+        overflow-x: hidden;
+    }
+
+    .container-fluid {
+        max-width: 100%;
+        overflow-x: hidden;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    /* Ensure cards don't overflow */
+    .card,
+    .card-body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* FullCalendar container */
+    #calendar {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .fc-scroller {
+        overflow-x: hidden !important;
+    }
+    
+    /* Ensure all flex containers wrap properly */
+    .d-flex {
+        flex-wrap: wrap;
+    }
+    
+    /* Better spacing for stacked elements */
+    .mb-3,
+    .mb-4 {
+        margin-bottom: 1rem;
+    }
+    
+    /* Ensure badges and labels don't overflow */
+    .badge {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: inline-block;
+    }
+}
+
 /* Print Styles */
 @media print {
     .control-panel,
@@ -2087,7 +3122,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     <!-- Main Content Area -->
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
+         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
         <section
     class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
     role="region"
@@ -2138,7 +3173,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         </fieldset>
 
         <!-- Primary Actions -->
-        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP'))
+        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
         <div class="d-flex align-items-center gap-2">
             <button
                 type="button"
@@ -2245,6 +3280,11 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                 <div class="row g-3" role="list" aria-label="Days of the week">
                                     <!-- JS will render day cards here -->
                                 </div>
+                            </div>
+
+                            <!-- Mobile Event Cards Container (shown only on mobile) -->
+                            <div id="mobileEventCards" class="mobile-event-cards-container" style="display: none;">
+                                <!-- Mobile cards will be rendered here by JavaScript -->
                             </div>
 
                             <!-- Timetable table -->
@@ -2464,6 +3504,7 @@ class CalendarManager {
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
+            dateClick: (info) => this.handleDateSelect({ ...info, start: info.date }),
             eventDidMount: this.setEventAccessibility.bind(this),
             dayCellDidMount: this.setDayCellAccessibility.bind(this)
         });
@@ -2841,12 +3882,31 @@ class CalendarManager {
         document.getElementById('eventgroupname').textContent = data.group_name || '';
         document.getElementById('internal_faculty_name_show').textContent = data.internal_faculty || '';
 
-        // Set edit/delete button data
+        // Set edit/delete button data and ensure event listeners
         const editBtn = document.getElementById('editEventBtn');
         const deleteBtn = document.getElementById('deleteEventBtn');
 
-        if (editBtn) editBtn.dataset.id = data.id;
-        if (deleteBtn) deleteBtn.dataset.id = data.id;
+        if (editBtn) {
+            editBtn.dataset.id = data.id;
+            // Remove any existing listeners and add new one
+            editBtn.onclick = null;
+            editBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.loadEventForEdit();
+            });
+        }
+        
+        if (deleteBtn) {
+            deleteBtn.dataset.id = data.id;
+            // Remove any existing listeners and add new one
+            deleteBtn.onclick = null;
+            deleteBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.confirmDelete();
+            });
+        }
 
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
@@ -2854,7 +3914,7 @@ class CalendarManager {
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))) return;
+        if (!@json(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))) return;
 
         this.resetEventForm();
         this.setFormDate(info.start);
@@ -2949,9 +4009,33 @@ class CalendarManager {
             this.toggleFeedbackDependencies();
         });
 
-        // Edit/Delete buttons
-        document.getElementById('editEventBtn')?.addEventListener('click', () => this.loadEventForEdit());
-        document.getElementById('deleteEventBtn')?.addEventListener('click', () => this.confirmDelete());
+        // Edit/Delete buttons - Use event delegation for reliability
+        const eventDetailsModal = document.getElementById('eventDetails');
+        if (eventDetailsModal) {
+            eventDetailsModal.addEventListener('click', (e) => {
+                if (e.target.closest('#editEventBtn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.loadEventForEdit();
+                } else if (e.target.closest('#deleteEventBtn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.confirmDelete();
+                }
+            });
+        }
+        
+        // Also attach direct listeners as backup
+        document.getElementById('editEventBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.loadEventForEdit();
+        });
+        document.getElementById('deleteEventBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.confirmDelete();
+        });
 
         // Create event button
         document.getElementById('createEventButton')?.addEventListener('click', () => {
@@ -2977,8 +4061,43 @@ class CalendarManager {
             }
         });
 
+        // Mobile event cards: open details on click/keyboard
+        const mobileCardsContainer = document.getElementById('mobileEventCards');
+        if (mobileCardsContainer) {
+            mobileCardsContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.mobile-event-card');
+                if (card?.dataset?.eventId) {
+                    this.loadEventDetails(card.dataset.eventId);
+                }
+            });
+
+            mobileCardsContainer.addEventListener('keydown', (e) => {
+                const card = e.target.closest('.mobile-event-card');
+                if (!card) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (card.dataset?.eventId) {
+                        this.loadEventDetails(card.dataset.eventId);
+                    }
+                }
+            });
+        }
+
         // Density toggle
         document.getElementById('toggleDensityBtn')?.addEventListener('click', () => this.toggleDensity());
+
+        // Handle window resize to switch between mobile and desktop views
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const listViewEl = document.getElementById('eventListView');
+                if (listViewEl && !listViewEl.classList.contains('d-none')) {
+                    // Reload list view to switch between mobile cards and desktop table
+                    this.loadListView();
+                }
+            }, 250);
+        });
 
         // Course filter change
         document.getElementById('courseFilter')?.addEventListener('change', (e) => {
@@ -3455,28 +4574,75 @@ class CalendarManager {
     }
 
     async loadEventForEdit() {
-        const eventId = document.getElementById('editEventBtn').dataset.id;
+         const editBtn = document.getElementById('editEventBtn');
+        
+        if (!editBtn) {
+            console.error('Edit button not found');
+            this.showNotification('Edit button not found', 'danger');
+            return;
+        }
+        
+        const eventId = editBtn.dataset.id;
+        
+        if (!eventId) {
+            console.error('Event ID not found on edit button. Button dataset:', editBtn.dataset);
+            this.showNotification('Event ID not found. Please try again.', 'danger');
+            return;
+        }
+        
+        console.log('Loading event for edit, ID:', eventId);
 
         try {
-            const response = await fetch(`/calendar/event-edit/${eventId}`);
+            const response = await fetch(`/calendar/event-edit/${eventId}`, {
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const event = await response.json();
 
             await this.populateEditForm(event);
 
             // Update modal for edit
-            document.getElementById('eventModalTitle').textContent = 'Edit Event';
-            document.querySelector('.btn-text').textContent = 'Update Event';
-            document.getElementById('submitEventBtn').dataset.action = 'edit';
-            document.getElementById('start_datetime').removeAttribute('readonly');
+            const modalTitle = document.getElementById('eventModalTitle');
+            if (modalTitle) {
+                modalTitle.textContent = 'Edit Event';
+            }
+            
+            const btnText = document.querySelector('.btn-text');
+            if (btnText) {
+                btnText.textContent = 'Update Event';
+            }
+            
+            const submitBtn = document.getElementById('submitEventBtn');
+            if (submitBtn) {
+                submitBtn.dataset.action = 'edit';
+                submitBtn.dataset.eventId = eventId;
+            }
+            
+            const startDateInput = document.getElementById('start_datetime');
+            if (startDateInput) {
+                startDateInput.removeAttribute('readonly');
+            }
 
-            // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
-            modal.show();
+            // Hide event details modal and show edit modal
+            const eventDetailsModal = bootstrap.Modal.getInstance(document.getElementById('eventDetails'));
+            if (eventDetailsModal) {
+                eventDetailsModal.hide();
+            }
+            
+            const editModal = new bootstrap.Modal(document.getElementById('eventModal'));
+            editModal.show();
 
         } catch (error) {
-            this.showNotification('Error loading event for editing', 'danger');
             console.error('Edit load error:', error);
+            this.showNotification('Error loading event for editing: ' + error.message, 'danger');
         }
     }
 
@@ -3832,6 +4998,7 @@ async setInternalFaculty(internalFacultyIds) {
             // Filter and render events
             const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
             console.log('Filtered events for this week:', filteredEvents.length);
+            console.log('Sample event structure:', filteredEvents.length > 0 ? filteredEvents[0] : 'No events');
             this.renderListView(filteredEvents);
             this.renderWeekCards(events, weekStart);
             this.updateWeekRangeText(weekStart);
@@ -3870,6 +5037,8 @@ async setInternalFaculty(internalFacultyIds) {
 
     renderListView(events) {
         const tbody = document.getElementById('timetableBody');
+        const mobileCardsContainer = document.getElementById('mobileEventCards');
+        const isMobile = window.innerWidth <= 767;
 
         if (!events.length) {
             tbody.innerHTML = `
@@ -3882,29 +5051,251 @@ async setInternalFaculty(internalFacultyIds) {
                     </td>
                 </tr>
             `;
+            if (mobileCardsContainer) {
+                mobileCardsContainer.innerHTML = `
+                    <div class="empty-state text-center p-5">
+                        <i class="bi bi-calendar-x display-5 text-muted mb-3"></i>
+                        <p class="text-muted mb-3">No events scheduled</p>
+                    </div>
+                `;
+            }
             return;
         }
 
-        // Group events by time slot
-        const timeSlots = this.groupEventsByTime(events);
+        // On mobile, render cards instead of table
+        if (isMobile && mobileCardsContainer) {
+            console.log('Rendering mobile cards view. Events count:', events.length);
+            this.renderMobileEventCards(events, mobileCardsContainer);
+            // Hide table on mobile
+            const tableContainer = document.querySelector('.timetable-container');
+            if (tableContainer) {
+                tableContainer.style.display = 'none';
+            }
+            mobileCardsContainer.style.display = 'block';
+            mobileCardsContainer.classList.remove('d-none');
+        } else {
+            // Desktop: render table
+            if (mobileCardsContainer) {
+                mobileCardsContainer.style.display = 'none';
+                mobileCardsContainer.classList.add('d-none');
+            }
+            const tableContainer = document.querySelector('.timetable-container');
+            if (tableContainer) {
+                tableContainer.style.display = 'block';
+            }
+
+            // Group events by time slot
+            const timeSlots = this.groupEventsByTime(events);
+
+            let html = '';
+            Object.entries(timeSlots).forEach(([time, dayEvents]) => {
+                html += `
+                    <tr>
+                        <th scope="row" class="time-slot">${time}</th>
+                        ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
+                            <td class="event-cell">
+                                ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
+                            </td>
+                        `).join('')}
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            this.applyBreakLunchRowStyles();
+            this.initializeScrollIndicators();
+        }
+    }
+
+    renderMobileEventCards(events, container) {
+        if (!events || events.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state text-center p-5">
+                    <i class="bi bi-calendar-x display-5 text-muted mb-3"></i>
+                    <p class="text-muted mb-3">No events scheduled</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Group events by day
+        const eventsByDay = {};
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        events.forEach(event => {
+            if (!event.start) {
+                console.warn('Event missing start date:', event);
+                return;
+            }
+            
+            const eventDate = new Date(event.start);
+            if (isNaN(eventDate.getTime())) {
+                console.warn('Invalid event date:', event.start, event);
+                return;
+            }
+            
+            const dayIndex = eventDate.getDay();
+            const dayName = dayNames[dayIndex];
+            const dayShort = dayShortNames[dayIndex];
+            
+            // Use the first event's date for the day header
+            if (!eventsByDay[dayName]) {
+                eventsByDay[dayName] = {
+                    dayIndex: dayIndex,
+                    dayShort: dayShort,
+                    date: new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate()),
+                    events: []
+                };
+            }
+            eventsByDay[dayName].events.push(event);
+        });
+
+        // Sort days by day index (Sunday=0, Monday=1, etc.)
+        const sortedDays = Object.keys(eventsByDay).sort((a, b) => {
+            return eventsByDay[a].dayIndex - eventsByDay[b].dayIndex;
+        });
+
+        if (sortedDays.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state text-center p-5">
+                    <i class="bi bi-calendar-x display-5 text-muted mb-3"></i>
+                    <p class="text-muted mb-3">No valid events found</p>
+                </div>
+            `;
+            return;
+        }
 
         let html = '';
-        Object.entries(timeSlots).forEach(([time, dayEvents]) => {
+        sortedDays.forEach(dayName => {
+            const dayData = eventsByDay[dayName];
+            const dateStr = dayData.date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+
+            // Sort events by time within each day
+            dayData.events.sort((a, b) => {
+                const timeA = a.start ? new Date(a.start).getTime() : 0;
+                const timeB = b.start ? new Date(b.start).getTime() : 0;
+                return timeA - timeB;
+            });
+
             html += `
-                <tr>
-                    <th scope="row" class="time-slot">${time}</th>
-                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
-                        <td class="event-cell">
-                            ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
-                        </td>
-                    `).join('')}
-                </tr>
+                <div class="mobile-day-section mb-4">
+                    <div class="mobile-day-header">
+                        <h3 class="mobile-day-title">
+                            <i class="bi bi-calendar-day me-2"></i>
+                            ${dayName}
+                            <span class="mobile-day-date">${dateStr}</span>
+                        </h3>
+                        <span class="mobile-day-badge">${dayData.events.length} event${dayData.events.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="mobile-events-list">
+                        ${dayData.events.map(event => this.renderMobileEventCard(event)).join('')}
+                    </div>
+                </div>
             `;
         });
 
-        tbody.innerHTML = html;
-        this.applyBreakLunchRowStyles();
-        this.initializeScrollIndicators();
+        container.innerHTML = html;
+    }
+
+    renderMobileEventCard(event) {
+        // Handle both FullCalendar event format and raw API format
+        const extendedProps = event.extendedProps || {};
+        const groupName = extendedProps.group_name || extendedProps.group || event.group_name || event.group || '';
+        const title = event.title || extendedProps.topic || event.topic || event.subject_topic || 'Untitled Event';
+        const faculty = extendedProps.faculty_name || event.faculty_name || '';
+        const venue = extendedProps.vanue || extendedProps.venue_name || event.vanue || event.venue_name || '';
+        const classSession = extendedProps.class_session || event.class_session || '';
+        const internalFaculty = extendedProps.internal_faculty_name || event.internal_faculty_name || '';
+        
+        // Parse start and end times
+        let startTime = '';
+        let endTime = '';
+        let timeRange = 'All Day';
+        
+        if (event.start) {
+            const startDate = new Date(event.start);
+            if (!isNaN(startDate.getTime())) {
+                startTime = startDate.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+            }
+        }
+        
+        if (event.end) {
+            const endDate = new Date(event.end);
+            if (!isNaN(endDate.getTime())) {
+                endTime = endDate.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+            }
+        }
+        
+        if (startTime && endTime) {
+            timeRange = `${startTime} - ${endTime}`;
+        } else if (startTime) {
+            timeRange = startTime;
+        } else if (classSession) {
+            timeRange = classSession;
+        }
+        
+        const eventId = event.id || extendedProps.event_id || event.event_id || event.pk || '';
+
+        return `
+            <div class="mobile-event-card" data-event-id="${eventId}" role="button" tabindex="0">
+                ${groupName ? `<div class="mobile-card-badge">${groupName}</div>` : ''}
+                <div class="mobile-card-header">
+                    <h4 class="mobile-card-title">${title}</h4>
+                    <div class="mobile-card-time">
+                        <i class="bi bi-clock-fill"></i>
+                        <span>${timeRange}</span>
+                    </div>
+                </div>
+                <div class="mobile-card-body">
+                    ${classSession ? `
+                    <div class="mobile-card-detail">
+                        <i class="bi bi-clock-history text-primary"></i>
+                        <div class="mobile-card-detail-content">
+                            <span class="mobile-card-detail-label">Session</span>
+                            <span class="mobile-card-detail-value">${classSession}</span>
+                        </div>
+                    </div>` : ''}
+                    ${venue ? `
+                    <div class="mobile-card-detail">
+                        <i class="bi bi-geo-alt-fill text-danger"></i>
+                        <div class="mobile-card-detail-content">
+                            <span class="mobile-card-detail-label">Venue</span>
+                            <span class="mobile-card-detail-value">${venue}</span>
+                        </div>
+                    </div>` : ''}
+                    ${faculty ? `
+                    <div class="mobile-card-detail">
+                        <i class="bi bi-person-fill text-info"></i>
+                        <div class="mobile-card-detail-content">
+                            <span class="mobile-card-detail-label">Faculty</span>
+                            <span class="mobile-card-detail-value">${faculty}</span>
+                        </div>
+                    </div>` : ''}
+                    ${internalFaculty ? `
+                    <div class="mobile-card-detail">
+                        <i class="bi bi-person-check-fill text-success"></i>
+                        <div class="mobile-card-detail-content">
+                            <span class="mobile-card-detail-label">Internal Faculty</span>
+                            <span class="mobile-card-detail-value">${internalFaculty}</span>
+                        </div>
+                    </div>` : ''}
+                </div>
+            </div>
+        `;
     }
 
     renderWeekCards(events, weekStart) {

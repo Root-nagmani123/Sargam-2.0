@@ -12,7 +12,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
+                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -99,6 +99,10 @@
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Faculty</span>
                                     </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.faculty.whos-who') ? 'active' : '' }}" 
+                                        href="{{ route('admin.faculty.whos-who') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Who's Who</span>
+                                    </a></li>
                             </ul>
 
                             {{-- USER MANAGEMENT --}}
@@ -137,14 +141,14 @@
                             box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
                             min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
-                                    aria-expanded="false" aria-controls="userManagementCollapse">
+                                    data-bs-toggle="collapse" href="#idCardManagementCollapse" role="button"
+                                    aria-expanded="false" aria-controls="idCardManagementCollapse">
                                     <span class="hide-menu fw-bold small small-sm-normal text-nowrap">ID Card Management</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="userManagementCollapse">
+                            <ul class="collapse list-unstyled ps-3" id="idCardManagementCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.employee_idcard.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">ID Card List</span>
@@ -161,11 +165,202 @@
                                         href="{{ route('admin.security.vehicle_pass.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
                                     </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
+                                        href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval I</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
+                                        href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval II</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.employee_idcard_approval.all') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">All ID Card Requests</span>
+                                    </a></li>
                             </ul>
                             <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
-                                </a></li>                            
+                                </a></li>
+
+                            {{-- ESTATE MANAGEMENT --}}
+                            <li class="sidebar-item mt-2" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#estateManagementCollapse" role="button"
+                                    aria-expanded="false" aria-controls="estateManagementCollapse">
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Estate Management</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="estateManagementCollapse">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.request-for-others') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
+                                    </a>
+                                </li>
+                                <!-- <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.add-other-estate-request') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.add-other-estate-request') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Add Other Estate Request</span>
+                                    </a>
+                                </li> -->
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.possession-for-others') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Others</span>
+                                    </a>
+                                </li>
+                              
+                                <!-- <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.possession-view') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession View</span>
+                                    </a>
+                                </li> -->
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.update-meter-reading') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading</span>
+                                    </a>
+                                </li>
+                                <!-- <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading-of-other') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.update-meter-reading-of-other') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
+                                    </a>
+                                </li> -->
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.update-meter-no') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter No.</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.generate-estate-bill') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.return-house') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.return-house') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Return House</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-house') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-house') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define House</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            {{-- ESTATE MASTER --}}
+                            <li class="sidebar-item mt-2" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#estateMasterCollapse" role="button"
+                                    aria-expanded="false" aria-controls="estateMasterCollapse">
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Estate Master</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="estateMasterCollapse">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-campus.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-campus.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Estate/Campus</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-unit-type.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-unit-type.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Unit Type</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-unit-sub-type.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-unit-sub-type.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Unit Sub Type</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-block-building.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-block-building.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Block/Building</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-electric-slab.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-electric-slab.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-pay-scale.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-pay-scale.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Pay Scale</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.eligibility-criteria.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.eligibility-criteria.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Eligibility - Criteria</span>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            {{-- ESTATE REPORTS --}}
+                            <li class="sidebar-item mt-2" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#estateReportsCollapse" role="button"
+                                    aria-expanded="false" aria-controls="estateReportsCollapse">
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Estate Reports</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="estateReportsCollapse">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.pending-meter-reading') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.reports.pending-meter-reading') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Pending Meter Reading</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.house-status') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.reports.house-status') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">House Status</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.bill-report-grid') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.reports.bill-report-grid') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report - Grid View</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.bill-report-print') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.reports.bill-report-print') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
+                                    </a>
+                                </li>
+                            </ul>
+                            
                             @endif
 
                         </ul>

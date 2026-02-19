@@ -22,6 +22,16 @@ class District extends Model
         return $this->hasMany(City::class, 'district_master_pk', 'pk');
     }
 
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'country_master_pk', 'pk');
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(State::class, 'state_master_pk', 'pk');
+    }
+
     public static function getDistrictList()
     {
         return self::select('pk', 'district_name')->get()->pluck('district_name', 'pk');

@@ -135,7 +135,7 @@
                                 <!-- start row -->
                                 <tr>
                                     <th class="col">S.No.</th>
-                                    <th class="col">Speciality Name</th>
+                                    <th class="col">Medical specialty name</th>
                                     <th class="col">Created Date</th>
                                     <th class="col">Status</th>
                                     <th class="col">Actions</th>

@@ -37,14 +37,132 @@ function incoming_course(Request $request)
 
 function guest_faculty()
 {
-   $guest_faculty = DB::table('faculty_master')->where('faculty_type', 2)->where('active_inactive', 1)->get();
+   $guest_faculty = DB::table('faculty_master')
+       ->where('faculty_type', 2)
+       ->where('active_inactive', 1)
+       ->select('pk', 'full_name', 'mobile_no', 'faculty_sector', 'email_id', 'photo_uplode_path')
+       ->get();
+   
+   // Fetch feedback data and session count for each guest faculty
+   $guest_faculty = $guest_faculty->map(function ($faculty) {
+       // Get feedback grouped by session (timetable_pk)
+       $feedbackData = DB::table('topic_feedback as tf')
+           ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+           ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+           ->leftJoin('subject_master as sm', 'tt.subject_master_pk', '=', 'sm.pk')
+           ->select(
+               'tf.timetable_pk',
+               'tf.topic_name',
+               'cm.course_name',
+               'cm.pk as course_id',
+               'sm.subject_name',
+               'tt.START_DATE as session_date',
+               'tt.class_session',
+               DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
+               DB::raw('ROUND(AVG(CAST(tf.content AS DECIMAL(10,2))) * 20, 2) as avg_content_percent'),
+               DB::raw('ROUND(AVG(CAST(tf.presentation AS DECIMAL(10,2))) * 20, 2) as avg_presentation_percent'),
+               DB::raw('ROUND(AVG(CAST(tf.content AS DECIMAL(10,2))), 2) as avg_content_rating'),
+               DB::raw('ROUND(AVG(CAST(tf.presentation AS DECIMAL(10,2))), 2) as avg_presentation_rating'),
+               DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark END SEPARATOR " | ") as remarks')
+           )
+           ->where('tf.faculty_pk', $faculty->pk)
+           ->where('tf.is_submitted', 1)
+           ->groupBy('tf.timetable_pk', 'tf.topic_name', 'cm.course_name', 'cm.pk', 'sm.subject_name', 'tt.START_DATE', 'tt.class_session')
+           ->orderBy('tt.START_DATE', 'desc')
+           ->get();
+       
+       // Count total sessions for this faculty from timetable
+       $sessionCount = DB::table('timetable')
+           ->where('active_inactive', 1)
+           ->where(function ($query) use ($faculty) {
+               $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$faculty->pk.'"'])
+                     ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$faculty->pk])
+                     ->orWhere('faculty_master', $faculty->pk);
+           })
+           ->count();
+       
+       // Calculate summary statistics
+       $totalFeedback = $feedbackData->count();
+       $totalParticipants = $feedbackData->sum('participant_count');
+       $avgContent = $feedbackData->avg('avg_content_percent') ?? 0;
+       $avgPresentation = $feedbackData->avg('avg_presentation_percent') ?? 0;
+       
+       $faculty->feedback = $feedbackData;
+       $faculty->session_count = $sessionCount;
+       $faculty->feedback_summary = [
+           'total_feedback' => $totalFeedback,
+           'total_participants' => $totalParticipants,
+           'avg_content' => round($avgContent, 2),
+           'avg_presentation' => round($avgPresentation, 2),
+       ];
+       
+       return $faculty;
+   });
+   
     return view('admin.dashboard.guest_faculty', compact('guest_faculty'));
     
 }
-function inhouse_faculty(){
-   $inhouse_faculty  = DB::table('faculty_master')->where('faculty_type', 1)->where('active_inactive', 1)->get();
+function inhouse_faculty()
+{
+    $inhouse_faculty = DB::table('faculty_master')
+        ->where('faculty_type', 1)
+        ->where('active_inactive', 1)
+        ->select('pk', 'full_name', 'mobile_no', 'faculty_sector', 'email_id', 'photo_uplode_path')
+        ->get();
+
+    $inhouse_faculty = $inhouse_faculty->map(function ($faculty) {
+        $feedbackData = DB::table('topic_feedback as tf')
+            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+            ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('subject_master as sm', 'tt.subject_master_pk', '=', 'sm.pk')
+            ->select(
+                'tf.timetable_pk',
+                'tf.topic_name',
+                'cm.course_name',
+                'cm.pk as course_id',
+                'sm.subject_name',
+                'tt.START_DATE as session_date',
+                'tt.class_session',
+                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
+                DB::raw('ROUND(AVG(CAST(tf.content AS DECIMAL(10,2))) * 20, 2) as avg_content_percent'),
+                DB::raw('ROUND(AVG(CAST(tf.presentation AS DECIMAL(10,2))) * 20, 2) as avg_presentation_percent'),
+                DB::raw('ROUND(AVG(CAST(tf.content AS DECIMAL(10,2))), 2) as avg_content_rating'),
+                DB::raw('ROUND(AVG(CAST(tf.presentation AS DECIMAL(10,2))), 2) as avg_presentation_rating'),
+                DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark END SEPARATOR " | ") as remarks')
+            )
+            ->where('tf.faculty_pk', $faculty->pk)
+            ->where('tf.is_submitted', 1)
+            ->groupBy('tf.timetable_pk', 'tf.topic_name', 'cm.course_name', 'cm.pk', 'sm.subject_name', 'tt.START_DATE', 'tt.class_session')
+            ->orderBy('tt.START_DATE', 'desc')
+            ->get();
+
+        $sessionCount = DB::table('timetable')
+            ->where('active_inactive', 1)
+            ->where(function ($query) use ($faculty) {
+                $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$faculty->pk.'"'])
+                      ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$faculty->pk])
+                      ->orWhere('faculty_master', $faculty->pk);
+            })
+            ->count();
+
+        $totalFeedback = $feedbackData->count();
+        $totalParticipants = $feedbackData->sum('participant_count');
+        $avgContent = $feedbackData->avg('avg_content_percent') ?? 0;
+        $avgPresentation = $feedbackData->avg('avg_presentation_percent') ?? 0;
+
+        $faculty->feedback = $feedbackData;
+        $faculty->session_count = $sessionCount;
+        $faculty->feedback_summary = [
+            'total_feedback' => $totalFeedback,
+            'total_participants' => $totalParticipants,
+            'avg_content' => round($avgContent, 2),
+            'avg_presentation' => round($avgPresentation, 2),
+        ];
+
+        return $faculty;
+    });
+
     return view('admin.dashboard.inhouse_faculty', compact('inhouse_faculty'));
-    
 }
 
 function sessions(Request $request)

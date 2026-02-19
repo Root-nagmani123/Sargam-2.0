@@ -28,7 +28,28 @@ class CasteCategoryMasterDataTable extends DataTable
             ->addColumn('Seat_name_hindi', fn($row) => $row->Seat_name_hindi ?? '-')
             ->addColumn('action', function ($row) {
                 $editUrl = route('master.caste.category.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                $deleteUrl = route('master.caste.category.delete', ['id' => encrypt($row->pk)]);
+                $csrf = csrf_token();
+                $isActive = $row->active_inactive == 1;
+
+                $deleteButton = $isActive
+                    ? '<a href="javascript:void(0)" class="text-muted delete-caste-category-disabled" title="Cannot delete active caste category" style="opacity: 0.5; cursor: not-allowed;">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px; vertical-align: middle;">delete</i>
+                    </a>'
+                    : '<form action="' . $deleteUrl . '" method="POST" class="d-inline">
+                        <input type="hidden" name="_token" value="' . $csrf . '">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <a href="javascript:void(0)" class="text-danger delete-caste-category" title="Delete caste category">
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px; vertical-align: middle;">delete</i>
+                        </a>
+                    </form>';
+
+                return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Caste category actions">
+                    <a href="' . $editUrl . '" class="text-primary edit-caste-category" title="Edit caste category">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px; vertical-align: middle;">edit</i>
+                    </a>
+                    ' . $deleteButton . '
+                </div>';
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
@@ -75,6 +96,9 @@ class CasteCategoryMasterDataTable extends DataTable
             // ->orderBy(1)
             ->selectStyleSingle()
             ->parameters([
+                'responsive' => false,
+                'scrollX' => true,
+                'autoWidth' => false,
                 'order' => [],
             ])
             ->buttons([
@@ -98,8 +122,9 @@ class CasteCategoryMasterDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('Seat_name')->title('Category/Caste name')->orderable(false)->addClass('text-center'),
             Column::make('Seat_name_hindi')->title('Category/Caste name (Hindi)')->orderable(false)->addClass('text-center'),
-            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
+            
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center')
         ];
     }
 

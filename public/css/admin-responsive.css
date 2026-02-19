@@ -1676,6 +1676,19 @@
     padding-right: 0.5rem;
   }
 
+  /* MDO duty type index - header and Add button aligned on mobile */
+  .mdo-duty-type-index .mdo-duty-type-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mdo-duty-type-index .mdo-duty-type-header-row .add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .mdo-duty-type-index .mdo-duty-type-card .card-body {
+    padding: 1rem !important;
+  }
+
   /* Caste category index - header and actions */
   .caste-category-index .caste-category-header-row {
     flex-direction: column;
@@ -2532,14 +2545,44 @@
   .group-mapping-index .dataTables_wrapper .row:first-child {
     flex-wrap: wrap;
     gap: 0.75rem;
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
   .group-mapping-index .dataTables_length,
   .group-mapping-index .dataTables_filter {
     margin-bottom: 0.5rem;
+    display: block !important;
+    width: 100%;
   }
-  .group-mapping-index .dataTables_filter input {
+  .group-mapping-index .dataTables_length label,
+  .group-mapping-index .dataTables_filter label {
+    display: block !important;
+    margin-bottom: 0.5rem !important;
+    width: 100%;
+    font-weight: 500;
+    text-align: left !important;
+  }
+  .group-mapping-index .dataTables_length label select,
+  .group-mapping-index .dataTables_filter label input {
+    display: block !important;
+    margin-top: 0.5rem !important;
+    width: 100% !important;
+  }
+  .group-mapping-index .dataTables_length select,
+  .group-mapping-index .dataTables_length label select {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    margin-top: 0.5rem !important;
+  }
+  .group-mapping-index .dataTables_filter input,
+  .group-mapping-index .dataTables_filter label input {
     min-width: 140px;
     max-width: 100%;
+    width: 100% !important;
+    display: block !important;
+    margin: 0 !important;
+    margin-top: 0.5rem !important;
   }
   /* Expand/collapse control - touch friendly */
   .group-mapping-index .dtr-control {
@@ -2564,10 +2607,12 @@
   .group-mapping-index .dtr-details li {
     padding: 0.5rem 0;
     border-bottom: 1px solid #eee;
-    display: flex;
+    display: flex !important;
+    flex-direction: row !important;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    align-items: flex-start;
+    gap: 0.5rem;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
   }
   .group-mapping-index .dtr-details li:last-child {
     border-bottom: none;
@@ -2575,13 +2620,20 @@
   .group-mapping-index .dtr-details .dtr-title {
     font-weight: 600;
     min-width: 7rem;
+    max-width: 7rem;
     color: #495057;
     flex-shrink: 0;
+    text-align: left !important;
+    padding-right: 0.5rem;
+    display: inline-block;
   }
   .group-mapping-index .dtr-details .dtr-data {
     flex: 1;
     min-width: 0;
     word-break: break-word;
+    text-align: left !important;
+    display: inline-block;
+    padding-left: 0;
   }
   /* Status toggle in table - touch friendly */
   .group-mapping-index #group-mapping-table .form-check-input {
@@ -2755,32 +2807,45 @@
   .group-mapping-index .dataTables_filter {
     text-align: left !important;
     margin-bottom: 0;
-    display: block;
+    display: block !important;
     width: 100%;
   }
   .group-mapping-index .dataTables_length label,
   .group-mapping-index .dataTables_filter label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
-    flex-wrap: wrap;
+    display: block !important;
+    margin: 0 0 0.5rem 0 !important;
     font-size: 0.9rem;
+    font-weight: 500;
+    width: 100%;
+    text-align: left !important;
   }
-  .group-mapping-index .dataTables_length select {
-    margin: 0;
+  .group-mapping-index .dataTables_length label select,
+  .group-mapping-index .dataTables_filter label input {
+    display: block !important;
+    margin-top: 0.5rem !important;
+    width: 100% !important;
+  }
+  .group-mapping-index .dataTables_length select,
+  .group-mapping-index .dataTables_length label select {
+    margin: 0 !important;
+    margin-top: 0.5rem !important;
     min-width: 80px;
     max-width: 100%;
+    width: 100% !important;
     min-height: 40px;
     padding: 0.35rem 1.75rem 0.35rem 0.5rem;
+    display: block !important;
   }
-  .group-mapping-index .dataTables_filter input {
+  .group-mapping-index .dataTables_filter input,
+  .group-mapping-index .dataTables_filter label input {
     margin-left: 0 !important;
-    width: 100%;
-    max-width: 100%;
+    margin-top: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
     min-height: 40px;
     padding: 0.375rem 0.75rem;
+    display: block !important;
   }
   /* DataTables bottom bar - tablet */
   .group-mapping-index .dataTables_wrapper .row:last-child {
@@ -2840,18 +2905,45 @@
     font-size: 0.875rem;
   }
   /* DataTables Show entries + Search - compact on small phones */
+  .group-mapping-index .dataTables_length,
+  .group-mapping-index .dataTables_filter {
+    display: block !important;
+    width: 100%;
+  }
   .group-mapping-index .dataTables_length label,
   .group-mapping-index .dataTables_filter label {
+    display: block !important;
     font-size: 0.8125rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem !important;
+    width: 100%;
+    text-align: left !important;
   }
-  .group-mapping-index .dataTables_length select {
-    max-width: 90px;
+  .group-mapping-index .dataTables_length label select,
+  .group-mapping-index .dataTables_filter label input {
+    display: block !important;
+    margin-top: 0.4rem !important;
+    width: 100% !important;
+  }
+  .group-mapping-index .dataTables_length select,
+  .group-mapping-index .dataTables_length label select {
+    max-width: 100% !important;
+    width: 100% !important;
     padding: 0.25rem 0.5rem;
     font-size: 0.8125rem;
+    display: block !important;
+    margin: 0 !important;
+    margin-top: 0.4rem !important;
   }
-  .group-mapping-index .dataTables_filter input {
+  .group-mapping-index .dataTables_filter input,
+  .group-mapping-index .dataTables_filter label input {
+    width: 100% !important;
+    max-width: 100% !important;
     padding: 0.25rem 0.5rem;
     font-size: 0.8125rem;
+    display: block !important;
+    margin: 0 !important;
+    margin-top: 0.4rem !important;
   }
   .group-mapping-index .group-mapping-status-col .btn-group .btn {
     font-size: 0.85rem;
@@ -2882,9 +2974,26 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
   }
+  .group-mapping-index .dtr-details li {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+  }
   .group-mapping-index .dtr-details .dtr-title {
     min-width: 6rem;
+    max-width: 6rem;
     font-size: 0.8125rem;
+    text-align: left !important;
+    padding-right: 0.5rem;
+    flex-shrink: 0;
+  }
+  .group-mapping-index .dtr-details .dtr-data {
+    flex: 1;
+    text-align: left !important;
+    word-break: break-word;
+    padding-left: 0;
   }
   /* Action buttons in table - touch friendly */
   .group-mapping-index #group-mapping-table .btn-sm {
@@ -4376,6 +4485,395 @@
     gap: 8px;
     margin-top: 12px;
     padding-top: 10px;
+  }
+}
+
+/* ============================================
+   Comprehensive Mobile Fixes - Bug Fix Batch
+   ============================================ */
+
+/* Prevent DataTables search input from triggering form submit on mobile */
+@media (max-width: 991.98px) {
+  .dataTables_filter input[type="search"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .dataTables_filter label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+}
+
+/* Side navigation - responsive sizing on mobile */
+@media (max-width: 991.98px) {
+  .sidebarmenu,
+  .sidebar-google-style {
+    max-width: 280px !important;
+    width: 100% !important;
+  }
+  .side-mini-panel {
+    max-width: 80px !important;
+  }
+}
+
+/* Modal/dialog cropping fix - ensure dialogs fit mobile viewport */
+@media (max-width: 991.98px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100vw - 1rem) !important;
+  }
+  .modal-content {
+    max-height: calc(100vh - 1rem);
+    overflow-y: auto;
+  }
+  .modal-body {
+    padding: 1rem;
+  }
+}
+
+/* Button groups - full width on mobile */
+@media (max-width: 767.98px) {
+  .datatables .d-flex.gap-2,
+  .datatables .btn-group {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+  .datatables .btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Add/Export buttons - stack and full width */
+  .card-body .d-flex.justify-content-between,
+  .card-body .d-flex.justify-content-end {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+  .card-body .btn-primary,
+  .card-body .btn-secondary,
+  .card-body .btn-outline-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* List header - better visibility */
+@media (max-width: 991.98px) {
+  .table thead th {
+    background-color: #004a93 !important;
+    color: #fff !important;
+    font-weight: 600;
+    padding: 10px 8px;
+    white-space: nowrap;
+    font-size: 0.9rem;
+  }
+}
+
+/* Action buttons - icon only on mobile */
+@media (max-width: 767.98px) {
+  .btn .d-none.d-md-inline {
+    display: none !important;
+  }
+  .btn-sm .material-symbols-rounded {
+    margin: 0 !important;
+  }
+}
+
+/* Course master - filter buttons */
+@media (max-width: 767.98px) {
+  .active-course-index .btn-group,
+  .course-index .btn-group .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .active-course-index .d-flex.gap-2 {
+    flex-wrap: wrap;
+  }
+}
+
+/* Calendar - button spacing */
+@media (max-width: 767.98px) {
+  .calendar-header .btn,
+  .calendar-header .d-flex {
+    gap: 0.5rem !important;
+  }
+}
+
+/* ============================================
+   Phase 2: Comprehensive Bug Fixes
+   ============================================ */
+
+/* Table header & data - prevent multiline, ensure visibility */
+@media (max-width: 991.98px) {
+  .building-master-index .table th,
+  .hostel-room-index .table th,
+  .hostel-floor-index .table th,
+  .body-wrapper .table thead th {
+    white-space: nowrap;
+    font-size: 0.85rem;
+    padding: 8px 6px;
+  }
+  .building-master-index .table td,
+  .hostel-room-index .table td,
+  .hostel-floor-index .table td,
+  .body-wrapper .table tbody td {
+    white-space: nowrap;
+    font-size: 0.85rem;
+    padding: 8px 6px;
+  }
+}
+
+/* SweetAlert/Swal dialog - mobile responsive, prevent cropping */
+@media (max-width: 767.98px) {
+  .swal2-popup {
+    max-width: calc(100vw - 2rem) !important;
+    width: 100% !important;
+    margin: 1rem !important;
+  }
+  .swal2-html-container {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .swal2-html-container .form-control,
+  .swal2-html-container .form-select {
+    width: 100% !important;
+  }
+  .swal2-html-container .row {
+    flex-direction: column;
+  }
+  .swal2-html-container .col-sm {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+/* Memo type Add form - label and input alignment in Swal */
+@media (max-width: 767.98px) {
+  .swal2-popup .row.g-2 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .swal2-popup .form-label {
+    text-align: left;
+  }
+  .swal2-popup .form-control,
+  .swal2-popup .form-select {
+    width: 100%;
+  }
+}
+
+/* Memo conclusion - Edit/Add dialog cropping */
+@media (max-width: 767.98px) {
+  .swal2-container .swal2-popup {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* Building floor mapping - Add button mobile */
+@media (max-width: 767.98px) {
+  .building-floor-mapping-index .btn-primary,
+  .building-floor-mapping-index .btn-secondary {
+    width: 100%;
+  }
+}
+
+/* Building floor room mapping - buttons and filter */
+@media (max-width: 767.98px) {
+  .building-floor-room-mapping-index .row.g-2 .col-md-3,
+  .building-floor-room-mapping-index .row.g-2 .col-md-2 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .building-floor-room-mapping-index .btn-primary,
+  .building-floor-room-mapping-index .btn-secondary {
+    width: 100%;
+  }
+}
+
+/* Hostel floor index - add class */
+.hostel-floor-index .table th,
+.hostel-floor-index .table td {
+  white-space: nowrap;
+}
+
+/* Attendance - Reset button, Back/Save full width */
+@media (max-width: 767.98px) {
+  .attendance-index .btn[type="reset"],
+  .attendance-index .btn-primary,
+  .attendance-index .btn-secondary {
+    width: 100%;
+  }
+  .attendance-index .d-flex.gap-2 {
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+}
+
+/* Discipline memo - Add button, Save/Back spacing */
+@media (max-width: 767.98px) {
+  .memo-discipline-index .btn-primary,
+  .memo-discipline-index .btn-secondary {
+    width: 100%;
+  }
+  .memo-discipline-index .d-flex.gap-2 {
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+}
+
+/* Memo/notice template - Filter, Create new template */
+@media (max-width: 767.98px) {
+  .memo-template-index .btn,
+  .memo-template-index .form-control,
+  .memo-template-index .form-select,
+  .memo-notice-index-page .btn,
+  .memo-notice-index-page .form-control,
+  .memo-notice-index-page .form-select {
+    width: 100%;
+  }
+  .memo-template-index .d-flex.gap-2,
+  .memo-notice-index-page .d-flex.gap-2 {
+    flex-direction: column;
+  }
+}
+
+/* Memo/notice index - list header and data multiline on mobile */
+@media (max-width: 767.98px) {
+  .memo-notice-index-page .table th,
+  .memo-notice-index-page .table td {
+    white-space: normal;
+    word-break: break-word;
+    min-width: 60px;
+  }
+  .memo-notice-index-page .card-header.d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .memo-notice-index-page .card-header .btn-primary {
+    width: 100%;
+  }
+}
+
+/* Faculty - Add faculty, Export, Print blank */
+@media (max-width: 767.98px) {
+  .faculty-index .d-flex.gap-2,
+  .faculty-index .btn-group {
+    flex-wrap: wrap;
+  }
+  .faculty-index .btn {
+    min-width: 44px;
+  }
+}
+
+/* Users - Assign role button */
+@media (max-width: 767.98px) {
+  .users-index .btn span {
+    white-space: nowrap;
+  }
+}
+
+/* Course upload document - Active/Archived, Attachment */
+@media (max-width: 767.98px) {
+  .course-repository-index .btn-group .btn,
+  .course-repository-index-page .btn-group .btn,
+  .course-repository-show-page .btn-group .btn {
+    flex: 1;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .course-repository-show-page .btn-group.w-100 {
+    flex-wrap: wrap;
+  }
+  .course-repository-show-page .btn-group.w-100 .btn {
+    flex: 1 1 auto;
+  }
+  .course-repository-show-page .add-attachment-course,
+  .course-repository-show-page .add-attachment-other {
+    width: 100%;
+    justify-content: center;
+  }
+  .course-repository-show-page #course_attachments_container,
+  .course-repository-show-page #other_attachments_container {
+    max-height: 200px !important;
+  }
+}
+
+/* ID card - Upload photo, joining letter alignment */
+@media (max-width: 767.98px) {
+  .idcard-create-page .row .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  .idcard-create-page .form-control,
+  .idcard-create-page .form-select {
+    width: 100%;
+  }
+}
+
+/* Create event - faculty dropdown floating fix */
+@media (max-width: 991.98px) {
+  #eventModal .select2-container,
+  .modal .select2-container {
+    position: relative;
+    z-index: 1;
+  }
+  #eventModal .select2-dropdown,
+  .modal .select2-dropdown {
+    z-index: 1060 !important;
+    position: fixed !important;
+  }
+  .modal .select2-container--open .select2-dropdown {
+    z-index: 1060 !important;
+  }
+}
+
+/* Course group mapping - Student details list header */
+@media (max-width: 991.98px) {
+  .group-mapping-index .table thead th {
+    background-color: #004a93 !important;
+    color: #fff !important;
+  }
+}
+
+/* Extra blank space in data list - reduce row padding */
+@media (max-width: 767.98px) {
+  .body-wrapper .table tbody tr td {
+    padding: 6px 8px;
+    vertical-align: middle;
+  }
+}
+
+/* Assign role - prevent multiline on button */
+@media (max-width: 767.98px) {
+  .users-index .btn-sm {
+    white-space: nowrap;
+    font-size: 0.8rem;
+  }
+  .users-index .btn-primary {
+    padding: 0.35rem 0.5rem;
+  }
+}
+
+/* Faculty index - stack buttons on mobile */
+@media (max-width: 767.98px) {
+  .faculty-index .faculty-header-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .faculty-index .col-6 {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+  .faculty-index .d-flex.justify-content-end {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .faculty-index .d-flex.justify-content-end .btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 

@@ -2,6 +2,8 @@
 @section('title', 'View ID Card Request - Sargam | Lal Bahadur Shastri')
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Employee ID Card Request Details"></x-breadcrum>
+    <x-session_message />
     <!-- Header Card - Bootstrap 5.3 -->
     <div class="card border-0 shadow rounded-3 mb-4 overflow-hidden" style="border-left: 4px solid #004a93;">
         <div class="card-body p-4 p-lg-5">
@@ -385,6 +387,24 @@
                         <span class="text-muted">Last Updated:</span>
                         <strong class="text-dark">{{ $request->updated_at->diffForHumans() }}</strong>
                     </div>
+                    @if($request->approver1)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Approved By A1:</span>
+                        <strong class="text-success">{{ $request->approver1->name ?? '--' }}</strong>
+                    </div>
+                    @endif
+                    @if($request->approver2)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Approved By A2:</span>
+                        <strong class="text-success">{{ $request->approver2->name ?? '--' }}</strong>
+                    </div>
+                    @endif
+                    @if($request->rejection_reason)
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Rejection Reason:</span>
+                        <strong class="text-danger small">{{ Str::limit($request->rejection_reason, 30) }}</strong>
+                    </div>
+                    @endif
                     <hr>
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Status:</span>

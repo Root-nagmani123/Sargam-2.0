@@ -181,6 +181,41 @@
     text-align: center;
 }
 
+/* Chat loading overlay – blur only during load */
+.chat-body.is-loading {
+    position: relative;
+    min-height: 320px;
+}
+.chat-body.is-loading .chat-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(248, 249, 250, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 10;
+    border-radius: 0.75rem;
+}
+.chat-body:not(.is-loading) .chat-loading-overlay {
+    display: none;
+}
+.chat-body .chat-loading-content {
+    text-align: center;
+    padding: 1.5rem;
+}
+.chat-body .chat-loading-content .spinner-border {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 0.2em;
+}
+.chat-body .chat-loading-content .loading-text {
+    margin-top: 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--gigw-text-muted);
+}
+
 /* Accessibility Enhancements */
 .offcanvas:focus-visible {
     outline: 3px solid var(--gigw-primary);
@@ -721,10 +756,10 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                     <button class="btn btn-sm btn-outline-secondary" disabled>
                                         Memo
                                     </button>
-                                    @elseif($memo->type_notice_memo == 'Memo' &&
-                                    in_array($memo->communication_status,[1,2]))
+                                    @elseif($memo->type_notice_memo == 'Memo')
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
-                                        class="btn btn-sm btn-outline-primary btn-action-sm d-inline-flex align-items-center">
+                                        class="btn btn-sm btn-outline-primary btn-action-sm d-inline-flex align-items-center"
+                                        title="View memo and conversation">
                                         <i class="bi bi-chat-square-text me-1"></i> Memo
                                     </a>
                                     @endif
@@ -833,15 +868,16 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 
         <div class="offcanvas-body d-flex flex-column">
             <!-- Chat Body with Enhanced Styling -->
-            <div class="chat-body flex-grow-1" id="chatBody" role="log" aria-live="polite" aria-label="Conversation messages">
-                <div class="d-flex align-items-center justify-content-center h-100">
-                    <div class="text-center">
-                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <div class="chat-body flex-grow-1 is-loading" id="chatBody" role="log" aria-live="polite" aria-label="Conversation messages">
+                <div class="chat-loading-overlay">
+                    <div class="chat-loading-content">
+                        <div class="spinner-border text-primary" role="status" aria-hidden="false">
                             <span class="visually-hidden">Loading conversation...</span>
                         </div>
-                        <p class="text-muted">Loading conversation...</p>
+                        <p class="loading-text mb-0">Loading conversation...</p>
                     </div>
                 </div>
+                <div class="chat-body-inner" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -1002,7 +1038,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
     </div>
     <!-- Memo generation end -->
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
     $('.view-conversation').on('click', function() {
@@ -1014,18 +1050,29 @@ $(document).ready(function() {
 
         $('#conversationTopic').text("Topic: " + topic);
         $('#type_side_menu').text(type);
-        $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
+
+        var $chatBody = $('#chatBody');
+        $chatBody.addClass('is-loading');
+        $chatBody.find('.chat-body-inner').hide().empty();
+        $chatBody.find('.chat-loading-overlay').show();
 
         $.ajax({
             url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type + '/' + user_type,
             type: 'GET',
             success: function(res) {
-                $('#chatBody').html(res);
+                $chatBody.removeClass('is-loading');
+                $chatBody.find('.chat-loading-overlay').hide();
+                $chatBody.find('.chat-body-inner').html(res).show();
             },
             error: function() {
-                $('#chatBody').html(
-                    '<p class="text-danger text-center">Failed to load conversation.</p>'
-                );
+                $chatBody.removeClass('is-loading');
+                $chatBody.find('.chat-loading-overlay').hide();
+                $chatBody.find('.chat-body-inner')
+                    .html('<p class="text-danger text-center py-4">Failed to load conversation.</p>')
+                    .show();
+            },
+            complete: function() {
+                $chatBody.removeClass('is-loading');
             }
         });
 

@@ -35,15 +35,31 @@
             <div class="card-body">
                 <h4 class="mb-3">Edit Issue #{{ $issue->pk }}</h4>
                 <hr>
+                
+                @php
+                    // Check if issue is assigned - if statusHistory has any record with assign_to, it's assigned
+                    $isAssigned = $issue->statusHistory && $issue->statusHistory->whereNotNull('assign_to')->count() > 0;
+                @endphp
+
+                @if($isAssigned)
+                <input type="hidden" name="issue_category_id" value="{{ $issue->issue_category_master_pk }}">
+                <input type="hidden" name="issue_sub_category_id" value="{{ $issue->subCategoryMappings->first()->issue_sub_category_master_pk ?? '' }}">
+                <input type="hidden" name="issue_priority_id" value="{{ $issue->issue_priority_master_pk ?? '' }}">
+                
+                @endif
+
                 <form action="{{ route('admin.issue-management.update', $issue->pk) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
+                    @if(request('embed'))
+                    <input type="hidden" name="from_modal" value="1">
+                    @endif
 
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Complaint Category <span class="text-danger">*</span></label>
-                                <select name="issue_category_id" id="issue_category" class="form-select" required>
+                                <select name="issue_category_id" id="issue_category" class="form-select" {{ $isAssigned ? 'readonly' : '' }} required>
                                     <option value="">- select -</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->pk }}" {{ $issue->issue_category_master_pk == $category->pk ? 'selected' : '' }}>
@@ -79,9 +95,28 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Complainant <span class="text-danger">*</span></label>
-                                <select name="created_by" id="complainant" class="form-select" required>
+                                <label class="form-label">Priority <span class="text-danger">*</span></label>
+                                <select name="issue_priority_id" id="issue_priority" class="form-select" {{ $isAssigned ? 'readonly' : '' }} required>
                                     <option value="">- Select -</option>
+                                    @foreach($priorities as $priority)
+                                        <option value="{{ $priority->pk }}" {{ $issue->issue_priority_master_pk == $priority->pk ? 'selected' : '' }}>
+                                            {{ $priority->priority }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('issue_priority_id')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Complainant <span class="text-danger">*</span></label>
+                                <select name="created_by" id="complainant" class="form-select select2-complainant" required>
+                                    <option value="">Search complainant by name...</option>
                                     @foreach($employees as $employee)
                                         <option value="{{ $employee->employee_pk }}" 
                                             data-mobile="{{ $employee->mobile }}"
@@ -90,6 +125,7 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                <small class="text-muted">Type to search when editing issue on behalf of others</small>
                                 @error('created_by')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                 @enderror
@@ -121,18 +157,11 @@
                                 @enderror
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Sub Category Name <span class="text-danger">*</span></label>
-                                <input type="text" name="sub_category_name" id="sub_category_name" 
+                        <input type="hidden" name="sub_category_name" id="sub_category_name" 
                                     class="form-control" placeholder="Sub category name will auto-fill" 
                                     readonly required 
                                     value="{{ $issue->subCategoryMappings->first()->sub_category_name ?? '' }}">
-                                @error('sub_category_name')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+
                     </div>
 
                     <div class="mb-3">
@@ -235,11 +264,22 @@
                     </div>
 
                     
+                   @if($issue->issue_status == 0)
+                        <div class="d-flex justify-content-end gap-2 pt-2">
+                            <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-secondary rounded">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Update Issue
+                            </button>
+                        </div>
+                    @else
+                        <div class="alert alert-info mt-4">
+                            <i class="bi bi-info-circle"></i>
+                            This issue cannot be edited as its status is not "Open".
+                        </div>
+                    @endif
 
-                    <div class="d-flex justify-content-end gap-2 pt-2">
-                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-secondary rounded">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Update Issue</button>
-                    </div>
                 </form>
             </div>
         </div>
@@ -248,9 +288,18 @@
 @endsection
 
 @section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
+    // Complainant searchable dropdown (search by name when creating/editing issue on behalf of others)
+    if ($.fn.select2) {
+        $('#complainant').select2({
+            placeholder: 'Search complainant by name...',
+            allowClear: true,
+            width: '100%'
+        });
+    }
+
     // Character counter
     function updateCharCount() {
         var len = $('#description').val().length;
@@ -283,14 +332,12 @@ $(document).ready(function() {
                 type: 'GET',
                 success: function(response) {
                     $('#nodal_employee').html('<option value="">- Select -</option>');
-                    
-                    // Handle both direct array and wrapped response object
-                    var employees = Array.isArray(response) ? response : (response.data || []);
-                    
+                    var employees = response.level1 || response.data || [];
+                    var autoSelect = response.level1_auto_select;
                     $.each(employees, function(key, value) {
                         var empPk = value.employee_pk || value.pk;
-                        var empName = value.employee_name || (value.first_name + ' ' + value.last_name);
-                        var selected = (currentNodalEmpPk && empPk == currentNodalEmpPk) ? 'selected' : '';
+                        var empName = value.employee_name || (value.first_name + ' ' + (value.middle_name ? value.middle_name + ' ' : '') + value.last_name);
+                        var selected = (currentNodalEmpPk && empPk == currentNodalEmpPk) ? 'selected' : (!currentNodalEmpPk && autoSelect && empPk == autoSelect) ? 'selected' : '';
                         $('#nodal_employee').append('<option value="'+ empPk +'" '+ selected +'>'+ empName +'</option>');
                     });
                 }
@@ -304,10 +351,19 @@ $(document).ready(function() {
         $('#sub_category_name').val(selectedText);
     });
 
+    // Helper to normalize mobile value (handles numbers / strings / null)
+    function getNormalizedMobile(mobile) {
+        if (mobile === null || mobile === undefined) return '';
+        var str = String(mobile).trim();
+        return str;
+    }
+
     // Auto-fill mobile number
     $('#complainant').change(function() {
+        var selected = $(this).val();
         var mobile = $(this).find('option:selected').data('mobile');
-        $('#mobile_number').val(mobile || '');
+        var normalized = getNormalizedMobile(mobile);
+        $('#mobile_number').val(!selected ? '' : (normalized ? normalized : 'Mobile number is not available'));
     });
 
     // Location change - load buildings
@@ -375,8 +431,8 @@ $(document).ready(function() {
                     
                     $.each(floors, function(key, value) {
                        
-                         var floorId = value.floor_id || value.pk || value.estate_unit_sub_type_master_pk;
-                            var floorName = value.floor_name || value.floor || value.unit_sub_type;
+                         var floorId = value.floor_id ?? value.pk ?? value.estate_unit_sub_type_master_pk ?? '';
+                            var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
                         var selected = (currentFloor && floorId == currentFloor) ? 'selected' : '';
 
                             $('#floor_select').append('<option value="'+ floorId +'" '+ selected +'>'+ floorName +'</option>');
@@ -418,7 +474,7 @@ $(document).ready(function() {
                     
                     $.each(rooms, function(key, value) {
                         var roomId = value.pk || value.room_no;
-                        var roomName = value.room_name || value.room_no || value.house_no;
+                        var roomName = value.room_name ?? value.room_no ?? value.house_no ?? '';
                         var selected = (currentRoom && roomId == currentRoom) ? 'selected' : '';
 
                         if(roomName) {
@@ -464,9 +520,9 @@ $(document).ready(function() {
 
     // Auto-fill mobile number on page load
     var initialMobile = $('#complainant').find('option:selected').data('mobile');
-    if(initialMobile) {
-        $('#mobile_number').val(initialMobile);
-    }
+    var hasComplainant = $('#complainant').val();
+    var normalizedInitial = getNormalizedMobile(initialMobile);
+    $('#mobile_number').val(!hasComplainant ? '' : (normalizedInitial ? normalizedInitial : 'Mobile number is not available'));
 });
 </script>
 @endsection

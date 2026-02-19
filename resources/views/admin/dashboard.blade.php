@@ -9,24 +9,66 @@
    Following Government of India Web Guidelines
    ======================================== */
 
+/* ========================================
+   INDIAN GOVERNMENT THEME - GIGW COMPLIANT
+   Official Government of India Design System
+   
+   Design Principles:
+   - Professional & Formal appearance
+   - Solid colors (no flashy gradients)
+   - Conservative styling
+   - High contrast for accessibility
+   - Clean, structured layout
+   - Government color palette
+   - WCAG 2.1 AA compliant
+   ======================================== */
+
 /* ACCESSIBILITY & TYPOGRAPHY - GIGW Compliant */
 :root {
-    --primary-color: #004a93;
-    --secondary-color: #dc3545;
-    --success-color: #28a745;
-    --warning-color: #ffc107;
-    --info-color: #17a2b8;
+    /* Official Government Colors */
+    --primary-color: #004a93; /* Government Blue */
+    --primary-dark: #003366;
+    --primary-light: #1565c0;
+    --secondary-color: #dc3545; /* Government Red */
+    --success-color: #28a745; /* Government Green */
+    --warning-color: #ff9800; /* Saffron-inspired */
+    --info-color: #0066cc;
+    
+    /* Tricolor Inspiration (Subtle) */
+    --saffron: #ff9933;
+    --white: #ffffff;
+    --green: #138808;
+    
+    /* Text Colors - WCAG 2.1 AA Compliant */
     --text-primary: #1a1a1a;
     --text-secondary: #4a4a4a;
     --text-muted: #6c757d;
+    --text-light: #9e9e9e;
+    
+    /* Background Colors */
+    --bg-white: #ffffff;
+    --bg-light: #f5f7fa;
+    --bg-lighter: #fafbfc;
+    --bg-government: #f8f9fa;
     --border-color: #dee2e6;
-    --bg-light: #f8f9fa;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
-    --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --border-radius-base: 12px;
-    --border-radius-lg: 16px;
+    
+    /* Shadows - Subtle Government Style */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
+    
+    /* Transitions - Professional */
+    --transition-base: all 0.2s ease;
+    --transition-slow: all 0.3s ease;
+    
+    /* Border Radius - Conservative */
+    --border-radius-base: 8px;
+    --border-radius-lg: 12px;
+    
+    /* Government Typography */
+    --font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+    --font-size-base: 14px;
+    --line-height-base: 1.6;
 }
 
 /* GIGW: Minimum 4.5:1 contrast ratio for text */
@@ -210,44 +252,49 @@ textarea:focus,
 }
 
 .birthday-card {
-    border-radius: 18px;
-    padding: 18px 22px;
+    border-radius: 12px;
+    padding: 12px;
     display: block;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.12);
-    min-height: 150px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    min-height: 130px;
+    transition: all 0.25s ease;
+}
+
+.birthday-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
 
 .birthday-photo {
-    width: 68px;
-    height: 67px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     object-fit: cover;
 }
 
 .emp-name {
     margin: 0;
-    font-size: 18px;
+    font-size: 0.95rem;
     font-weight: 700;
-    line-height: 18px;
+    line-height: 1.2;
     color: #000;
 }
 
 .emp-desg {
-    margin: 2px 0 0;
-    font-size: 13px;
-    font-weight: 400;
-    color: #444;
-    line-height: 16px;
-    letter-spacing: 0.3px;
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #555;
+    line-height: 1.3;
 }
 
 .emp-email,
 .emp-phone {
-    margin: 2px 0;
-    font-size: 13px;
+    margin: 0;
+    font-size: 0.75rem;
     font-weight: 400;
-    color: #2d2d2d;
-    letter-spacing: 0.4px;
+    color: #555;
+    line-height: 1.4;
 }
 </style>
 <style>
@@ -256,40 +303,32 @@ textarea:focus,
 ================================ */
 
 /* --- Global Card Styling --- */
-.stat-card-modern,
-.content-card-modern,
-.card,
-.birthday-card {
-    border-radius: 18px !important;
+.content-card-modern {
+    border-radius: 12px !important;
     background: #ffffff;
-    box-shadow: var(--shadow-sm) !important;
-    border: 1px solid #e8e8e8;
     transition: var(--transition-base);
 }
 
-.stat-card-modern:hover,
-.content-card-modern:hover,
-.card:hover {
-    box-shadow: var(--shadow-md) !important;
-    transform: translateY(-3px);
+.content-card-modern:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* --- Modern Section Headers --- */
 .section-header-modern {
-    font-size: 1.2rem;
-    font-weight: 700;
-    padding-bottom: 4px;
+    font-size: 1.1rem;
+    font-weight: 600;
     color: var(--text-primary);
-    border-left: 4px solid var(--primary-color);
-    padding-left: 10px;
+    border-left: 3px solid var(--primary-color);
+    padding-left: 12px;
+    margin-bottom: 0.75rem;
 }
 
 /* --- Divider --- */
 .divider-modern {
     width: 100%;
     height: 1px;
-    background: #e5e5e5;
-    margin: 16px 0;
+    background: linear-gradient(90deg, transparent, #e5e5e5, transparent);
+    margin: 0.75rem 0;
 }
 
 /* --- Notice Sidebar --- */
@@ -308,16 +347,18 @@ textarea:focus,
 }
 
 /* --- Notice Items --- */
-.notice-item {
-    padding: 12px 14px;
-    border-radius: 12px;
-    transition: var(--transition-base);
-    background: #fafafa;
+.notice-item-modern {
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: #f8f9fa;
+    border-left: 2px solid transparent;
 }
 
-.notice-item:hover {
-    background: #eff5ff;
-    border-left: 4px solid var(--primary-color);
+.notice-item-modern:hover {
+    background: #e7f3ff;
+    border-left-color: var(--primary-color);
+    transform: translateX(2px);
 }
 
 /* --- Calendar Card --- */
@@ -353,23 +394,7 @@ textarea:focus,
     width: 100%;
 }
 
-/* --- Birthday Cards Grid --- */
-.birthday-card {
-    min-height: 160px;
-    padding: 16px 20px !important;
-    transition: var(--transition-base);
-}
-
-.birthday-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-}
-
-/* Employee name */
-.emp-name {
-    font-size: 1.1rem !important;
-    font-weight: 700;
-}
+/* Birthday card styles moved above */
 
 /* --- Smooth Scrolling --- */
 .content-card-body-modern {
@@ -413,171 +438,544 @@ h3.fw-bold {
     margin-top: 30px;
 }
 
-/* --- Metric Cards Icons --- */
-.stat-card-icon-modern img {
-    width: 38px !important;
-    height: 38px !important;
-}
-
-.stat-card-icon-modern {
-    border-radius: 12px;
-    padding: 10px !important;
-}
-
-.stat-card-value-modern {
-    font-size: 1.8rem !important;
-    font-weight: 800 !important;
-}
-
-/* --- Modern Stat Card Enhancements --- */
+/* Government Stat Cards */
 .stat-card-modern {
-    position: relative;
-    overflow: hidden;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid transparent;
+    transition: var(--transition-base);
+}
+
+.stat-card-modern:hover {
+    border-left-color: var(--primary-color);
+    box-shadow: var(--shadow-md);
+    background: var(--bg-light);
+}
+
+.stat-card-modern:hover .stat-value-modern {
+    color: var(--primary-color);
+}
+
+/* Modern Minimal Stat Cards - Bootstrap 5.3+ */
+.stat-card-modern {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    overflow: hidden;
+    position: relative;
 }
 
 .stat-card-modern::before {
     content: '';
     position: absolute;
     top: 0;
-    left: -100%;
-    width: 100%;
+    left: 0;
+    width: 3px;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s ease;
+    background: var(--primary-color);
+    transform: scaleY(0);
+    transition: transform 0.25s ease;
+}
+
+.stat-card-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 74, 147, 0.2);
 }
 
 .stat-card-modern:hover::before {
-    left: 100%;
+    transform: scaleY(1);
 }
 
-/* Icon Background Colors with Gradients */
-.icon-bg-blue {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-}
-
-.icon-bg-green {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-}
-
-.icon-bg-yellow {
-    background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
-}
-
-.icon-bg-purple {
-    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-}
-
-/* Stat Card Label */
-.stat-card-label-modern {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-    margin-bottom: 8px;
-}
-
-/* Add subtle pulse animation to stat values */
-@keyframes pulseValue {
-
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.05);
-    }
-}
-
-.stat-card-modern:hover .stat-card-value-modern {
-    animation: pulseValue 0.6s ease;
-    color: var(--primary-color);
-}
-
-/* Modern card style matching the reference image */
-.stat-card.clean-style {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    background: #ffffff;
-    padding: 20px 22px;
-    border-radius: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-}
-
-.stat-card.clean-style:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
-}
-
-/* Icon container */
-.stat-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
+/* Icon Container - Compact & Modern */
+.stat-icon-modern {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
 }
 
-.stat-icon img {
-    width: 28px;
-    height: 28px;
+.stat-card-modern:hover .stat-icon-modern {
+    transform: scale(1.05);
 }
 
-/* Colors */
-.icon-blue {
-    background: #e5edff;
+/* Government Icon Backgrounds - Solid Colors */
+.icon-bg-blue {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
 }
 
-.icon-green {
-    background: #e6f7ec;
+.icon-bg-green {
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
 }
 
-.icon-yellow {
-    background: #fff4e2;
+.icon-bg-yellow {
+    background: #fff3cd;
+    border: 1px solid #ffe69c;
 }
 
-.icon-purple {
-    background: #f1ebff;
+.icon-bg-purple {
+    background: #f3e5f5;
+    border: 1px solid #e1bee7;
 }
 
-/* Texts */
-.stat-label {
-    font-size: 15px;
-    font-weight: 600;
-    color: #4a4a4a;
+/* Text Styles - Minimal & Clean */
+.stat-label-modern {
+    font-size: 0.813rem;
+    font-weight: 500;
+    color: #6c757d;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
 }
 
-.stat-value {
-    font-size: 26px;
+.stat-value-modern {
+    font-size: 1.75rem;
     font-weight: 700;
-    color: #000;
-    margin-top: 3px;
+    color: #1a1a1a;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
 }
 
-.stat-change {
-    font-size: 13px;
-    margin-top: 3px;
+.stat-card-modern:hover .stat-value-modern {
+    color: var(--primary-color);
 }
 
 table>thead {
     background-color: #ffffff !important;
 }
 
-/* Compact Timetable Card Design - Shows 2 items at a time */
-.timetable-container {
-    max-height: 240px; /* Shows exactly 2 cards (110px each + 8px margin) */
+/* ========================================
+   ADVANCED DASHBOARD DESIGN SYSTEM
+   Bootstrap 5.3+ Modern UI Components
+   ======================================== */
+
+/* Government Theme Backgrounds - Solid Colors */
+.bg-gradient-primary {
+    background: #004a93 !important; /* Solid Government Blue */
+    border-bottom: 3px solid #003366;
+}
+
+.bg-gradient-danger {
+    background: #dc3545 !important; /* Solid Government Red */
+    border-bottom: 3px solid #c82333;
+}
+
+.bg-gradient-info {
+    background: #0066cc !important; /* Solid Government Info Blue */
+    border-bottom: 3px solid #004a93;
+}
+
+/* Government Style Cards - Professional & Formal */
+.dashboard-main-card,
+.dashboard-notice-card {
+    border: 1px solid var(--border-color);
+    background: var(--bg-white);
+    transition: var(--transition-base);
+}
+
+.dashboard-main-card:hover,
+.dashboard-notice-card:hover {
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--primary-color);
+}
+
+/* Government Icon Wrapper - Conservative */
+.dashboard-icon-wrapper {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: var(--transition-base);
+}
+
+.dashboard-icon-wrapper:hover {
+    background: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Custom Scrollbar for Dashboard */
+.dashboard-scrollable-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 74, 147, 0.3) transparent;
+}
+
+.dashboard-scrollable-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dashboard-scrollable-content::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+}
+
+.dashboard-scrollable-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 74, 147, 0.3);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.dashboard-scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 74, 147, 0.5);
+}
+
+/* Dashboard Sections */
+.dashboard-section {
+    position: relative;
+}
+
+/* Government Section Styling */
+.section-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    transition: var(--transition-base);
+}
+
+.section-icon-wrapper:hover {
+    background: var(--primary-color);
+    color: white !important;
+    border-color: var(--primary-color);
+}
+
+.section-divider {
+    height: 2px;
+    background: var(--border-color);
+    border: none;
+    margin: 1rem 0;
+}
+
+.section-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    transition: var(--transition-base);
+}
+
+.section-header-icon:hover {
+    background: var(--primary-color);
+    color: white !important;
+}
+
+/* Government Style Notification Items */
+.notification-item {
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid transparent;
+    transition: var(--transition-base);
+    position: relative;
+}
+
+.notification-item:hover {
+    border-left-color: var(--primary-color);
+    background: var(--bg-light);
+    box-shadow: var(--shadow-sm);
+}
+
+.notification-indicator {
+    margin-top: 0.4rem;
+    flex-shrink: 0;
+}
+
+.notification-action {
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.notification-item:hover .notification-action {
+    opacity: 1;
+}
+
+/* Government Info Card */
+.info-card {
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--info-color);
+    transition: var(--transition-base);
+}
+
+.info-card:hover {
+    border-left-width: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.info-icon-wrapper {
+    flex-shrink: 0;
+}
+
+/* Timetable Modern Styles */
+.timetable-container-modern {
+    max-height: 300px;
     overflow-y: auto;
-    padding-right: 5px;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 74, 147, 0.3) transparent;
+}
+
+.timetable-container-modern::-webkit-scrollbar {
+    width: 5px;
+}
+
+.timetable-container-modern::-webkit-scrollbar-thumb {
+    background: rgba(0, 74, 147, 0.3);
+    border-radius: 10px;
+}
+
+/* Government Timetable Cards */
+.timetable-card-modern {
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--success-color);
+    transition: var(--transition-base);
+    position: relative;
+}
+
+.timetable-card-modern:hover {
+    border-left-width: 6px;
+    box-shadow: var(--shadow-md);
+    background: var(--bg-light);
+}
+
+.timetable-topic-modern {
+    font-size: 0.938rem;
+    line-height: 1.4;
+    color: #1a1a1a;
+}
+
+.timetable-details-modern {
+    font-size: 0.813rem;
+}
+
+/* Government Notice Cards */
+.notice-card-modern {
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--secondary-color);
+    transition: var(--transition-base);
+    position: relative;
+}
+
+.notice-card-modern:hover {
+    border-left-width: 6px;
+    box-shadow: var(--shadow-md);
+    background: var(--bg-light);
+}
+
+.notice-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Government Birthday Cards */
+.birthday-card-modern {
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    transition: var(--transition-base);
+    position: relative;
+}
+
+.birthday-card-modern:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.birthday-photo-modern {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    transition: all 0.3s ease;
+}
+
+.birthday-card-modern:hover .birthday-photo-modern {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.emp-name-modern {
+    font-size: 0.938rem;
+    line-height: 1.3;
+}
+
+.emp-desg-modern {
+    font-size: 0.75rem;
+    line-height: 1.3;
+}
+
+.birthday-details {
+    font-size: 0.813rem;
+}
+
+/* Government Empty State */
+.empty-state {
+    padding: 3rem 1rem;
+    background: var(--bg-light);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius-base);
+}
+
+.empty-state-icon {
+    opacity: 0.4;
+    color: var(--text-muted);
+    transition: var(--transition-base);
+}
+
+.empty-state:hover .empty-state-icon {
+    opacity: 0.6;
+}
+
+/* Responsive Improvements */
+@media (max-width: 992px) {
+    .dashboard-main-card,
+    .dashboard-notice-card {
+        max-height: none !important;
+        height: auto !important;
+    }
+    
+    .dashboard-scrollable-content {
+        max-height: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .stat-card-modern {
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-value-modern {
+        font-size: 1.5rem;
+    }
+    
+    .stat-icon-modern {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .birthday-photo-modern {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .section-icon-wrapper {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .dashboard-icon-wrapper {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .timetable-card-modern {
+        padding: 0.75rem !important;
+    }
+    
+    .notice-card-modern {
+        padding: 0.75rem !important;
+    }
+}
+
+/* Link hover effects */
+a.text-decoration-none:hover .stat-card-modern {
+    text-decoration: none;
+}
+
+/* Smooth transitions for all interactive elements */
+.stat-card-modern,
+.birthday-card-modern,
+.timetable-card-modern,
+.notice-card-modern,
+.notification-item {
+    will-change: transform;
+}
+
+/* Government Typography */
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    color: var(--text-primary);
+}
+
+/* Government Badge Styles */
+.badge {
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    border-radius: 4px;
+}
+
+/* Government Button Styles */
+.btn-outline-primary {
+    border: 1.5px solid var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 500;
+    transition: var(--transition-base);
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn-outline-danger {
+    border: 1.5px solid var(--secondary-color);
+    color: var(--secondary-color);
+    font-weight: 500;
+}
+
+.btn-outline-danger:hover {
+    background: var(--secondary-color);
+    color: white;
+}
+
+/* Government Card Headers */
+.card-header {
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* Subtle Animations - Government Style */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.dashboard-section,
+.notification-item,
+.timetable-card-modern,
+.notice-card-modern,
+.birthday-card-modern {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Compact Timetable Card Design - Modern Minimal */
+.timetable-container {
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
     scrollbar-width: thin;
     scrollbar-color: #c1c1c1 transparent;
 }
 
 .timetable-container::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
 }
 
 .timetable-container::-webkit-scrollbar-track {
@@ -596,13 +994,13 @@ table>thead {
 
 .timetable-card {
     background: #fff;
-    border-left: 4px solid #dc3545;
-    border-radius: 6px;
+    border-left: 3px solid #dc3545;
+    border-radius: 8px;
     padding: 10px 12px;
     margin-bottom: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    transition: all 0.2s ease;
-    height: 110px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: all 0.25s ease;
+    min-height: 100px;
     display: flex;
     flex-direction: column;
 }
@@ -623,9 +1021,9 @@ table>thead {
 .timetable-time-badge {
     background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     color: white;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.688rem;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -633,14 +1031,14 @@ table>thead {
 .timetable-sno {
     background: #f8f9fa;
     color: #6c757d;
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.688rem;
     font-weight: 600;
 }
 
 .timetable-topic {
-    font-size: 0.85rem;
+    font-size: 0.813rem;
     font-weight: 600;
     color: #1a1a1a;
     margin: 0 0 6px 0;
@@ -655,9 +1053,9 @@ table>thead {
 
 .timetable-details {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
-    font-size: 0.7rem;
+    font-size: 0.688rem;
     color: #555;
     margin-top: auto;
 }
@@ -665,11 +1063,11 @@ table>thead {
 .timetable-detail-item {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
 }
 
 .timetable-detail-item i {
-    font-size: 14px;
+    font-size: 12px;
     color: #6c757d;
 }
 </style>
@@ -677,18 +1075,20 @@ table>thead {
 
 <div class="container-fluid admin-dashboard-page">
 
-    <div class="row g-4 mb-4">
+    <div class="row g-3 mb-3">
 
         <!-- Total Active Courses -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.active_course') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-blue">
-                        <img src="{{ asset('images/groups.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Total Active Courses</div>
-                        <div class="stat-value">{{ $totalActiveCourses }}</div>
+            <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-blue d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-book-fill text-primary fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Total Active Courses</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $totalActiveCourses }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
@@ -696,72 +1096,87 @@ table>thead {
 
         <!-- Upcoming Courses -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.incoming_course') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-green">
-                        <img src="{{ asset('images/teachers.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Upcoming Courses</div>
-                        <div class="stat-value">{{ $upcomingCourses }}</div>
+            <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-green d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-calendar-event-fill text-success fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Upcoming Courses</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $upcomingCourses }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
         </div>
+
+        <!-- Upcoming Events -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.upcoming_events') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-green">
-                        <img src="{{ asset('images/teachers.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Upcoming Events</div>
-                        <div class="stat-value">2</div>
+            <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-yellow d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-calendar-check-fill text-warning fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Upcoming Events</div>
+                            <div class="stat-value-modern fw-bold text-dark">2</div>
+                        </div>
                     </div>
                 </div>
             </a>
         </div>
+
         @if(hasRole('Student-OT'))
+        <!-- Medical Exception -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('medical.exception.ot.view') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-yellow">
-                        <img src="{{ asset('images/classes.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Medical Exception</div>
-                        <div class="stat-value">{{ $exemptionCount }}</div>
+            <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-purple d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-heart-pulse-fill text-info fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Medical Exception</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $exemptionCount }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
         </div>
         @else
+        <!-- Total Guest Faculty -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.guest_faculty') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-yellow">
-                        <img src="{{ asset('images/classes.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Total Guest Faculty</div>
-                        <div class="stat-value">{{ $total_guest_faculty }}</div>
+            <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-yellow d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-person-badge-fill text-warning fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Total Guest Faculty</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $total_guest_faculty }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
         </div>
         @endif
-        <!-- Total Guest Faculty -->
 
         @if(hasRole('Student-OT'))
+        <!-- OT MDO/Escort -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('ot.mdo.escrot.exemption.view') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-purple">
-                        <img src="{{ asset('images/attendance.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">OT MDO/Escort</div>
-                        <div class="stat-value">{{ $MDO_count }}</div>
+            <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-purple d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-people-fill text-info fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">OT MDO/Escort</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $MDO_count }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
@@ -769,14 +1184,16 @@ table>thead {
         @else
         <!-- Total Inhouse Faculty -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.inhouse_faculty') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-purple">
-                        <img src="{{ asset('images/attendance.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Total Inhouse Faculty</div>
-                        <div class="stat-value">{{ $total_internal_faculty }}</div>
+            <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-purple d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-person-video3-fill text-info fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Total Inhouse Faculty</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $total_internal_faculty }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
@@ -786,14 +1203,16 @@ table>thead {
         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
         <!-- Total Sessions -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.sessions') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-blue">
-                        <img src="{{ asset('images/attendance.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Session Details</div>
-                        <div class="stat-value">{{ $totalSessions }}</div>
+            <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-blue d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-clock-history text-primary fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Session Details</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $totalSessions }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
@@ -803,46 +1222,73 @@ table>thead {
         @if(isset($isCCorACC) && $isCCorACC)
         <!-- Total Students - Only for CC/ACC -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.students') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-green">
-                        <img src="{{ asset('images/classes.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Total Students</div>
-                        <div class="stat-value">{{ $totalStudents }}</div>
+            <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-green d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-people-fill text-success fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Total Students</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $totalStudents }}</div>
+                        </div>
                     </div>
                 </div>
             </a>
         </div>
         @endif
 
-
     </div>
 
+    <!-- Advanced Dashboard Content Section - Bootstrap 5.3+ Design System -->
     <div class="row g-4 mb-4">
-        <!-- LEFT CONTENT -->
+        <!-- LEFT CONTENT PANEL -->
         <div class="col-lg-7">
-            <div class="content-card-modern" style="height:700px; overflow-y:auto;">
-                <div class="content-card-header-modern">
-                    <h2>Admin & Campus Summary</h2>
+            <div class="card border-0 shadow-lg h-100 dashboard-main-card" style="max-height: 720px;">
+                <!-- Government Style Card Header -->
+                <div class="card-header bg-gradient-primary border-0 rounded-top px-4 py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="dashboard-icon-wrapper rounded p-2">
+                                <i class="bi bi-clipboard-data-fill text-white fs-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="mb-0 fw-bold text-white fs-5">Admin & Campus Summary</h2>
+                                <small class="text-white text-opacity-90">Overview of key activities and information</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="content-card-body-modern">
-                    <!-- Admin Summary / Notifications -->
+                
+                <!-- Card Body with Custom Scrollbar -->
+                <div class="card-body p-4 dashboard-scrollable-content" style="overflow-y: auto; max-height: calc(720px - 100px);">
+                    @php
+                    // Define notifications early so it can be used in badge
+                    $user = Auth::user();
+                    $notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
+                    @endphp
+                    
+                    <!-- Admin Summary / Notifications Section -->
                     <section aria-labelledby="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}"
-                        class="mb-5">
-                        <h3 id="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}"
-                            class="section-header-modern" style="font-size:1.25rem;line-height:1.4;">
-                            {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
-                        </h3>
-
-                        <div class="divider-modern"></div>
+                        class="dashboard-section mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="section-icon-wrapper rounded p-2">
+                                    <i class="bi bi-{{ hasRole('Admin') ? 'shield-check' : 'bell' }}-fill text-primary"></i>
+                                </div>
+                                <h3 id="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}"
+                                    class="mb-0 fw-bold fs-6 text-dark">
+                                    {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
+                                </h3>
+                            </div>
+                            <span class="badge bg-primary text-white px-3" style="font-weight: 600;">
+                                {{ $notifications->count() }} {{ $notifications->count() === 1 ? 'item' : 'items' }}
+                            </span>
+                        </div>
+                        
+                        <div class="section-divider mb-3"></div>
 
                         <div class="content-text">
-                            @php
-                            $user = Auth::user();
-                            $notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
-                            @endphp
 
                             <script>
                             // Define markAsRead function for Admin Summary notifications - Define early to ensure availability
@@ -908,69 +1354,109 @@ table>thead {
                             </script>
 
                             @if($notifications->isEmpty())
-                            <p>No notifications available.</p>
+                            <div class="empty-state text-center py-5">
+                                <div class="empty-state-icon mb-3">
+                                    <i class="bi bi-bell-slash text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+                                </div>
+                                <p class="text-muted mb-0 fw-medium">No notifications available</p>
+                                <small class="text-muted">You're all caught up!</small>
+                            </div>
                             @else
-                            <ul style="list-style-type: disc; padding-left: 20px;">
+                            <div class="notification-list">
                                 @foreach($notifications as $notification)
-                                <li style="cursor: pointer;"
-                                    onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
-                                    {{ $notification->message }}</li>
+                                <div class="notification-item p-3 mb-2 rounded border" 
+                                    style="cursor: pointer; transition: all 0.2s ease;"
+                                    onclick="window.markAsReadDashboard({{ $notification->pk }}, this)"
+                                    onmouseover="this.style.transform='translateX(4px)'; this.style.borderColor='rgba(0, 74, 147, 0.3)';"
+                                    onmouseout="this.style.transform='translateX(0)'; this.style.borderColor='rgba(0,0,0,0.1)';">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="notification-indicator">
+                                            <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem;"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <p class="mb-0 small text-dark lh-sm">{{ $notification->message }}</p>
+                                        </div>
+                                        <div class="notification-action">
+                                            <i class="bi bi-chevron-right text-muted"></i>
+                                        </div>
+                                    </div>
+                                </div>
                                 @endforeach
-                            </ul>
+                            </div>
                             @endif
                         </div>
                     </section>
 
-                    <!-- Campus Summary -->
-                    <section aria-labelledby="campus-summary-title" style="overflow-y:auto; max-height:250px;">
-                        <h2 id="campus-summary-title"
-                            style="color: #1a1a1a !important;font-size:24px;line-height:28px;">
-                            Campus Summary
-                        </h2>
+                    <!-- Campus Summary Section -->
+                    <section aria-labelledby="campus-summary-title" class="dashboard-section mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="section-icon-wrapper rounded p-2">
+                                <i class="bi bi-building-fill text-info"></i>
+                            </div>
+                            <h2 id="campus-summary-title" class="mb-0 fw-bold fs-6 text-dark">
+                                Campus Summary
+                            </h2>
+                        </div>
+                        
+                        <div class="section-divider mb-3"></div>
 
-                        <div class="line w-100 my-4"></div>
-
-                        <div class="content-text">
-                            <ul style="list-style-type: disc; padding-left: 20px;">
-                                <li>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                    access
-                                    to various administrative functions.</li>
-                            </ul>
+                        <div class="info-card rounded p-3">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="info-icon-wrapper">
+                                    <i class="bi bi-info-circle-fill text-info fs-5"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <p class="mb-0 small text-dark lh-base">
+                                        Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick access to various administrative functions.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
-                    <!-- Today's Timetable -->
+                    <!-- Today's Timetable Section -->
                     @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
-                    <section aria-labelledby="timetable-title" style="margin-top: 20px;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h2 id="timetable-title" style="font-size: 1.2rem; font-weight: 600; margin: 0; color: #1a1a1a;">
-                                Today's Classes
-                            </h2>
-                            <a href="{{ route('calendar.index') }}" class="btn btn-outline-primary btn-sm" style="font-size: 0.75rem; padding: 4px 12px;">View All</a>
+                    <section aria-labelledby="timetable-title" class="dashboard-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="section-icon-wrapper rounded p-2">
+                                    <i class="bi bi-calendar-day-fill text-success"></i>
+                                </div>
+                                <h2 id="timetable-title" class="mb-0 fw-bold fs-6 text-dark">
+                                    Today's Classes
+                                </h2>
+                            </div>
+                                <a href="{{ route('calendar.index') }}" class="btn btn-outline-primary btn-sm px-3">
+                                    <i class="bi bi-arrow-right me-1"></i>View All
+                                </a>
                         </div>
-
-                        <div class="line w-100 my-2"></div>
+                        
+                        <div class="section-divider mb-3"></div>
 
                         @if($todayTimetable && $todayTimetable->isNotEmpty())
-                        <div class="timetable-container">
+                        <div class="timetable-container-modern">
                             @foreach($todayTimetable as $entry)
-                            <div class="timetable-card">
-                                <div class="timetable-header">
-                                    <span class="timetable-time-badge">{{ $entry['session_time'] }}</span>
-                                    <span class="timetable-sno">#{{ $entry['sno'] }}</span>
+                            <div class="timetable-card-modern p-3 mb-3 rounded border shadow-sm">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge bg-success text-white px-3 py-1" style="font-weight: 600;">
+                                        <i class="bi bi-clock me-1"></i>{{ $entry['session_time'] }}
+                                    </span>
+                                    <span class="badge bg-secondary text-white px-2 py-1" style="font-weight: 600;">
+                                        #{{ $entry['sno'] }}
+                                    </span>
                                 </div>
-                                <h5 class="timetable-topic">{{ $entry['topic'] }}</h5>
-                                <div class="timetable-details">
-                                    <div class="timetable-detail-item">
-                                        <i class="material-icons material-symbols-rounded">person</i>
+                                <h6 class="timetable-topic-modern fw-bold mb-3 text-dark">{{ $entry['topic'] }}</h6>
+                                <div class="timetable-details-modern d-flex flex-wrap gap-3">
+                                    <div class="d-flex align-items-center gap-2 text-muted small">
+                                        <i class="bi bi-person-fill text-primary"></i>
                                         <span>{{ $entry['faculty_name'] }}</span>
                                     </div>
-                                    <div class="timetable-detail-item">
-                                        <i class="material-icons material-symbols-rounded">location_on</i>
+                                    <div class="d-flex align-items-center gap-2 text-muted small">
+                                        <i class="bi bi-geo-alt-fill text-danger"></i>
                                         <span>{{ $entry['session_venue'] }}</span>
                                     </div>
-                                    <div class="timetable-detail-item">
-                                        <i class="material-icons material-symbols-rounded">event</i>
+                                    <div class="d-flex align-items-center gap-2 text-muted small">
+                                        <i class="bi bi-calendar3 text-info"></i>
                                         <span>{{ $entry['session_date'] }}</span>
                                     </div>
                                 </div>
@@ -978,11 +1464,12 @@ table>thead {
                             @endforeach
                         </div>
                         @else
-                        <div class="alert alert-info" style="padding: 10px; margin: 0; border-radius: 6px; font-size: 0.85rem;">
-                            <p class="mb-0" style="text-align: center; color: #6c757d;">
-                                <i class="material-icons material-symbols-rounded" style="font-size: 18px; vertical-align: middle; margin-right: 5px;">event_busy</i>
-                                No classes scheduled for today
-                            </p>
+                        <div class="empty-state text-center py-4">
+                            <div class="empty-state-icon mb-3">
+                                <i class="bi bi-calendar-x text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
+                            </div>
+                            <p class="text-muted mb-0 fw-medium">No classes scheduled for today</p>
+                            <small class="text-muted">Enjoy your free time!</small>
                         </div>
                         @endif
                     </section>
@@ -993,97 +1480,147 @@ table>thead {
 
         <!-- RIGHT NOTICE PANEL -->
         <div class="col-lg-5">
-
-            <div class="card shadow-sm border-0 rounded-4 h-100" style="max-height:700px; overflow-y:auto;">
-                <!-- Notice Header -->
-                <div class="card-header bg-danger text-white rounded-top-4 py-3">
-                    <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                        <i class="material-icons material-symbols-rounded me-2">campaign</i>
-                        Notices
-                    </h5>
+            <div class="card border-0 shadow-lg h-100 dashboard-notice-card" style="max-height: 720px;">
+                <!-- Government Style Notice Header -->
+                <div class="card-header bg-gradient-danger border-0 rounded-top px-4 py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="dashboard-icon-wrapper rounded p-2">
+                                <i class="bi bi-megaphone-fill text-white fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold text-white fs-5">Notices</h5>
+                                <small class="text-white text-opacity-90">Important announcements and updates</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Notice Body -->
-                <div class="card-body" style="overflow-y:auto;">
+                <!-- Notice Body with Custom Scrollbar -->
+                <div class="card-body p-4 dashboard-scrollable-content" style="overflow-y: auto; max-height: calc(720px - 100px);">
                     @php $notices = get_notice_notification_by_role() @endphp
-                    @foreach($notices as $notice)
-                    @php //print_r($notice); @endphp
-                    <div class="mb-4 pb-2 border-bottom">
-                        <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
-
-                        <small class="text-muted">Posted on:
-                            {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
-                        @if($notice->document)
-                        <div class="mt-2">
-                            <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
-                                class="btn btn-sm btn-outline-primary  text-center">
-                                <i class="material-icons material-symbols-rounded me-1">attachment</i>View Attachment
-                            </a>
+                    @if(count($notices) === 0)
+                    <div class="empty-state text-center py-5">
+                        <div class="empty-state-icon mb-3">
+                            <i class="bi bi-file-earmark-text text-white text-opacity-50" style="font-size: 3rem;"></i>
                         </div>
-                        @endif
-
+                        <p class="text-muted mb-0 fw-medium">No notices available</p>
+                        <small class="text-muted">Check back later for updates</small>
+                    </div>
+                    @else
+                    @foreach($notices as $notice)
+                    <div class="notice-card-modern p-3 mb-3 rounded border">
+                        <div class="d-flex align-items-start gap-3 mb-2">
+                            <div class="notice-icon-wrapper rounded p-2 flex-shrink-0" style="background: #fee; border: 1px solid #fcc;">
+                                <i class="bi bi-file-earmark-text-fill text-danger"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-2 text-dark">{{ $notice->notice_title }}</h6>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <small class="text-muted d-flex align-items-center gap-1">
+                                        <i class="bi bi-calendar3"></i>
+                                        Posted on: {{ date('d M, Y', strtotime($notice->created_at)) }}
+                                    </small>
+                                </div>
+                                @if($notice->document)
+                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-danger px-3 mt-2">
+                                    <i class="bi bi-paperclip me-1"></i>View Attachment
+                                </a>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                     @endforeach
-
-
+                    @endif
                 </div>
-
             </div>
         </div>
 
-        <h3 class="fw-bold">Today Birthday's</h3>
-        <hr class="my-2">
+        <!-- Birthdays Section Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="section-header-icon rounded p-3" style="background: #fee; border: 1px solid #fcc;">
+                        <i class="bi bi-balloon-fill text-danger fs-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-bold mb-0 text-dark fs-4">Today's Birthdays</h3>
+                        <small class="text-muted">Celebrating {{ $emp_dob_data->count() }} {{ $emp_dob_data->count() === 1 ? 'birthday' : 'birthdays' }} today</small>
+                    </div>
+                </div>
+                <hr class="my-0">
+            </div>
+        </div>
+
         <div class="row g-4">
             <!-- LEFT SIDE: Birthday Cards -->
             <div class="col-lg-7">
-                <div class="card">
-                    <div class="card-body">
+                <div class="card border-0 shadow-lg h-100">
+                    <div class="card-body p-4">
                         @if($emp_dob_data->isEmpty())
-                        <p class="text-center">No Birthdays Today</p>
+                        <div class="empty-state text-center py-5">
+                            <div class="empty-state-icon mb-3">
+                                <i class="bi bi-balloon text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                            </div>
+                            <p class="text-muted mb-0 fw-medium fs-5">No Birthdays Today</p>
+                            <small class="text-muted">Check back tomorrow for birthday celebrations!</small>
+                        </div>
                         @else
-
-                        <div class="row g-4">
+                        <div class="row g-3">
                             @php
-                            $colors = ['#ebf5e8', '#fef5e7', '#ccdbe9', '#ecedf8', '#f8e7e8', '#f2f2f2'];
+                            // Government theme colors - solid backgrounds
+                            $colors = [
+                                '#f0f7f0', // Light green
+                                '#fff8e1', // Light saffron/yellow
+                                '#e3f2fd', // Light blue
+                                '#f3e5f5', // Light purple
+                                '#fce4ec', // Light pink
+                                '#f5f5f5'  // Light gray
+                            ];
                             @endphp
 
                             @foreach($emp_dob_data as $employee)
-                            <div class="col-6 mb-4">
-                                <div class="birthday-card"
-                                    style="background: {{ $colors[$loop->index % count($colors)] }};">
-
-                                    <div class="d-flex align-items-center gap-3">
-
+                            <div class="col-6">
+                                <div class="birthday-card-modern p-3 rounded border shadow-sm h-100"
+                                    style="background: {{ $colors[$loop->index % count($colors)] }}; border-color: var(--border-color) !important;">
+                                    
+                                    <div class="d-flex align-items-center gap-3 mb-3">
                                         @php
                                         $photo = !empty($employee->profile_picture)
                                         ? asset('storage/' . $employee->profile_picture)
-                                        :
-                                        'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+                                        : 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
                                         @endphp
 
-                                        <!-- IMAGE -->
-                                        <img src="{{ $photo }}" class="birthday-photo" alt="">
+                                        <div class="position-relative">
+                                            <img src="{{ $photo }}" class="birthday-photo-modern rounded-circle border border-3 border-white shadow" alt="{{ $employee->first_name }}">
+                                            <div class="position-absolute top-0 start-100 translate-middle">
+                                                <span class="badge bg-danger rounded-circle p-1">
+                                                    <i class="bi bi-balloon-fill text-white" style="font-size: 0.6rem;"></i>
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                        <!-- NAME + DESIGNATION -->
                                         <div class="flex-grow-1">
-                                            <h5 class="emp-name">
-                                                {{ strtoupper($employee->first_name) }}
-                                                {{ strtoupper($employee->last_name) }}
-                                            </h5>
-
-                                            <p class="emp-desg">
+                                            <h6 class="emp-name-modern fw-bold mb-1 text-dark">
+                                                {{ strtoupper($employee->first_name) }} {{ strtoupper($employee->last_name) }}
+                                            </h6>
+                                            <p class="emp-desg-modern mb-0 small text-muted fw-medium">
                                                 {{ strtoupper($employee->designation_name) }}
                                             </p>
                                         </div>
-
                                     </div>
 
-                                    <!-- BOTTOM DETAILS -->
-                                    <div class="mt-2 ps-2">
-                                        <p class="emp-email">{{ $employee->email }}</p>
-                                        <p class="emp-phone">{{ $employee->mobile }}</p>
+                                    <div class="birthday-details pt-2 border-top border-white border-opacity-50">
+                                        <div class="d-flex align-items-center gap-2 mb-2 small">
+                                            <i class="bi bi-envelope-fill text-muted"></i>
+                                            <span class="text-muted text-truncate">{{ $employee->email }}</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 small">
+                                            <i class="bi bi-telephone-fill text-muted"></i>
+                                            <span class="text-muted">{{ $employee->mobile }}</span>
+                                        </div>
                                     </div>
-
                                 </div>
                             </div>
 
@@ -1091,16 +1628,30 @@ table>thead {
 
                             @endforeach
                         </div>
-
                         @endif
                     </div>
                 </div>
             </div>
+            
             <!-- RIGHT SIDE: Calendar -->
             <div class="col-lg-5">
-                <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events"
-                    theme="gov-red" />
-
+                <div class="card border-0 shadow-lg h-100">
+                    <div class="card-header bg-gradient-info border-0 rounded-top px-4 py-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="dashboard-icon-wrapper rounded p-2">
+                                <i class="bi bi-calendar3-fill text-white fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold text-white fs-5">Calendar</h5>
+                                <small class="text-white text-opacity-90">View events and important dates</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events"
+                            theme="gov-red" />
+                    </div>
+                </div>
             </div>
         </div>
     </div>

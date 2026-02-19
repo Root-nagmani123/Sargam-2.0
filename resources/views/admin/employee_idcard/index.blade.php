@@ -3,13 +3,14 @@
 @section('setup_content')
 <div class="container-fluid idcard-index-page">
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
-    <x-breadcrum title="Request Employee ID Card"></x-breadcrum>
+    <x-breadcrum title="Request Employee ID Card" variant="minimal"></x-breadcrum>
+    <x-session_message />
 
     <!-- Tabs + Generate Button Row - Bootstrap 5.3 enhanced -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <ul class="nav nav-pills nav-fill gap-2 idcard-index-tabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-pill px-4 py-2" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
+                <button class="nav-link active rounded-1 px-4 py-2" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
                     Active
                     @if($activeRequests->total() > 0)
                         <span class="badge text-bg-light text-primary ms-1">{{ $activeRequests->total() }}</span>
@@ -17,7 +18,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill px-4 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
+                <button class="nav-link rounded-1 px-4 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
                     Archive
                     @if($archivedRequests->total() > 0)
                         <span class="badge text-bg-secondary ms-1">{{ $archivedRequests->total() }}</span>
@@ -27,27 +28,27 @@
         </ul>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <div class="dropdown">
-                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">download</i>
+                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-1 shadow-sm" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="material-icons material-symbols-rounded fs-5">download</i>
                     Export
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 py-2" aria-labelledby="exportDropdown">
                     <li><h6 class="dropdown-header text-muted small text-uppercase">Active Requests</h6></li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'active', 'format' => 'xlsx']) }}">
-                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
+                            <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
                             Export Excel
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'active', 'format' => 'csv']) }}">
-                            <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
+                            <i class="material-icons material-symbols-rounded text-info fs-6">description</i>
                             Export CSV
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'active', 'format' => 'pdf']) }}">
-                            <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
+                            <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
                             Export PDF
                         </a>
                     </li>
@@ -55,19 +56,19 @@
                     <li><h6 class="dropdown-header text-muted small text-uppercase">Archived Requests</h6></li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'archive', 'format' => 'xlsx']) }}">
-                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
+                            <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
                             Export Excel
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'archive', 'format' => 'csv']) }}">
-                            <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
+                            <i class="material-icons material-symbols-rounded text-info fs-6">description</i>
                             Export CSV
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'archive', 'format' => 'pdf']) }}">
-                            <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
+                            <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
                             Export PDF
                         </a>
                     </li>
@@ -75,26 +76,26 @@
                     <li><h6 class="dropdown-header text-muted small text-uppercase">All Requests</h6></li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'all', 'format' => 'xlsx']) }}">
-                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
+                            <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
                             Export Excel
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'all', 'format' => 'csv']) }}">
-                            <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
+                            <i class="material-icons material-symbols-rounded text-info fs-6">description</i>
                             Export CSV
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'all', 'format' => 'pdf']) }}">
-                            <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
+                            <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
                             Export PDF
                         </a>
                     </li>
                 </ul>
             </div>
-            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary idcard-create-btn px-4 py-2 rounded-pill shadow-sm d-flex align-items-center gap-2">
-                <i class="material-icons material-symbols-rounded" style="font-size:20px;">add_circle</i>
+            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary px-4 py-2 rounded-1 d-flex align-items-center gap-2">
+                <i class="material-icons material-symbols-rounded fs-5">add</i>
                 Generate New ID Card
             </a>
         </div>
@@ -110,17 +111,17 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th class="text-nowrap">S.No.</th>
-                                    <th>ID Card</th>
-                                    <th>Request date</th>
-                                    <th>Employee Name</th>
-                                    <th>Designation</th>
-                                    <th>Card Type</th>
-                                    <th>Request For</th>
-                                    <th>Duplication</th>
-                                    <th>Extension</th>
-                                    <th>Valid Upto</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Actions</th>
+                                    <th class="col">ID Card</th>
+                                    <th class="col">Request date</th>
+                                    <th class="col">Employee Name</th>
+                                    <th class="col">Designation</th>
+                                    <th class="col">Card Type</th>
+                                    <th class="col">Request For</th>
+                                    <th class="col">Duplication</th>
+                                    <th class="col">Extension</th>
+                                    <th class="col">Valid Upto</th>
+                                    <th class="col">Status</th>
+                                    <th class="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -130,7 +131,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -170,34 +171,38 @@
                                                     'Issued' => 'primary',
                                                     default => 'secondary'
                                                 };
+                                                $statusLabel = $request->status ?? '--';
+                                                if ($request->status === 'Pending') {
+                                                    $statusLabel = $request->approved_by_a1 ? 'Pending (A2)' : 'Pending (A1)';
+                                                }
                                             @endphp
-                                            <span class="badge bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
+                                            <span class="badge text-{{ $statusClass }} fw-bold">{{ $statusLabel }}</span>
                                         </td>
-                                        <td class="text-end">
-                                            <div class="d-flex align-items-center justify-content-end gap-1" role="group">
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2" role="group">
                                                 <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
-                                                   class="btn btn-sm btn-outline-primary rounded-2 view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
+                                                   class="text-primary d-inline-flex align-items-center" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                    <i class="material-icons material-symbols-rounded">visibility</i>
                                                 </a>
                                                 <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
-                                                   class="btn btn-sm btn-outline-secondary rounded-2 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+                                                   class="d-inline-flex align-items-center text-primary" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                    <i class="material-icons material-symbols-rounded">edit</i>
                                                 </a>
                                                 <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" 
                                                       method="POST" class="d-inline" 
                                                       onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    </button>
+                                                    <a href="javascript:void(0)" class="text-primary d-inline-flex align-items-center" title="Archive">
+                                                    <i class="material-icons material-symbols-rounded">delete</i>
+                                                    </a>
                                                 </form>
                                             </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="12" class="text-center py-5 table-empty-state">
+                                        <td colspan="12" class=" text-center py-5 table-empty-state">
                                             <div class="d-inline-flex flex-column align-items-center p-4 bg-light rounded-3">
                                                 <i class="material-icons material-symbols-rounded mb-3 text-muted" style="font-size:56px;">inbox</i>
                                                 <p class="mb-1 fw-medium">No active ID card requests found.</p>
@@ -248,7 +253,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -301,8 +306,8 @@
                                             <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">content_copy</i>
                                             <p class="mb-1">No ID card duplication requests found.</p>
                                             <small>Duplication requests (Lost/Damage) will appear here when request for is "Replacement" or "Duplication".</small>
-                                            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-warning btn-sm mt-2 rounded-pill px-3 d-inline-block">
-                                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
+                                                <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-warning btn-sm mt-2 rounded-pill px-3 d-inline-block">
+                                                <i class="material-icons material-symbols-rounded align-middle me-1 fs-6">add</i>
                                                 Request Duplication
                                             </a>
                                         </td>
@@ -346,7 +351,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -397,7 +402,7 @@
                                             <p class="mb-1">No ID card extension requests found.</p>
                                             <small>Extension requests will appear here when request for is "Extension".</small>
                                             <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-info btn-sm mt-2 rounded-pill px-3 d-inline-block">
-                                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
+                                                <i class="material-icons material-symbols-rounded align-middle me-1 fs-6">add</i>
                                                 Request Extension
                                             </a>
                                         </td>
@@ -438,7 +443,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -493,7 +498,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">archive</i>
+                                            <i class="material-icons material-symbols-rounded d-block mb-2 fs-1" style="opacity:0.4;">archive</i>
                                             <p class="mb-1">No archived ID card requests found.</p>
                                             <small>Deleted records will appear here.</small>
                                         </td>
@@ -663,139 +668,7 @@
             </div>
         </div>
     </div>
-</div>
 
-<style>
-/* Request Employee ID Card - Match reference design */
-.idcard-index-page .idcard-breadcrumb { font-size: 0.875rem; }
-.idcard-index-page .breadcrumb-item.active { color: #004a93 !important; }
-.idcard-page-title { font-size: 1.5rem; font-weight: 700; color: #212529; }
-
-/* Tabs - Active: blue bg white text, Archive: light grey */
-.idcard-index-tabs .nav-link {
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    font-weight: 500;
-    color: #6c757d;
-    background: #e9ecef;
-    border: none;
-    margin-right: 0.25rem;
-}
-.idcard-index-tabs .nav-link:hover { color: #495057; background: #dee2e6; }
-.idcard-index-tabs .nav-link.active {
-    background: #004a93;
-    color: #fff;
-}
-
-/* Export dropdown */
-.idcard-index-page .dropdown .btn-outline-success {
-    border-color: #198754;
-    color: #198754;
-    transition: all 0.2s ease;
-}
-.idcard-index-page .dropdown .btn-outline-success:hover {
-    background: #198754;
-    color: #fff;
-    transform: translateY(-1px);
-}
-.idcard-index-page .dropdown-menu .dropdown-item:hover {
-    background: #f8fafc;
-}
-.idcard-index-page .dropdown-menu .dropdown-item:active {
-    background: #e9ecef;
-}
-
-/* Generate New ID Card button */
-.idcard-create-btn {
-    transition: all 0.2s ease;
-}
-.idcard-create-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 74, 147, 0.3) !important;
-}
-
-/* Table action buttons */
-.idcard-action-btns {
-    border-radius: 0.5rem;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-.idcard-action-btns .btn {
-    padding: 0.4rem 0.6rem;
-    transition: all 0.2s ease;
-}
-.idcard-action-btns .btn:hover {
-    transform: translateY(-1px);
-}
-.idcard-action-btns .btn i {
-    font-size: 1.125rem;
-}
-.idcard-action-btns .btn-group .btn { border-radius: 0; }
-.idcard-action-btns .btn-group .btn:first-child { border-radius: 0.5rem 0 0 0.5rem; }
-.idcard-action-btns .btn-group .btn:last-child { border-radius: 0 0.5rem 0.5rem 0; }
-.idcard-action-btns form { display: inline; }
-
-/* Table - Dark blue header, white text */
-.idcard-index-card { border-radius: 0.5rem; overflow: hidden; }
-.idcard-index-table thead tr {
-    background: #122442;
-    color: #fff;
-}
-.idcard-index-table thead.table-dark th {
-    font-weight: 600;
-    font-size: 0.8125rem;
-    padding: 0.75rem 1rem;
-    border: none;
-    letter-spacing: 0.03em;
-}
-.idcard-index-table tbody td {
-    padding: 0.75rem 1rem;
-    vertical-align: middle;
-    border-bottom: 1px solid #f1f3f5;
-}
-.idcard-index-table tbody tr:hover { background: #f8fafc; }
-
-/* Pagination - match reference */
-.idcard-index-page .pagination .page-item.active .page-link {
-    background-color: #004a93;
-    border-color: #004a93;
-    color: #fff;
-}
-.idcard-index-page .pagination .page-link { color: #004a93; }
-.idcard-index-page .pagination .page-link:hover { color: #003a75; }
-
-/* Amend Duplication/Extension anchors */
-a.amend-dup-ext-btn { cursor: pointer; }
-a.amend-dup-ext-btn:hover { opacity: 0.85; }
-
-/* View Details Modal - Bootstrap 5 + GIGW compliant */
-#viewDetailsModal .idcard-view-modal { border-radius: 0.5rem; overflow: hidden; }
-#viewDetailsModal .idcard-modal-header {
-    background: linear-gradient(135deg, #122442 0%, #004a93 100%);
-    border-bottom: none;
-}
-#viewDetailsModal .idcard-modal-item {
-    min-height: 3.5rem;
-    transition: background-color 0.15s ease;
-}
-#viewDetailsModal .idcard-modal-item:hover { background-color: rgba(0, 74, 147, 0.04); }
-#viewDetailsModal .idcard-modal-label { font-size: 0.75rem; letter-spacing: 0.02em; }
-#viewDetailsModal .idcard-modal-value { font-size: 0.9375rem; color: #212529; }
-#viewDetailsModal .idcard-amend-section .card { border-color: #dee2e6; }
-#viewDetailsModal .btn-close:focus-visible,
-#viewDetailsModal .btn:focus-visible,
-#viewDetailsModal .form-control:focus-visible,
-#viewDetailsModal .form-select:focus-visible,
-#viewDetailsModal a:focus-visible {
-    outline: 2px solid #004a93;
-    outline-offset: 2px;
-}
-#viewDetailsModal [role="alert"],
-#viewDetailsModal [role="status"] { font-size: 0.875rem; }
-@media (max-width: 767.98px) {
-    #viewDetailsModal .idcard-modal-item { border-end: none !important; }
-}
-</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Ensure Active tab is active by default on page load

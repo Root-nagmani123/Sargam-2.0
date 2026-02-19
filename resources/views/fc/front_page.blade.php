@@ -7,7 +7,7 @@
     <div class="academy-box">
         <div class="text-center mb-2">
             <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" height="80">
-            <h4 class="mt-3 fw-bold" style="color: #af2910; font-size: 20px;">Lal Bahadur Shastri National Academy of
+            <h4 class="mt-3 fw-bold" style="color: #004a93; font-size: 20px;">Lal Bahadur Shastri National Academy of
                 Administration</h4>
             <p class="text-muted" style="font-size: 16px;">Mussoorie, Uttarakhand</p>
         </div>

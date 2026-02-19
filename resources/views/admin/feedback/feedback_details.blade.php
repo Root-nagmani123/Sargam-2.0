@@ -1,429 +1,24 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty Feedback with Comments All Details - Sargam | Lal Bahadur')
+@section('title', 'Faculty Feedback with Comments All Details')
 
 @section('setup_content')
-    <style>
-        :root {
-            --primary: #af2910;
-            --primary-rgb: 175, 41, 16;
-            --secondary: #f4f6f9;
-            --accent: #f2b705;
-            --success: #198754;
-            --border: #e2e8f0;
-            --text-dark: #1e293b;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-            --radius: 0.75rem;
-            --radius-lg: 1rem;
-        }
-
-        body {
-            background: var(--secondary);
-            color: var(--text-dark);
-            font-size: 14px;
-        }
-
-        .page-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .filter-card {
-            border: 0;
-            border-radius: var(--radius-lg);
-            background: #fff;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-        }
-
-        .filter-card .card-header {
-            background: linear-gradient(135deg, var(--primary) 0%, #8a1f0d 100%);
-            color: #fff;
-            font-weight: 600;
-            padding: 1rem 1.25rem;
-            border: 0;
-        }
-
-        .content-card {
-            border: 0;
-            border-radius: var(--radius-lg);
-            background: #fff;
-            box-shadow: var(--shadow-sm);
-            overflow: hidden;
-        }
-
-        .content-card .card-header {
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-            font-weight: 600;
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .rating-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 28px;
-            height: 28px;
-            padding: 0 6px;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .rating-5 { background: #198754; color: #fff; }
-        .rating-4 { background: #20c997; color: #fff; }
-        .rating-3 { background: #ffc107; color: #000; }
-        .rating-2 { background: #fd7e14; color: #fff; }
-        .rating-1 { background: #dc3545; color: #fff; }
-
-        .faculty-type-badge {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 9999px;
-            background: #e2e8f0;
-            color: #475569;
-            font-weight: 500;
-        }
-
-        .session-badge {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 9999px;
-            background: #dbeafe;
-            color: #1d4ed8;
-            font-weight: 500;
-        }
-
-        .suggestions-container { position: relative; }
-
-        .suggestions-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            margin-top: 0.25rem;
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            max-height: 220px;
-            overflow-y: auto;
-            z-index: 1050;
-            display: none;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .suggestion-item {
-            padding: 0.6rem 1rem;
-            cursor: pointer;
-            border-bottom: 1px solid #f1f5f9;
-            transition: background 0.15s ease;
-        }
-
-        .suggestion-item:hover { background: #f8fafc; }
-        .suggestion-item:last-child { border-bottom: none; }
-
-        #loadingSpinner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 9999;
-            background: rgba(255, 255, 255, 0.92);
-            padding: 1.5rem 2rem;
-            backdrop-filter: blur(6px);
-            transition: opacity 0.2s ease, visibility 0.2s ease;
-        }
-
-        #loadingSpinner.loading-hidden {
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-        }
-
-        /* Pagination - modern card-style wrapper */
-        .pagination-wrapper {
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 1rem 1.25rem;
-            margin-top: 1.5rem;
-        }
-
-        .pagination-info {
-            font-size: 0.8125rem;
-            color: #64748b;
-            margin-bottom: 0.75rem;
-        }
-
-        .pagination-info strong { color: var(--text-dark); }
-
-        .pagination {
-            gap: 0.35rem;
-            margin: 0;
-        }
-
-        .pagination .page-item .page-link {
-            min-width: 2.5rem;
-            height: 2.5rem;
-            padding: 0 0.65rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--primary);
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            font-weight: 500;
-            transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .pagination .page-item:not(.disabled) .page-link:hover {
-            color: #fff;
-            background: var(--primary);
-            border-color: var(--primary);
-            box-shadow: 0 2px 4px rgba(175, 41, 16, 0.25);
-        }
-
-        .pagination .page-item.active .page-link {
-            color: #fff;
-            background: var(--primary);
-            border-color: var(--primary);
-            box-shadow: 0 2px 4px rgba(175, 41, 16, 0.3);
-        }
-
-        .pagination .page-item.disabled .page-link {
-            color: #94a3b8;
-            background: #f1f5f9;
-            border-color: var(--border);
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1.5rem;
-            color: #64748b;
-        }
-
-        .empty-state i {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            color: #cbd5e1;
-        }
-
-        .nav-tabs .nav-link {
-            color: var(--text-dark);
-            border: none;
-            border-bottom: 3px solid transparent;
-            font-weight: 500;
-            padding: 12px 24px;
-        }
-
-        .nav-tabs .nav-link:hover {
-            border-color: transparent;
-            background-color: #f8f9fa;
-        }
-
-        .nav-tabs .nav-link.active {
-            color: var(--primary);
-            background-color: transparent;
-            border-bottom-color: var(--primary);
-        }
-
-        /* Session header card */
-        .session-header {
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: rgba(var(--primary-rgb), 0.5);
-            box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.15);
-        }
-
-        .btn-group .btn { border-radius: 0.5rem; }
-        .feedback-actions .btn-group {
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .session-header .row .col-md-4 {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-        }
-
-        /* Responsive - tablet and below (desktop unchanged) */
-        @media (max-width: 991px) {
-            .filter-card .card-body,
-            .content-card .card-body {
-                padding: 1rem !important;
-            }
-            .session-header {
-                padding: 1rem !important;
-            }
-            .session-header .col-md-4 {
-                margin-bottom: 0.75rem;
-            }
-            .session-header .col-md-4:last-child {
-                margin-bottom: 0;
-            }
-            .pagination .page-item .page-link {
-                min-width: 2.25rem;
-                height: 2.25rem;
-                padding: 0 0.5rem;
-                font-size: 0.8125rem;
-            }
-        }
-
-        @media (max-width: 767px) {
-            .container-fluid {
-                padding-left: 0.75rem !important;
-                padding-right: 0.75rem !important;
-            }
-            .filter-card .card-body,
-            .content-card .card-body {
-                padding: 0.75rem !important;
-            }
-            .filter-card .card-header,
-            .content-card .card-header {
-                padding: 0.75rem 1rem !important;
-                font-size: 0.9375rem;
-            }
-            .content-card .card-header {
-                flex-direction: column;
-                align-items: flex-start !important;
-                gap: 0.5rem;
-            }
-            .content-card .card-header small {
-                font-size: 0.75rem;
-            }
-            .session-header {
-                padding: 0.75rem !important;
-            }
-            .session-header h6 {
-                font-size: 0.9375rem;
-            }
-            .feedback-actions {
-                flex-direction: column;
-                align-items: stretch !important;
-            }
-            .feedback-actions .btn-group {
-                flex-direction: column;
-                width: 100%;
-                gap: 0.5rem;
-            }
-            .feedback-actions .btn-group .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            .feedback-actions .btn-outline-secondary,
-            .feedback-actions .btn-warning {
-                width: 100%;
-            }
-            .table-feedback {
-                font-size: 0.8125rem;
-            }
-            .table-feedback th,
-            .table-feedback td {
-                padding: 0.5rem 0.4rem;
-            }
-            .table-feedback thead th {
-                white-space: nowrap;
-                font-size: 0.75rem;
-            }
-            .rating-badge {
-                min-width: 24px;
-                height: 24px;
-                font-size: 0.75rem;
-            }
-            .pagination-wrapper {
-                padding: 0.75rem 1rem;
-                margin-top: 1rem;
-            }
-            .pagination-info {
-                flex-direction: column;
-                gap: 0.5rem !important;
-                font-size: 0.75rem;
-            }
-            .pagination .page-item .page-link {
-                min-width: 2rem;
-                height: 2rem;
-                padding: 0 0.4rem;
-                font-size: 0.75rem;
-            }
-            .empty-state {
-                padding: 2rem 1rem;
-            }
-            .empty-state i {
-                font-size: 2.5rem;
-            }
-            .empty-state h5 {
-                font-size: 1rem;
-            }
-            .suggestions-list {
-                max-height: 180px;
-                max-width: 100%;
-                left: 0;
-                right: 0;
-            }
-        }
-
-        @media (max-width: 575px) {
-            .page-title {
-                font-size: 1rem;
-            }
-            .filter-card .card-body {
-                padding: 0.5rem !important;
-            }
-            fieldset legend,
-            .form-label {
-                font-size: 0.8125rem;
-            }
-            .form-control,
-            .form-select {
-                font-size: 0.875rem;
-            }
-            .session-header .d-flex.align-items-center.gap-2 {
-                flex-wrap: wrap;
-            }
-            .table-feedback th:nth-child(n+4),
-            .table-feedback td:nth-child(n+4) {
-                font-size: 0.75rem;
-            }
-            .pagination .page-item:not(:first-child):not(:last-child) .page-link {
-                min-width: 1.75rem;
-                height: 1.75rem;
-                padding: 0 0.35rem;
-            }
-            .pagination .page-item .page-link i {
-                font-size: 0.7rem;
-            }
-        }
-    </style>
-
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <div class="container-fluid py-3">
         <x-breadcrum title="Faculty Feedback with Comments All Details"></x-breadcrum>
 
-        <!-- Loading Spinner (hidden by default; JS toggles class loading-hidden) -->
-        <div id="loadingSpinner" class="loading-hidden d-flex flex-column align-items-center justify-content-center gap-3">
-            <div class="spinner-border text-primary" style="width: 2.5rem; height: 2.5rem;" role="status">
+        <!-- Loading Spinner (hidden by default; JS toggles d-none) -->
+        <div id="loadingSpinner" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center gap-3 bg-white bg-opacity-90">
+            <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
             <p class="mb-0 small text-body-secondary">Loading feedback data...</p>
         </div>
 
         <!-- FILTER PANEL -->
-        <div class="card filter-card mb-4">
-            <div class="card-header d-flex align-items-center gap-2">
+        <div class="card shadow rounded-3 mb-4 border-0 overflow-hidden">
+            <div class="card-header bg-primary text-white fw-semibold py-3 px-4 d-flex align-items-center gap-2 border-0">
                 <i class="fas fa-filter"></i>
                 <span>Feedback Details</span>
             </div>
@@ -495,64 +90,64 @@
                         </div>
 
                         <!-- Faculty Name -->
-                        <div class="col-lg-2 col-md-6 suggestions-container">
+                        <div class="col-lg-2 col-md-6 position-relative">
                             <label for="facultySearch" class="form-label fw-medium">Faculty Name</label>
                             <input type="text" id="facultySearch" class="form-control" name="faculty_name"
                                 value="{{ $currentFaculty ?? '' }}" placeholder="Type to search..." autocomplete="off" />
 
                             <!-- Suggestions dropdown -->
-                            <div class="suggestions-list" id="facultySuggestions">
+                            <div class="position-absolute top-100 start-0 w-100 mt-1 list-group list-group-flush border rounded shadow overflow-auto d-none" id="facultySuggestions">
                                 @if ($facultySuggestions->isNotEmpty())
                                     @foreach ($facultySuggestions as $faculty)
-                                        <div class="suggestion-item" data-value="{{ $faculty->full_name }}">
+                                        <div class="list-group-item list-group-item-action suggestion-item" data-value="{{ $faculty->full_name }}" role="button">
                                             {{ $faculty->full_name }}
                                             @php
                                                 $typeMap = ['1' => 'Internal', '2' => 'Guest'];
                                                 $typeDisplay =
                                                     $typeMap[$faculty->faculty_type] ?? ucfirst($faculty->faculty_type);
                                             @endphp
-                                            <span class="faculty-type-badge ms-2">{{ $typeDisplay }}</span>
+                                            <span class="badge bg-secondary ms-2">{{ $typeDisplay }}</span>
                                         </div>
                                     @endforeach
                                 @else
-                                    <div class="suggestion-item text-muted">No faculty found</div>
+                                    <div class="list-group-item text-muted">No faculty found</div>
                                 @endif
                             </div>
                         </div>
                     @endif
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center gap-2 mt-4 pt-3 border-top feedback-actions">
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-success" onclick="exportToExcel()">
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-4 pt-3 border-top">
+                    <div class="btn-group flex-wrap" role="group">
+                        <button type="button" class="btn btn-success rounded-2" onclick="exportToExcel()">
                             <i class="fas fa-file-excel me-1"></i> Export Excel
                         </button>
-                        <button type="button" class="btn btn-danger" onclick="exportToPDF()">
+                        <button type="button" class="btn btn-danger rounded-2" onclick="exportToPDF()">
                             <i class="fas fa-file-pdf me-1"></i> Export PDF
                         </button>
                     </div>
-                    <button type="button" class="btn btn-outline-secondary" id="resetButton">
+                    <button type="button" class="btn btn-outline-secondary rounded-2" id="resetButton">
                         <i class="fas fa-redo me-1"></i> Reset Filters
                     </button>
-                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning">
+                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning rounded-2">
                         <i class="fas fa-user-clock me-1"></i> Pending Feedback (Students)
                     </a>
                 </div>
             </div>
 
             <!-- Content card -->
-            <div class="card content-card mt-0 border-0 rounded-0 shadow-none" style="box-shadow: none;">
-                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
-                    <span class="page-title mb-0 text-primary">Faculty Feedback with Comments All Details</span>
+            <div class="card shadow-sm border-0 rounded-0 mt-0">
+                <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-4 border-bottom fw-semibold">
+                    <span class="mb-0 text-primary fs-6">Faculty Feedback with Comments All Details</span>
                     <small class="text-body-secondary"><i class="fas fa-sync-alt me-1"></i> {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
                 </div>
 
                 <div class="card-body p-4">
                     <div id="contentContainer">
                     @if ($groupedData->isEmpty())
-                        <div class="empty-state rounded-3 bg-light py-5">
-                            <i class="fas fa-clipboard-list d-block"></i>
-                            <h5 class="fw-semibold mt-2">No feedback data found</h5>
+                        <div class="text-center rounded-3 bg-light py-5 px-3 text-body-secondary">
+                            <i class="fas fa-clipboard-list display-4 text-secondary mb-3 d-block"></i>
+                            <h5 class="fw-semibold mt-2 text-dark">No feedback data found</h5>
                             <p class="text-body-secondary mb-0">Try adjusting your filters to see results.</p>
                         </div>
                     @else
@@ -563,15 +158,15 @@
                             @endphp
 
                             <!-- Session Header -->
-                            <div class="session-header mb-4 p-4">
-                                <div class="row g-3 align-items-center">
+                            <div class="border rounded bg-light shadow-sm mb-4 p-4">
+                                <div class="row g-3 align-items-start">
                                     <div class="col-md-4">
                                         <div class="d-flex align-items-center gap-2 mb-1">
                                             <i class="fas fa-book-open text-primary"></i>
                                             <span class="fw-semibold text-body-secondary small">Course</span>
                                         </div>
                                         <h6 class="mb-0 fw-semibold">{{ $programName }}</h6>
-                                        <span class="session-badge mt-1">{{ $firstRecord['course_status'] ?? 'Unknown' }}</span>
+                                        <span class="badge bg-primary rounded-pill mt-1">{{ $firstRecord['course_status'] ?? 'Unknown' }}</span>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="d-flex align-items-center gap-2 mb-1">
@@ -579,7 +174,7 @@
                                             <span class="fw-semibold text-body-secondary small">Faculty</span>
                                         </div>
                                         <h6 class="mb-0 fw-semibold">{{ $facultyName }}</h6>
-                                        <span class="faculty-type-badge mt-1">{{ $firstRecord['faculty_type'] ?? '' }}</span>
+                                        <span class="badge bg-secondary rounded-pill mt-1">{{ $firstRecord['faculty_type'] ?? '' }}</span>
                                     </div>
                                     <div class="col-md-4">
                                         <div class="d-flex align-items-center gap-2 mb-1">
@@ -597,11 +192,11 @@
                                         @endif
                                     </div>
                                 </div>
-                            </div>  
+                            </div>
                             <!-- Feedback Table -->
                             <div class="table-responsive mb-5 rounded-3 overflow-hidden border">
-                                <table class="table table-feedback align-middle mb-0">
-                                    <thead>
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
                                         <tr>
                                             <th>#</th>
                                             <th>OT Name</th>
@@ -614,23 +209,37 @@
                                     </thead>
                                     <tbody>
                                         @foreach ($group as $index => $item)
+                                            @php
+                                                $ratingClass = match((int)($item['content'] ?? 0)) {
+                                                    5 => 'bg-success',
+                                                    4 => 'bg-info',
+                                                    3 => 'bg-warning text-dark',
+                                                    2 => 'bg-secondary',
+                                                    1 => 'bg-danger',
+                                                    default => 'bg-secondary',
+                                                };
+                                                $presClass = match((int)($item['presentation'] ?? 0)) {
+                                                    5 => 'bg-success',
+                                                    4 => 'bg-info',
+                                                    3 => 'bg-warning text-dark',
+                                                    2 => 'bg-secondary',
+                                                    1 => 'bg-danger',
+                                                    default => 'bg-secondary',
+                                                };
+                                            @endphp
                                             <tr>
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $item['ot_name'] }}</td>
                                                 <td>{{ $item['ot_code'] }}</td>
                                                 <td>
-                                                    <span class="rating-badge rating-{{ $item['content'] }}">
-                                                        {{ $item['content'] }}
-                                                    </span>
+                                                    <span class="badge {{ $ratingClass }}">{{ $item['content'] }}</span>
                                                 </td>
                                                 <td>
-                                                    <span class="rating-badge rating-{{ $item['presentation'] }}">
-                                                        {{ $item['presentation'] }}
-                                                    </span>
+                                                    <span class="badge {{ $presClass }}">{{ $item['presentation'] }}</span>
                                                 </td>
                                                 <td>
                                                     @if (!empty($item['remark']))
-                                                        <div class="remark-text">{{ $item['remark'] }}</div>
+                                                        <div>{{ $item['remark'] }}</div>
                                                     @else
                                                         <span class="text-muted fst-italic">No remarks</span>
                                                     @endif
@@ -649,26 +258,17 @@
 
                         <!-- Pagination -->
                         @if ($totalRecords > 10)
-                            <div class="pagination-wrapper">
-                                <div class="pagination-info text-center d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3">
-                                    <span>
-                                        <strong>Page {{ $currentPage }}</strong> of {{ $totalPages }}
-                                    </span>
+                            <div class="border rounded bg-light p-3 mt-4">
+                                <div class="small text-center d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3 mb-2">
+                                    <span><strong>Page {{ $currentPage }}</strong> of {{ $totalPages }}</span>
                                     <span class="text-body-secondary">·</span>
-                                    <span>
-                                        Showing {{ ($currentPage - 1) * 10 + 1 }}–{{ min($currentPage * 10, $totalRecords) }} of <strong>{{ $totalRecords }}</strong> records
-                                    </span>
+                                    <span>Showing {{ ($currentPage - 1) * 10 + 1 }}–{{ min($currentPage * 10, $totalRecords) }} of <strong>{{ $totalRecords }}</strong> records</span>
                                 </div>
                                 <nav aria-label="Feedback pagination">
-                                    <ul class="pagination justify-content-center flex-wrap mb-0">
+                                    <ul class="pagination pagination-sm justify-content-center flex-wrap mb-0 gap-1">
                                         <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
-                                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First page" title="First">
-                                                <i class="fas fa-angle-double-left" aria-hidden="true"></i>
-                                            </a>
-                                        </li>
-                                        <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
-                                            <a class="page-link" href="javascript:void(0)" onclick="goToPage({{ $currentPage - 1 }})" aria-label="Previous page" title="Previous">
-                                                <i class="fas fa-angle-left" aria-hidden="true"></i>
+                                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage({{ $currentPage - 1 }})" aria-label="Previous page" title="Previous">
+                                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_left</span>
                                             </a>
                                         </li>
                                         @php
@@ -677,17 +277,12 @@
                                         @endphp
                                         @for ($i = $startPage; $i <= $endPage; $i++)
                                             <li class="page-item {{ $i == $currentPage ? 'active' : '' }}">
-                                                <a class="page-link" href="javascript:void(0)" onclick="goToPage({{ $i }})" aria-label="Page {{ $i }}" aria-current="{{ $i == $currentPage ? 'page' : 'false' }}">{{ $i }}</a>
+                                                <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage({{ $i }})" aria-label="Page {{ $i }}" aria-current="{{ $i == $currentPage ? 'page' : 'false' }}">{{ $i }}</a>
                                             </li>
                                         @endfor
                                         <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
-                                            <a class="page-link" href="javascript:void(0)" onclick="goToPage({{ $currentPage + 1 }})" aria-label="Next page" title="Next">
-                                                <i class="fas fa-angle-right" aria-hidden="true"></i>
-                                            </a>
-                                        </li>
-                                        <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
-                                            <a class="page-link" href="javascript:void(0)" onclick="goToPage({{ $totalPages }})" aria-label="Last page" title="Last">
-                                                <i class="fas fa-angle-double-right" aria-hidden="true"></i>
+                                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage({{ $currentPage + 1 }})" aria-label="Next page" title="Next">
+                                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_right</span>
                                             </a>
                                         </li>
                                     </ul>
@@ -721,14 +316,13 @@
                     facultySearch
                 ];
 
-                // Show/hide loader using class so it always hides (Bootstrap d-flex uses !important)
                 function showLoader() {
-                    if (loadingSpinner) loadingSpinner.classList.remove('loading-hidden');
-                    if (contentContainer) contentContainer.style.opacity = '0.5';
+                    if (loadingSpinner) loadingSpinner.classList.remove('d-none');
+                    if (contentContainer) contentContainer.classList.add('opacity-50');
                 }
                 function hideLoader() {
-                    if (loadingSpinner) loadingSpinner.classList.add('loading-hidden');
-                    if (contentContainer) contentContainer.style.opacity = '1';
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
+                    if (contentContainer) contentContainer.classList.remove('opacity-50');
                 }
 
                 // Function to load feedback data with current filters
@@ -795,20 +389,29 @@
                     if (data.groupedData && Object.keys(data.groupedData).length > 0) {
                         let html = '';
 
+                        function ratingClass(r) {
+                            const n = parseInt(r, 10);
+                            if (n === 5) return 'bg-success';
+                            if (n === 4) return 'bg-info';
+                            if (n === 3) return 'bg-warning text-dark';
+                            if (n === 2) return 'bg-secondary';
+                            if (n === 1) return 'bg-danger';
+                            return 'bg-secondary';
+                        }
                         Object.entries(data.groupedData).forEach(([groupKey, group]) => {
                             const [programName, facultyName, topicName] = groupKey.split('|');
                             const firstRecord = group[0];
 
                             html += `
-                    <div class="session-header mb-4 p-4">
-                        <div class="row g-3 align-items-center">
+                    <div class="border rounded bg-light shadow-sm mb-4 p-4">
+                        <div class="row g-3 align-items-start">
                             <div class="col-md-4">
                                 <div class="d-flex align-items-center gap-2 mb-1">
                                     <i class="fas fa-book-open text-primary"></i>
                                     <span class="fw-semibold text-body-secondary small">Course</span>
                                 </div>
                                 <h6 class="mb-0 fw-semibold">${programName}</h6>
-                                <span class="session-badge mt-1">${firstRecord.course_status || 'Unknown'}</span>
+                                <span class="badge bg-primary rounded-pill mt-1">${firstRecord.course_status || 'Unknown'}</span>
                             </div>
                             <div class="col-md-4">
                                 <div class="d-flex align-items-center gap-2 mb-1">
@@ -816,7 +419,7 @@
                                     <span class="fw-semibold text-body-secondary small">Faculty</span>
                                 </div>
                                 <h6 class="mb-0 fw-semibold">${facultyName}</h6>
-                                <span class="faculty-type-badge mt-1">${firstRecord.faculty_type || ''}</span>
+                                <span class="badge bg-secondary rounded-pill mt-1">${firstRecord.faculty_type || ''}</span>
                             </div>
                             <div class="col-md-4">
                                 <div class="d-flex align-items-center gap-2 mb-1">
@@ -835,8 +438,8 @@
                     </div>
 
                     <div class="table-responsive mb-5 rounded-3 overflow-hidden border">
-                        <table class="table table-feedback align-middle mb-0">
-                            <thead>
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
                                 <tr>
                                     <th>#</th>
                                     <th>OT Name</th>
@@ -853,18 +456,10 @@
                                         <td>${index + 1}</td>
                                         <td>${item.ot_name || ''}</td>
                                         <td>${item.ot_code || ''}</td>
-                                        <td class="text-center">
-                                            <span class="rating-badge rating-${item.content}">${item.content}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="rating-badge rating-${item.presentation}">${item.presentation}</span>
-                                        </td>
-                                        <td>
-                                            ${item.remark ? `<div class="remark-text">${item.remark}</div>` : `<span class="text-muted fst-italic">No remarks</span>`}
-                                        </td>
-                                        <td>
-                                            <small class="text-body-secondary">${item.feedback_date || ''}</small>
-                                        </td>
+                                        <td><span class="badge ${ratingClass(item.content)}">${item.content}</span></td>
+                                        <td><span class="badge ${ratingClass(item.presentation)}">${item.presentation}</span></td>
+                                        <td>${item.remark ? `<div>${item.remark}</div>` : `<span class="text-muted fst-italic">No remarks</span>`}</td>
+                                        <td><small class="text-body-secondary">${item.feedback_date || ''}</small></td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -888,9 +483,9 @@
                         }
                     } else {
                         contentContainer.innerHTML = `
-                <div class="empty-state rounded-3 bg-light py-5">
-                    <i class="fas fa-clipboard-list d-block"></i>
-                    <h5 class="fw-semibold mt-2">No feedback data found</h5>
+                <div class="text-center rounded-3 bg-light py-5 px-3 text-body-secondary">
+                    <i class="fas fa-clipboard-list display-4 text-secondary mb-3 d-block"></i>
+                    <h5 class="fw-semibold mt-2 text-dark">No feedback data found</h5>
                     <p class="text-body-secondary mb-0">Try adjusting your filters to see results.</p>
                 </div>
             `;
@@ -903,22 +498,17 @@
                     const endRec = Math.min(currentPage * 10, totalRecords);
 
                     let pagination = `
-            <div class="pagination-wrapper">
-                <div class="pagination-info text-center d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3">
+            <div class="border rounded bg-light p-3 mt-4">
+                <div class="small text-center d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3 mb-2">
                     <span><strong>Page ${currentPage}</strong> of ${totalPages}</span>
                     <span class="text-body-secondary">·</span>
                     <span>Showing ${startRec}–${endRec} of <strong>${totalRecords}</strong> records</span>
                 </div>
                 <nav aria-label="Feedback pagination">
-                    <ul class="pagination justify-content-center flex-wrap mb-0">
+                    <ul class="pagination pagination-sm justify-content-center flex-wrap mb-0 gap-1">
                         <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First page" title="First">
-                                <i class="fas fa-angle-double-left" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                        <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous page" title="Previous">
-                                <i class="fas fa-angle-left" aria-hidden="true"></i>
+                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous page" title="Previous">
+                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_left</span>
                             </a>
                         </li>
         `;
@@ -930,20 +520,15 @@
                         const ariaCurrent = i === currentPage ? ' aria-current="page"' : ' aria-current="false"';
                         pagination += `
                         <li class="page-item ${i === currentPage ? 'active' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${i})" aria-label="Page ${i}"${ariaCurrent}>${i}</a>
+                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage(${i})" aria-label="Page ${i}"${ariaCurrent}>${i}</a>
                         </li>
         `;
                     }
 
                     pagination += `
                         <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next page" title="Next">
-                                <i class="fas fa-angle-right" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                        <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last page" title="Last">
-                                <i class="fas fa-angle-double-right" aria-hidden="true"></i>
+                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next page" title="Next">
+                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_right</span>
                             </a>
                         </li>
                     </ul>
@@ -977,9 +562,9 @@
                         let suggestions = '';
                         data.facultySuggestions.forEach(faculty => {
                             suggestions += `
-                    <div class="suggestion-item" data-value="${faculty.full_name}">
+                    <div class="list-group-item list-group-item-action suggestion-item" data-value="${faculty.full_name}" role="button">
                         ${faculty.full_name}
-                        <span class="faculty-type-badge ms-2">${faculty.faculty_type_display}</span>
+                        <span class="badge bg-secondary ms-2">${faculty.faculty_type_display}</span>
                     </div>
                 `;
                         });
@@ -1004,7 +589,7 @@
                         .map(cb => cb.value);
 
                     if (selectedTypes.length === 0) {
-                        suggestionsList.style.display = 'none';
+                        if (suggestionsList) suggestionsList.classList.add('d-none');
                         return;
                     }
 
@@ -1030,11 +615,11 @@
                             `;
                                     });
                                     suggestionsList.innerHTML = suggestions;
-                                    suggestionsList.style.display = 'block';
+                                    suggestionsList.classList.remove('d-none');
                                 } else {
                                     suggestionsList.innerHTML =
-                                        '<div class="suggestion-item text-muted">No faculty found</div>';
-                                    suggestionsList.style.display = 'block';
+                                        '<div class="list-group-item text-muted">No faculty found</div>';
+                                    suggestionsList.classList.remove('d-none');
                                 }
                             })
                             .catch(error => {
@@ -1082,16 +667,17 @@
                 // Hide suggestions when clicking outside
                 document.addEventListener('click', function(event) {
                     if (suggestionsList && facultySearch && !facultySearch.contains(event.target) && !suggestionsList.contains(event.target)) {
-                        suggestionsList.style.display = 'none';
+                        suggestionsList.classList.add('d-none');
                     }
                 });
 
-                // Suggestion click
+                // Suggestion click (support clicking on child elements like badge)
                 if (suggestionsList) {
                     suggestionsList.addEventListener('click', function(event) {
-                        if (event.target.classList.contains('suggestion-item') && facultySearch) {
-                            facultySearch.value = event.target.getAttribute('data-value') || '';
-                            suggestionsList.style.display = 'none';
+                        const item = event.target.closest('.suggestion-item');
+                        if (item && facultySearch) {
+                            facultySearch.value = item.getAttribute('data-value') || '';
+                            suggestionsList.classList.add('d-none');
                             loadFeedbackData(1);
                         }
                     });
@@ -1107,7 +693,7 @@
                         document.querySelectorAll('select').forEach(select => select.value = '');
                         document.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
                         if (facultySearch) facultySearch.value = '';
-                        if (suggestionsList) suggestionsList.style.display = 'none';
+                        if (suggestionsList) suggestionsList.classList.add('d-none');
                         loadFeedbackData(1);
                     });
                 }
@@ -1155,7 +741,7 @@
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '{{ route('admin.feedback.feedback_details.export') }}';
-                form.style.display = 'none';
+                form.classList.add('d-none');
 
                 // Add all parameters as hidden inputs
                 params.forEach((value, key) => {
@@ -1170,7 +756,7 @@
                 form.submit();
 
                 setTimeout(() => {
-                    if (loadingSpinner) loadingSpinner.classList.add('loading-hidden');
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
                 }, 2000);
             }
 
@@ -1204,7 +790,7 @@
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '{{ route('admin.feedback.feedback_details.export') }}';
-                form.style.display = 'none';
+                form.classList.add('d-none');
 
                 // Add all parameters as hidden inputs
                 params.forEach((value, key) => {
@@ -1219,7 +805,7 @@
                 form.submit();
 
                 setTimeout(() => {
-                    if (loadingSpinner) loadingSpinner.classList.add('loading-hidden');
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
                 }, 2000);
             }
         </script>

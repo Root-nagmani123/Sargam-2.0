@@ -1,11 +1,11 @@
 <aside class="side-mini-panel with-vertical sidebar-google-style">
-    <div>
+    <div style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar">
-            <div>
-                <div class="mini-nav">
+        <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+            <div style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+                <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
                     <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
     <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
         data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
@@ -17,7 +17,7 @@
 
     </a>
 </div>
-                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init">
+                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto; min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer"></div>
@@ -38,7 +38,7 @@
                                                 </a>
                                             </li>
 
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
+                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
@@ -58,7 +58,7 @@
                                                     <span class="mini-nav-title sidebar-google-label">Users</span>
                                                 </a>
                                             </li>
-                                            @if(! hasRole('Training-MCTP'))
+                                            @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
@@ -95,17 +95,20 @@
                                                     <span class="mini-nav-title sidebar-google-label">Security</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
+                                           
+                                            @endif
+
+                                            @endif
+                                        @if(! hasRole('Student-OT'))
+                                             <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">report_problem</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Issues</span>
+                                                    <span class="mini-nav-title sidebar-google-label">Centcom</span>
                                                 </a>
                                             </li>
-                                            @endif
-
                                             @endif
 
                                         </div>
@@ -173,7 +176,7 @@
 <style>
 /* Google-style sidebar - light gray, icon above text, oval selected state */
 #sidebar-setup .sidebar-google-style.side-mini-panel {
-    width: 80px;
+    width: 90px;
 }
 #sidebar-setup .sidebar-google-style .mini-nav {
     background: #F0F0F0 !important;
@@ -191,7 +194,6 @@
     list-style: none;
     display: flex !important;
     justify-content: center !important;
-    width: 100%;
 }
 #sidebar-setup .sidebar-google-style .mini-nav ul.mini-nav-ul {
     padding-inline-start: 0 !important;
@@ -248,6 +250,14 @@
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
     background: #E0E0E0 !important;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    transform: scale(1.05);
+    margin: 4px 8px;
+    width: 100%;
+    height: 100%;
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {

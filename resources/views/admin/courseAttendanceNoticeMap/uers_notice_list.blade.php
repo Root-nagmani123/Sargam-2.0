@@ -38,7 +38,7 @@
             <hr>
             <div class="table-responsive">
                 <table class="table text-nowrap" style="border-radius: 10px; overflow: hidden; width: 100%;">
-                    <thead style="background-color: #af2910;">
+                    <thead style="background-color: #004a93;">
                         <tr>
                             <th class="col">S.No.</th>
                             <th class="col">Participant</th>
@@ -150,7 +150,7 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
     $('.view-conversation').on('click', function() {

@@ -23,8 +23,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="discussion_name" class="form-label">Discussion Name<span style="color:red;">*</span></label>
-                            <input type="text" name="discussion_name" class="form-control"
+                            <label for="discussion_name" class="form-label">Conclusion name<span style="color:red;">*</span></label>
+                            <input type="text" name="discussion_name" class="form-control memo-conclusion-input"
                                    value="{{ old('discussion_name', $conclusion->discussion_name ?? '') }}" required>
                             @error('discussion_name')
                                 <small class="text-danger">{{ $message }}</small>
@@ -35,7 +35,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="pt_discusion" class="form-label">PT Discussion</label>
-                            <input type="text" name="pt_discusion" class="form-control"
+                            <input type="text" name="pt_discusion" class="form-control memo-conclusion-input"
                                    value="{{ old('pt_discusion', $conclusion->pt_discusion ?? '') }}">
                             @error('pt_discusion')
                                 <small class="text-danger">{{ $message }}</small>
@@ -126,6 +126,14 @@
     }
     .memo-conclusion-form .form-label {
         font-size: 0.9375rem;
+    }
+    /* Same size text boxes at Add Discussion */
+    .memo-conclusion-form .memo-conclusion-input {
+        width: 100%;
+        min-height: 38px;
+    }
+    .memo-conclusion-form .row .col-md-6 .form-control {
+        flex: 1 1 auto;
     }
 }
 </style>

@@ -5,12 +5,12 @@
 @section('setup_content')
 <link rel="stylesheet" href="{{asset('admin_assets/css/dual-listbox.css')}}">
 <div class="container-fluid py-3">
-    <x-breadcrum title="Create Memo/Notice Management" />
+    <x-breadcrum title="Create Notice" />
     <x-session_message />
 
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-header bg-white py-3 px-4 border-0 border-bottom">
-            <h4 class="card-title mb-0 fw-semibold text-body">Create Memo/Notice Management</h4>
+            <h4 class="card-title mb-0 fw-semibold text-body">Create Notice</h4>
         </div>
         <div class="card-body p-4">
             <form action="{{ route('memo.notice.management.store_memo_notice') }}" method="POST">
@@ -32,7 +32,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <div class="mb-0">
-                            <label for="date_memo_notice" class="form-label fw-medium">Date</label>
+                            <label for="date_memo_notice" class="form-label fw-medium">Session Date</label>
                             <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice" required>
                             @error('date_memo_notice')
                                 <span class="text-danger small">{{ $message }}</span>
@@ -183,7 +183,7 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
     const today = new Date().toISOString().split('T')[0];

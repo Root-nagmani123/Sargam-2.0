@@ -132,6 +132,7 @@ class EmployeeIDCardRequestController extends Controller
      */
     public function show(EmployeeIDCardRequest $employeeIDCardRequest)
     {
+        $employeeIDCardRequest->load(['approver1', 'approver2']);
         return view('admin.employee_idcard.show', ['request' => $employeeIDCardRequest]);
     }
 

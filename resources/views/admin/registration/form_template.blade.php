@@ -66,7 +66,7 @@
             margin-bottom: 15px;
             background-color: rgb(235, 204, 198);
             text-transform: uppercase;
-            border-bottom: 2px solid #af2910;
+            border-bottom: 2px solid #004a93;
             padding: 10px;
         }
 

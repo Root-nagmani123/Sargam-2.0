@@ -22,7 +22,7 @@
         str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
         str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
         str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-        str_starts_with($path, 'admin/master') || str_starts_with($path, 'password') ||
+        str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
         str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
     ) {
         $activeNavTab = '#tab-setup';
@@ -40,46 +40,44 @@
     Skip to main content
 </a>
 
-<header class="header-top-bar d-none d-lg-block">
-<div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+    <header class="header-top-bar d-none d-lg-block">
+    <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
 
-<!-- Left: Government Identity -->
-<div class="d-flex align-items-center gap-2">
-    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-         alt="Emblem of India" class="header-flag-icon">
-    <span class="fw-semibold small text-white">
-        भारत सरकार | Government of India
-    </span>
-</div>
+    <!-- Left: Government Identity -->
+    <div class="d-flex align-items-center gap-2">
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+            alt="Emblem of India" class="header-flag-icon">
+        <span class="fw-semibold small text-white">
+            भारत सरकार | Government of India
+        </span>
+    </div>
 
-<!-- Right: Utilities with vertical separators -->
-<nav aria-label="Utility Navigation">
-    <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
-        <li class="list-inline-item">
-            <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
-        </li>
-        <li class="header-utility-sep" aria-hidden="true"></li>
-        <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
-            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
-            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
-            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
-        </li>
-        <li class="header-utility-sep" aria-hidden="true"></li>
-        <li class="list-inline-item">
-            <div class="header-lang-dropdown">
-                <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
-                <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
-                    <option selected>English</option>
-                    <option>हिन्दी</option>
-                </select>
-            </div>
-        </li>
-    </ul>
-</nav>
-</div>
-</header>
-
-<main id="main-content" tabindex="-1"></main>
+    <!-- Right: Utilities with vertical separators -->
+    <nav aria-label="Utility Navigation">
+        <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
+            <li class="list-inline-item">
+                <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
+            </li>
+            <li class="header-utility-sep" aria-hidden="true"></li>
+            <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
+            </li>
+            <li class="header-utility-sep" aria-hidden="true"></li>
+            <li class="list-inline-item">
+                <div class="header-lang-dropdown">
+                    <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
+                    <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
+                        <option selected>English</option>
+                        <option>हिन्दी</option>
+                    </select>
+                </div>
+            </li>
+        </ul>
+    </nav>
+    </div>
+    </header>
 
     <div class="with-vertical">
         <nav class="navbar navbar-expand-lg p-0">
@@ -125,7 +123,8 @@
                                     class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
                                     data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
-                                    @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff'))
+
+                                    @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff') || hasRole('IST'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
@@ -194,7 +193,7 @@
 
                             <!-- Search -->
                             <li class="nav-item" role="none">
-                                <button class="nav-link header-search-btn search-trigger"
+                                <button type="button" class="nav-link header-search-btn search-trigger"
                                     aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
                                     <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
                                 </button>
@@ -206,102 +205,122 @@
 
                 <!-- Right Side: Logout + Last Login -->
                 <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
-                    <!-- Notification Icon (optional - keep for functionality) -->
-                    <div class="dropdown position-relative">
-                        <button type="button"
-                            class="btn btn-link border-0 p-2 text-body-secondary position-relative"
-                            id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                            aria-label="Notifications" title="Notifications">
-                            <i class="material-icons material-symbols-rounded header-icon-sm"
-                                aria-hidden="true">notifications</i>
-                            @php
-                            $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
-                            @endphp
-                            @if($unreadCount > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">
-                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
-                            </span>
-                            @endif
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end-lg shadow-lg border-0 rounded-xl p-2"
-                            style="min-width: 350px; max-height: 400px; overflow-y: auto;"
-                            aria-labelledby="notificationDropdown">
-                            <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2">
-                                <span class="fw-semibold">Notifications</span>
-                                @if($unreadCount > 0)
-                                <button type="button" class="btn btn-sm btn-link text-primary p-0"
-                                    onclick="markAllAsRead()">
-                                    Mark all as read
-                                </button>
-                                @endif
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <div id="notificationList">
-                                @php
-                                $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
-                                @endphp
-                                @if($notifications->count() > 0)
-                                @foreach($notifications as $notification)
-                                <li>
-                                    <a class="dropdown-item px-3 py-2 rounded-lg {{ $notification->is_read ? '' : 'bg-light' }}"
-                                        href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
-                                        <div class="d-flex flex-column">
-                                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}
-                                            </div>
-                                            <div class="text-muted small mt-1">
-                                                {{ Str::limit($notification->message ?? '', 50) }}</div>
-                                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
-                                                {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
-                                            </div>
-                                        </div>
-                                    </a>
-                                </li>
-                                @endforeach
-                                @else
-                                <li class="px-3 py-4 text-center text-muted">
-                                    <i class="material-icons material-symbols-rounded"
-                                        style="font-size: 48px; opacity: 0.3;">notifications_none</i>
-                                    <div class="mt-2">No notifications</div>
-                                </li>
-                                @endif
-                            </div>
-                        </ul>
-                    </div>
 
-                    <!-- Divider -->
-                    <div class="header-logout-divider" aria-hidden="true"></div>
+    <!-- Notifications (visible on both desktop and mobile) -->
+    <div class="dropdown position-relative d-none d-lg-block">
+        <button type="button"
+            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
+            id="notificationDropdown"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            aria-label="Notifications">
 
-                    <!-- Logout Button -->
-                    <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
-                        @csrf
-                        <button type="submit" class="btn btn-link border-0 header-logout-btn d-flex flex-column align-items-center justify-content-center"
-                            aria-label="Sign out from system">
-                            <i class="material-icons material-symbols-rounded header-logout-icon" aria-hidden="true">logout</i>
-                            <span class="header-logout-text">Log out</span>
-                        </button>
-                    </form>
+            <i class="material-icons material-symbols-rounded fs-5">
+                notifications
+            </i>
 
-                    <!-- Last Login -->
-                    <div class="d-flex align-items-center gap-2 header-last-login">
-                        <span class="text-body-secondary small">Last login:</span>
-                        @php
-                        $lastLogin = Auth::user()->last_login ?? null;
-                        if ($lastLogin) {
-                            $date = \Carbon\Carbon::parse($lastLogin);
-                            $formattedDate = $date->format('Y-m-d H:i:s');
-                            $isoDate = $date->toIso8601String();
-                        } else {
-                            $formattedDate = 'Never';
-                            $isoDate = '';
-                        }
-                        @endphp
-                        <time id="myTime" datetime="{{ $isoDate }}" class="text-body-secondary small" aria-live="polite">
-                            {{ $formattedDate }}
-                        </time>
-                    </div>
-                </div>
+            @php
+                $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+            @endphp
+
+            @if($unreadCount > 0)
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                    {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                </span>
+            @endif
+        </button>
+
+        <!-- Dropdown -->
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
+            aria-labelledby="notificationDropdown">
+
+            <!-- Header -->
+            <li class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                <span class="fw-semibold">Notifications</span>
+                @if($unreadCount > 0)
+                    <button type="button"
+                        class="btn btn-sm btn-link text-primary p-0"
+                        onclick="markAllAsRead()">
+                        Mark all as read
+                    </button>
+                @endif
+            </li>
+
+            <div id="notificationList" class="notification-list">
+                @php
+                    $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
+                @endphp
+
+                @if($notifications->count() > 0)
+                    @foreach($notifications as $notification)
+                        <li>
+                            <a class="dropdown-item px-3 py-3 d-flex gap-2 notification-item
+                                {{ $notification->is_read ? '' : 'unread' }}"
+                               href="javascript:void(0)"
+                               onclick="markAsRead({{ $notification->pk }})">
+
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold small">
+                                        {{ $notification->title ?? 'Notification' }}
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        {{ Str::limit($notification->message ?? '', 60) }}
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size: 11px;">
+                                        {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                    @endforeach
+                @else
+                    <li class="text-center px-4 py-5 text-muted">
+                        <i class="material-icons material-symbols-rounded fs-1 opacity-25">
+                            notifications_none
+                        </i>
+                        <div class="mt-2 small">No notifications</div>
+                    </li>
+                @endif
+            </div>
+        </ul>
+    </div>
+
+    <!-- Logout -->
+    <form action="{{ route('logout') }}" method="POST" class="m-0">
+        @csrf
+        <button type="submit"
+            class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
+            aria-label="Sign out">
+            <i class="material-icons material-symbols-rounded fs-6">logout</i>
+            <span class="small fw-medium">Logout</span>
+        </button>
+    </form>
+
+    <!-- Last Login -->
+    <div class="d-flex align-items-center gap-1 text-body-secondary small">
+        <i class="material-icons material-symbols-rounded fs-6 opacity-50">
+            history
+        </i>
+        <span>Last login:</span>
+
+        @php
+            $lastLogin = Auth::user()->last_login ?? null;
+            if ($lastLogin) {
+                $date = \Carbon\Carbon::parse($lastLogin);
+                $formattedDate = $date->format('Y-m-d H:i:s');
+                $isoDate = $date->toIso8601String();
+            } else {
+                $formattedDate = 'Never';
+                $isoDate = '';
+            }
+        @endphp
+
+        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}">
+            {{ $formattedDate }}
+        </time>
+    </div>
+</div>
+
             </div>
 
             <!-- Mobile Navigation Container (FB/Instagram-style) -->
@@ -400,7 +419,7 @@
 
                     <!-- Search -->
                     <li class="nav-item" role="none">
-                        <button class="nav-link mobile-tab-link search-trigger"
+                        <button type="button" class="nav-link mobile-tab-link search-trigger"
                             aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
                             <span>Search</span>
@@ -448,6 +467,41 @@
             </div>
 
             <style>
+                .notification-btn:hover {
+    background-color: var(--bs-light);
+    transform: translateY(-1px);
+}
+
+.notification-badge {
+    font-size: 10px;
+    padding: 4px 6px;
+}
+
+.notification-dropdown {
+    width: 360px;
+    max-height: 420px;
+    overflow: hidden;
+}
+
+.notification-list {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    border-left: 3px solid transparent;
+    transition: background-color 0.2s ease;
+}
+
+.notification-item.unread {
+    background-color: var(--bs-light);
+    border-left-color: var(--bs-primary);
+}
+
+.notification-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
                 /* Skip link visibility */
 .skip-link {
     position: absolute;
@@ -498,9 +552,15 @@
 
 /* Main nav bar - white background */
 .with-vertical .navbar { background: #fff !important }
-.header-brand { gap: 8px !important; }
-.header-logo-emblem { height: 40px; }
-.header-logo { height: 32px; }
+.header-brand { gap: 10px !important; }
+.header-logo-emblem { height: 40px; object-fit: contain; }
+.header-logo { height: 32px; object-fit: contain; }
+/* Desktop: larger, more prominent logo */
+@media (min-width: 992px) {
+    .header-brand { gap: 12px !important; }
+    .header-logo-emblem { height: 52px !important; }
+    .header-logo { height: 44px !important; }
+}
 .header-app-name {
     font-size: 1.25rem;
     font-weight: 700;
@@ -586,7 +646,16 @@
                     padding-bottom: 64px !important;
                 }
 
-                /* Hide sidebar by default on mobile */
+                /* Mobile: Right-align logout and header actions */
+                .header-right-actions {
+                    width: 100%;
+                    justify-content: flex-end !important;
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
+                    padding: 0.5rem 0;
+                }
+
+                /* Hide sidebar by default on mobile - responsive width */
                 .left-sidebar,
                 .side-mini-panel,
                 aside.side-mini-panel,
@@ -594,11 +663,11 @@
                     position: fixed !important;
                     top: 0 !important;
                     left: -100% !important;
-                    width: 350px !important;
+                    width: min(320px, 88vw) !important;
+                    max-width: 320px !important;
                     height: 100vh !important;
                     z-index: 1060 !important;
-                    background: #fff !important;
-                    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1) !important;
+                    background: transparent !important;
                     transition: left 0.3s ease-in-out !important;
                     display: block !important;
                     visibility: hidden !important;
@@ -606,10 +675,10 @@
                     overflow-y: auto !important;
                 }
 
-                /* Sidebar mini panel specific width */
+                /* Sidebar mini panel specific - compact when hidden */
                 .side-mini-panel {
-                    width: 70px !important;
-                    left: -70px !important;
+                    width: 64px !important;
+                    left: -64px !important;
                 }
 
                 /* Hide sidebar tab content by default on mobile */
@@ -642,13 +711,16 @@
                     visibility: visible !important;
                     opacity: 1 !important;
                     display: block !important;
+                    background: transparent !important;
+                    pointer-events: auto !important;
                 }
 
-                /* Expand side-mini-panel to full width on mobile when open - so child module (sidebar-nav) is visible */
+                /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
                 .side-mini-panel.show-sidebar,
                 aside.side-mini-panel.show-sidebar,
                 aside.side-mini-panel.with-vertical.show-sidebar {
-                    width: 350px !important;
+                    width: min(320px, 88vw) !important;
+                    max-width: 320px !important;
                 }
 
                 /* Show sidebar tab content when sidebar is open */
@@ -764,6 +836,23 @@
 
                 .mobile-tab-link.active i {
                     color: #1d4ed8 !important;
+                }
+            }
+
+            /* Very small phones - narrower sidebar */
+            @media (max-width: 375px) {
+                .left-sidebar,
+                .side-mini-panel,
+                aside.side-mini-panel,
+                aside.side-mini-panel.with-vertical {
+                    width: min(280px, 92vw) !important;
+                    max-width: 280px !important;
+                }
+                .side-mini-panel.show-sidebar,
+                aside.side-mini-panel.show-sidebar,
+                aside.side-mini-panel.with-vertical.show-sidebar {
+                    width: min(280px, 92vw) !important;
+                    max-width: 280px !important;
                 }
             }
 
@@ -1084,79 +1173,60 @@
                     });
                 }
                 
-                // Ensure collapse/expand functionality works on mobile
-                const collapseInitialized = new WeakSet();
-                
-                function initializeCollapseOnMobile() {
-                    if (window.innerWidth >= 992) return; // Only on mobile
+                // Mobile collapse: document-level delegation (capture phase)
+                let collapseHandledAt = 0;
+                function handleMobileCollapse(e) {
+                    if (window.innerWidth >= 992) return;
                     
-                    // Find all collapse elements in sidebar tab content (even when hidden)
+                    const trigger = e.target.closest('[data-bs-toggle="collapse"]');
+                    if (!trigger) return;
+                    
                     const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    if (!sidebarTabContent) return;
+                    if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
                     
-                    // Find collapse buttons in all sidebar panes
-                    const collapseButtons = sidebarTabContent.querySelectorAll('[data-bs-toggle="collapse"]');
+                    if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
                     
-                    collapseButtons.forEach(collapseBtn => {
-                        // Skip if already initialized
-                        if (collapseInitialized.has(collapseBtn)) return;
-                        collapseInitialized.add(collapseBtn);
-                        
-                        // Add click handler for mobile collapse - expand/collapse child menu only (do NOT close sidebar)
-                        collapseBtn.addEventListener('click', function(e) {
-                            const targetId = this.getAttribute('data-bs-target') || this.getAttribute('href');
-                            if (!targetId) return;
-                            
-                            const targetElement = document.querySelector(targetId);
-                            if (!targetElement) return;
-                            
-                            // On mobile: keep sidebar open - only expand/collapse the child submenu
-                            // (Previously incorrectly toggled sidebar visibility which closed the panel)
-                            
-                            // Don't prevent default - let Bootstrap handle collapse
-                            // But ensure Bootstrap collapse is initialized
-                            if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-                                let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
-                                if (!bsCollapse) {
-                                    bsCollapse = new bootstrap.Collapse(targetElement, {
-                                        toggle: false
-                                    });
+                    // Prevent double-fire from pointerup + click on touch devices
+                    const now = Date.now();
+                    if (now - collapseHandledAt < 400) return;
+                    collapseHandledAt = now;
+                    
+                    const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
+                    if (!targetId) return;
+                    
+                    const targetElement = document.getElementById(targetId);
+                    if (!targetElement) return;
+                    
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                        let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
+                        if (!bsCollapse) {
+                            bsCollapse = new bootstrap.Collapse(targetElement, { toggle: false });
+                        }
+                        bsCollapse.toggle();
+                        // Accordion: close other collapses in same sidebar-nav
+                        const parentNav = trigger.closest('.sidebar-nav');
+                        if (parentNav) {
+                            parentNav.querySelectorAll('.collapse').forEach(c => {
+                                if (c !== targetElement && c.classList.contains('show')) {
+                                    const other = bootstrap.Collapse.getInstance(c);
+                                    if (other) other.hide();
                                 }
-                            }
-                        }, { once: false });
-                    });
+                            });
+                        }
+                        // Rotate arrow icon
+                        const icon = trigger.querySelector('.material-icons');
+                        if (icon) {
+                            setTimeout(() => {
+                                icon.textContent = targetElement.classList.contains('show') ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+                            }, 350);
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
                 }
                 
-                // Initialize collapse on mobile immediately
-                if (window.innerWidth < 992) {
-                    setTimeout(initializeCollapseOnMobile, 100);
-                }
-                
-                // Re-initialize when sidebar becomes visible
-                const sidebar = getActiveSidebar();
-                if (sidebar) {
-                    const sidebarVisibilityObserver = new MutationObserver(function(mutations) {
-                        mutations.forEach(function(mutation) {
-                            if (mutation.attributeName === 'class') {
-                                if (sidebar.classList.contains('show-sidebar')) {
-                                    setTimeout(initializeCollapseOnMobile, 150);
-                                }
-                            }
-                        });
-                    });
-                    
-                    sidebarVisibilityObserver.observe(sidebar, {
-                        attributes: true,
-                        attributeFilter: ['class']
-                    });
-                }
-                
-                // Re-initialize when tabs change
-                document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                    tab.addEventListener('shown.bs.tab', function() {
-                        setTimeout(initializeCollapseOnMobile, 200);
-                    });
-                });
+                document.addEventListener('pointerup', handleMobileCollapse, true);
+                document.addEventListener('click', handleMobileCollapse, true);
              
 
                 // Time format is already set in PHP, no need to override
@@ -1210,15 +1280,20 @@
                     });
                 }
 
-                // Search trigger functionality
+                // Search trigger functionality - scroll to DataTables search or focus search input
                 const searchTriggers = document.querySelectorAll('.search-trigger');
                 if (searchTriggers.length) {
                     searchTriggers.forEach(trigger => {
-                        trigger.addEventListener('click', function() {
-                            // Open search modal or expand search bar
+                        trigger.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
                             this.setAttribute('aria-expanded', 'true');
-                            // Add your search functionality here
-                            console.log('Search triggered');
+                            // Find DataTables search input on current page
+                            const dtSearchInput = document.querySelector('.dataTables_filter input');
+                            if (dtSearchInput) {
+                                dtSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                dtSearchInput.focus();
+                            }
                         });
                     });
                 }
@@ -1341,33 +1416,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeBtn = document.getElementById('closeSearchBtn');
     const searchInput = document.getElementById('tableSearchInput');
 
-    // Open/close search
-    toggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        searchBox.classList.toggle('show');
-        if (searchBox.classList.contains('show')) {
-            searchInput.focus();
-        } else {
-            searchInput.value = '';
-        }
-    });
-
-    // Close via X button
-    closeBtn.addEventListener('click', () => {
-        searchBox.classList.remove('show');
-        searchInput.value = '';
-    });
-
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+    if (toggleBtn && searchBox) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            searchBox.classList.toggle('show');
+            if (searchBox.classList.contains('show') && searchInput) {
+                searchInput.focus();
+            } else if (searchInput) {
+                searchInput.value = '';
+            }
+        });
+    }
+    if (closeBtn && searchBox && searchInput) {
+        closeBtn.addEventListener('click', () => {
             searchBox.classList.remove('show');
-        }
-    });
-
-    // Close on ESC key
+            searchInput.value = '';
+        });
+    }
+    if (searchBox && toggleBtn) {
+        document.addEventListener('click', (e) => {
+            if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+                searchBox.classList.remove('show');
+            }
+        });
+    }
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && searchBox) {
             searchBox.classList.remove('show');
         }
     });
