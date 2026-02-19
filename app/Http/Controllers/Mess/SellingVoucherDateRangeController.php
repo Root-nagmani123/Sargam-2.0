@@ -28,7 +28,7 @@ class SellingVoucherDateRangeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory']);
+        $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory']);
 
         if ($request->filled('store')) {
             $query->where('store_id', $request->store);
@@ -159,7 +159,16 @@ class SellingVoucherDateRangeController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
-            'client_type_pk' => 'nullable|exists:mess_client_types,id',
+            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
+                if ($value === null || $value === '') return;
+                $slug = $request->client_type_slug ?? '';
+                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                    $fail('The selected client is invalid.');
+                }
+                if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
+                    $fail('The selected course is invalid.');
+                }
+            }],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
@@ -221,7 +230,7 @@ class SellingVoucherDateRangeController extends Controller
                 'total_amount' => 0,
                 'remarks' => $request->remarks,
                 'client_type_slug' => $request->client_type_slug,
-                'client_type_pk' => $request->client_type_pk,
+                'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_name' => $request->client_name,
                 'payment_type' => (int) $request->payment_type,
                 'issue_date' => $issueDate,
@@ -269,7 +278,7 @@ class SellingVoucherDateRangeController extends Controller
 
     public function show(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items.itemSubcategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory'])->findOrFail($id);
 
         if ($request->wantsJson()) {
             $issueDateFormatted = $report->issue_date ? $report->issue_date->format('d/m/Y') : '—';
@@ -283,7 +292,7 @@ class SellingVoucherDateRangeController extends Controller
                 'status' => $report->status,
                 'status_label' => SellingVoucherDateRangeReport::statusLabels()[$report->status] ?? '—',
                 'client_type' => $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—'),
-                'client_name' => $report->clientTypeCategory ? ($report->clientTypeCategory->client_name ?? '—') : '—',
+                'client_name' => $report->display_client_name,
                 'client_name_text' => $report->client_name ?? '—',
                 'payment_type' => $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')),
                 'issue_date' => $issueDateFormatted,
@@ -372,7 +381,16 @@ class SellingVoucherDateRangeController extends Controller
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
             'client_type_slug' => 'required|string|in:employee,ot,course,other',
-            'client_type_pk' => 'nullable|exists:mess_client_types,id',
+            'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
+                if ($value === null || $value === '') return;
+                $slug = $request->client_type_slug ?? '';
+                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                    $fail('The selected client is invalid.');
+                }
+                if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
+                    $fail('The selected course is invalid.');
+                }
+            }],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
@@ -425,7 +443,7 @@ class SellingVoucherDateRangeController extends Controller
                 'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
                 'remarks' => $request->remarks,
                 'client_type_slug' => $request->client_type_slug,
-                'client_type_pk' => $request->client_type_pk,
+                'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_name' => $request->client_name,
                 'payment_type' => (int) $request->payment_type,
                 'issue_date' => $issueDate,

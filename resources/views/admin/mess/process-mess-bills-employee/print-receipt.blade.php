@@ -47,7 +47,7 @@
     <div class="info-block">
         <div class="row">
             <div><span class="label">Buyer:</span> <span class="value">{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</span></div>
-            <div><span class="label">Client Type:</span> <span class="value">{{ $bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—') }}</span></div>
+            <div><span class="label">Client Type:</span> <span class="value">{{ $bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—')) }}</span></div>
             <div><span class="label">Invoice Date:</span> <span class="value">{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</span></div>
             <div><span class="label">Store:</span> <span class="value">{{ $bill->store->store_name ?? '—' }}</span></div>
         </div>

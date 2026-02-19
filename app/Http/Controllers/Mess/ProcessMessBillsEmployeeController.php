@@ -10,11 +10,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Process Mess Bills (Employee) - displays employee mess bills under Billing & Finance.
- * Shows both Regular Selling Voucher (from kitchen_issue_master) and Selling Voucher with Date Range (from sv_date_range_reports) filtered by employee client type.
+ * Process Mess Bills - displays mess bills for Employee, OT, Course, and Other client types.
+ * Shows both Regular Selling Voucher (from kitchen_issue_master) and Selling Voucher with Date Range (from sv_date_range_reports).
  */
 class ProcessMessBillsEmployeeController extends Controller
 {
+    /** Client type slugs used in SellingVoucherDateRangeReport */
+    private const ALLOWED_CLIENT_SLUGS = ['employee', 'ot', 'course', 'other'];
+
+    /** Client type constants for KitchenIssueMaster (Employee, OT, Course, Other) */
+    private const ALLOWED_KITCHEN_CLIENT_TYPES = [
+        KitchenIssueMaster::CLIENT_EMPLOYEE,
+        KitchenIssueMaster::CLIENT_OT,
+        KitchenIssueMaster::CLIENT_COURSE,
+        KitchenIssueMaster::CLIENT_OTHER,
+    ];
     public function index(Request $request)
     {
         $perPage = $request->get('per_page', 10);
@@ -36,7 +46,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'store_id',
                 DB::raw("'date_range' as source_type")
             ])
-            ->where('client_type_slug', 'employee');
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
 
         if ($dateFrom) {
             $dateRangeQuery->where(function ($q) use ($dateFrom) {
@@ -57,7 +67,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'pk as id',
                 'client_name',
                 'issue_date',
-                DB::raw("'employee' as client_type_slug"),
+                DB::raw("CASE client_type WHEN 1 THEN 'employee' WHEN 2 THEN 'ot' WHEN 3 THEN 'course' WHEN 4 THEN 'other' END as client_type_slug"),
                 'client_type_pk',
                 DB::raw('NULL as total_amount'),
                 'payment_type',
@@ -65,7 +75,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'store_id',
                 DB::raw("'kitchen_issue' as source_type")
             ])
-            ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
 
         if ($dateFrom) {
@@ -111,12 +121,12 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Get summary statistics for employee mess bills in the given date range.
+     * Get summary statistics for mess bills (Employee, OT, Course, Other) in the given date range.
      */
     private function getSummaryStats(?string $dateFrom, ?string $dateTo, ?string $search): array
     {
         $dateRangeBase = SellingVoucherDateRangeReport::query()
-            ->where('client_type_slug', 'employee');
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
         if ($dateFrom) {
             $dateRangeBase->where(function ($q) use ($dateFrom) {
                 $q->where('issue_date', '>=', $dateFrom)->orWhere('date_from', '>=', $dateFrom);
@@ -129,7 +139,7 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         $kitchenBase = KitchenIssueMaster::query()
-            ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
         if ($dateFrom) {
             $kitchenBase->where('issue_date', '>=', $dateFrom);
@@ -161,13 +171,13 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         // Try to find in Selling Voucher with Date Range first
         $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->where('client_type_slug', 'employee')
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($id);
 
         // If not found, try Kitchen Issue Master (Regular Selling Voucher)
         if (!$bill) {
             $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
-                ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('pk', $id)
                 ->firstOrFail();
@@ -187,7 +197,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         // Query 1: Selling Voucher with Date Range
         $dateRangeQuery = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->where('client_type_slug', 'employee')
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->where('status', '!=', 2); // Only unpaid bills
 
         if ($dateFrom) {
@@ -203,7 +213,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         // Query 2: Regular Selling Voucher (Kitchen Issue)
         $kitchenIssueQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
-            ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('status', '!=', 2); // Only unpaid bills
 
@@ -248,13 +258,13 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         // Try to find in Selling Voucher with Date Range first
         $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->where('client_type_slug', 'employee')
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($id);
 
         // If not found, try Kitchen Issue Master (Regular Selling Voucher)
         if (!$bill) {
             $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
-                ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('pk', $id)
                 ->firstOrFail();
@@ -280,7 +290,7 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         // Try to find in Selling Voucher with Date Range first
         $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->where('client_type_slug', 'employee')
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($id);
 
         $isKitchenIssue = false;
@@ -288,7 +298,7 @@ class ProcessMessBillsEmployeeController extends Controller
         // If not found, try Kitchen Issue Master (Regular Selling Voucher)
         if (!$bill) {
             $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
-                ->where('client_type', KitchenIssueMaster::CLIENT_EMPLOYEE)
+                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('pk', $id)
                 ->firstOrFail();
