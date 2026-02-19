@@ -166,10 +166,21 @@ class ReportController extends Controller
                 $previousSale = \DB::table('kitchen_issue_items as kii')
                     ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
                     ->where('kii.item_subcategory_id', $item->id)
+                    ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                    ->where('kim.store_type', 'store')
                     ->whereDate('kim.issue_date', '<=', $previousDate)
                     ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
-                    ->sum('kii.quantity');
-                $itemData['opening_qty'] = $previousPurchase - $previousSale;
+                    ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $previousSaleSv = \DB::table('sv_date_range_report_items as svi')
+                    ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                    ->where('svi.item_subcategory_id', $item->id)
+                    ->where('svr.store_type', 'store')
+                    ->whereDate('svr.issue_date', '<=', $previousDate)
+                    ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
+                    ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $itemData['opening_qty'] = $previousPurchase - $previousSale - $previousSaleSv;
             } else {
                 $previousAllocation = \DB::table('mess_store_allocation_items as sai')
                     ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
@@ -180,10 +191,21 @@ class ReportController extends Controller
                 $previousSale = \DB::table('kitchen_issue_items as kii')
                     ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
                     ->where('kii.item_subcategory_id', $item->id)
+                    ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                    ->where('kim.store_type', 'sub_store')
                     ->whereDate('kim.issue_date', '<=', $previousDate)
                     ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
-                    ->sum('kii.quantity');
-                $itemData['opening_qty'] = $previousAllocation - $previousSale;
+                    ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $previousSaleSv = \DB::table('sv_date_range_report_items as svi')
+                    ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                    ->where('svi.item_subcategory_id', $item->id)
+                    ->where('svr.store_type', 'sub_store')
+                    ->whereDate('svr.issue_date', '<=', $previousDate)
+                    ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
+                    ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $itemData['opening_qty'] = $previousAllocation - $previousSale - $previousSaleSv;
             }
 
             $itemData['opening_amount'] = $itemData['opening_qty'] * $itemData['opening_rate'];
@@ -214,16 +236,35 @@ class ReportController extends Controller
 
             $itemData['purchase_amount'] = $itemData['purchase_qty'] * $itemData['purchase_rate'];
 
-            $sales = \DB::table('kitchen_issue_items as kii')
+            // Sales from Selling Voucher (kitchen_issue)
+            $kimStoreType = $storeType == 'main' ? 'store' : 'sub_store';
+            $salesKi = \DB::table('kitchen_issue_items as kii')
                 ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
                 ->where('kii.item_subcategory_id', $item->id)
+                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('kim.store_type', $kimStoreType)
                 ->whereBetween('kim.issue_date', [$fromDate, $toDate])
                 ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
-                ->selectRaw('SUM(kii.quantity) as total_qty, AVG(kii.rate) as avg_rate')
+                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as total_qty, SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * kii.rate) as total_amount')
                 ->first();
-            $itemData['sale_qty'] = $sales->total_qty ?? 0;
-            $itemData['sale_rate'] = $sales->avg_rate ?? $itemData['sale_rate'];
-            $itemData['sale_amount'] = $itemData['sale_qty'] * $itemData['sale_rate'];
+            $saleQtyKi = (float) ($salesKi->total_qty ?? 0);
+            $saleAmountKi = (float) ($salesKi->total_amount ?? 0);
+
+            // Sales from Selling Voucher with Date Range
+            $salesSv = \DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->where('svi.item_subcategory_id', $item->id)
+                ->where('svr.store_type', $kimStoreType)
+                ->whereBetween('svr.issue_date', [$fromDate, $toDate])
+                ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
+                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty, SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * svi.rate) as total_amount')
+                ->first();
+            $saleQtySv = (float) ($salesSv->total_qty ?? 0);
+            $saleAmountSv = (float) ($salesSv->total_amount ?? 0);
+
+            $itemData['sale_qty'] = $saleQtyKi + $saleQtySv;
+            $itemData['sale_amount'] = $saleAmountKi + $saleAmountSv;
+            $itemData['sale_rate'] = $itemData['sale_qty'] > 0 ? $itemData['sale_amount'] / $itemData['sale_qty'] : $itemData['sale_rate'];
 
             $itemData['closing_qty'] = $itemData['opening_qty'] + $itemData['purchase_qty'] - $itemData['sale_qty'];
             $itemData['closing_amount'] = $itemData['closing_qty'] * $itemData['closing_rate'];
@@ -464,16 +505,33 @@ class ReportController extends Controller
                 })
                 ->sum('quantity');
             
-            // Get total sales/issues till date
-            $totalIssued = \DB::table('kitchen_issue_items as kii')
+            // Get total sales/issues till date from Selling Voucher (kitchen_issue)
+            $totalIssuedKi = \DB::table('kitchen_issue_items as kii')
                 ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
                 ->where('kii.item_subcategory_id', $item->id)
+                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('kim.store_type', 'store')
                 ->whereDate('kim.issue_date', '<=', $tillDate)
                 ->when($storeId, function($q) use ($storeId) {
                     return $q->where('kim.store_id', $storeId);
                 })
-                ->sum('kii.quantity');
-            
+                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+
+            // Get total sales/issues from Selling Voucher with Date Range
+            $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->where('svi.item_subcategory_id', $item->id)
+                ->where('svr.store_type', 'store')
+                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->when($storeId, function($q) use ($storeId) {
+                    return $q->where('svr.store_id', $storeId);
+                })
+                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+
+            $totalIssued = $totalIssuedKi + $totalIssuedSv;
+
             // Calculate remaining quantity
             $remainingQty = $totalPurchased - $totalIssued;
             
