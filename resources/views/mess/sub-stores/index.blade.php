@@ -2,8 +2,9 @@
 @section('title', 'Sub Store Master')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Sub Store Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
@@ -19,19 +20,19 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table id="subStoresTable" class="table table-bordered table-hover align-middle w-100">
+                    <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Sub Store Name</th>
-                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
+                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
+                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Sub Store Name</th>
+                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
+                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($subStores as $subStore)
+                        @foreach($subStores as $subStore)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $subStore->id }}</td>
                                 <td><div class="fw-semibold">{{ $subStore->sub_store_name }}</div></td>
                                 <td>
                                     <span class="badge bg-{{ $subStore->status_badge_class }}">
@@ -54,14 +55,11 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No sub stores found.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+        </div>
         </div>
     </div>
 </div>
@@ -138,24 +136,23 @@
     </div>
 </div>
 
+@include('components.mess-master-datatables', ['tableId' => 'subStoresTable', 'searchPlaceholder' => 'Search sub stores...', 'orderColumn' => 1, 'actionColumnIndex' => 3, 'infoLabel' => 'sub stores'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.btn-edit-substore').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            var baseUrl = '{{ url("admin/mess/sub-stores") }}';
-            document.getElementById('editSubStoreForm').action = baseUrl + '/' + id;
-            document.getElementById('edit_sub_store_name').value = this.getAttribute('data-sub-store-name') || '';
-            document.getElementById('edit_status').value = this.getAttribute('data-status') || 'active';
-            new bootstrap.Modal(document.getElementById('editSubStoreModal')).show();
-        });
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-edit-substore');
+        if (!btn) return;
+        document.getElementById('editSubStoreForm').action = '{{ url("admin/mess/sub-stores") }}/' + btn.getAttribute('data-id');
+        document.getElementById('edit_sub_store_name').value = btn.getAttribute('data-sub-store-name') || '';
+        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+        new bootstrap.Modal(document.getElementById('editSubStoreModal')).show();
     });
 });
 </script>
 @endpush
 
 <style>
-.table thead th { background-color: #af2910 !important; color: #fff !important; }
+.table thead th { background-color: #004a93 !important; color: #fff !important; }
 </style>
 @endsection

@@ -2,57 +2,71 @@
 @section('title', 'Purchase Orders')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Purchase Orders</h4>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-            Create Purchase Order
-        </button>
-    </div>
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Purchase Orders</h4>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                        Create Purchase Order
+                    </button>
+                </div>
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                <div class="table-responsive">
+                    <table id="purchaseOrdersTable" class="table table-bordered table-hover align-middle w-100">
+                        <thead>
+                            <tr>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; width: 60px;">S.No</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Order Number</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Vendor Name</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
+                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; min-width: 180px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($purchaseOrders as $po)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $po->po_number }}</td>
+                                <td>{{ $po->vendor->name ?? 'N/A' }}</td>
+                                <td>{{ $po->store->store_name ?? 'N/A' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ $po->status == 'approved' ? 'success' : ($po->status == 'rejected' ? 'danger' : ($po->status == 'completed' ? 'primary' : 'warning')) }}">
+                                        {{ ucfirst($po->status) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info btn-view-po" data-po-id="{{ $po->id }}" title="View">View</button>
+                                    <button type="button" class="btn btn-sm btn-warning btn-edit-po" data-po-id="{{ $po->id }}" title="Edit">Edit</button>
+                                    <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-    @endif
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
-            <thead style="background-color: #af2910;">
-                <tr>
-                    <th style="color: #fff; border-color: #af2910; width: 60px;">S.No</th>
-                    <th style="color: #fff; border-color: #af2910;">Order Number</th>
-                    <th style="color: #fff; border-color: #af2910;">Vendor Name</th>
-                    <th style="color: #fff; border-color: #af2910;">Store Name</th>
-                    <th style="color: #fff; border-color: #af2910;">Status</th>
-                    <th style="color: #fff; border-color: #af2910; min-width: 180px;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach($purchaseOrders as $po)
-                <tr>
-                    <td>{{ $loop->iteration }}</td>
-                    <td>{{ $po->po_number }}</td>
-                    <td>{{ $po->vendor->name ?? 'N/A' }}</td>
-                    <td>{{ $po->store->store_name ?? 'N/A' }}</td>
-                    <td>
-                        <span class="badge bg-{{ $po->status == 'approved' ? 'success' : ($po->status == 'rejected' ? 'danger' : ($po->status == 'completed' ? 'primary' : 'warning')) }}">
-                            {{ ucfirst($po->status) }}
-                        </span>
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-info btn-view-po" data-po-id="{{ $po->id }}" title="View">View</button>
-                        <button type="button" class="btn btn-sm btn-warning btn-edit-po" data-po-id="{{ $po->id }}" title="Edit">Edit</button>
-                        <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
     </div>
 </div>
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'purchaseOrdersTable',
+    'searchPlaceholder' => 'Search purchase orders...',
+    'orderColumn' => 1,
+    'actionColumnIndex' => 5,
+    'infoLabel' => 'purchase orders'
+])
 
 {{-- Create Purchase Order Modal --}}
 <style>
@@ -102,7 +116,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Order Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="po_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                                    <input type="date" name="po_date" class="form-control" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Store Name</label>
@@ -229,7 +243,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Order Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="po_date" id="editPoDate" class="form-control" required>
+                                    <input type="date" name="po_date" id="editPoDate" class="form-control" max="{{ date('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Store Name</label>
@@ -397,6 +411,7 @@
 (function() {
     let itemSubcategories = @json($itemSubcategories);
     let filteredItems = itemSubcategories;
+    let editModalItems = null;
     const editPoBaseUrl = "{{ url('admin/mess/purchaseorders') }}";
     let itemRowIndex = 1;
     let editItemRowIndex = 0;
@@ -405,7 +420,7 @@
 
     function getItemRowHtml(index, editItem, isEditModal) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
-        const itemsToUse = isEditModal ? itemSubcategories : filteredItems;
+        const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
         const options = itemsToUse.map(s =>
             `<option value="${s.id}" data-unit="${(s.unit_measurement || '').replace(/"/g, '&quot;')}" data-code="${(s.item_code || '').replace(/"/g, '&quot;')}" ${s.id == selected ? 'selected' : ''}>${(s.item_name || '—').replace(/</g, '&lt;')}</option>`
         ).join('');
@@ -457,7 +472,7 @@
 
     function updateItemDropdowns(tbody, isEditModal) {
         const rows = tbody.querySelectorAll('.po-item-row');
-        const itemsToUse = isEditModal ? itemSubcategories : filteredItems;
+        const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
         
         rows.forEach(row => {
             const select = row.querySelector('.po-item-select');
@@ -548,9 +563,18 @@
     });
 
     document.getElementById('poItemsBody').addEventListener('change', function(e) {
-        if (e.target.classList.contains('po-item-select')) {
+        // Some browsers/users (spinner, blur) trigger change more reliably than input
+        if (
+            e.target.classList.contains('po-item-select') ||
+            e.target.classList.contains('po-qty') ||
+            e.target.classList.contains('po-unit-price') ||
+            e.target.classList.contains('po-tax')
+        ) {
             const row = e.target.closest('.po-item-row');
-            if (row) { updateUnitAndCode(row); calcLineTotal(row); updateGrandTotal(); }
+            if (!row) return;
+            if (e.target.classList.contains('po-item-select')) updateUnitAndCode(row);
+            calcLineTotal(row);
+            updateGrandTotal();
         }
     });
 
@@ -590,10 +614,12 @@
         });
     }
 
-    // View button: fetch PO and open view modal (read-only)
-    document.querySelectorAll('.btn-view-po').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const poId = this.getAttribute('data-po-id');
+    // View button: fetch PO and open view modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-view-po');
+        if (!btn) return;
+        e.preventDefault();
+        const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(data => {
@@ -629,7 +655,6 @@
                     new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-        });
     });
 
     function escapeHtml(text) {
@@ -638,28 +663,45 @@
         return div.innerHTML;
     }
 
-    // Vendor selection change in EDIT modal
+    // Vendor selection change in EDIT modal: load vendor-mapped items and refresh dropdowns
     const editVendorSelect = document.querySelector('#editPurchaseOrderModal select[name="vendor_id"]');
     if (editVendorSelect) {
         editVendorSelect.addEventListener('change', function() {
             const vendorId = this.value;
             editCurrentVendorId = vendorId;
-            
+            const tbody = document.getElementById('editPoItemsBody');
+
             if (!vendorId) {
-                const tbody = document.getElementById('editPoItemsBody');
+                editModalItems = itemSubcategories;
                 updateItemDropdowns(tbody, true);
                 return;
             }
-            
-            // For edit modal, we don't filter items - show all items
-            // This allows editing existing POs without restriction
+
+            fetchVendorItems(vendorId, function() {
+                const currentIds = [];
+                tbody.querySelectorAll('.po-item-select').forEach(sel => {
+                    const v = sel.value;
+                    if (v) currentIds.push(v);
+                });
+                const merged = (filteredItems || []).slice();
+                currentIds.forEach(id => {
+                    if (id && !merged.some(m => m.id == id)) {
+                        const fromAll = itemSubcategories.find(s => s.id == id);
+                        if (fromAll) merged.push(fromAll);
+                    }
+                });
+                editModalItems = merged.length ? merged : itemSubcategories;
+                updateItemDropdowns(tbody, true);
+            });
         });
     }
 
-    // Edit button: fetch PO and open modal
-    document.querySelectorAll('.btn-edit-po').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const poId = this.getAttribute('data-po-id');
+    // Edit button: fetch PO and open modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-edit-po');
+        if (!btn) return;
+        e.preventDefault();
+        const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(data => {
@@ -674,23 +716,44 @@
                     document.getElementById('editContactNumber').value = po.contact_number || '';
                     document.getElementById('editDeliveryAddress').value = po.delivery_address || '';
                     editCurrentVendorId = po.vendor_id;
-                    const tbody = document.getElementById('editPoItemsBody');
-                    tbody.innerHTML = '';
-                    if (items.length === 0) {
-                        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, true));
-                        editItemRowIndex = 1;
-                    } else {
-                        items.forEach((item, i) => {
-                            tbody.insertAdjacentHTML('beforeend', getItemRowHtml(i, item, true));
+
+                    function buildEditRows(vendorItemList) {
+                        const merged = (vendorItemList || []).slice();
+                        items.forEach(poItem => {
+                            const id = poItem.item_subcategory_id;
+                            if (id && !merged.some(m => m.id == id)) {
+                                const fromAll = itemSubcategories.find(s => s.id == id);
+                                if (fromAll) merged.push(fromAll);
+                            }
                         });
-                        editItemRowIndex = items.length;
+                        editModalItems = merged.length ? merged : itemSubcategories;
+
+                        const tbody = document.getElementById('editPoItemsBody');
+                        tbody.innerHTML = '';
+                        if (items.length === 0) {
+                            tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, true));
+                            editItemRowIndex = 1;
+                        } else {
+                            items.forEach((item, i) => {
+                                tbody.insertAdjacentHTML('beforeend', getItemRowHtml(i, item, true));
+                            });
+                            editItemRowIndex = items.length;
+                        }
+                        updateEditGrandTotal();
+                        updateEditRemoveButtons();
+                        new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
                     }
-                    updateEditGrandTotal();
-                    updateEditRemoveButtons();
-                    new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
+
+                    if (po.vendor_id) {
+                        fetchVendorItems(po.vendor_id, function() {
+                            buildEditRows(filteredItems);
+                        });
+                    } else {
+                        editModalItems = itemSubcategories;
+                        buildEditRows(itemSubcategories);
+                    }
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-        });
     });
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
@@ -701,9 +764,17 @@
     });
 
     document.getElementById('editPoItemsBody').addEventListener('change', function(e) {
-        if (e.target.classList.contains('po-item-select')) {
+        if (
+            e.target.classList.contains('po-item-select') ||
+            e.target.classList.contains('po-qty') ||
+            e.target.classList.contains('po-unit-price') ||
+            e.target.classList.contains('po-tax')
+        ) {
             const row = e.target.closest('.po-item-row');
-            if (row) { updateUnitAndCode(row); calcLineTotal(row); updateEditGrandTotal(); }
+            if (!row) return;
+            if (e.target.classList.contains('po-item-select')) updateUnitAndCode(row);
+            calcLineTotal(row);
+            updateEditGrandTotal();
         }
     });
     document.getElementById('editPoItemsBody').addEventListener('input', function(e) {

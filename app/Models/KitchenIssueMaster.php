@@ -143,6 +143,25 @@ class KitchenIssueMaster extends Model
     }
 
     /**
+     * When client_type is OT (2) or Course (3), client_type_pk stores course_master.pk.
+     */
+    public function course()
+    {
+        return $this->belongsTo(\App\Models\CourseMaster::class, 'client_type_pk', 'pk');
+    }
+
+    /**
+     * Display name for Client Name column: course name for OT/Course, else client type category name.
+     */
+    public function getDisplayClientNameAttribute()
+    {
+        if (in_array((int) $this->client_type, [self::CLIENT_OT, self::CLIENT_COURSE]) && $this->client_type_pk) {
+            return $this->course?->course_name ?? '—';
+        }
+        return $this->clientTypeCategory?->client_name ?? '—';
+    }
+
+    /**
      * Grand total from items
      */
     public function getGrandTotalAttribute()

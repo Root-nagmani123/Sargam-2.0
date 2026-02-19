@@ -756,7 +756,7 @@ $memo_conclusion_master = collect(); // default empty collection
     $memoNotice->transform(function ($item) {
         if ($item->role_type == 'f') {
             $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = $creator ? $creator->name : 'Admin';
+            $item->display_name = 'Admin';
         } elseif ($item->role_type == 's') {
             $student = DB::table('student_master')->where('pk', $item->created_by)->first();
             $item->display_name = $student ? $student->display_name : 'Student';
@@ -799,7 +799,7 @@ $memoNotice->transform(function ($item) {
         $creator = DB::table('users')
             ->where('id', $item->created_by)
             ->first();
-        $item->display_name = $creator ? $creator->name : 'Admin';
+        $item->display_name = 'Admin';
     } elseif ($item->role_type == 's') {
         // Student (From student_master table)
         $student = DB::table('student_master')
@@ -1146,14 +1146,14 @@ public function memo_notice_conversation(Request $request)
     $statusTable = $type === 'memo' ? 'student_memo_status' : 'student_notice_status';
     $foreignKey = $type === 'memo' ? 'student_memo_status_pk' : 'student_notice_status_pk';
 
-    // Insert message
+    // Insert message (store created_date in UTC for correct chat order and display in Asia/Kolkata)
     $inserted = DB::table($table)->insert([
         $foreignKey => $validated['memo_notice_id'],
         'student_decip_incharge_msg' => $validated['message'],
         'doc_upload' => $filePath,
         'role_type' => 'f',
         'created_by' => auth()->user()->id ?? 1,
-        'created_date' => now(),
+        'created_date' => now('UTC'),
     ]);
 
    if ($inserted) {
@@ -1585,7 +1585,7 @@ if (!$id || !is_numeric($id)) {
     $memoNotice->transform(function ($item) {
         if ($item->role_type == 'f') {
             $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = $creator ? $creator->name : 'Admin';
+            $item->display_name = 'Admin';
         } elseif ($item->role_type == 's') {
             $student = DB::table('student_master')->where('pk', $item->created_by)->first();
             $item->display_name = $student ? $student->display_name : 'Student';
@@ -1629,14 +1629,14 @@ public function memo_notice_conversation_student(Request $request)
     $insertTable = $type === 'memo' ? 'memo_message_student_decip_incharge' : 'notice_message_student_decip_incharge';
     $foreignKeyField = $type === 'memo' ? 'student_memo_status_pk' : 'student_notice_status_pk';
 
-    // Insert message
+    // Insert message (store created_date in UTC for correct chat order and display in Asia/Kolkata)
     $inserted = DB::table($insertTable)->insert([
         $foreignKeyField => $validated['memo_notice_id'],
         'student_decip_incharge_msg' => $validated['message'],
         'doc_upload' => $filePath,
         'role_type' => 's',
         'created_by' => $validated['student_id'],
-        'created_date' => now(),
+        'created_date' => now('UTC'),
     ]);
 
     // Redirect back with appropriate message
@@ -1723,7 +1723,7 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
     $conversations = $conversations->map(function ($item) {
         if ($item->role_type == 'f') {
             $user = DB::table('users')->find($item->created_by);
-            $item->display_name = $user->name ?? 'Admin';
+            $item->display_name = 'Admin';
             $item->user_type = 'admin';
 
         } elseif ($item->role_type == 's') {
@@ -1765,7 +1765,7 @@ public function get_conversation_model_bkp($id,$type, Request $request)
         ->map(function ($item) {
             if ($item->role_type == 'f') {
                 $user = DB::table('users')->find($item->created_by);
-                $item->display_name = $user->name ?? 'Admin';
+                $item->display_name = 'Admin';
                 $item->user_type = 'admin';
             } elseif ($item->role_type == 's') {
                 $student = DB::table('student_master')->where('pk', $item->created_by)->first();
@@ -1782,14 +1782,21 @@ public function get_conversation_model_bkp($id,$type, Request $request)
     return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id'));
 }
 public function memo_notice_conversation_model(Request $request){
+    $isAjax = $request->ajax() || $request->wantsJson();
 
-
-     $validated = $request->validate([
-        'memo_notice_id' => 'required',
-        'student_decip_incharge_msg' => 'required_without:document|nullable|string|max:500',
-        'created_by' => 'required',
-        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-         ]);
+    try {
+        $validated = $request->validate([
+            'memo_notice_id' => 'required',
+            'student_decip_incharge_msg' => 'required_without:document|nullable|string|max:500',
+            'created_by' => 'required',
+            'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        if ($isAjax) {
+            return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+        }
+        throw $e;
+    }
 
     // Handle file upload (form field name must be "document" for side-panel chat)
     $filePath = null;
@@ -1801,38 +1808,52 @@ public function memo_notice_conversation_model(Request $request){
 
     $messageText = $validated['student_decip_incharge_msg'] ?? '';
 
-    if($request->type == 'memo'){
-$data = DB::table('memo_message_student_decip_incharge')->insert([
-        'student_memo_status_pk' => $validated['memo_notice_id'],
-        'student_decip_incharge_msg' => $messageText,
-         'doc_upload' => $filePath,
-        'role_type' => $request->role_type, // 'f' for admin, 's' for student
-        'created_by' => $validated['created_by'], // Replace with correct user ID
-         ]);
-          if ($data) {
-        return redirect()->back()->with('success', 'Memo msg created successfully.');
-
-        } else {
+    if ($request->type == 'memo') {
+        $data = DB::table('memo_message_student_decip_incharge')->insert([
+            'student_memo_status_pk' => $validated['memo_notice_id'],
+            'student_decip_incharge_msg' => $messageText,
+            'doc_upload' => $filePath,
+            'role_type' => $request->role_type,
+            'created_by' => $validated['created_by'],
+            'created_date' => now('UTC'),
+        ]);
+        if ($data) {
+            if ($isAjax) {
+                return response()->json(['success' => true, 'message' => 'Memo msg created successfully.']);
+            }
+            return redirect()->back()->with('success', 'Memo msg created successfully.');
+        }
+        if ($isAjax) {
+            return response()->json(['success' => false, 'message' => 'Failed to create Memo/Notice. Please try again.'], 500);
+        }
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
-    }else if($request->type == 'notice'){
-    // Insert into your table
-   $data = DB::table('notice_message_student_decip_incharge')->insert([
-        'student_notice_status_pk' => $validated['memo_notice_id'],
-        'student_decip_incharge_msg' => $messageText,
-        'doc_upload' => $filePath,
-        'role_type' => $request->role_type, // 'f' for admin, 's' for student
-        'created_by' => $validated['created_by'], // Replace with correct user ID
-         ]);
 
-   if ($data) {
-        return redirect()->back()->with('success', 'Notice msg created successfully.');
-
-        } else {
+    if ($request->type == 'notice') {
+        $data = DB::table('notice_message_student_decip_incharge')->insert([
+            'student_notice_status_pk' => $validated['memo_notice_id'],
+            'student_decip_incharge_msg' => $messageText,
+            'doc_upload' => $filePath,
+            'role_type' => $request->role_type,
+            'created_by' => $validated['created_by'],
+            'created_date' => now('UTC'),
+        ]);
+        if ($data) {
+            if ($isAjax) {
+                return response()->json(['success' => true, 'message' => 'Notice msg created successfully.']);
+            }
+            return redirect()->back()->with('success', 'Notice msg created successfully.');
+        }
+        if ($isAjax) {
+            return response()->json(['success' => false, 'message' => 'Failed to create Memo/Notice. Please try again.'], 500);
+        }
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
-}
 
+    if ($isAjax) {
+        return response()->json(['success' => false, 'message' => 'Invalid type.'], 400);
+    }
+    return redirect()->back()->with('error', 'Invalid type.');
 }
    public function getMemoData_bkp(Request $request)
 {

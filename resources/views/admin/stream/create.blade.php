@@ -134,66 +134,53 @@
 
     window.addStreamField = function() {
         streamFieldCounter++;
+
         const container = document.getElementById('stream_fields');
         const fieldRow = document.createElement('div');
+
         fieldRow.className = 'stream-field-row row g-2 align-items-end mb-3';
-        fieldRow.setAttribute('role', 'listitem');
 
         const inputId = 'stream_name_' + streamFieldCounter;
+
         fieldRow.innerHTML = `
             <div class="col-12 col-md-11">
-                <label for="${inputId}" class="form-label visually-hidden">Stream name ${streamFieldCounter}</label>
                 <input type="text"
                     id="${inputId}"
                     name="stream_name[]"
-                    class="form-control form-control-lg"
-                    placeholder="Enter stream name (e.g. Science, Arts, Commerce)"
-                    required
-                    autocomplete="organization"
-                    aria-required="true">
+                    class="form-control form-control-lg stream-input"
+                    placeholder="Enter stream name"
+                    autocomplete="organization">
             </div>
-            <div class="col-12 col-md-1 d-flex justify-content-md-start justify-content-end">
-                <button type="button"
-                    class="btn btn-danger btn-lg px-3"
-                    onclick="removeField(this)"
-                    aria-label="Remove stream ${streamFieldCounter}">
-                    <i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i>
+
+            <div class="col-12 col-md-1">
+                <button type="button" class="btn btn-danger btn-lg px-3" onclick="removeField(this)">
+                    delete
                 </button>
             </div>
         `;
 
         container.appendChild(fieldRow);
-
-        // Focus the new input for keyboard/screen reader users (GIGW)
-        const newInput = fieldRow.querySelector('input');
-        if (newInput) {
-            newInput.focus();
-        }
-
-        // Announce to screen readers (GIGW - assistive tech support)
-        const liveRegion = document.getElementById('stream-aria-live') || createLiveRegion();
-        liveRegion.textContent = 'Stream field ' + streamFieldCounter + ' added.';
-        setTimeout(function() { liveRegion.textContent = ''; }, 1000);
     };
 
-    window.removeField = function(button) {
-        const row = button.closest('.stream-field-row');
-        const list = document.getElementById('stream_fields');
-        if (row && list && list.querySelectorAll('.stream-field-row').length > 1) {
+    window.removeField = function(btn) {
+        const row = btn.closest('.stream-field-row');
+        if(document.querySelectorAll('.stream-field-row').length > 1){
             row.remove();
         }
     };
 
-    function createLiveRegion() {
-        const live = document.createElement('div');
-        live.id = 'stream-aria-live';
-        live.setAttribute('aria-live', 'polite');
-        live.setAttribute('aria-atomic', 'true');
-        live.className = 'visually-hidden';
-        document.body.appendChild(live);
-        return live;
-    }
+    // 🔥 CLEAN EMPTY INPUTS BEFORE SUBMIT (MOBILE FIX)
+    document.getElementById('stream-form').addEventListener('submit', function(e){
+
+        document.querySelectorAll('.stream-input').forEach(function(input){
+            if(input.value.trim() === ''){
+                input.remove();
+            }
+        });
+
+    });
+
 })();
 </script>
 @endpush
-    
+

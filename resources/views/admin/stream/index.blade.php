@@ -3,6 +3,20 @@
 @section('title', 'Stream - Sargam | Lal Bahadur')
 
 @section('setup_content')
+<style>
+ .delete-btn{
+    border:none;
+    background:none;
+    padding:4px;
+    cursor:pointer;
+    color:#0d6efd;
+}
+
+.delete-btn:hover{
+    color:red;
+}
+    </style>
+
 <div class="container-fluid stream-index">
     <x-breadcrum title="Stream" />
     <x-session_message />
@@ -92,7 +106,8 @@
 </div>
 
 <script>
-window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
+//window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
+window.statusToggleUrl = "{{ route('admin.stream.toggleStatus') }}";
 window.streamStoreUrl = "{{ route('stream.store') }}";
 </script>
 @endsection
@@ -219,4 +234,81 @@ window.streamStoreUrl = "{{ route('stream.store') }}";
         });
     })();
     </script>
+
+
+
+<script>
+document.addEventListener('change', function(e){
+
+    const toggle = e.target.closest('.status-toggle');
+    if(!toggle) return;
+
+    fetch(window.statusToggleUrl,{
+        method:'POST',
+        headers:{
+            'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+            id: toggle.dataset.id
+        })
+    })
+    .then(r=>r.json())
+    .then(res=>{
+
+        if(res.success){
+            $('#stream-table').DataTable().ajax.reload(null,false);
+        } else {
+            toggle.checked = !toggle.checked;
+            alert('Status update failed');
+        }
+
+    })
+    .catch(()=>{
+        toggle.checked = !toggle.checked;
+        alert('Server error');
+    });
+
+});
+</script>
+
+<script>
+document.addEventListener('click', function(e){
+
+    const btn = e.target.closest('.delete-stream');
+    if(!btn) return;
+
+    e.preventDefault();
+
+    if(!confirm('Are you sure you want to delete this stream?')) return;
+
+    fetch(btn.dataset.url,{
+        method:'POST',
+        headers:{
+            'X-CSRF-TOKEN': btn.dataset.token,
+            'Content-Type':'application/json'
+        },
+        body: JSON.stringify({
+            _method: 'DELETE'
+        })
+    })
+    .then(r => r.json())
+    .then(res => {
+
+        if(res.success){
+            // reload datatable only
+            $('#stream-table').DataTable().ajax.reload(null,false);
+        }else{
+            alert(res.message ?? 'Delete failed');
+        }
+
+    })
+    .catch(()=>{
+        alert('Server error');
+    });
+
+});
+</script>
+
+
 @endpush

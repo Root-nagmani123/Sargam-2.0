@@ -114,7 +114,7 @@
                             </td>
 
                             <td>
-                                {{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}
+                                {{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}
                             </td>
 
                             <td>
@@ -249,6 +249,7 @@
                     <hr>
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary">Send</button>
+
                         <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">Back</a>
                     </div>
 

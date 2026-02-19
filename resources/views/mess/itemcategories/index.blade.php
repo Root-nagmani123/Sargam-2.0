@@ -5,8 +5,9 @@
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
 @endphp
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Item Category Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
@@ -22,21 +23,21 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table id="itemCategoriesTable" class="table table-bordered table-hover align-middle w-100">
+                    <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Category Name</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Category Type</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Item Category Description</th>
-                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
+                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
+                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Category Name</th>
+                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Category Type</th>
+                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Item Category Description</th>
+                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
+                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($itemcategories as $itemcategory)
+                        @foreach($itemcategories as $itemcategory)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $itemcategory->id }}</td>
                                 <td><div class="fw-semibold">{{ $itemcategory->category_name }}</div></td>
                                 <td>
                                     {{ $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? '')) }}
@@ -65,14 +66,11 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">No item categories found.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+        </div>
         </div>
     </div>
 </div>
@@ -177,26 +175,25 @@
     </div>
 </div>
 
+@include('components.mess-master-datatables', ['tableId' => 'itemCategoriesTable', 'searchPlaceholder' => 'Search item categories...', 'orderColumn' => 1, 'actionColumnIndex' => 5, 'infoLabel' => 'item categories'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.btn-edit-itemcategory').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            var baseUrl = '{{ url("admin/mess/itemcategories") }}';
-            document.getElementById('editItemCategoryForm').action = baseUrl + '/' + id;
-            document.getElementById('edit_category_name').value = this.getAttribute('data-category-name') || '';
-            document.getElementById('edit_category_type').value = this.getAttribute('data-category-type') || '';
-            document.getElementById('edit_description').value = this.getAttribute('data-description') || '';
-            document.getElementById('edit_status').value = this.getAttribute('data-status') || 'active';
-            new bootstrap.Modal(document.getElementById('editItemCategoryModal')).show();
-        });
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-edit-itemcategory');
+        if (!btn) return;
+        document.getElementById('editItemCategoryForm').action = '{{ url("admin/mess/itemcategories") }}/' + btn.getAttribute('data-id');
+        document.getElementById('edit_category_name').value = btn.getAttribute('data-category-name') || '';
+        document.getElementById('edit_category_type').value = btn.getAttribute('data-category-type') || '';
+        document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
+        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+        new bootstrap.Modal(document.getElementById('editItemCategoryModal')).show();
     });
 });
 </script>
 @endpush
 
 <style>
-.table thead th { background-color: #af2910 !important; color: #fff !important; }
+.table thead th { background-color: #004a93 !important; color: #fff !important; }
 </style>
 @endsection

@@ -57,7 +57,7 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
+        <table class="table table-bordered table-hover align-middle" id="sellingVoucherDateRangeTable">
             <thead style="background-color: #af2910;">
                 <tr>
                     <th style="color: #fff; width: 50px;">Serial No.</th>
@@ -77,7 +77,7 @@
                 </tr>
             </thead>
             <tbody>
-                @php $serial = $reports->firstItem() ?: 0; @endphp
+                @php $serial = 1; @endphp
                 @forelse($reports as $report)
                     @forelse($report->items as $item)
                         <tr>
@@ -87,7 +87,7 @@
                             <td>{{ $item->return_quantity ?? 0 }}</td>
                             <td>{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
-                            <td>{{ $report->clientTypeCategory ? ($report->clientTypeCategory->client_name ?? '—') : '—' }}</td>
+                            <td>{{ $report->display_client_name }}</td>
                             <td>{{ $report->client_name ?? '—' }}</td>
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
@@ -126,7 +126,7 @@
                             <td>—</td>
                             <td>{{ $report->resolved_store_name }}</td>
                             <td>{{ $report->clientTypeCategory ? ucfirst($report->clientTypeCategory->client_type ?? '') : ($report->client_type_slug ? ucfirst($report->client_type_slug) : '—') }}</td>
-                            <td>{{ $report->clientTypeCategory ? ($report->clientTypeCategory->client_name ?? '—') : '—' }}</td>
+                            <td>{{ $report->display_client_name }}</td>
                             <td>{{ $report->client_name ?? '—' }}</td>
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
@@ -152,16 +152,23 @@
                     @endforelse
                 @empty
                     <tr>
-                        <td colspan="14" class="text-center py-4">No reports found.</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td class="text-center py-4">No reports found.</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
-    <div class="d-flex justify-content-center mt-3">
-        {{ $reports->links() }}
-    </div>
+    @include('components.mess-master-datatables', [
+        'tableId' => 'sellingVoucherDateRangeTable',
+        'searchPlaceholder' => 'Search selling vouchers...',
+        'ordering' => false,
+        'actionColumnIndex' => 13,
+        'infoLabel' => 'selling vouchers',
+        'searchDelay' => 0
+    ])
 </div>
 
 {{-- Add Report Modal --}}
@@ -237,7 +244,7 @@
                                     <select id="drCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -268,7 +275,7 @@
                                     <select id="drCourseNameSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -326,8 +333,11 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm dr-avail" step="0.01" min="0" value="0" placeholder="0"></td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td>
+                                                <input type="number" name="items[0][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
+                                            </td>
                                             <td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>
                                             <td><input type="date" name="items[0][issue_date]" class="form-control form-control-sm dr-issue-date" value="{{ date('Y-m-d') }}"></td>
                                             <td><input type="number" name="items[0][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>
@@ -360,6 +370,7 @@
 #viewReportModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #viewReportModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
 #viewReportModal .modal-header { background: #f8f9fa !important; color: #212529 !important; }
+#viewReportModal .modal-header * { color: #212529 !important; }
 #viewReportModal .modal-title { color: #212529 !important; }
 #viewReportModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); background: #fff; color: #212529 !important; }
 #viewReportModal .modal-body *, #viewReportModal .modal-body p, #viewReportModal .modal-body span { color: inherit; }
@@ -369,6 +380,8 @@
 #viewReportModal .card-body { background: #fff !important; color: #212529 !important; }
 #viewReportModal .card-body table th { color: #495057 !important; font-weight: 600; }
 #viewReportModal .card-body table td { color: #212529 !important; }
+#viewReportModal .card-body .table-borderless th { background: transparent !important; }
+#viewReportModal .card-body .table-borderless td { background: transparent !important; }
 #viewReportModal #viewReportItemsCard .table thead th { color: #fff !important; background: #af2910 !important; border-color: #af2910; }
 #viewReportModal #viewReportItemsCard .table tbody td { color: #212529 !important; background: #fff !important; }
 #viewReportModal #viewReportGrandTotal { color: #212529 !important; }
@@ -560,7 +573,7 @@
                                     <select id="editDrCourseSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -591,7 +604,7 @@
                                     <select id="editDrCourseNameSelect" class="form-select" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -661,10 +674,40 @@
     let itemSubcategories = @json($itemSubcategories);
     let filteredItems = itemSubcategories;
     const baseUrl = "{{ url('admin/mess/selling-voucher-date-range') }}";
+    // Match Selling Voucher behavior: only "Other" can choose Cash/Online (and Credit if enabled),
+    // Employee/OT/Course should be Credit-only in the UI.
+    const creditOnly = ['employee', 'ot', 'course'];
     let addRowIndex = 1;
     let editRowIndex = 0;
     let currentStoreId = null;
     let editCurrentStoreId = null;
+
+    function enforceQtyWithinAvailable(row, availSelector, qtySelector) {
+        if (!row) return;
+        const availEl = row.querySelector(availSelector);
+        const qtyEl = row.querySelector(qtySelector);
+        if (!availEl || !qtyEl) return;
+
+        const avail = parseFloat(availEl.value) || 0;
+        const qtyRaw = qtyEl.value;
+        const qty = parseFloat(qtyRaw);
+
+        qtyEl.max = String(avail);
+
+        if (qtyRaw === '' || Number.isNaN(qty)) {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+            return;
+        }
+
+        if (qty > avail) {
+            qtyEl.setCustomValidity('Issue Qty cannot exceed Available Qty.');
+            qtyEl.classList.add('is-invalid');
+        } else {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+        }
+    }
 
     function fetchStoreItems(storeId, callback) {
         if (!storeId) {
@@ -721,8 +764,8 @@
         return '<tr class="dr-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm dr-avail" step="0.01" min="0" value="0" placeholder="0"></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>' +
             '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control form-control-sm dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
@@ -740,6 +783,8 @@
         if (unitInp) unitInp.value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
+        if (availInp) availInp.readOnly = true;
+        enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
     }
 
     function updateAddRowLeft(row) {
@@ -755,6 +800,7 @@
         const totalInp = row.querySelector('.dr-total');
         if (totalInp) totalInp.value = (qty * rate).toFixed(2);
         updateAddRowLeft(row);
+        enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
     }
 
     function updateAddGrandTotal() {
@@ -812,7 +858,7 @@
     document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
         row.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(row); });
         row.querySelector('.dr-avail').addEventListener('input', function() { updateAddRowLeft(row); });
-        row.querySelector('.dr-qty').addEventListener('input', function() { updateAddRowTotal(row); updateAddGrandTotal(); });
+        row.querySelector('.dr-qty').addEventListener('input', function() { enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty'); updateAddRowTotal(row); updateAddGrandTotal(); });
         row.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(row); updateAddGrandTotal(); });
     });
 
@@ -882,6 +928,22 @@
     }
     document.querySelectorAll('#addReportModal .dr-client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
+            // Payment Type: enforce Credit-only for Employee/OT/Course; allow selection for Other
+            const paymentSelect = document.querySelector('#addReportModal select[name="payment_type"]');
+            const hint = document.getElementById('drPaymentTypeHint');
+            if (paymentSelect) {
+                if (creditOnly.indexOf((this.value || '').toLowerCase()) !== -1) {
+                    paymentSelect.value = '1';
+                    paymentSelect.querySelectorAll('option').forEach(function(opt) {
+                        opt.disabled = (opt.value !== '' && opt.value !== '1');
+                    });
+                    if (hint) hint.textContent = 'Credit only for this client type';
+                } else {
+                    paymentSelect.querySelectorAll('option').forEach(function(opt) { opt.disabled = false; });
+                    if (hint) hint.textContent = 'Cash / Online / Credit';
+                }
+            }
+
             const isOt = (this.value || '').toLowerCase() === 'ot';
             const isCourse = (this.value || '').toLowerCase() === 'course';
             const clientSelect = document.getElementById('drClientNameSelect');
@@ -892,21 +954,21 @@
             const nameInput = document.getElementById('drClientNameInput');
             if (isOt) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
+                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.removeAttribute('name'); drCourseSelect.value = ''; }
                 if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'block'; drCourseSelect.setAttribute('required', 'required'); drCourseSelect.value = ''; }
+                if (drCourseSelect) { drCourseSelect.style.display = 'block'; drCourseSelect.setAttribute('required', 'required'); drCourseSelect.setAttribute('name', 'client_type_pk'); drCourseSelect.value = ''; }
                 if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; drCourseNameSelect.setAttribute('required', 'required'); drCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else {
                 if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
                 if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
@@ -928,7 +990,8 @@
         if (!otStudentSelect || !nameInput) return;
         otStudentSelect.innerHTML = '<option value="">Loading...</option>';
         otStudentSelect.value = '';
-        nameInput.value = '';
+        const selectedOpt = this.options[this.selectedIndex];
+        nameInput.value = (selectedOpt && selectedOpt.dataset.courseName) ? selectedOpt.dataset.courseName : '';
         if (!coursePk) {
             otStudentSelect.innerHTML = '<option value="">Select course first</option>';
             return;
@@ -951,18 +1014,20 @@
         if (inp) inp.value = this.value || '';
     });
     document.getElementById('drCourseSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const drCourseNameSelect = document.getElementById('drCourseNameSelect');
         const inp = document.getElementById('drClientNameInput');
-        if (drCourseNameSelect) drCourseNameSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (drCourseNameSelect) drCourseNameSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('drCourseNameSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const drCourseSelect = document.getElementById('drCourseSelect');
         const inp = document.getElementById('drClientNameInput');
-        if (drCourseSelect) drCourseSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (drCourseSelect) drCourseSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
     document.getElementById('drFacultySelect').addEventListener('change', function() {
@@ -1038,23 +1103,23 @@
             const nameInput = document.getElementById('editDrClientNameInput');
             if (isOt) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.value = ''; }
+                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.removeAttribute('name'); editDrCourseSelect.value = ''; }
                 if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; editDrCourseSelect.setAttribute('required', 'required'); editDrCourseSelect.value = nameInput.value || ''; }
-                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; editDrCourseNameSelect.setAttribute('required', 'required'); editDrCourseNameSelect.value = nameInput.value || ''; }
+                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; editDrCourseSelect.setAttribute('required', 'required'); editDrCourseSelect.setAttribute('name', 'client_type_pk'); editDrCourseSelect.value = ''; }
+                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; editDrCourseNameSelect.setAttribute('required', 'required'); editDrCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else {
                 if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.value = ''; }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.value = ''; }
+                if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.removeAttribute('required'); editDrCourseSelect.removeAttribute('name'); editDrCourseSelect.value = ''; }
                 if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
                 if (clientSelect) {
                     clientSelect.querySelectorAll('option').forEach(function(opt) {
@@ -1074,7 +1139,8 @@
         if (!otStudentSelect || !nameInput) return;
         otStudentSelect.innerHTML = '<option value="">Loading...</option>';
         otStudentSelect.value = '';
-        nameInput.value = '';
+        const selectedOpt = this.options[this.selectedIndex];
+        nameInput.value = (selectedOpt && selectedOpt.dataset.courseName) ? selectedOpt.dataset.courseName : '';
         if (!coursePk) {
             otStudentSelect.innerHTML = '<option value="">Select course first</option>';
             return;
@@ -1097,18 +1163,20 @@
         if (inp) inp.value = this.value || '';
     });
     document.getElementById('editDrCourseSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const editDrCourseNameSelect = document.getElementById('editDrCourseNameSelect');
         const inp = document.getElementById('editDrClientNameInput');
-        if (editDrCourseNameSelect) editDrCourseNameSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (editDrCourseNameSelect) editDrCourseNameSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('editDrCourseNameSelect').addEventListener('change', function() {
-        const val = this.value || '';
+        const pk = this.value || '';
         const editDrCourseSelect = document.getElementById('editDrCourseSelect');
         const inp = document.getElementById('editDrClientNameInput');
-        if (editDrCourseSelect) editDrCourseSelect.value = val;
-        if (inp) inp.value = val;
+        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
+        if (editDrCourseSelect) editDrCourseSelect.value = pk;
+        if (inp) inp.value = courseName;
     });
     document.getElementById('editDrClientNameSelect').addEventListener('change', updateEditDrNameField);
     document.getElementById('editDrFacultySelect').addEventListener('change', function() {
@@ -1140,8 +1208,8 @@
         return '<tr class="edit-dr-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail" step="0.01" min="0" value="' + avail + '"></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm edit-dr-left bg-light" readonly value="' + left + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
             '<td><input type="text" class="form-control form-control-sm edit-dr-total bg-light" readonly value="' + total + '"></td>' +
@@ -1162,6 +1230,7 @@
         const totalInp = row.querySelector('.edit-dr-total');
         if (totalInp) totalInp.value = (qty * rate).toFixed(2);
         updateEditRowLeft(row);
+        enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
     }
 
     function updateEditGrandTotal() {
@@ -1185,7 +1254,7 @@
         const opt = sel && sel.options[sel.selectedIndex];
         newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
         newTr.querySelector('.edit-dr-avail').addEventListener('input', function() { updateEditRowLeft(newTr); });
-        newTr.querySelector('.edit-dr-qty').addEventListener('input', function() { updateEditRowTotal(newTr); updateEditGrandTotal(); });
+        newTr.querySelector('.edit-dr-qty').addEventListener('input', function() { enforceQtyWithinAvailable(newTr, '.edit-dr-avail', '.edit-dr-qty'); updateEditRowTotal(newTr); updateEditGrandTotal(); });
         newTr.querySelector('.edit-dr-rate').addEventListener('input', function() { updateEditRowTotal(newTr); updateEditGrandTotal(); });
         newTr.querySelector('.edit-dr-item-select').addEventListener('change', function() {
             const o = this.options[this.selectedIndex];
@@ -1207,10 +1276,12 @@
         }
     });
 
-    // View report
-    document.querySelectorAll('.btn-view-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // View report (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-view-report');
+        if (!btn) return;
+        e.preventDefault();
+        const reportId = btn.getAttribute('data-report-id');
             fetch(baseUrl + '/' + reportId, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(function(data) {
@@ -1251,17 +1322,19 @@
                     new bootstrap.Modal(document.getElementById('viewReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report.'); });
-        });
     });
 
-    // Return item modal
-    document.querySelectorAll('.btn-return-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // Return item modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-return-report');
+        if (!btn) return;
+        e.preventDefault();
+        const reportId = btn.getAttribute('data-report-id');
             fetch(baseUrl + '/' + reportId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(function(data) {
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
+                    const issueDate = data.issue_date || '';
                     const tbody = document.getElementById('returnItemModalBody');
                     tbody.innerHTML = '';
                     (data.items || []).forEach(function(item, i) {
@@ -1271,22 +1344,87 @@
                         const unit = (item.unit || '—').replace(/</g, '&lt;');
                         const retQty = item.return_quantity != null ? item.return_quantity : 0;
                         const retDate = item.return_date || '';
+                        const issuedQty = parseFloat(qty) || 0;
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
-                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm" step="0.01" min="0" value="' + retQty + '"></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm" value="' + retDate + '"></td></tr>');
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load return data.'); });
-        });
     });
 
-    // Edit report
-    document.querySelectorAll('.btn-edit-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    function enforceReturnQtyWithinIssued(inputEl) {
+        if (!inputEl) return;
+        const issued = parseFloat(inputEl.dataset.issued) || 0;
+        const raw = inputEl.value;
+        const val = parseFloat(raw);
+        inputEl.max = String(issued);
+        if (raw === '' || Number.isNaN(val)) {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+            return;
+        }
+        if (val > issued) {
+            inputEl.setCustomValidity('Return Qty cannot exceed Issued Qty.');
+            inputEl.classList.add('is-invalid');
+        } else {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+        }
+    }
+
+    function enforceReturnDateNotBeforeIssue(inputEl) {
+        if (!inputEl) return;
+        const issue = inputEl.dataset.issueDate || '';
+        const raw = inputEl.value;
+        if (!issue || !raw) {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+            return;
+        }
+        if (raw < issue) {
+            inputEl.setCustomValidity('Return date cannot be earlier than issue date.');
+            inputEl.classList.add('is-invalid');
+        } else {
+            inputEl.setCustomValidity('');
+            inputEl.classList.remove('is-invalid');
+        }
+    }
+
+    const returnItemModalBody = document.getElementById('returnItemModalBody');
+    if (returnItemModalBody) {
+        returnItemModalBody.addEventListener('input', function(e) {
+            if (e.target && e.target.classList.contains('dr-return-qty')) {
+                enforceReturnQtyWithinIssued(e.target);
+            }
+            if (e.target && e.target.classList.contains('dr-return-date')) {
+                enforceReturnDateNotBeforeIssue(e.target);
+            }
+        });
+    }
+
+    const returnItemForm = document.getElementById('returnItemForm');
+    if (returnItemForm) {
+        returnItemForm.addEventListener('submit', function(e) {
+            this.querySelectorAll('.dr-return-qty').forEach(enforceReturnQtyWithinIssued);
+            this.querySelectorAll('.dr-return-date').forEach(enforceReturnDateNotBeforeIssue);
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+            }
+        }, true);
+    }
+
+    // Edit report (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-edit-report');
+        if (!btn) return;
+        e.preventDefault();
+        const reportId = btn.getAttribute('data-report-id');
             document.getElementById('editReportForm').action = baseUrl + '/' + reportId;
             fetch(baseUrl + '/' + reportId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
@@ -1302,11 +1440,11 @@
                     const editMessEl = document.getElementById('editDrMessStaffSelect');
                     if (editMessEl) editMessEl.value = v.client_name || '';
                     const editOtCourseEl = document.getElementById('editDrOtCourseSelect');
-                    if (editOtCourseEl) editOtCourseEl.value = v.client_name || '';
+                    if (editOtCourseEl) editOtCourseEl.value = v.client_type_pk || '';
                     const editDrCourseEl = document.getElementById('editDrCourseSelect');
-                    if (editDrCourseEl) editDrCourseEl.value = v.client_name || '';
+                    if (editDrCourseEl) editDrCourseEl.value = v.client_type_pk || '';
                     const editDrCourseNameEl = document.getElementById('editDrCourseNameSelect');
-                    if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_name || '';
+                    if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('.edit-payment-type').value = String(v.payment_type ?? 1);
                     document.querySelector('.edit-issue-date').value = v.issue_date || '';
                     document.querySelector('.edit-client-type-pk').value = v.client_type_pk || '';
@@ -1323,20 +1461,20 @@
                     const editNameInp = document.getElementById('editDrClientNameInput');
                     if (isOt) {
                         if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.value = ''; }
+                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
+                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else if (isCourse) {
                         if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.value = v.client_name || ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_name || ''; }
+                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
+                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_type_pk || ''; }
                         if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else {
                         if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== slug; }); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.value = ''; }
+                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
                     }
@@ -1369,7 +1507,6 @@
                     new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report for edit.'); });
-        });
     });
 
     // Reset add modal when opened
@@ -1392,6 +1529,52 @@
                 currentStoreId = null;
                 filteredItems = itemSubcategories;
                 if (storeSelect) storeSelect.value = '';
+            }
+        });
+    }
+
+    // Prevent double submit on Add form (stops double entry on Save Selling Voucher)
+    var addReportFormEl = document.getElementById('addReportForm');
+    if (addReportFormEl) {
+        addReportFormEl.addEventListener('submit', function(e) {
+            document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
+                enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
+            });
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+        }, true);
+        addReportFormEl.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+            }
+        });
+    }
+
+    // Prevent double submit on Edit form
+    var editReportFormEl = document.getElementById('editReportForm');
+    if (editReportFormEl) {
+        editReportFormEl.addEventListener('submit', function(e) {
+            document.querySelectorAll('#editModalItemsBody .edit-dr-item-row').forEach(function(row) {
+                enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
+            });
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+        }, true);
+        editReportFormEl.addEventListener('submit', function() {
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
             }
         });
     }
