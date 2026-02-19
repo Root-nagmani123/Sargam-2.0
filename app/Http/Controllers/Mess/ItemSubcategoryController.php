@@ -5,21 +5,18 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Mess\ItemSubcategory;
-use App\Models\Mess\ItemCategory;
 
 class ItemSubcategoryController extends Controller
 {
     public function index()
     {
-        $itemsubcategories = ItemSubcategory::with('category')->orderByDesc('id')->get();
-        $categories = ItemCategory::orderBy('category_name')->get();
-        return view('mess.itemsubcategories.index', compact('itemsubcategories', 'categories'));
+        $itemsubcategories = ItemSubcategory::orderByDesc('id')->get();
+        return view('mess.itemsubcategories.index', compact('itemsubcategories'));
     }
 
     public function create()
     {
-        $categories = ItemCategory::orderBy('category_name')->get();
-        return view('mess.itemsubcategories.create', compact('categories'));
+        return view('mess.itemsubcategories.create');
     }
 
     public function store(Request $request)
@@ -36,14 +33,13 @@ class ItemSubcategoryController extends Controller
 
         ItemSubcategory::create($data);
 
-        return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Item Subcategory added successfully');
+        return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Item added successfully');
     }
 
     public function edit($id)
     {
         $itemsubcategory = ItemSubcategory::findOrFail($id);
-        $categories = ItemCategory::orderBy('category_name')->get();
-        return view('mess.itemsubcategories.edit', compact('itemsubcategory', 'categories'));
+        return view('mess.itemsubcategories.edit', compact('itemsubcategory'));
     }
 
     public function update(Request $request, $id)
@@ -57,14 +53,14 @@ class ItemSubcategoryController extends Controller
         }
 
         $itemsubcategory->update($data);
-        return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Item Subcategory updated successfully');
+        return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Item updated successfully');
     }
 
     public function destroy($id)
     {
         $itemsubcategory = ItemSubcategory::findOrFail($id);
         $itemsubcategory->delete();
-        return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Item Subcategory deleted successfully');
+        return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Item deleted successfully');
     }
 
     /**
@@ -73,7 +69,7 @@ class ItemSubcategoryController extends Controller
     protected function validatedData(Request $request, ?ItemSubcategory $itemsubcategory = null): array
     {
         $validated = $request->validate([
-            'category_id'      => ['required', 'exists:mess_item_categories,id'],
+            'category_id'      => ['nullable', 'exists:mess_item_categories,id'],
             'item_name'        => ['required', 'string', 'max:255'],
             'unit_measurement' => ['nullable', 'string', 'max:50'],
             'standard_cost'   => ['nullable', 'numeric', 'min:0'],
@@ -84,7 +80,7 @@ class ItemSubcategoryController extends Controller
         $status = $validated['status'] ?? ItemSubcategory::STATUS_ACTIVE;
 
         $data = [
-            'category_id' => $validated['category_id'],
+            'category_id' => $validated['category_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
 

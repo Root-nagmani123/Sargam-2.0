@@ -121,8 +121,11 @@
                                     </select>
                                 </td>
                                 <td><input type="text" name="items[0][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>
-                                <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm sv-avail" step="0.01" min="0" value="0" placeholder="0"></td>
-                                <td><input type="number" name="items[0][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                <td>
+                                    <input type="number" name="items[0][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required>
+                                    <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
+                                </td>
                                 <td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0"></td>
                                 <td><input type="number" name="items[0][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" required></td>
                                 <td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00"></td>
@@ -150,6 +153,33 @@
     const itemSubcategories = @json($itemSubcategories);
     let rowIndex = 1;
 
+    function enforceQtyWithinAvailable(row) {
+        if (!row) return;
+        const availEl = row.querySelector('.sv-avail');
+        const qtyEl = row.querySelector('.sv-qty');
+        if (!availEl || !qtyEl) return;
+
+        const avail = parseFloat(availEl.value) || 0;
+        const qtyRaw = qtyEl.value;
+        const qty = parseFloat(qtyRaw);
+
+        qtyEl.max = String(avail);
+
+        if (qtyRaw === '' || Number.isNaN(qty)) {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+            return;
+        }
+
+        if (qty > avail) {
+            qtyEl.setCustomValidity('Issue Qty cannot exceed Available Qty.');
+            qtyEl.classList.add('is-invalid');
+        } else {
+            qtyEl.setCustomValidity('');
+            qtyEl.classList.remove('is-invalid');
+        }
+    }
+
     function getRowHtml(index) {
         const options = itemSubcategories.map(s =>
             '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
@@ -157,8 +187,8 @@
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail" step="0.01" min="0" value="0" placeholder="0"></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" required></td>' +
             '<td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00"></td>' +
@@ -181,6 +211,7 @@
         const total = qty * rate;
         row.querySelector('.sv-left').value = left;
         row.querySelector('.sv-total').value = total.toFixed(2);
+        enforceQtyWithinAvailable(row);
     }
 
     function updateGrandTotal() {
@@ -218,7 +249,7 @@
     document.getElementById('itemsBody').addEventListener('input', function(e) {
         if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
             const row = e.target.closest('.sv-item-row');
-            if (row) { calcRow(row); updateGrandTotal(); }
+            if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateGrandTotal(); }
         }
     });
 

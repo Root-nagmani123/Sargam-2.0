@@ -1,13 +1,14 @@
 @extends('admin.layouts.master')
-@section('title', 'Item Sub Category Master')
+@section('title', 'Item Master')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
+    <div class="datatables">
+        <div class="card">
+            <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Item Sub Category Master</h4>
+                <h4 class="mb-0">Item Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
-                    Add Item Sub Category
+                    Add Item
                 </button>
             </div>
 
@@ -19,24 +20,22 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-light">
+                <table id="itemSubcategoriesTable" class="table table-bordered table-hover align-middle w-100">
+                    <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Category Name</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Item Name</th>
-                            <th style="width: 140px; background-color: #af2910; color: #fff; border-color: #af2910;">Item Code</th>
-                            <th style="width: 140px; background-color: #af2910; color: #fff; border-color: #af2910;">Unit Measurement</th>
-                            <th style="width: 140px; background-color: #af2910; color: #fff; border-color: #af2910;">Standard Cost</th>
-                            <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
+                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
+                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Item Name</th>
+                            <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Item Code</th>
+                            <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Unit Measurement</th>
+                            <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Standard Cost</th>
+                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
+                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($itemsubcategories as $itemsubcategory)
+                        @foreach($itemsubcategories as $itemsubcategory)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td><div class="fw-semibold">{{ $itemsubcategory->category->category_name ?? '-' }}</div></td>
+                                <td>{{ $itemsubcategory->id }}</td>
                                 <td><div class="fw-semibold">{{ $itemsubcategory->item_name }}</div></td>
                                 <td>{{ $itemsubcategory->item_code ?? '-' }}</td>
                                 <td>{{ $itemsubcategory->unit_measurement ?? '-' }}</td>
@@ -56,7 +55,6 @@
                                     <div class="d-flex gap-2 flex-wrap">
                                         <button type="button" class="btn btn-sm btn-warning btn-edit-itemsubcategory"
                                                 data-id="{{ $itemsubcategory->id }}"
-                                                data-category-id="{{ $itemsubcategory->category_id }}"
                                                 data-item-name="{{ e($itemsubcategory->item_name) }}"
                                                 data-item-code="{{ e($itemsubcategory->item_code ?? '') }}"
                                                 data-unit-measurement="{{ e($itemsubcategory->unit_measurement ?? '') }}"
@@ -65,7 +63,7 @@
                                                 data-status="{{ e($itemsubcategory->status ?? 'active') }}"
                                                 title="Edit">Edit</button>
                                         <form method="POST" action="{{ route('admin.mess.itemsubcategories.destroy', $itemsubcategory->id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this item sub category?');">
+                                              onsubmit="return confirm('Are you sure you want to delete this item?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
@@ -73,40 +71,27 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-muted">No item sub categories found.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
+        </div>
     </div>
 </div>
 
-{{-- Create Item Subcategory Modal --}}
+{{-- Create Item Modal --}}
 <div class="modal fade" id="createItemSubcategoryModal" tabindex="-1" aria-labelledby="createItemSubcategoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.itemsubcategories.store') }}">
                 @csrf
                 <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="createItemSubcategoryModalLabel">Add Item Sub Category</h5>
+                    <h5 class="modal-title fw-semibold" id="createItemSubcategoryModalLabel">Add Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Category Name <span class="text-danger">*</span></label>
-                            <select name="category_id" class="form-select" required>
-                                <option value="">Select Category</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>{{ $category->category_name }}</option>
-                                @endforeach
-                            </select>
-                            @error('category_id')<div class="text-danger small">{{ $message }}</div>@enderror
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Item Name <span class="text-danger">*</span></label>
                             <input type="text" name="item_name" class="form-control" required value="{{ old('item_name') }}">
@@ -151,7 +136,7 @@
     </div>
 </div>
 
-{{-- Edit Item Subcategory Modal --}}
+{{-- Edit Item Modal --}}
 <div class="modal fade" id="editItemSubcategoryModal" tabindex="-1" aria-labelledby="editItemSubcategoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -159,20 +144,11 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="editItemSubcategoryModalLabel">Edit Item Sub Category</h5>
+                    <h5 class="modal-title fw-semibold" id="editItemSubcategoryModalLabel">Edit Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Category Name <span class="text-danger">*</span></label>
-                            <select name="category_id" id="edit_category_id" class="form-select" required>
-                                <option value="">Select Category</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->category_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Item Name <span class="text-danger">*</span></label>
                             <input type="text" name="item_name" id="edit_item_name" class="form-control" required>
@@ -212,29 +188,27 @@
     </div>
 </div>
 
+@include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search items...', 'orderColumn' => 1, 'actionColumnIndex' => 6, 'infoLabel' => 'items'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.btn-edit-itemsubcategory').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var id = this.getAttribute('data-id');
-            var baseUrl = '{{ url("admin/mess/itemsubcategories") }}';
-            document.getElementById('editItemSubcategoryForm').action = baseUrl + '/' + id;
-            document.getElementById('edit_category_id').value = this.getAttribute('data-category-id') || '';
-            document.getElementById('edit_item_name').value = this.getAttribute('data-item-name') || '';
-            document.getElementById('edit_item_code_display').value = this.getAttribute('data-item-code') || '-';
-            document.getElementById('edit_unit_measurement').value = this.getAttribute('data-unit-measurement') || '';
-            document.getElementById('edit_standard_cost').value = this.getAttribute('data-standard-cost') || '';
-            document.getElementById('edit_description').value = this.getAttribute('data-description') || '';
-            document.getElementById('edit_status').value = this.getAttribute('data-status') || 'active';
-            new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
-        });
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-edit-itemsubcategory');
+        if (!btn) return;
+        document.getElementById('editItemSubcategoryForm').action = '{{ url("admin/mess/itemsubcategories") }}/' + btn.getAttribute('data-id');
+        document.getElementById('edit_item_name').value = btn.getAttribute('data-item-name') || '';
+        document.getElementById('edit_item_code_display').value = btn.getAttribute('data-item-code') || '-';
+        document.getElementById('edit_unit_measurement').value = btn.getAttribute('data-unit-measurement') || '';
+        document.getElementById('edit_standard_cost').value = btn.getAttribute('data-standard-cost') || '';
+        document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
+        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+        new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
     });
 });
 </script>
 @endpush
 
 <style>
-.table thead th { background-color: #af2910 !important; color: #fff !important; }
+.table thead th { background-color: #004a93 !important; color: #fff !important; }
 </style>
 @endsection

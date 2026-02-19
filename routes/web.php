@@ -237,14 +237,12 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
+     Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
+    ->name('admin.stream.toggleStatus');
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
-
     Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
-
-
-
 
     // curriculum route
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
@@ -590,18 +588,17 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
         Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
         Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
-        Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
         Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
         Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'store']);
         Route::get('storeallocations/{id}/edit', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'edit'])->name('storeallocations.edit');
         Route::put('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'update'])->name('storeallocations.update');
         Route::delete('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'destroy'])->name('storeallocations.destroy');
-        
+
         // Store Management
         Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['show']);
-        
+
         Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
-        
+
         // NEW: Setup - Configuration Modules
         Route::resource('vendor-item-mappings', \App\Http\Controllers\Mess\VendorItemMappingController::class);
         Route::resource('menu-rate-lists', \App\Http\Controllers\Mess\MenuRateListController::class);
@@ -610,7 +607,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('credit-limits', \App\Http\Controllers\Mess\CreditLimitController::class);
         Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
         Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
-        
+
         // Purchase Order Management
         Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
         Route::get('purchaseorders/{id}/edit', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
@@ -619,7 +616,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
         Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
         Route::get('purchaseorders/vendor/{vendorId}/items', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'getVendorItems'])->name('purchaseorders.vendor.items');
-        
+
         // Material Management (formerly Kitchen Issue)
         Route::get('material-management/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
         Route::get('material-management/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
@@ -636,7 +633,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
         Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
         Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
-        
+
         // Material Management Approval
         Route::prefix('material-management-approvals')->name('material-management-approvals.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'index'])->name('index');
@@ -644,7 +641,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{id}/approve', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'approve'])->name('approve');
             Route::post('/{id}/reject', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'reject'])->name('reject');
         });
-        
+
         // NEW: Billing & Finance
         Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
         Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
@@ -656,17 +653,18 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('finance-bookings', \App\Http\Controllers\Mess\FinanceBookingController::class);
         Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
         Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
-        
+
         // NEW: Mess RBAC - Permission Management
         // IMPORTANT: Custom routes MUST come BEFORE resource route
         Route::get('permissions/users-by-role', [\App\Http\Controllers\Mess\MessPermissionController::class, 'getUsersByRole'])->name('permissions.getUsersByRole');
         Route::get('permissions/check/{action}', [\App\Http\Controllers\Mess\MessPermissionController::class, 'checkPermission'])->name('permissions.check');
         Route::resource('permissions', \App\Http\Controllers\Mess\MessPermissionController::class);
-        
+
         // Reports
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
             Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
+            Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
             Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
@@ -835,7 +833,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
-    
+
     // Who's Who Routes
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
@@ -916,19 +914,19 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
-Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+    Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+    Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
 // Change export routes to POST
-Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
     ->name('admin.feedback.export.pdf');
 
-Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+    Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
 
 // ============================================
 // Issue Management Module Routes (CENTCOM)
 // ============================================
-Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+    Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
 
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
@@ -981,24 +979,25 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         // Estate Request for Others
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
 
-        // Change Requests (HAC Approved)
-        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
-        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
-        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
-        
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
+        Route::get('change-request-hac-approved', function () {
+            return view('admin.estate.change-request-hac-approved');
+        })->name('change-request-hac-approved');
+
+
+
         // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
-        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
-        Route::post('possession-view', [EstateController::class, 'storePossession'])->name('possession-view.store');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+
+        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
+        Route::post('possession-view/store', [EstateController::class, 'storePossession'])->name('possession-view.store');
         Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
         Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
         Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
-        Route::get('possession/requester-details', [EstateController::class, 'getRequesterDetails'])->name('possession.requester-details');
 
         // Update Meter
         Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
@@ -1088,13 +1087,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             Route::get('house-status/data', [EstateController::class, 'getHouseStatusData'])->name('house-status.data');
             Route::get('house-status', [EstateController::class, 'houseStatus'])->name('house-status');
             
+            Route::get('pending-meter-reading', function () {
+                return view('admin.estate.pending_meter_reading');
+            })->name('pending-meter-reading');
+
+            Route::get('house-status', function () {
+                return view('admin.estate.house_status');
+            })->name('house-status');
+
             Route::get('bill-report-grid', function () {
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
-            
+
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
-            Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
-            Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
         });
     });
 });
