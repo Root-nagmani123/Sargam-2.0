@@ -87,6 +87,10 @@
                                            class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye me-1"></i> View
                                         </a>
+                                        <a href="{{ route('admin.dashboard.students.history', encrypt($student->pk)) }}" 
+                                           class="btn btn-sm btn-info" title="Participant History">
+                                            <i class="fas fa-history me-1"></i> History
+                                        </a>
                                     </td>
                                 </tr>
                             @empty

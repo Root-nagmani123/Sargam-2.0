@@ -35,6 +35,8 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     MemoDisciplineController,
     DashboardController,
+    DashboardStatisticsController,
+    ParticipantHistoryController,
     CourseRepositoryController,
     EmployeeIDCardRequestController,
     FamilyIDCardRequestController,
@@ -153,6 +155,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::get('/dashboard/students/{id}/history', [ParticipantHistoryController::class, 'show'])->name('admin.dashboard.students.history');
 
 
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
@@ -843,6 +846,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
+
+    // Participant / Dashboard Statistics (charts data)
+    Route::get('/dashboard-statistics/charts', [DashboardStatisticsController::class, 'charts'])->name('admin.dashboard-statistics.charts');
+    Route::post('/dashboard-statistics/save-from-course', [DashboardStatisticsController::class, 'saveSnapshotFromCourse'])->name('admin.dashboard-statistics.save-from-course');
+    Route::post('/dashboard-statistics/{dashboard_statistic}/set-default', [DashboardStatisticsController::class, 'setDefault'])->name('admin.dashboard-statistics.set-default');
+    Route::resource('dashboard-statistics', DashboardStatisticsController::class)->names('admin.dashboard-statistics')->parameters(['dashboard_statistics' => 'dashboard_statistic']);
 
     Route::get('/upcoming-events', function () {
         return view('admin.dashboard.upcoming_events');
