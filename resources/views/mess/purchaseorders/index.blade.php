@@ -622,12 +622,11 @@
         });
     }
 
-    // View button: fetch PO and open view modal (mousedown ensures single-tap works with DataTables)
-    document.addEventListener('mousedown', function(e) {
+    // View button: fetch PO and open view modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
         const btn = e.target.closest('.btn-view-po');
         if (!btn) return;
         e.preventDefault();
-        e.stopPropagation();
         const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
@@ -664,7 +663,7 @@
                     new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-    }, true);
+    });
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -705,12 +704,11 @@
         });
     }
 
-    // Edit button: fetch PO and open modal (mousedown ensures single-tap works with DataTables)
-    document.addEventListener('mousedown', function(e) {
+    // Edit button: fetch PO and open modal (event delegation - works with DataTables redraws)
+    document.addEventListener('click', function(e) {
         const btn = e.target.closest('.btn-edit-po');
         if (!btn) return;
         e.preventDefault();
-        e.stopPropagation();
         const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
@@ -764,7 +762,7 @@
                     }
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-    }, true);
+    });
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('editPoItemsBody');
