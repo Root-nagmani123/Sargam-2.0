@@ -386,19 +386,8 @@ class EmployeeIDCardRequestController extends Controller
                         'name_change_doc' => null,
                     ]);
 
-                    foreach ($approvers as $idx => $approverPk) {
-                        DB::table('security_dup_perm_id_apply_approval')->insert([
-                            'security_parm_id_apply_pk' => $applyId,
-                            'status' => $idx + 1,
-                            'approval_remarks' => null,
-                            'recommend_status' => $idx === 0 ? 1 : null,
-                            'approval_emp_pk' => (int) $approverPk,
-                            'created_by' => $employeePk ?? $authEmpPk,
-                            'created_date' => $now,
-                            'modified_by' => null,
-                            'modified_date' => null,
-                        ]);
-                    }
+                    // Case 2 - Extension/Duplicate ID Card (Own Permanent): Only security_dup_perm_id_apply at request time.
+                    // security_dup_perm_id_apply_approval rows are inserted when approvers approve.
                 } else {
                     $nextPk = (int) DB::table('security_dup_other_id_apply')->max('pk') + 1;
                     $applyId = 'DUO' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
@@ -468,19 +457,8 @@ class EmployeeIDCardRequestController extends Controller
                         'aadhar_doc' => null,
                     ]);
 
-                    foreach ($approvers as $idx => $approverPk) {
-                        DB::table('security_dup_other_id_apply_approval')->insert([
-                            'security_con_id_apply_pk' => $applyId,
-                            'status' => $idx + 1,
-                            'approval_remarks' => null,
-                            'recommend_status' => $idx === 0 ? 1 : null,
-                            'approval_emp_pk' => (int) $approverPk,
-                            'created_by' => $employeePk ?? $authEmpPk,
-                            'created_date' => $now,
-                            'modified_by' => null,
-                            'modified_date' => null,
-                        ]);
-                    }
+                    // Case 4 - Extension/Duplicate ID Card (Other/Contractual): Only security_dup_other_id_apply at request time.
+                    // security_dup_other_id_apply_approval rows are inserted when approvers approve.
                 }
 
                 return;
@@ -514,19 +492,8 @@ class EmployeeIDCardRequestController extends Controller
                     'perm_sub_type' => $configMap->map_pk, // sec_id_cardno_config_map.pk
                 ]);
 
-                foreach ($approvers as $idx => $approverPk) {
-                    DB::table('security_parm_id_apply_approval')->insert([
-                        'security_parm_id_apply_pk' => $empIdApply,
-                        'status' => $idx + 1,
-                        'approval_remarks' => null,
-                        'recommend_status' => $idx === 0 ? 1 : null,
-                        'approval_emp_pk' => (int) $approverPk,
-                        'created_by' => $employeePk ?? $authEmpPk,
-                        'created_date' => $now,
-                        'modified_by' => null,
-                        'modified_date' => null,
-                    ]);
-                }
+                // Case 1 - Permanent Employee (Own ID Card): Only security_parm_id_apply at request time.
+                // security_parm_id_apply_approval rows are inserted when approvers approve (EmployeeIDCardApprovalController).
             } else {
                 $nextId = (int) DB::table('security_con_oth_id_apply')->max('pk') + 1;
                 $empIdApply = 'COD' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
@@ -564,19 +531,8 @@ class EmployeeIDCardRequestController extends Controller
                     'section' => $userDepartmentPk,
                 ]);
 
-                foreach ($approvers as $idx => $approverPk) {
-                    DB::table('security_con_oth_id_apply_approval')->insert([
-                        'security_parm_id_apply_pk' => $empIdApply,
-                        'status' => $idx + 1,
-                        'approval_remarks' => null,
-                        'recommend_status' => $idx === 0 ? 1 : null,
-                        'approval_emp_pk' => (int) $approverPk,
-                        'created_by' => $employeePk ?? $authEmpPk,
-                        'created_date' => $now,
-                        'modified_by' => null,
-                        'modified_date' => null,
-                    ]);
-                }
+                // Case 3 - Request Employee ID Card (Other/Contractual): Only security_con_oth_id_apply at request time.
+                // security_con_oth_id_apply_approval rows are inserted when approvers approve (EmployeeIDCardApprovalController).
             }
         });
 
@@ -943,37 +899,5 @@ class EmployeeIDCardRequestController extends Controller
         } catch (\Exception $e) {
             return null;
         }
-    }
-
-    /**
-     * Export ID card requests to Excel or CSV.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     */
-    public function export(Request $request)
-    {
-        $tab = $request->get('tab', 'active');
-        $format = $request->get('format', 'xlsx');
-
-        if (! in_array($tab, ['active', 'archive', 'all'])) {
-            $tab = 'active';
-        }
-
-        $filename = 'employee_idcard_requests_' . $tab . '_' . now()->format('Y-m-d_His');
-
-        if ($format === 'csv') {
-            return Excel::download(
-                new EmployeeIDCardExport($tab),
-                $filename . '.csv',
-                \Maatwebsite\Excel\Excel::CSV
-            );
-        }
-
-        return Excel::download(
-            new EmployeeIDCardExport($tab),
-            $filename . '.xlsx',
-            \Maatwebsite\Excel\Excel::XLSX
-        );
     }
 }

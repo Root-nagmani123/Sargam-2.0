@@ -19,17 +19,27 @@
                 </div>
             </div>
 
-            <form method="GET" class="row g-2 mb-3">
-                <div class="col-md-4">
-                    <select name="card_type" class="form-select form-select-sm">
-                        <option value="">Select ID Card Type</option>
-                        @foreach(\App\Models\EmployeeIDCardRequest::distinct()->whereNotNull('card_type')->pluck('card_type') as $ct)
-                            <option value="{{ $ct }}" {{ request('card_type') == $ct ? 'selected' : '' }}>{{ $ct }}</option>
+            <form method="GET" action="{{ route('admin.security.employee_idcard_approval.approval1') }}" id="filterForm" class="row g-2 align-items-center mb-3">
+                <div class="col-auto">
+                    <label for="per_page" class="col-form-label col-form-label-sm">Show</label>
+                </div>
+                <div class="col-auto">
+                    <select name="per_page" id="per_page" class="form-select form-select-sm" style="width:auto;">
+                        @foreach([10, 25, 50, 100] as $n)
+                            <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }} entries</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search here..." value="{{ request('search') }}">
+                <div class="col-auto ms-auto">
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search with in table:" value="{{ request('search') }}" style="min-width:200px;">
+                </div>
+                <div class="col-auto">
+                    <select name="card_type" class="form-select form-select-sm" style="min-width:160px;">
+                        <option value="">Select ID Card Type</option>
+                        @foreach($cardTypes ?? [] as $pk => $name)
+                            <option value="{{ $pk }}" {{ request('card_type') == (string)$pk ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary btn-sm">Search</button>
@@ -49,59 +59,11 @@
                 </div>
             @endif
 
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width:50px;"><input type="checkbox" id="selectAll"></th>
-                            <th style="width:60px;">S.No.</th>
-                            <th>Request date</th>
-                            <th>Employee Name</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($requests as $index => $req)
-                            <tr>
-                                <td><input type="checkbox" class="row-check" value="{{ $req->id }}"></td>
-                                <td>{{ $requests->firstItem() + $index }}</td>
-                                <td>{{ $req->created_at ? $req->created_at->format('d/m/Y') : '--' }}</td>
-                                <td>{{ $req->name }}</td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.employee_idcard_approval.show', encrypt($req->id)) }}"
-                                           class="btn btn-sm btn-info" title="View Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                        </a>
-                                        <a href="{{ route('admin.employee_idcard.show', $req->id) }}"
-                                           class="btn btn-sm btn-outline-secondary" title="Full Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">open_in_new</i>
-                                        </a>
-                                        <form action="{{ route('admin.security.employee_idcard_approval.approve1', encrypt($req->id)) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success" title="Approve">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i>
-                                            </button>
-                                        </form>
-                                        <button type="button" class="btn btn-sm btn-danger reject-btn" title="Reject"
-                                                data-name="{{ $req->name }}"
-                                                data-url="{{ route('admin.security.employee_idcard_approval.reject1', encrypt($req->id)) }}">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-4">No pending requests for Approval I.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-3 d-flex justify-content-between align-items-center">
-                <small class="text-muted">Show {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</small>
-                {{ $requests->links() }}
+            @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $requests, 'approvalStage' => 1])
+
+            <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-muted">Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</small>
+                {{ $requests->withQueryString()->links() }}
             </div>
         </div>
     </div>
@@ -143,6 +105,9 @@ document.querySelectorAll('.reject-btn').forEach(function(btn) {
         document.getElementById('rejection_reason').value = '';
         new bootstrap.Modal(document.getElementById('rejectModal')).show();
     });
+});
+document.getElementById('per_page') && document.getElementById('per_page').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
 });
 </script>
 @endpush
