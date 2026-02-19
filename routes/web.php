@@ -953,6 +953,18 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('update-meter-reading', function () {
             return view('admin.estate.update_meter_reading');
         })->name('update-meter-reading');
+<<<<<<< HEAD
+=======
+        Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
+        Route::get('list-meter-reading', [EstateController::class, 'listMeterReading'])->name('list-meter-reading');
+        Route::get('list-meter-reading/data', [EstateController::class, 'getListMeterReadingData'])->name('list-meter-reading.data');
+        Route::get('update-meter-reading/list', [EstateController::class, 'getMeterReadingList'])->name('update-meter-reading.list');
+        Route::get('update-meter-reading/meter-reading-dates', [EstateController::class, 'getMeterReadingDates'])->name('update-meter-reading.meter-reading-dates');
+        Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
+        Route::get('update-meter-reading/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypes'])->name('update-meter-reading.unit-sub-types');
+        Route::post('update-meter-reading/store', [EstateController::class, 'storeMeterReadings'])->name('update-meter-reading.store');
+<<<<<<< HEAD
+>>>>>>> f736df28 (Working on estate module)
         
         Route::get('update-meter-reading-of-other', function () {
             return view('admin.estate.update_meter_reading_of_other');
