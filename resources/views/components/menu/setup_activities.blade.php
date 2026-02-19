@@ -282,6 +282,12 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define House</span>
                                     </a>
                                 </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-electric-slab.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-electric-slab.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
+                                    </a>
+                                </li>
                             </ul>
 
                             {{-- ESTATE MASTER --}}
