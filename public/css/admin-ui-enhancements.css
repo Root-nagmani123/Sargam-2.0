@@ -21,9 +21,7 @@
 .idcard-index-card,
 .idcard-create-form-card,
 .idcard-create-type-card,
-.stream-create-card,
-.mdo-duty-type-index .mdo-duty-type-card,
-.discipline-master-index .discipline-master-card {
+.stream-create-card {
     border-radius: var(--admin-radius-lg) !important;
     box-shadow: var(--admin-shadow) !important;
     transition: box-shadow var(--admin-transition), transform var(--admin-transition);
@@ -31,30 +29,8 @@
 
 .admin-card:hover,
 .course-group-type-index .card:hover,
-.idcard-index-card:hover,
-.mdo-duty-type-index .mdo-duty-type-card:hover,
-.discipline-master-index .discipline-master-card:hover {
+.idcard-index-card:hover {
     box-shadow: var(--admin-shadow-lg) !important;
-}
-
-/* MDO duty type – accent border uses admin primary */
-.mdo-duty-type-index .mdo-duty-type-card.border-primary {
-    border-start-color: var(--admin-primary) !important;
-}
-
-/* Discipline Master – accent border and table */
-.discipline-master-index .discipline-master-card.border-primary {
-    border-start-color: var(--admin-primary) !important;
-}
-
-.discipline-master-index .table thead th {
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    font-size: 0.8125rem;
-}
-
-.discipline-master-index .table tbody tr {
-    transition: background-color 0.15s ease;
 }
 
 /* Nav pills/tabs - Bootstrap 5.3 nav-underline style */
@@ -70,16 +46,14 @@
 }
 
 /* Table enhancements */
-.table.idcard-index-table thead th,
-.mdo-duty-type-index .table thead th {
+.table.idcard-index-table thead th {
     font-weight: 600;
     letter-spacing: 0.02em;
     text-transform: uppercase;
     font-size: 0.75rem;
 }
 
-.table.idcard-index-table tbody tr,
-.mdo-duty-type-index .table tbody tr {
+.table.idcard-index-table tbody tr {
     transition: background-color 0.15s ease;
 }
 
@@ -523,91 +497,6 @@
     }
 }
 
-/* ========== Programme show page refinements ========== */
-
-/* Section scroll-margin for anchor links (e.g. Back to top → #course-info) */
-.programme-section {
-    scroll-margin-top: 1.5rem;
-}
-
-.programme-section-title {
-    letter-spacing: 0.01em;
-}
-
-/* Field labels: small caps, consistent spacing */
-.programme-field-label {
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--bs-body-secondary);
-    margin-bottom: 0.25rem;
-}
-
-/* Info field blocks: min-height, subtle hover */
-.programme-info-field {
-    min-height: 2.5rem;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.programme-info-field:hover {
-    background-color: rgba(0, 0, 0, 0.03) !important;
-}
-
-.programme-info-field-lg {
-    min-height: 4rem;
-}
-
-/* Overview list: alternating row background */
-.programme-overview-list .programme-overview-item:nth-child(even) {
-    background-color: rgba(0, 0, 0, 0.02);
-}
-
-.programme-overview-list .programme-overview-item {
-    border-bottom: 1px solid var(--bs-border-color-translucent);
-    transition: background-color 0.15s ease;
-}
-
-.programme-overview-list .programme-overview-item:last-child {
-    border-bottom: 0;
-}
-
-/* Header card refinements */
-.programme-header-card {
-    transition: box-shadow var(--admin-transition);
-}
-
-.programme-header-card:hover {
-    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08) !important;
-}
-
-.programme-header-banner {
-    position: relative;
-}
-
-.programme-header-accent {
-    pointer-events: none;
-}
-
-.programme-course-title {
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Breadcrumb link hover */
-.programme-breadcrumb-link:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-}
-
-/* Coordinator card: subtle depth */
-.coordinator-card {
-    transition: box-shadow var(--admin-transition), transform 0.2s ease;
-}
-
-.coordinator-card:hover {
-    box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08) !important;
-}
-
 /* Programme view: subtle image sizing & hover lift */
 .programme-coordinator-img {
     width: 7.5rem;
@@ -630,91 +519,12 @@
     border-color: rgba(0, 74, 147, 0.2) !important;
 }
 
-/* Additional info cards: hover lift */
-.programme-info-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.programme-info-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Empty state */
-.programme-empty-state {
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.programme-empty-icon {
-    display: inline-block;
-    transition: transform 0.25s ease;
-}
-
-.programme-empty-state:hover .programme-empty-icon {
-    transform: scale(1.05);
-}
-
-/* Card footer & system footer */
-.programme-card-footer {
-    border-top: 1px solid var(--bs-border-color-translucent) !important;
-}
-
-.programme-system-footer {
-    background-color: rgba(0, 0, 0, 0.02);
-}
-
-/* Back to top link */
 .programme-back-top {
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .programme-back-top:hover {
     background-color: var(--admin-primary-subtle);
-}
-
-.programme-back-top-icon {
-    transition: transform 0.2s ease;
-}
-
-.programme-back-top:hover .programme-back-top-icon {
-    transform: translateY(-2px);
-}
-
-/* Programme: focus ring and sticky overview */
-.focus-ring-primary:focus-visible {
-    outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
-.programme-overview-card.sticky-lg-top {
-    top: 1rem;
-}
-
-/* Programme print: clean layout, preserve header color */
-@media print {
-    .programme-action-bar,
-    .programme-card-footer,
-    .programme-system-footer,
-    .programme-back-top {
-        display: none !important;
-    }
-
-    .programme-header-banner {
-        background: #0d6efd !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    .programme-section-divider {
-        border-color: #dee2e6 !important;
-    }
-
-    .programme-assistant-card,
-    .programme-info-card,
-    .coordinator-card {
-        box-shadow: none !important;
-        border: 1px solid #dee2e6 !important;
-    }
 }
 
 /* Accessible focus outline using Bootstrap primary */
