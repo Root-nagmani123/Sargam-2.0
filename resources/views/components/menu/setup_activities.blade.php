@@ -135,7 +135,7 @@
                                 </a></li> --}}
                             </ul>
                             {{-- ID CARD MANAGEMENT --}}
-                            <li class="sidebar-item" style="background: #4077ad;
+                            <!-- <li class="sidebar-item" style="background: #4077ad;
                             border-radius: 30px 0px 0px 30px;
                             width: 100%;
                             box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -177,14 +177,14 @@
                                         href="{{ route('admin.security.employee_idcard_approval.all') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">All ID Card Requests</span>
                                     </a></li>
-                            </ul>
+                            </ul> -->
                             <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
                                 </a></li>
 
                             {{-- ESTATE MANAGEMENT --}}
-                            <li class="sidebar-item mt-2" style="background: #4077ad;
+                            <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -204,37 +204,18 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.add-other-estate-request') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.add-other-estate-request') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Add Other Estate Request</span>
-                                    </a>
-                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.possession-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Others</span>
                                     </a>
                                 </li>
-                              
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.possession-view') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession View</span>
-                                    </a>
-                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.update-meter-reading') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading-of-other') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.update-meter-reading-of-other') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
-                                    </a>
-                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.update-meter-no') }}">
@@ -259,10 +240,10 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define House</span>
                                     </a>
                                 </li>
-                            </ul>
+                            </ul> -->
 
                             {{-- ESTATE MASTER --}}
-                            <li class="sidebar-item mt-2" style="background: #4077ad;
+                            <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -318,10 +299,10 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Eligibility - Criteria</span>
                                     </a>
                                 </li>
-                            </ul>
+                            </ul> -->
 
                             {{-- ESTATE REPORTS --}}
-                            <li class="sidebar-item mt-2" style="background: #4077ad;
+                            <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -359,7 +340,7 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
                                     </a>
                                 </li>
-                            </ul>
+                            </ul> -->
                             
                             @endif
 

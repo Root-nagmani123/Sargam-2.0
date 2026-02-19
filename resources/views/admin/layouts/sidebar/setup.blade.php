@@ -77,7 +77,7 @@
                                                     <span class="mini-nav-title sidebar-google-label">FC Forms</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-8">
+                                            <!-- <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-8">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
@@ -94,7 +94,7 @@
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Security</span>
                                                 </a>
-                                            </li>
+                                            </li> -->
                                            
                                             @endif
 
