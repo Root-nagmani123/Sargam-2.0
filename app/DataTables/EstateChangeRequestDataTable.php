@@ -113,9 +113,6 @@ class EstateChangeRequestDataTable extends DataTable
             ->filterColumn('availability_as_per_request', function ($query, $keyword) {
                 $query->where('estate_change_home_req_details.change_house_no', 'like', "%{$keyword}%");
             })
-            ->orderColumn('estate_change_req_ID', fn ($query, $order) => $query->orderBy('estate_change_home_req_details.estate_change_req_ID', $order))
-            ->orderColumn('change_req_date', fn ($query, $order) => $query->orderBy('estate_change_home_req_details.change_req_date', $order))
-            ->orderColumn('availability_as_per_request', fn ($query, $order) => $query->orderBy('estate_change_home_req_details.change_house_no', $order))
             ->setRowId('pk');
     }
 

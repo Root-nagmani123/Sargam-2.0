@@ -3666,337 +3666,6 @@ class EstateController extends Controller
     }
 
     /**
-     * List Meter Reading - view with Bill Month and Building Name filters.
-     */
-    public function listMeterReading()
-    {
-        $billMonths = EstateMonthReadingDetails::select('bill_year', 'bill_month')
-            ->whereNotNull('bill_year')
-            ->whereNotNull('bill_month')
-            ->groupBy('bill_year', 'bill_month')
-            ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC, CAST(bill_month AS UNSIGNED) DESC')
-            ->limit(24)
-            ->get();
-        $blocks = DB::table('estate_month_reading_details as emrd')
-            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
-            ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
-            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
-            ->select('b.pk', 'b.block_name')
-            ->distinct()
-            ->orderBy('b.block_name')
-            ->get();
-        if ($blocks->isEmpty()) {
-            $blocks = DB::table('estate_month_reading_details_other as emro')
-                ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
-                ->join('estate_block_master as b', 'epo.estate_block_master_pk', '=', 'b.pk')
-                ->select('b.pk', 'b.block_name')
-                ->distinct()
-                ->orderBy('b.block_name')
-                ->get();
-        }
-        return view('admin.estate.list_meter_reading', compact('billMonths', 'blocks'));
-    }
-
-    /**
-     * API: Get list meter reading data (filtered by bill month and building).
-     */
-    public function getListMeterReadingData(Request $request)
-    {
-        $billMonth = $request->get('bill_month');
-        $blockId = $request->get('block_id');
-
-        if (!$billMonth) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Please select Bill Month.']);
-        }
-        // Parse Y-m format – DB stores bill_month as full month name, bill_year as 4-digit (estate_month_reading_details).
-        $parts = is_string($billMonth) ? explode('-', trim($billMonth)) : [];
-        $billYearStr = (count($parts) >= 1 && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
-        $monthNum = (count($parts) >= 2 && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
-        if ($monthNum < 1 || $monthNum > 12) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
-        }
-        $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1)); // e.g. "December"
-
-        $query = DB::table('estate_month_reading_details as emrd')
-            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
-            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-            ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
-            ->leftJoin('estate_block_master as b', 'ehm.estate_block_master_pk', '=', 'b.pk')
-            ->leftJoin('estate_unit_type_master as ut', 'ehm.estate_unit_master_pk', '=', 'ut.pk')
-            ->leftJoin('estate_unit_sub_type_master as ust', 'ehm.estate_unit_sub_type_master_pk', '=', 'ust.pk')
-            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
-            ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
-            ->leftJoin('department_master as dm', 'em.department_master_pk', '=', 'dm.pk')
-            ->where(function ($q) use ($billMonthStr, $billMonthShortStr, $billMonthNumStr, $billMonthNumPadded) {
-                $q->where('emrd.bill_month', $billMonthStr)
-                    ->orWhere('emrd.bill_month', $billMonthShortStr)
-                    ->orWhere('emrd.bill_month', $billMonthNumStr)
-                    ->orWhere('emrd.bill_month', $billMonthNumPadded);
-            })
-            ->where('emrd.bill_year', $billYearStr)
-            ->where(function ($q) {
-                $q->whereNull('epd.return_home_status')
-                    ->orWhere('epd.return_home_status', 0);
-            })
-            ->whereNotNull('epd.estate_house_master_pk')
-            ->select([
-                'emrd.pk',
-                'emrd.house_no',
-                'emrd.curr_month_elec_red',
-                'emrd.curr_month_elec_red2',
-                'emrd.last_month_elec_red',
-                'emrd.last_month_elec_red2',
-                'ehrd.emp_name',
-                'ehrd.emp_designation',
-                'etm.category_type_name as employee_type',
-                'dm.department_name as section',
-                'ut.unit_type',
-                'ust.unit_sub_type',
-                'b.block_name as building_name',
-                'epd.pk as possession_pk',
-            ])
-            ->orderBy('b.block_name')
-            ->orderBy('emrd.house_no');
-
-        if ($blockId && $blockId !== 'all' && $blockId !== '') {
-            $query->where('ehm.estate_block_master_pk', $blockId);
-        }
-
-        $rows = $query->get();
-
-        $data = [];
-        $sno = 1;
-        if ($rows->isEmpty()) {
-            $otherQuery = DB::table('estate_month_reading_details_other as emro')
-                ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
-                ->leftJoin('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
-                ->leftJoin('estate_block_master as b', 'epo.estate_block_master_pk', '=', 'b.pk')
-                ->leftJoin('estate_unit_type_master as ut', 'epo.estate_unit_type_master_pk', '=', 'ut.pk')
-                ->leftJoin('estate_unit_sub_type_master as ust', 'epo.estate_unit_sub_type_master_pk', '=', 'ust.pk')
-                ->where(function ($q) use ($billMonthStr, $billMonthShortStr, $billMonthNumStr, $billMonthNumPadded) {
-                    $q->where('emro.bill_month', $billMonthStr)
-                        ->orWhere('emro.bill_month', $billMonthShortStr)
-                        ->orWhere('emro.bill_month', $billMonthNumStr)
-                        ->orWhere('emro.bill_month', $billMonthNumPadded);
-                })
-                ->where('emro.bill_year', $billYearStr)
-                ->select([
-                    'emro.house_no',
-                    'emro.curr_month_elec_red',
-                    'emro.curr_month_elec_red2',
-                    'emro.last_month_elec_red',
-                    'emro.last_month_elec_red2',
-                    'eor.emp_name',
-                    'eor.section',
-                    'ut.unit_type',
-                    'ust.unit_sub_type',
-                    'b.block_name as building_name',
-                    'epo.pk as possession_pk',
-                ])
-                ->orderBy('b.block_name')
-                ->orderBy('emro.house_no');
-
-            if ($blockId && $blockId !== 'all' && $blockId !== '') {
-                $otherQuery->where('epo.estate_block_master_pk', $blockId);
-            }
-
-            $rows = $otherQuery->get();
-
-            foreach ($rows as $r) {
-                $m1 = $r->curr_month_elec_red ?? $r->last_month_elec_red;
-                $m2 = $r->curr_month_elec_red2 ?? $r->last_month_elec_red2;
-                $data[] = [
-                    'sno' => $sno++,
-                    'name' => $r->emp_name ?? 'N/A',
-                    'employee_type' => 'Other Employee',
-                    'section' => $r->section ?? 'N/A',
-                    'unit_type' => $r->unit_type ?? 'N/A',
-                    'unit_sub_type' => $r->unit_sub_type ?? 'N/A',
-                    'building_name' => $r->building_name ?? 'N/A',
-                    'house_no' => $r->house_no ?? 'N/A',
-                    'meter1_reading' => $m1 !== null && $m1 !== '' ? (string) $m1 : 'N/A',
-                    'meter2_reading' => $m2 !== null && $m2 !== '' ? (string) $m2 : 'N/A',
-                    'edit_url' => route('admin.estate.update-meter-reading-of-other'),
-                ];
-            }
-        } else {
-            foreach ($rows as $r) {
-                $m1 = $r->curr_month_elec_red ?? $r->last_month_elec_red;
-                $m2 = $r->curr_month_elec_red2 ?? $r->last_month_elec_red2;
-                $data[] = [
-                    'sno' => $sno++,
-                    'name' => $r->emp_name ?? 'N/A',
-                    'employee_type' => $r->employee_type ?? $r->emp_designation ?? 'N/A',
-                    'section' => $r->section ?? 'N/A',
-                    'unit_type' => $r->unit_type ?? 'N/A',
-                    'unit_sub_type' => $r->unit_sub_type ?? 'N/A',
-                    'building_name' => $r->building_name ?? 'N/A',
-                    'house_no' => $r->house_no ?? 'N/A',
-                    'meter1_reading' => $m1 !== null && $m1 !== '' ? (string) $m1 : 'N/A',
-                    'meter2_reading' => $m2 !== null && $m2 !== '' ? (string) $m2 : 'N/A',
-                    'edit_url' => route('admin.estate.update-meter-reading') . '?possession_pk=' . $r->possession_pk . '&bill_month=' . urlencode($billMonth),
-                ];
-            }
-        }
-
-        return response()->json(['status' => true, 'data' => $data]);
-    }
-
-    /**
-     * Estate Bill Report - Grid View: only notified bills (notify_employee_status = 1), filtered by bill month.
-     * Data mapping per estate_module_tables: estate_month_reading_details (LBSNA) + estate_month_reading_details_other (Other).
-     */
-    public function getBillReportGridData(Request $request)
-    {
-        $billMonth = $request->get('bill_month');
-        if (! $billMonth || ! is_string($billMonth)) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Please select Bill Month.']);
-        }
-        $parts = explode('-', trim($billMonth));
-        $billYearStr = (count($parts) >= 1 && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
-        $monthNum = (count($parts) >= 2 && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
-        if ($monthNum < 1 || $monthNum > 12) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
-        }
-        $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
-
-        $rows = collect();
-
-        // LBSNA: estate_month_reading_details (notify_employee_status = 1) + possession + home_request + employee + house + block
-        $lbsna = DB::table('estate_month_reading_details as emrd')
-            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
-            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-            ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
-            ->leftJoin('estate_block_master as b', 'ehm.estate_block_master_pk', '=', 'b.pk')
-            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.pk')
-            ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
-            ->leftJoin('department_master as dm', 'em.department_master_pk', '=', 'dm.pk')
-            ->where('emrd.bill_month', $billMonthStr)
-            ->where('emrd.bill_year', $billYearStr)
-            ->where('emrd.notify_employee_status', 1)
-            ->where('epd.return_home_status', 0)
-            ->whereNotNull('epd.estate_house_master_pk')
-            ->select([
-                'emrd.from_date',
-                'emrd.to_date',
-                'emrd.house_no',
-                'emrd.meter_one',
-                'emrd.meter_two',
-                'emrd.last_month_elec_red',
-                'emrd.curr_month_elec_red',
-                'emrd.last_month_elec_red2',
-                'emrd.curr_month_elec_red2',
-                'emrd.meter_one_consume_unit',
-                'emrd.meter_two_consume_unit',
-                'emrd.electricty_charges',
-                'emrd.water_charges',
-                'emrd.licence_fees',
-                'ehrd.emp_name',
-                'etm.category_type_name as employee_type',
-                'dm.department_name as section',
-                'b.block_name as building_name',
-            ])
-            ->orderBy('b.block_name')
-            ->orderBy('emrd.house_no')
-            ->get();
-
-        foreach ($lbsna as $r) {
-            $prev = (int) ($r->last_month_elec_red ?? 0);
-            $curr = (int) ($r->curr_month_elec_red ?? 0);
-            $prev2 = (int) ($r->last_month_elec_red2 ?? 0);
-            $curr2 = (int) ($r->curr_month_elec_red2 ?? 0);
-            $u1 = $r->meter_one_consume_unit !== null ? (int) $r->meter_one_consume_unit : (($curr >= $prev) ? $curr - $prev : 0);
-            $u2 = $r->meter_two_consume_unit !== null ? (int) $r->meter_two_consume_unit : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
-            $units = $u1 + $u2;
-            $totalCharge = (float) ($r->electricty_charges ?? 0);
-            $licence = (float) ($r->licence_fees ?? 0);
-            $water = (float) ($r->water_charges ?? 0);
-            $rows->push([
-                'employee_type' => $r->employee_type ?? 'LBSNA Employee',
-                'name' => $r->emp_name ?? 'N/A',
-                'section' => $r->section ?? 'N/A',
-                'building_name' => $r->building_name ?? 'N/A',
-                'house_no' => $r->house_no ?? 'N/A',
-                'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
-                'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
-                'meter_no' => trim(($r->meter_one ?? '') . (isset($r->meter_two) && (string) $r->meter_two !== '' ? "\n" . $r->meter_two : '')),
-                'prev_reading' => (string) $prev . (($prev2 > 0 || $curr2 > 0) ? "\n" . $prev2 : ''),
-                'curr_reading' => (string) $curr . (($prev2 > 0 || $curr2 > 0) ? "\n" . $curr2 : ''),
-                'unit_consumed' => (string) $units,
-                'total_charge' => $totalCharge,
-                'licence_fee' => $licence,
-                'water_charges' => $water,
-                'grand_total' => $totalCharge + $licence + $water,
-            ]);
-        }
-
-        // Other: estate_month_reading_details_other (notify_employee_status = 1) + possession_other + estate_other_req + block
-        $other = DB::table('estate_month_reading_details_other as emro')
-            ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
-            ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
-            ->leftJoin('estate_block_master as b', 'epo.estate_block_master_pk', '=', 'b.pk')
-            ->where('emro.bill_month', $billMonthStr)
-            ->where('emro.bill_year', $billYearStr)
-            ->where('emro.notify_employee_status', 1)
-            ->where('epo.return_home_status', 0)
-            ->select([
-                'emro.from_date',
-                'emro.to_date',
-                'emro.house_no',
-                'emro.meter_one',
-                'emro.meter_two',
-                'emro.last_month_elec_red',
-                'emro.curr_month_elec_red',
-                'emro.last_month_elec_red2',
-                'emro.curr_month_elec_red2',
-                'emro.electricty_charges',
-                'emro.water_charges',
-                'emro.licence_fees',
-                'eor.emp_name',
-                'eor.section',
-                'b.block_name as building_name',
-            ])
-            ->orderBy('b.block_name')
-            ->orderBy('emro.house_no')
-            ->get();
-
-        foreach ($other as $r) {
-            $prev = (int) ($r->last_month_elec_red ?? 0);
-            $curr = (int) ($r->curr_month_elec_red ?? 0);
-            $prev2 = (int) ($r->last_month_elec_red2 ?? 0);
-            $curr2 = (int) ($r->curr_month_elec_red2 ?? 0);
-            $units = (($curr >= $prev) ? $curr - $prev : 0) + (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
-            $totalCharge = (float) ($r->electricty_charges ?? 0);
-            $licence = (float) ($r->licence_fees ?? 0);
-            $water = (float) ($r->water_charges ?? 0);
-            $rows->push([
-                'employee_type' => 'Other Employee',
-                'name' => $r->emp_name ?? 'N/A',
-                'section' => $r->section ?? 'N/A',
-                'building_name' => $r->building_name ?? 'N/A',
-                'house_no' => $r->house_no ?? 'N/A',
-                'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
-                'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
-                'meter_no' => trim(($r->meter_one ?? '') . (isset($r->meter_two) && (string) $r->meter_two !== '' ? "\n" . $r->meter_two : '')),
-                'prev_reading' => (string) $prev . (($prev2 > 0 || $curr2 > 0) ? "\n" . $prev2 : ''),
-                'curr_reading' => (string) $curr . (($prev2 > 0 || $curr2 > 0) ? "\n" . $curr2 : ''),
-                'unit_consumed' => (string) $units,
-                'total_charge' => $totalCharge,
-                'licence_fee' => $licence,
-                'water_charges' => $water,
-                'grand_total' => $totalCharge + $licence + $water,
-            ]);
-        }
-
-        $data = $rows->values()->map(function ($row, $index) {
-            $row['sno'] = $index + 1;
-            return $row;
-        })->all();
-
-        return response()->json(['status' => true, 'data' => $data]);
-    }
-
-    /**
      * Pending Meter Reading report - view with bill month filter.
      * Tables: estate_possession_details, estate_house_master, estate_home_request_details, estate_month_reading_details.
      */
@@ -4018,23 +3687,14 @@ class EstateController extends Controller
             return response()->json(['status' => true, 'data' => [], 'message' => 'Please select bill month and year.']);
         }
 
-        // Parse Y-m format (e.g. 2025-12) – DB stores bill_month as full month name, bill_year as 4-digit string (estate_module_tables SQL).
-        $parts = is_string($billMonth) ? explode('-', trim($billMonth)) : [];
-        $year = (count($parts) >= 1 && is_numeric($parts[0])) ? (int) $parts[0] : (int) $billYear;
-        $month = (count($parts) >= 2 && is_numeric($parts[1])) ? (int) $parts[1] : 0;
+        // Parse Y-m format to month number and year (DB stores bill_month as 1-12, bill_year as 4-digit)
+        $parts = explode('-', $billMonth);
+        $year = count($parts) === 2 ? (int) $parts[0] : (int) $billYear;
+        $month = count($parts) === 2 ? (int) $parts[1] : (int) $billMonth;
         $billYearStr = (string) $year;
+        $billMonthStr = (string) $month;
         if ($month < 1 || $month > 12) {
             return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
-        }
-        $billMonthStr = date('F', mktime(0, 0, 0, $month, 1)); // e.g. "December" – matches estate_month_reading_details.bill_month
-
-        // If this month+year has no readings in DB, return empty (correct mapping: no data = no list).
-        $hasReadingsForMonth = DB::table('estate_month_reading_details')
-            ->where('bill_month', $billMonthStr)
-            ->where('bill_year', $billYearStr)
-            ->exists();
-        if (!$hasReadingsForMonth) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'No readings exist for this month.']);
         }
 
         $pending = DB::table('estate_possession_details as epd')
@@ -4042,7 +3702,8 @@ class EstateController extends Controller
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
             ->leftJoin('estate_month_reading_details as emrd', function ($join) use ($billMonthStr, $billYearStr) {
                 $join->on('emrd.estate_possession_details_pk', '=', 'epd.pk')
-                    ->whereRaw('emrd.bill_month = ? AND emrd.bill_year = ?', [$billMonthStr, $billYearStr]);
+                    ->where('emrd.bill_month', '=', $billMonthStr)
+                    ->where('emrd.bill_year', '=', $billYearStr);
             })
             ->whereNotNull('epd.estate_house_master_pk')
             ->where('epd.return_home_status', 0)
@@ -4058,22 +3719,19 @@ class EstateController extends Controller
 
         $possessionIds = $pending->pluck('possession_pk')->unique()->values()->all();
 
-        $monthOrderSql = "FIELD(emrd.bill_month, 'January','February','March','April','May','June','July','August','September','October','November','December')";
-        $currentMonthOrder = (int) array_search($billMonthStr, ['January','February','March','April','May','June','July','August','September','October','November','December'], true) + 1;
-
         $lastReadings = [];
         if (!empty($possessionIds)) {
             $previousReadings = DB::table('estate_month_reading_details as emrd')
                 ->whereIn('emrd.estate_possession_details_pk', $possessionIds)
-                ->where(function ($q) use ($billYearStr, $billMonthStr, $monthOrderSql, $currentMonthOrder) {
+                ->where(function ($q) use ($billYearStr, $billMonthStr) {
                     $q->where('emrd.bill_year', '<', $billYearStr)
-                        ->orWhere(function ($q2) use ($billYearStr, $monthOrderSql, $currentMonthOrder) {
+                        ->orWhere(function ($q2) use ($billYearStr, $billMonthStr) {
                             $q2->where('emrd.bill_year', '=', $billYearStr)
-                                ->whereRaw($monthOrderSql . ' < ?', [$currentMonthOrder]);
+                                ->whereRaw('CAST(emrd.bill_month AS UNSIGNED) < ?', [(int) $billMonthStr]);
                         });
                 })
                 ->select('emrd.estate_possession_details_pk', 'emrd.curr_month_elec_red', 'emrd.curr_month_elec_red2', 'emrd.to_date')
-                ->orderByRaw('CAST(emrd.bill_year AS UNSIGNED) DESC, ' . $monthOrderSql . ' DESC')
+                ->orderByRaw('CAST(emrd.bill_year AS UNSIGNED) DESC, CAST(emrd.bill_month AS UNSIGNED) DESC')
                 ->get();
 
             foreach ($previousReadings as $row) {
@@ -4117,283 +3775,64 @@ class EstateController extends Controller
     }
 
     /**
-     * Estate Migration Report (1998–2026) – historical allotment data with filters.
-     * Filter options come from distinct values in the report table.
-     */
-    public function estateMigrationReport(EstateMigrationReportDataTable $dataTable)
-    {
-        $years = EstateMigrationReport::select('allotment_year')
-            ->whereNotNull('allotment_year')
-            ->distinct()
-            ->orderBy('allotment_year', 'desc')
-            ->pluck('allotment_year');
-
-        $campuses = EstateMigrationReport::select('campus_name')
-            ->whereNotNull('campus_name')
-            ->where('campus_name', '!=', '')
-            ->distinct()
-            ->orderBy('campus_name')
-            ->pluck('campus_name');
-
-        $buildings = EstateMigrationReport::select('building_name')
-            ->whereNotNull('building_name')
-            ->where('building_name', '!=', '')
-            ->distinct()
-            ->orderBy('building_name')
-            ->pluck('building_name');
-
-        $buildingTypes = EstateMigrationReport::select('type_of_building')
-            ->whereNotNull('type_of_building')
-            ->where('type_of_building', '!=', '')
-            ->distinct()
-            ->orderBy('type_of_building')
-            ->pluck('type_of_building');
-
-        $departments = EstateMigrationReport::select('department_name')
-            ->whereNotNull('department_name')
-            ->where('department_name', '!=', '')
-            ->distinct()
-            ->orderBy('department_name')
-            ->pluck('department_name');
-
-        $employeeTypes = EstateMigrationReport::select('employee_type')
-            ->whereNotNull('employee_type')
-            ->where('employee_type', '!=', '')
-            ->distinct()
-            ->orderBy('employee_type')
-            ->pluck('employee_type');
-
-        return $dataTable->render('admin.estate.estate_migration_report', compact(
-            'years', 'campuses', 'buildings', 'buildingTypes', 'departments', 'employeeTypes'
-        ));
-    }
-
-    /**
-     * API: Get cascading filter options for Estate Migration Report.
-     * Options depend on upstream filters: year → campus → building → type → department → employee type.
-     * Each dropdown only considers filters that come before it in the chain.
-     */
-    public function getEstateMigrationReportFilterOptions(Request $request)
-    {
-        $year = $request->query('year');
-        $campus = $request->query('campus');
-        $building = $request->query('building');
-        $type = $request->query('type');
-        $department = $request->query('department');
-
-        $response = [];
-
-        // Years: no upstream filters
-        $yearsQuery = EstateMigrationReport::query();
-        $response['years'] = $yearsQuery->select('allotment_year')
-            ->whereNotNull('allotment_year')
-            ->distinct()
-            ->orderBy('allotment_year', 'desc')
-            ->pluck('allotment_year');
-
-        // Campuses: filtered by year
-        $campusesQuery = EstateMigrationReport::query();
-        if ($year !== null && $year !== '') {
-            $campusesQuery->where('allotment_year', (int) $year);
-        }
-        $response['campuses'] = $campusesQuery->select('campus_name')
-            ->whereNotNull('campus_name')
-            ->where('campus_name', '!=', '')
-            ->distinct()
-            ->orderBy('campus_name')
-            ->pluck('campus_name');
-
-        // Buildings: filtered by year, campus
-        $buildingsQuery = EstateMigrationReport::query();
-        if ($year !== null && $year !== '') {
-            $buildingsQuery->where('allotment_year', (int) $year);
-        }
-        if ($campus !== null && $campus !== '') {
-            $buildingsQuery->where('campus_name', $campus);
-        }
-        $response['buildings'] = $buildingsQuery->select('building_name')
-            ->whereNotNull('building_name')
-            ->where('building_name', '!=', '')
-            ->distinct()
-            ->orderBy('building_name')
-            ->pluck('building_name');
-
-        // Type of building: filtered by year, campus, building
-        $typesQuery = EstateMigrationReport::query();
-        if ($year !== null && $year !== '') {
-            $typesQuery->where('allotment_year', (int) $year);
-        }
-        if ($campus !== null && $campus !== '') {
-            $typesQuery->where('campus_name', $campus);
-        }
-        if ($building !== null && $building !== '') {
-            $typesQuery->where('building_name', $building);
-        }
-        $response['buildingTypes'] = $typesQuery->select('type_of_building')
-            ->whereNotNull('type_of_building')
-            ->where('type_of_building', '!=', '')
-            ->distinct()
-            ->orderBy('type_of_building')
-            ->pluck('type_of_building');
-
-        // Departments: filtered by year, campus, building, type
-        $deptQuery = EstateMigrationReport::query();
-        if ($year !== null && $year !== '') {
-            $deptQuery->where('allotment_year', (int) $year);
-        }
-        if ($campus !== null && $campus !== '') {
-            $deptQuery->where('campus_name', $campus);
-        }
-        if ($building !== null && $building !== '') {
-            $deptQuery->where('building_name', $building);
-        }
-        if ($type !== null && $type !== '') {
-            $deptQuery->where('type_of_building', $type);
-        }
-        $response['departments'] = $deptQuery->select('department_name')
-            ->whereNotNull('department_name')
-            ->where('department_name', '!=', '')
-            ->distinct()
-            ->orderBy('department_name')
-            ->pluck('department_name');
-
-        // Employee types: filtered by year, campus, building, type, department
-        $empTypeQuery = EstateMigrationReport::query();
-        if ($year !== null && $year !== '') {
-            $empTypeQuery->where('allotment_year', (int) $year);
-        }
-        if ($campus !== null && $campus !== '') {
-            $empTypeQuery->where('campus_name', $campus);
-        }
-        if ($building !== null && $building !== '') {
-            $empTypeQuery->where('building_name', $building);
-        }
-        if ($type !== null && $type !== '') {
-            $empTypeQuery->where('type_of_building', $type);
-        }
-        if ($department !== null && $department !== '') {
-            $empTypeQuery->where('department_name', $department);
-        }
-        $response['employeeTypes'] = $empTypeQuery->select('employee_type')
-            ->whereNotNull('employee_type')
-            ->where('employee_type', '!=', '')
-            ->distinct()
-            ->orderBy('employee_type')
-            ->pluck('employee_type');
-
-        return response()->json($response);
-    }
-
-    /**
-     * API: Get house status data for report (one row per quarter/house).
-     * Columns: Sno., QtrNo, Building Name, Type, Allottee Name, Section/Designation,
-     * Mobile Number, Alloted Date, Occupied Date, Vacated Date, Status (O/V).
-     *
-     * Mapping rules (current occupancy-centric):
-     * - If there is an active LBSNAA possession (estate_possession_details.return_home_status = 0, estate_change_id = -1),
-     *   show it as Occupied (O) with name/dates from possession_details + home_request_details.
-     * - Else if there is an active Other possession (estate_possession_other.return_home_status = 0),
-     *   show it as Occupied (O) with name/dates from possession_other + estate_other_req.
-     * - If neither stream has an active possession for a house, mark it as Vacant (V) with VACANT label and blank dates.
+     * API: Get house status data (dynamic from DB).
+     * Per unit sub type: Types, Grade Pay, House Available, Under Construction, Total Projected,
+     * Allotted to LBSNAA, Other, Vacant.
      */
     public function getHouseStatusData(Request $request)
     {
-        $hasEmployeeMobile = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'mobile');
-
-        // Base house list
-        $houses = DB::table('estate_house_master as ehm')
-            ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
-            ->leftJoin('estate_unit_type_master as eut', 'ehm.estate_unit_master_pk', '=', 'eut.pk')
-            ->select(
-                'ehm.pk as house_pk',
-                'ehm.house_no',
-                'eb.block_name',
-                'eut.unit_type'
-            )
-            ->orderBy('eb.block_name')
-            ->orderBy('ehm.house_no')
+        $unitTypes = DB::table('estate_unit_sub_type_master as ust')
+            ->select('ust.pk', 'ust.unit_sub_type')
+            ->orderBy('ust.unit_sub_type')
             ->get();
 
-        $housePks = $houses->pluck('house_pk')->all();
+        $houseCountsBySubType = DB::table('estate_house_master as ehm')
+            ->whereNotNull('ehm.estate_unit_sub_type_master_pk')
+            ->select('ehm.estate_unit_sub_type_master_pk', DB::raw('COUNT(*) as total'))
+            ->groupBy('ehm.estate_unit_sub_type_master_pk')
+            ->pluck('total', 'estate_unit_sub_type_master_pk');
 
-        $lbsnaaActive = collect();
-        $otherActive = collect();
+        $allottedLbsnaaBySubType = DB::table('estate_possession_details as epd')
+            ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('epd.return_home_status', 0)
+            ->whereNotNull('epd.estate_house_master_pk')
+            ->select('ehm.estate_unit_sub_type_master_pk', DB::raw('COUNT(DISTINCT ehm.pk) as cnt'))
+            ->groupBy('ehm.estate_unit_sub_type_master_pk')
+            ->pluck('cnt', 'estate_unit_sub_type_master_pk');
 
-        if (! empty($housePks)) {
-            // Active LBSNAA possessions (return_home_status = 0, estate_change_id = -1)
-            $lbsnaaActive = DB::table('estate_possession_details as epd')
-                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-                ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
-                ->whereIn('epd.estate_house_master_pk', $housePks)
-                ->where('epd.return_home_status', 0)
-                ->whereNotNull('epd.estate_house_master_pk')
-                ->where('epd.estate_change_id', -1)
-                ->select(
-                    'epd.estate_house_master_pk as house_pk',
-                    'epd.allotment_date',
-                    'epd.possession_date',
-                    DB::raw('COALESCE(NULLIF(TRIM(ehrd.emp_name), \'\'), CONCAT(COALESCE(em.first_name, \'\'), \' \', COALESCE(em.last_name, \'\'))) as allottee_name'),
-                    'ehrd.emp_designation as section_designation',
-                    $hasEmployeeMobile ? 'em.mobile as mobile_number' : DB::raw('NULL as mobile_number'),
-                    'epd.pk as possession_pk'
-                )
-                ->orderBy('epd.pk', 'desc')
-                ->get()
-                // latest possession per house
-                ->unique('house_pk')
-                ->keyBy('house_pk');
+        $otherBySubType = DB::table('estate_possession_other as epo')
+            ->join('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('epo.return_home_status', 0)
+            ->select('ehm.estate_unit_sub_type_master_pk', DB::raw('COUNT(DISTINCT ehm.pk) as cnt'))
+            ->groupBy('ehm.estate_unit_sub_type_master_pk')
+            ->pluck('cnt', 'estate_unit_sub_type_master_pk');
 
-            // Active Other possessions (return_home_status = 0)
-            $otherActive = DB::table('estate_possession_other as epo')
-                ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
-                ->whereIn('epo.estate_house_master_pk', $housePks)
-                ->where('epo.return_home_status', 0)
-                ->whereNotNull('epo.estate_house_master_pk')
-                ->select(
-                    'epo.estate_house_master_pk as house_pk',
-                    'epo.allotment_date',
-                    'epo.possession_date_oth as possession_date',
-                    'eor.emp_name as allottee_name',
-                    DB::raw('COALESCE(NULLIF(TRIM(eor.section), \'\'), eor.designation) as section_designation'),
-                    'eor.mobile as mobile_number',
-                    'epo.pk as possession_pk'
-                )
-                ->orderBy('epo.pk', 'desc')
-                ->get()
-                ->unique('house_pk')
-                ->keyBy('house_pk');
-        }
+        $gradePayBySubType = DB::table('estate_eligibility_mapping as eem')
+            ->join('salary_grade_master as sgm', 'eem.salary_grade_master_pk', '=', 'sgm.pk')
+            ->whereNotNull('eem.estate_unit_sub_type_master_pk')
+            ->select('eem.estate_unit_sub_type_master_pk', DB::raw('GROUP_CONCAT(DISTINCT sgm.salary_grade ORDER BY sgm.salary_grade SEPARATOR ", ") as grade_pay'))
+            ->groupBy('eem.estate_unit_sub_type_master_pk')
+            ->pluck('grade_pay', 'estate_unit_sub_type_master_pk');
 
         $rows = [];
-        $sno = 0;
-
-        foreach ($houses as $h) {
-            $sno++;
-            $hpk = $h->house_pk;
-
-            $lbsnaa = $lbsnaaActive->get($hpk);
-            $other = $otherActive->get($hpk);
-
-            // Prefer LBSNAA stream when both are somehow present for same house
-            $pos = $lbsnaa ?: $other;
-
-            $status = $pos ? 'O' : 'V';
-
-            $allotmentDate = $pos->allotment_date ?? null;
-            $occupiedDate = $pos->possession_date ?? null;
+        foreach ($unitTypes as $ut) {
+            $pk = $ut->pk;
+            $total = (int) ($houseCountsBySubType[$pk] ?? 0);
+            $underConstruction = 0;
+            $allottedLbsnaa = (int) ($allottedLbsnaaBySubType[$pk] ?? 0);
+            $other = (int) ($otherBySubType[$pk] ?? 0);
+            $vacant = max(0, $total - $allottedLbsnaa - $other);
+            $gradePay = $gradePayBySubType[$pk] ?? '-';
 
             $rows[] = [
-                'sno' => $sno,
-                'qtr_no' => $h->house_no ?? '—',
-                'building_name' => $h->block_name ?? '—',
-                'type' => $h->unit_type ?? '—',
-                'allottee_name' => $pos && $pos->allottee_name ? trim($pos->allottee_name) : 'VACANT',
-                'section_designation' => $pos && $pos->section_designation ? trim($pos->section_designation) : '',
-                'mobile_number' => $pos && $pos->mobile_number ? trim((string) $pos->mobile_number) : '',
-                'alloted_date' => $allotmentDate ? \Carbon\Carbon::parse($allotmentDate)->format('d/m/Y') : '',
-                'occupied_date' => $occupiedDate ? \Carbon\Carbon::parse($occupiedDate)->format('d/m/Y') : '',
-                'vacated_date' => '', // current implementation focuses on active occupancy; vacated date can be added later
-                'status' => $status,
+                'types' => $ut->unit_sub_type ?? 'N/A',
+                'grade_pay' => $gradePay,
+                'house_available' => $total,
+                'house_under_construction' => $underConstruction,
+                'total_projected' => $total + $underConstruction,
+                'allotted_lbsnaa' => $allottedLbsnaa,
+                'other' => $other,
+                'vacant' => $vacant,
             ];
         }
 
