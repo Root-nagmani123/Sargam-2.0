@@ -34,14 +34,6 @@ class VendorItemMappingDataTable extends DataTable
                 }
                 return '—';
             })
-            ->addColumn('item_code', function ($row) {
-                return $row->itemSubcategory ? ($row->itemSubcategory->item_code ?? '—') : '—';
-            })
-            ->addColumn('unit_measurement', function ($row) {
-                return $row->itemSubcategory
-                    ? ($row->itemSubcategory->unit_measurement ?? '—')
-                    : '—';
-            })
             ->addColumn('action', function ($row) {
                 $editUrl = route('admin.mess.vendor-item-mappings.edit', $row->id);
                 $deleteUrl = route('admin.mess.vendor-item-mappings.destroy', $row->id);
@@ -70,17 +62,6 @@ class VendorItemMappingDataTable extends DataTable
                     });
                 });
             })
-            ->filterColumn('item_code', function ($query, $keyword) {
-                $query->whereHas('itemSubcategory', function ($q) use ($keyword) {
-                    $q->where('item_code', 'like', "%{$keyword}%")
-                        ->orWhere('subcategory_code', 'like', "%{$keyword}%");
-                });
-            })
-            ->filterColumn('unit_measurement', function ($query, $keyword) {
-                $query->whereHas('itemSubcategory', function ($q) use ($keyword) {
-                    $q->where('unit_measurement', 'like', "%{$keyword}%");
-                });
-            })
             ->orderColumn('vendor_name', function ($query, $order) {
                 $query->orderBy(
                     \App\Models\Mess\Vendor::select('name')->whereColumn('mess_vendors.id', 'mess_vendor_item_mappings.vendor_id'),
@@ -95,10 +76,7 @@ class VendorItemMappingDataTable extends DataTable
                             ->orWhereHas('itemSubcategory', function ($q) use ($searchValue) {
                                 $q->where('item_name', 'like', "%{$searchValue}%")
                                     ->orWhere('subcategory_name', 'like', "%{$searchValue}%")
-                                    ->orWhere('name', 'like', "%{$searchValue}%")
-                                    ->orWhere('item_code', 'like', "%{$searchValue}%")
-                                    ->orWhere('subcategory_code', 'like', "%{$searchValue}%")
-                                    ->orWhere('unit_measurement', 'like', "%{$searchValue}%");
+                                    ->orWhere('name', 'like', "%{$searchValue}%");
                             })
                             ->orWhereHas('itemCategory', fn ($q) => $q->where('category_name', 'like', "%{$searchValue}%"));
                     });
@@ -184,18 +162,6 @@ class VendorItemMappingDataTable extends DataTable
                 ->searchable(true)
                 ->orderable(false)
                 ->addClass('text-center'),
-            Column::computed('item_code')
-                ->title('Item Code')
-                ->searchable(true)
-                ->orderable(false)
-                ->addClass('text-center')
-                ->width('120px'),
-            Column::computed('unit_measurement')
-                ->title('Unit')
-                ->searchable(true)
-                ->orderable(false)
-                ->addClass('text-center')
-                ->width('100px'),
             Column::computed('action')
                 ->title('Actions')
                 ->searchable(false)

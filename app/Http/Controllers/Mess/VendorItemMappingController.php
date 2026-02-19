@@ -14,23 +14,7 @@ class VendorItemMappingController extends Controller
 {
     public function index(VendorItemMappingDataTable $dataTable)
     {
-<<<<<<< HEAD
-        $mappings = VendorItemMapping::with(['vendor', 'itemCategory', 'itemSubcategory'])
-            ->orderBy('vendor_id')
-            ->orderBy('id')
-            ->get();
-        $vendors = Vendor::when(
-            \Illuminate\Support\Facades\Schema::hasColumn('mess_vendors', 'is_active'),
-            fn ($q) => $q->where('is_active', true)
-        )->orderBy('name')->get();
-        $itemSubcategories = ItemSubcategory::active()->orderBy('id')->get();
-
-        return view('admin.mess.vendor-item-mappings.index', compact(
-            'mappings', 'vendors', 'itemSubcategories'
-        ));
-=======
         return $dataTable->render('admin.mess.vendor-item-mappings.index');
->>>>>>> 051cf8b3 (vendor-mapping)
     }
 
     public function create(Request $request)
