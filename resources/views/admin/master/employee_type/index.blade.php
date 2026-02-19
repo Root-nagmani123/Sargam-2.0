@@ -9,16 +9,15 @@
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body p-4">
-                
+            <div class="card-body p-4">                
                 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-                    <div>
+                    <div class="flex-grow-1 min-w-0">
                         <h4 class="fw-semibold text-dark mb-1">Employee Type Master</h4>
                         <p class="text-muted small mb-0">Manage and organize employee type categories</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 w-100 w-md-auto justify-content-start">
                         <button type="button" 
-                                class="btn btn-primary px-4 py-2 rounded-1 shadow-sm d-flex align-items-center gap-2 transition-all"
+                                class="btn btn-primary px-4 py-2 rounded-1"
                                 data-bs-toggle="modal" 
                                 data-bs-target="#employeeTypeModal"
                                 onclick="openEmployeeTypeModal('{{ route('master.employee.type.create') }}', 'Create Employee Type')">
@@ -28,9 +27,7 @@
                         </button>
                     </div>
                 </div>
-                
                 <hr class="my-4">
-                
                 <div class="table-responsive rounded overflow-auto">
                     {{ $dataTable->table(['class' => 'table text-nowrap mb-0 align-middle']) }}
                 </div>
