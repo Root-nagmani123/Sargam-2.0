@@ -721,6 +721,30 @@ table>thead {
                 </div>
             </a>
         </div>
+<<<<<<< HEAD
+=======
+
+        @if(hasRole('Admin') || hasRole('Training-Induction'))
+        <!-- Batch Profile (Participant Statistics by course) -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard-statistics.charts') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-blue d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-bar-chart-line-fill text-primary fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Batch Profile</div>
+                            <div class="stat-value-modern fw-bold text-dark">{{ $batchProfileCoursesCount ?? 0 }} courses</div>
+                            <small class="text-muted">View by batch</small>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
+>>>>>>> d4ee663b (batch profile and participant list)
         @if(hasRole('Student-OT'))
         <div class="col-lg-3 col-md-6 col-sm-12">
             <a href="{{ route('medical.exception.ot.view') }}">
@@ -811,6 +835,27 @@ table>thead {
                     <div>
                         <div class="stat-label">Total Students</div>
                         <div class="stat-value">{{ $totalStudents }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        @endif
+
+        @if(hasRole('Admin') || hasRole('Training-Induction') || (isset($isCCorACC) && $isCCorACC))
+        <!-- Participant History - Full academic records across all courses -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-blue d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-clock-history text-primary fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Participant History</div>
+                            <div class="stat-value-modern fw-bold text-dark">View Full</div>
+                            <small class="text-muted">Academic, notices, memos, attendance</small>
+                        </div>
                     </div>
                 </div>
             </a>
