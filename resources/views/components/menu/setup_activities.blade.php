@@ -247,6 +247,12 @@
                                     </a>
                                 </li> -->
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.list-meter-reading') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.update-meter-reading') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading</span>
