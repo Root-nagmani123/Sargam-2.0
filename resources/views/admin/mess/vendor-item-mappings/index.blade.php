@@ -123,11 +123,12 @@ document.addEventListener('DOMContentLoaded', function() {
         loadForm(this.getAttribute('href'), 'Add Vendor Mapping');
     });
 
-    document.querySelectorAll('.openEditVendorMapping').forEach(function(link) {
-        link.addEventListener('click', function(e) {
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('.openEditVendorMapping');
+        if (link) {
             e.preventDefault();
-            loadForm(this.getAttribute('href'), 'Edit Vendor Mapping');
-        });
+            loadForm(link.getAttribute('href'), 'Edit Vendor Mapping');
+        }
     });
 
     modalEl.addEventListener('submit', function(e) {

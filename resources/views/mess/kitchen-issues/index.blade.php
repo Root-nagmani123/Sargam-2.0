@@ -1269,11 +1269,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // View button handler
+    // View button handler (use closest() for reliable single-click on DataTables rows)
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-view-sv')) {
+        const btn = e.target.closest('.btn-view-sv');
+        if (btn) {
             e.preventDefault();
-            const voucherId = e.target.getAttribute('data-voucher-id');
+            const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found');
                 return;
@@ -1331,11 +1332,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Return button handler
+    // Return button handler (use closest() for reliable single-click on DataTables rows)
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-return-sv')) {
+        const btn = e.target.closest('.btn-return-sv');
+        if (btn) {
             e.preventDefault();
-            const voucherId = e.target.getAttribute('data-voucher-id');
+            const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for return');
                 return;
@@ -1440,11 +1442,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }, true);
     }
 
-    // Edit button handler
+    // Edit button handler (use closest() for reliable single-click on DataTables rows)
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-edit-sv')) {
+        const btn = e.target.closest('.btn-edit-sv');
+        if (btn) {
             e.preventDefault();
-            const voucherId = e.target.getAttribute('data-voucher-id');
+            const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for edit');
                 return;
