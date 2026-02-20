@@ -26,6 +26,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <link rel="stylesheet" href="{{asset('admin_assets/libs/select2/dist/css/select2.min.css')}}">
+<link rel="stylesheet" href="{{asset('css/select2-enhancements.css')}}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/plugins/datatable.min.css')}}">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
 <!-- Breadcrumb Component CSS -->
