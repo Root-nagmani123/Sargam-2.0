@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class EmployeeMaster extends Model
 {
@@ -12,6 +14,30 @@ class EmployeeMaster extends Model
 
     protected $guarded = [];
     protected $primaryKey = 'pk';
+
+    /**
+     * Scope: match employee by pk OR pk_old.
+     */
+    public function scopeWhereIdOrPkOld(Builder $query, $id): Builder
+    {
+        if (Schema::hasColumn($this->getTable(), 'pk_old')) {
+            return $query->where(function ($q) use ($id) {
+                $q->where('pk', $id)->orWhere('pk_old', $id);
+            });
+        }
+        return $query->where('pk', $id);
+    }
+
+    /**
+     * Find employee by pk OR pk_old.
+     */
+    public static function findByIdOrPkOld($id): ?self
+    {
+        if ($id === null || $id === '') {
+            return null;
+        }
+        return static::whereIdOrPkOld($id)->first();
+    }
 
     public const title = [
         'Mr' => 'Mr',
