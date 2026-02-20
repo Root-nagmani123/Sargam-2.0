@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
-use App\Models\DuplicateVehiclePassRequest;
 use App\Models\EmployeeMaster;
 use App\Models\SecVehicleType;
+use App\Models\VehiclePassDuplicateApplyTwfw;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -15,19 +15,21 @@ class DuplicateVehiclePassController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $createdBy = $user->user_id ?? null;
+        $userOldPk = EmployeeMaster::where('pk', $user->user_id)->first();
+        $employeePk = $user->user_id ?? null;
+        $pkOld = $userOldPk->pk_old ?? null;
 
-        $query = DuplicateVehiclePassRequest::with(['vehicleType', 'employee'])
-            ->when($createdBy, fn ($q) => $q->where('created_by', $createdBy))
-            ->orderBy('created_at', 'desc');
+        $query = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])
+            ->where('veh_created_by', $employeePk)
+            ->orWhere('veh_created_by', $pkOld)
+            ->orderBy('created_date', 'desc');
 
         if ($request->filled('search')) {
             $term = trim($request->search);
             $query->where(function ($q) use ($term) {
-                $q->where('vehicle_number', 'like', "%{$term}%")
-                    ->orWhere('vehicle_pass_no', 'like', "%{$term}%")
-                    ->orWhere('employee_name', 'like', "%{$term}%")
-                    ->orWhere('id_card_number', 'like', "%{$term}%");
+                $q->where('vehicle_no', 'like', "%{$term}%")
+                    ->orWhere('vehicle_primary_pk', 'like', "%{$term}%")
+                    ->orWhere('employee_id_card', 'like', "%{$term}%");
             });
         }
 
@@ -57,6 +59,10 @@ class DuplicateVehiclePassController extends Controller
         return view('admin.security.duplicate_vehicle_pass.create', compact('vehicleTypes', 'employees'));
     }
 
+    /**
+     * Case 7 - Vehicle Pass Request (Duplicate): INSERT into vehicle_pass_duplicate_apply_TWFW.
+     * Maps: vehicle_pass_no -> vehicle_primary_pk, reason_for_duplicate -> card_reason.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -64,8 +70,6 @@ class DuplicateVehiclePassController extends Controller
             'vehicle_pass_no' => ['required', 'string', 'max:50'],
             'id_card_number' => ['nullable', 'string', 'max:100'],
             'emp_master_pk' => ['required', 'exists:employee_master,pk'],
-            'designation' => ['nullable', 'string', 'max:255'],
-            'department' => ['nullable', 'string', 'max:255'],
             'vehicle_type' => ['required', 'exists:sec_vehicle_type,pk'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
@@ -76,32 +80,39 @@ class DuplicateVehiclePassController extends Controller
         $user = Auth::user();
         $createdBy = $user->user_id ?? null;
 
-        $emp = EmployeeMaster::with(['designation', 'department'])->find($validated['emp_master_pk']);
-        $employeeName = $emp ? trim($emp->first_name . ' ' . ($emp->last_name ?? '')) : '';
-        $designation = $validated['designation'] ?: ($emp->designation->designation_name ?? null);
-        $department = $validated['department'] ?: ($emp->department->department_name ?? null);
-        $idCardNumber = $validated['id_card_number'] ?: ($emp->emp_id ?? null);
+        $emp = EmployeeMaster::find($validated['emp_master_pk']);
+        $idCardNumber = $validated['id_card_number'] ?: ($emp->emp_id ?? '');
 
         $docPath = null;
         if ($request->hasFile('doc_upload')) {
             $docPath = $request->file('doc_upload')->store('duplicate_vehicle_pass_docs', 'public');
         }
 
-        DuplicateVehiclePassRequest::create([
-            'vehicle_number' => $validated['vehicle_number'],
-            'vehicle_pass_no' => $validated['vehicle_pass_no'],
-            'id_card_number' => $idCardNumber,
+        // Generate vehicle_tw_pk: DUP + 3-digit padded number (per SQL structure)
+        $maxNum = VehiclePassDuplicateApplyTwfw::where('vehicle_tw_pk', 'like', 'DUP%')
+            ->get()
+            ->map(fn ($r) => (int) preg_replace('/^DUP0*/', '', $r->vehicle_tw_pk))
+            ->filter()
+            ->max() ?? 0;
+        $vehicleTwPk = 'DUP' . str_pad($maxNum + 1, 3, '0', STR_PAD_LEFT);
+
+        $cardReason = VehiclePassDuplicateApplyTwfw::mapReasonToCardReason($validated['reason_for_duplicate']);
+
+        VehiclePassDuplicateApplyTwfw::create([
+            'vehicle_tw_pk' => $vehicleTwPk,
+            'vehicle_no' => $validated['vehicle_number'],
+            'vehicle_primary_pk' => $validated['vehicle_pass_no'],
+            'employee_id_card' => $idCardNumber ?: '',
             'emp_master_pk' => $validated['emp_master_pk'],
-            'employee_name' => $employeeName,
-            'designation' => $designation,
-            'department' => $department,
             'vehicle_type' => $validated['vehicle_type'],
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'],
-            'reason_for_duplicate' => $validated['reason_for_duplicate'],
+            'card_reason' => $cardReason,
             'doc_upload' => $docPath,
-            'status' => 'Pending',
-            'created_by' => $createdBy,
+            'veh_card_valid_from' => $validated['start_date'],
+            'vech_card_valid_to' => $validated['end_date'],
+            'vech_card_status' => VehiclePassDuplicateApplyTwfw::STATUS_PENDING,
+            'veh_created_by' => $createdBy,
+            'created_date' => now(),
+            'vehicle_card_reapply' => 0,
         ]);
 
         return redirect()->route('admin.security.duplicate_vehicle_pass.index')
@@ -110,13 +121,17 @@ class DuplicateVehiclePassController extends Controller
 
     public function show($id)
     {
-        $req = DuplicateVehiclePassRequest::with(['vehicleType', 'employee'])->findOrFail($id);
+        $vehicleTwPk = $this->decryptPk($id);
+        $req = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])->findOrFail($vehicleTwPk);
+
         return view('admin.security.duplicate_vehicle_pass.show', compact('req'));
     }
 
     public function edit($id)
     {
-        $req = DuplicateVehiclePassRequest::with(['vehicleType', 'employee'])->findOrFail($id);
+        $vehicleTwPk = $this->decryptPk($id);
+        $req = VehiclePassDuplicateApplyTwfw::with(['vehicleType', 'employee'])->findOrFail($vehicleTwPk);
+
         $vehicleTypes = SecVehicleType::active()->get();
         $employees = EmployeeMaster::with(['designation', 'department'])
             ->where('status', 1)
@@ -137,29 +152,28 @@ class DuplicateVehiclePassController extends Controller
 
     public function update(Request $request, $id)
     {
-        $req = DuplicateVehiclePassRequest::findOrFail($id);
+        $vehicleTwPk = $this->decryptPk($id);
+        $req = VehiclePassDuplicateApplyTwfw::findOrFail($vehicleTwPk);
+
+        if ((int) $req->vech_card_status !== VehiclePassDuplicateApplyTwfw::STATUS_PENDING) {
+            return redirect()->route('admin.security.duplicate_vehicle_pass.index')
+                ->with('error', 'Cannot edit approved/rejected application.');
+        }
 
         $validated = $request->validate([
             'vehicle_number' => ['required', 'string', 'max:50'],
             'vehicle_pass_no' => ['required', 'string', 'max:50'],
             'id_card_number' => ['nullable', 'string', 'max:100'],
             'emp_master_pk' => ['required', 'exists:employee_master,pk'],
-            'designation' => ['nullable', 'string', 'max:255'],
-            'department' => ['nullable', 'string', 'max:255'],
             'vehicle_type' => ['required', 'exists:sec_vehicle_type,pk'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'reason_for_duplicate' => ['required', 'string', 'max:100'],
             'doc_upload' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
-            'status' => ['nullable', 'in:Pending,Approved,Rejected,Issued'],
-            'remarks' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $emp = EmployeeMaster::with(['designation', 'department'])->find($validated['emp_master_pk']);
-        $employeeName = $emp ? trim($emp->first_name . ' ' . ($emp->last_name ?? '')) : '';
-        $designation = $validated['designation'] ?: ($emp->designation->designation_name ?? null);
-        $department = $validated['department'] ?: ($emp->department->department_name ?? null);
-        $idCardNumber = $validated['id_card_number'] ?: ($emp->emp_id ?? null);
+        $emp = EmployeeMaster::find($validated['emp_master_pk']);
+        $idCardNumber = $validated['id_card_number'] ?: ($emp->emp_id ?? '');
 
         $docPath = $req->doc_upload;
         if ($request->hasFile('doc_upload')) {
@@ -169,34 +183,50 @@ class DuplicateVehiclePassController extends Controller
             $docPath = $request->file('doc_upload')->store('duplicate_vehicle_pass_docs', 'public');
         }
 
-        $user = Auth::user();
+        $cardReason = VehiclePassDuplicateApplyTwfw::mapReasonToCardReason($validated['reason_for_duplicate']);
+
         $req->update([
-            'vehicle_number' => $validated['vehicle_number'],
-            'vehicle_pass_no' => $validated['vehicle_pass_no'],
-            'id_card_number' => $idCardNumber,
+            'vehicle_no' => $validated['vehicle_number'],
+            'vehicle_primary_pk' => $validated['vehicle_pass_no'],
+            'employee_id_card' => $idCardNumber ?: '',
             'emp_master_pk' => $validated['emp_master_pk'],
-            'employee_name' => $employeeName,
-            'designation' => $designation,
-            'department' => $department,
             'vehicle_type' => $validated['vehicle_type'],
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'],
-            'reason_for_duplicate' => $validated['reason_for_duplicate'],
+            'card_reason' => $cardReason,
             'doc_upload' => $docPath,
-            'status' => $validated['status'] ?? $req->status,
-            'remarks' => $validated['remarks'] ?? $req->remarks,
-            'updated_by' => $user->user_id ?? null,
+            'veh_card_valid_from' => $validated['start_date'],
+            'vech_card_valid_to' => $validated['end_date'],
         ]);
 
-        return redirect()->route('admin.security.duplicate_vehicle_pass.index')
+        return redirect()->route('admin.security.duplicate_vehicle_pass.show', encrypt($req->vehicle_tw_pk))
             ->with('success', 'Request updated successfully.');
     }
 
     public function destroy($id)
     {
-        $req = DuplicateVehiclePassRequest::findOrFail($id);
+        $vehicleTwPk = $this->decryptPk($id);
+        $req = VehiclePassDuplicateApplyTwfw::findOrFail($vehicleTwPk);
+
+        if ((int) $req->vech_card_status !== VehiclePassDuplicateApplyTwfw::STATUS_PENDING) {
+            return redirect()->route('admin.security.duplicate_vehicle_pass.index')
+                ->with('error', 'Cannot delete approved/rejected application.');
+        }
+
+        if ($req->doc_upload) {
+            Storage::disk('public')->delete($req->doc_upload);
+        }
+
         $req->delete();
+
         return redirect()->route('admin.security.duplicate_vehicle_pass.index')
             ->with('success', 'Request deleted successfully.');
+    }
+
+    private function decryptPk(string $id): string
+    {
+        try {
+            return decrypt($id);
+        } catch (\Exception $e) {
+            abort(404);
+        }
     }
 }

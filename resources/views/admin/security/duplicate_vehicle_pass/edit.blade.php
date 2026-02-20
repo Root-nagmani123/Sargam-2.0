@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Edit Duplicate Vehicle Pass Request"></x-breadcrum>
 
-    <form action="{{ route('admin.security.duplicate_vehicle_pass.update', $req->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="dupVehPassForm" novalidate>
+    <form action="{{ route('admin.security.duplicate_vehicle_pass.update', encrypt($req->vehicle_tw_pk)) }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="dupVehPassForm" novalidate>
         @csrf
         @method('PUT')
 
@@ -14,7 +14,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="vehicle_number" class="form-label">Vehicle Number <span class="text-danger">*</span></label>
-                        <input type="text" name="vehicle_number" id="vehicle_number" class="form-control" value="{{ old('vehicle_number', $req->vehicle_number) }}" placeholder="Enter Vehicle Number" required>
+                        <input type="text" name="vehicle_number" id="vehicle_number" class="form-control" value="{{ old('vehicle_number', $req->vehicle_no) }}" placeholder="Enter Vehicle Number" required>
                         @error('vehicle_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -24,7 +24,7 @@
                     </div>
                     <div class="col-md-6">
                         <label for="id_card_number" class="form-label">Id Card Number <span class="text-danger">*</span></label>
-                        <input type="text" name="id_card_number" id="id_card_number" class="form-control" value="{{ old('id_card_number', $req->id_card_number) }}" placeholder="Enter Id Card Number">
+                        <input type="text" name="id_card_number" id="id_card_number" class="form-control" value="{{ old('id_card_number', $req->employee_id_card) }}" placeholder="Enter Id Card Number">
                         @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -44,14 +44,12 @@
                         @error('emp_master_pk')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
-                        <label for="designation" class="form-label">Designation <span class="text-danger">*</span></label>
-                        <input type="text" name="designation" id="designation" class="form-control" value="{{ old('designation', $req->designation) }}" placeholder="Employee Designation" required>
-                        @error('designation')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <label class="form-label" for="designation">Designation</label>
+                        <input type="text" id="designation" class="form-control bg-light" value="{{ $req->designation ?? '--' }}" readonly>
                     </div>
                     <div class="col-md-6">
-                        <label for="department" class="form-label">Department <span class="text-danger">*</span></label>
-                        <input type="text" name="department" id="department" class="form-control" value="{{ old('department', $req->department) }}" placeholder="Employee Department" required>
-                        @error('department')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <label class="form-label" for="department">Department</label>
+                        <input type="text" id="department" class="form-control bg-light" value="{{ $req->department ?? '--' }}" readonly>
                     </div>
                     <div class="col-md-6">
                         <label for="vehicle_type" class="form-label">Vehicle Type <span class="text-danger">*</span></label>
@@ -65,32 +63,23 @@
                     </div>
                     <div class="col-md-6">
                         <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
-                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ old('start_date', $req->start_date?->format('Y-m-d')) }}" required>
+                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ old('start_date', $req->veh_card_valid_from?->format('Y-m-d')) }}" required>
                         @error('start_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
                         <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
-                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ old('end_date', $req->end_date?->format('Y-m-d')) }}" required>
+                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ old('end_date', $req->vech_card_valid_to?->format('Y-m-d')) }}" required>
                         @error('end_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
                         <label for="reason_for_duplicate" class="form-label">Reason For Duplicate Card <span class="text-danger">*</span></label>
                         <select name="reason_for_duplicate" id="reason_for_duplicate" class="form-select" required>
                             <option value="">-- Select --</option>
-                            @foreach(\App\Models\DuplicateVehiclePassRequest::reasonOptions() as $val => $label)
+                            @foreach(\App\Models\VehiclePassDuplicateApplyTwfw::reasonOptions() as $val => $label)
                                 <option value="{{ $val }}" {{ old('reason_for_duplicate', $req->reason_for_duplicate) === $val ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                         @error('reason_for_duplicate')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="status" class="form-label">Status</label>
-                        <select name="status" id="status" class="form-select">
-                            @foreach(\App\Models\DuplicateVehiclePassRequest::statusOptions() as $val => $label)
-                                <option value="{{ $val }}" {{ old('status', $req->status) === $val ? 'selected' : '' }}>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        @error('status')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
                         <label for="doc_upload" class="form-label">Upload Document</label>
@@ -102,16 +91,11 @@
                         @endif
                         @error('doc_upload')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-12">
-                        <label for="remarks" class="form-label">Remarks</label>
-                        <textarea name="remarks" id="remarks" class="form-control" rows="2">{{ old('remarks', $req->remarks) }}</textarea>
-                        @error('remarks')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
                 </div>
 
                 <div class="d-flex gap-2 mt-4">
                     <button type="submit" class="btn btn-success">Update</button>
-                    <a href="{{ route('admin.security.duplicate_vehicle_pass.show', $req->id) }}" class="btn btn-outline-secondary">Cancel</a>
+                    <a href="{{ route('admin.security.duplicate_vehicle_pass.show', encrypt($req->vehicle_tw_pk)) }}" class="btn btn-outline-secondary">Cancel</a>
                 </div>
             </div>
         </div>

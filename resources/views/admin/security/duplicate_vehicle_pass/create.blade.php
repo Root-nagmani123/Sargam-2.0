@@ -43,14 +43,12 @@
                         @error('emp_master_pk')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
-                        <label for="designation" class="form-label">Designation <span class="text-danger">*</span></label>
-                        <input type="text" name="designation" id="designation" class="form-control" value="{{ old('designation') }}" placeholder="Employee Designation" required>
-                        @error('designation')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <label class="form-label" for="designation">Designation</label>
+                        <input type="text" id="designation" class="form-control bg-light" placeholder="Auto-filled from employee" readonly>
                     </div>
                     <div class="col-md-6">
-                        <label for="department" class="form-label">Department <span class="text-danger">*</span></label>
-                        <input type="text" name="department" id="department" class="form-control" value="{{ old('department') }}" placeholder="Employee Department" required>
-                        @error('department')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <label class="form-label" for="department">Department</label>
+                        <input type="text" id="department" class="form-control bg-light" placeholder="Auto-filled from employee" readonly>
                     </div>
                     <div class="col-md-6">
                         <label for="vehicle_type" class="form-label">Vehicle Type <span class="text-danger">*</span></label>
@@ -77,7 +75,7 @@
                         <p class="small text-muted mb-1">Enter Reason For Duplicate Card</p>
                         <select name="reason_for_duplicate" id="reason_for_duplicate" class="form-select" required>
                             <option value="">-- Select --</option>
-                            @foreach(\App\Models\DuplicateVehiclePassRequest::reasonOptions() as $val => $label)
+                            @foreach(\App\Models\VehiclePassDuplicateApplyTwfw::reasonOptions() as $val => $label)
                                 <option value="{{ $val }}" {{ old('reason_for_duplicate') === $val ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>

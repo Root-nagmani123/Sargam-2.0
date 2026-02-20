@@ -80,7 +80,7 @@
                                 <td class="col-emp">{{ $r->employee_name ?? '--' }}</td>
                                 <td class="col-pass">{{ $r->vehicle_pass_no ?? '--' }}</td>
                                 <td class="col-type">{{ $r->vehicleType->vehicle_type ?? '--' }}</td>
-                                <td class="col-veh">{{ $r->vehicle_number ?? '--' }}</td>
+                                <td class="col-veh">{{ $r->vehicle_no ?? '--' }}</td>
                                 <td class="col-doc">
                                     @if($r->doc_upload)
                                         <a href="{{ asset('storage/' . $r->doc_upload) }}" target="_blank" class="text-primary">
@@ -90,27 +90,27 @@
                                         --
                                     @endif
                                 </td>
-                                <td class="col-date">{{ $r->created_at ? $r->created_at->format('d-m-Y') : '--' }}</td>
+                                <td class="col-date">{{ $r->created_date ? $r->created_date->format('d-m-Y') : '--' }}</td>
                                 <td class="col-status">
                                     @php
-                                        $badge = match($r->status) {
+                                        $badge = match($r->status_text) {
                                             'Approved' => 'bg-success',
                                             'Rejected' => 'bg-danger',
                                             'Issued' => 'bg-info',
                                             default => 'bg-warning text-dark',
                                         };
                                     @endphp
-                                    <span class="badge {{ $badge }}">{{ $r->status }}</span>
+                                    <span class="badge {{ $badge }}">{{ $r->status_text }}</span>
                                 </td>
                                 <td class="col-action">
                                     <div class="d-flex align-items-center gap-1">
-                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.show', $r->id) }}" class="btn btn-sm btn-outline-primary" title="View">
+                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.show', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-primary" title="View">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                         </a>
-                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', $r->id) }}" class="btn btn-sm btn-outline-success" title="Edit">
+                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-success" title="Edit">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                                         </a>
-                                        <form action="{{ route('admin.security.duplicate_vehicle_pass.delete', $r->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this request?');">
+                                        <form action="{{ route('admin.security.duplicate_vehicle_pass.delete', encrypt($r->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this request?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">

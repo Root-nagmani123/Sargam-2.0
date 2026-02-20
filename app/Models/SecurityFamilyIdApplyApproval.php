@@ -34,4 +34,9 @@ class SecurityFamilyIdApplyApproval extends Model
     {
         return $this->belongsTo(SecurityFamilyIdApply::class, 'security_fm_id_apply_pk', 'fml_id_apply');
     }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(\App\Models\EmployeeMaster::class, 'created_by', 'pk');
+    }
 }
