@@ -309,10 +309,11 @@
         }
     });
 
-    document.querySelector('.table-responsive').addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-edit-allocation');
         if (!btn) return;
         e.preventDefault();
+        e.stopPropagation();
         const id = btn.getAttribute('data-allocation-id');
         fetch(editBaseUrl + '/' + id + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(r => r.json())
@@ -337,7 +338,7 @@
                 new bootstrap.Modal(document.getElementById('editStoreAllocationModal')).show();
             })
             .catch(err => { console.error(err); alert('Failed to load store allocation.'); });
-    });
+    }, true);
 
     document.getElementById('addEditAllocationItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('editAllocationItemsBody');

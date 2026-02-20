@@ -81,13 +81,14 @@ document.addEventListener('DOMContentLoaded', function() {
         loadForm(this.getAttribute('href'), 'Add Vendor Mapping');
     });
 
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var link = e.target.closest('.openEditVendorMapping');
         if (link) {
             e.preventDefault();
+            e.stopPropagation();
             loadForm(link.getAttribute('href'), 'Edit Vendor Mapping');
         }
-    });
+    }, true);
 
     modalEl.addEventListener('submit', function(e) {
         var form = e.target;

@@ -180,16 +180,18 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-store');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editStoreForm').action = '{{ url("admin/mess/stores") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_store_name').value = btn.getAttribute('data-store-name') || '';
         document.getElementById('edit_store_type').value = btn.getAttribute('data-store-type') || 'mess';
         document.getElementById('edit_location').value = btn.getAttribute('data-location') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editStoreModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush
