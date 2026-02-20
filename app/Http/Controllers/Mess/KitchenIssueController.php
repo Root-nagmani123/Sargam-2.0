@@ -847,7 +847,24 @@ class KitchenIssueController extends Controller
             $storeType = 'sub_store';
             $storeId = (int) str_replace('sub_', '', $storeIdentifier);
 
-            // Get items with their allocated quantities and store-specific rate (weighted avg unit_price)
+            // FIFO: get allocation items ordered by date (oldest first) for price tiers
+            $fifoRows = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->where('sa.sub_store_id', $storeId)
+                ->orderByRaw('COALESCE(sa.allocation_date, sa.created_at) ASC')
+                ->orderBy('sa.id')
+                ->orderBy('sai.id')
+                ->select('sai.item_subcategory_id', 'sai.quantity', 'sai.unit_price')
+                ->get();
+
+            $tiersByItem = [];
+            foreach ($fifoRows as $r) {
+                $id = (int) ($r->item_subcategory_id ?? 0);
+                if ($id <= 0) continue;
+                if (!isset($tiersByItem[$id])) $tiersByItem[$id] = [];
+                $tiersByItem[$id][] = ['quantity' => (float) $r->quantity, 'unit_price' => (float) $r->unit_price];
+            }
+
             $allocatedItems = DB::table('mess_store_allocation_items as sai')
                 ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
                 ->where('sa.sub_store_id', $storeId)
@@ -867,7 +884,7 @@ class KitchenIssueController extends Controller
                 $items = ItemSubcategory::whereIn('id', $itemIds)
                     ->active()
                     ->get()
-                    ->map(function ($s) use ($allocatedItems, $availableMap) {
+                    ->map(function ($s) use ($allocatedItems, $availableMap, $tiersByItem) {
                         $allocated = $allocatedItems->get($s->id);
                         $storeRate = $allocated && isset($allocated->avg_unit_price) ? (float) $allocated->avg_unit_price : null;
                         $rawTiers = $tiersByItem[$s->id] ?? [];
@@ -891,13 +908,34 @@ class KitchenIssueController extends Controller
                             'id' => $s->id,
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
-                            'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
-                            'available_quantity' => (float) ($availableMap[$s->id] ?? 0),
+                            'standard_cost' => $firstPrice ?? ($storeRate !== null ? $storeRate : ($s->standard_cost ?? 0)),
+                            'available_quantity' => $available,
+                            'price_tiers' => $tiers,
                         ];
                     });
             }
         } else {
-            // Main store: get items from purchase orders
+            // Main store: FIFO from purchase orders (oldest first by po_date = purchase date)
+            $fifoRows = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->where('po.store_id', $storeId)
+                ->where('po.status', 'approved')
+                ->whereNotNull('poi.item_subcategory_id')
+                ->where('poi.item_subcategory_id', '>', 0)
+                ->orderBy('po.po_date', 'asc')
+                ->orderBy('po.id')
+                ->orderBy('poi.id')
+                ->select('poi.item_subcategory_id', 'poi.quantity', 'poi.unit_price')
+                ->get();
+
+            $tiersByItem = [];
+            foreach ($fifoRows as $r) {
+                $id = (int) ($r->item_subcategory_id ?? 0);
+                if ($id <= 0) continue;
+                if (!isset($tiersByItem[$id])) $tiersByItem[$id] = [];
+                $tiersByItem[$id][] = ['quantity' => (float) $r->quantity, 'unit_price' => (float) $r->unit_price];
+            }
+
             $purchasedItems = DB::table('mess_purchase_order_items as poi')
                 ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
                 ->where('po.store_id', $storeId)
@@ -918,7 +956,7 @@ class KitchenIssueController extends Controller
                 $items = ItemSubcategory::whereIn('id', $itemIds)
                     ->active()
                     ->get()
-                    ->map(function ($s) use ($purchasedItems, $availableMap) {
+                    ->map(function ($s) use ($purchasedItems, $availableMap, $tiersByItem) {
                         $purchased = $purchasedItems->get($s->id);
                         $storeRate = $purchased && isset($purchased->avg_unit_price) ? (float) $purchased->avg_unit_price : null;
                         $rawTiers = $tiersByItem[$s->id] ?? [];
@@ -943,8 +981,9 @@ class KitchenIssueController extends Controller
                             'id' => $s->id,
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
-                            'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
-                            'available_quantity' => (float) ($availableMap[$s->id] ?? 0),
+                            'standard_cost' => $firstPrice ?? ($storeRate !== null ? $storeRate : ($s->standard_cost ?? 0)),
+                            'available_quantity' => $available,
+                            'price_tiers' => $tiers,
                         ];
                     });
             }
