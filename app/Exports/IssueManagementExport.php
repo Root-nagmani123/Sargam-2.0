@@ -4,9 +4,12 @@ namespace App\Exports;
 
 use App\Models\IssueLogManagement;
 use App\Models\EmployeeMaster;
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithCustomChunkSize;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -15,16 +18,21 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSize
+class IssueManagementExport implements FromQuery, WithHeadings, WithMapping, WithStyles, WithCustomChunkSize, ShouldAutoSize
 {
-    protected $filters;
+    protected array $filters;
+
+    protected int $rowIndex = 0;
 
     public function __construct(array $filters = [])
     {
         $this->filters = $filters;
     }
 
-    public function collection(): Collection
+    /**
+     * Build and return the filtered query (chunked for Excel, used by PDF too).
+     */
+    public function query(): Builder
     {
         $query = IssueLogManagement::with([
             'category',
@@ -35,18 +43,22 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
             'statusHistory',
         ]);
 
-        // User scope (non-admin sees only own issues)
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
-            $query->where(function ($q) {
-                $q->where('employee_master_pk', Auth::user()->user_id)
-                    ->orWhere('issue_logger', Auth::user()->user_id)
-                    ->orWhere('assigned_to', Auth::user()->user_id)
-                    ->orWhere('created_by', Auth::user()->user_id);
+            $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+            if (empty($ids)) {
+                $ids = [Auth::user()->user_id];
+            }
+            $query->where(function ($q) use ($ids) {
+                $q->whereIn('employee_master_pk', $ids)
+                    ->orWhereIn('issue_logger', $ids)
+                    ->orWhereIn('assigned_to', $ids)
+                    ->orWhereIn('created_by', $ids);
             });
         }
 
         if (!empty($this->filters['raised_by']) && $this->filters['raised_by'] === 'self') {
-            $query->where('created_by', Auth::user()->user_id);
+            $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+            $query->whereIn('created_by', empty($ids) ? [Auth::user()->user_id] : $ids);
         }
 
         if (!empty($this->filters['search'])) {
@@ -82,66 +94,12 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
             $query->where('issue_status', (int) $this->filters['status']);
         }
 
-        $issues = $query->orderBy('created_date', 'desc')->get();
+        return $query->orderBy('created_date', 'desc');
+    }
 
-        $locationLabel = function ($issue) {
-            if ($issue->buildingMapping && $issue->buildingMapping->building) {
-                return trim($issue->buildingMapping->building->building_name ?? '') ?: '';
-            }
-            if ($issue->hostelMapping && $issue->hostelMapping->hostelBuilding) {
-                $h = $issue->hostelMapping->hostelBuilding;
-                return trim($h->hostel_name ?? $h->building_name ?? '') ?: '';
-            }
-            return '';
-        };
-
-        $nameWithDesignation = function ($issue) {
-            $creator = $issue->creator;
-            if (!$creator) {
-                return 'CENTCOM LBSNAA - USER';
-            }
-            $name = trim(($creator->first_name ?? '') . ' ' . ($creator->middle_name ?? '') . ' ' . ($creator->last_name ?? ''));
-            $designation = $creator->designation->designation_name ?? '';
-            return $designation ? $name . ' - ' . $designation : $name;
-        };
-
-        $assignedToName = function ($issue) {
-            if (empty($issue->assigned_to) || trim((string) $issue->assigned_to) === '') {
-                return 'Not assigned';
-            }
-            if (is_numeric($issue->assigned_to)) {
-                $emp = EmployeeMaster::find($issue->assigned_to);
-                return $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : (string) $issue->assigned_to;
-            }
-            return $issue->assigned_to;
-        };
-
-        // Effective cleared datetime: clear_date if set, else from status history when status is Completed (2)
-        $effectiveClearedAt = function ($issue) {
-            if ($issue->clear_date) {
-                return Carbon::parse($issue->clear_date);
-            }
-            if ((int) $issue->issue_status === 2 && $issue->relationLoaded('statusHistory')) {
-                $completed = $issue->statusHistory->where('issue_status', 2)->sortByDesc('issue_date')->first();
-                return $completed && $completed->issue_date ? Carbon::parse($completed->issue_date) : null;
-            }
-            return null;
-        };
-
-        $timeTaken = function ($issue) use ($effectiveClearedAt) {
-            $created = $issue->created_date ? Carbon::parse($issue->created_date) : null;
-            $cleared = $effectiveClearedAt($issue);
-            if (!$created || !$cleared) {
-                return '';
-            }
-            $diff = $created->diff($cleared);
-            return sprintf('%02d:%02d:%02d', $diff->h + $diff->days * 24, $diff->i, $diff->s);
-        };
-
-        $rows = collect();
-
-        // Table header - yellow in styles
-        $rows->push([
+    public function headings(): array
+    {
+        return [
             'S.No.',
             'Section',
             'Call ID',
@@ -156,36 +114,128 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
             'location',
             'Status',
             'Remarks',
-        ]);
+        ];
+    }
 
-        // Data rows
-        $sno = 1;
+    public function map($issue): array
+    {
+        return $this->issueToRow($issue);
+    }
+
+    /**
+     * Convert a single issue to export row (used by Excel map and PDF).
+     */
+    public function issueToRow(IssueLogManagement $issue): array
+    {
+        $this->rowIndex++;
+
+        $callDate = $issue->created_date ? $issue->created_date->format('d-m-Y') : '';
+        $callTime = $issue->created_date ? $issue->created_date->format('H:i:s') : '';
+        $clearedAt = $this->effectiveClearedAt($issue);
+        $clearedDate = $clearedAt ? $clearedAt->format('d-m-Y') : '';
+        $clearedTime = $clearedAt ? $clearedAt->format('H:i:s') : '';
+
+        return [
+            $this->rowIndex,
+            $issue->category->issue_category ?? 'N/A',
+            $issue->pk,
+            $this->nameWithDesignation($issue),
+            $issue->description ?? '',
+            $this->assignedToName($issue),
+            $callDate,
+            $callTime,
+            $clearedDate,
+            $clearedTime,
+            $this->timeTaken($issue),
+            $this->locationLabel($issue),
+            $issue->issue_status == 2 ? 'Closed' : $issue->status_label,
+            $issue->remark ?? '',
+        ];
+    }
+
+    /**
+     * Get rows for PDF export (limited to avoid memory exhaustion).
+     * Returns ['rows' => [...], 'total_count' => int, 'truncated' => bool].
+     */
+    public function getRowsForPdf(int $limit = 5000): array
+    {
+        $query = $this->query();
+        $totalCount = $query->count();
+        $issues = (clone $query)->limit($limit)->get();
+        $this->rowIndex = 0;
+        $rows = [];
         foreach ($issues as $issue) {
-            $callDate = $issue->created_date ? $issue->created_date->format('d-m-Y') : '';
-            $callTime = $issue->created_date ? $issue->created_date->format('H:i:s') : '';
-            $clearedAt = $effectiveClearedAt($issue);
-            $clearedDate = $clearedAt ? $clearedAt->format('d-m-Y') : '';
-            $clearedTime = $clearedAt ? $clearedAt->format('H:i:s') : '';
-
-            $rows->push([
-                $sno++,
-                $issue->category->issue_category ?? 'N/A',
-                $issue->pk,
-                $nameWithDesignation($issue),
-                $issue->description ?? '',
-                $assignedToName($issue),
-                $callDate,
-                $callTime,
-                $clearedDate,
-                $clearedTime,
-                $timeTaken($issue),
-                $locationLabel($issue),
-                $issue->issue_status == 2 ? 'Closed' : $issue->status_label,
-                $issue->remark ?? '',
-            ]);
+            $rows[] = $this->issueToRow($issue);
         }
+        return [
+            'rows' => $rows,
+            'total_count' => $totalCount,
+            'truncated' => $totalCount > $limit,
+            'limit' => $limit,
+        ];
+    }
 
-        return $rows;
+    public function chunkSize(): int
+    {
+        return 500; // Smaller chunks for large datasets (65K+ rows) to avoid memory exhaustion
+    }
+
+    protected function locationLabel(IssueLogManagement $issue): string
+    {
+        if ($issue->buildingMapping && $issue->buildingMapping->building) {
+            return trim($issue->buildingMapping->building->building_name ?? '') ?: '';
+        }
+        if ($issue->hostelMapping && $issue->hostelMapping->hostelBuilding) {
+            $h = $issue->hostelMapping->hostelBuilding;
+            return trim($h->hostel_name ?? $h->building_name ?? '') ?: '';
+        }
+        return '';
+    }
+
+    protected function nameWithDesignation(IssueLogManagement $issue): string
+    {
+        $creator = $issue->creator ?: EmployeeMaster::findByIdOrPkOld($issue->created_by);
+        if (!$creator) {
+            return 'CENTCOM LBSNAA - USER';
+        }
+        $name = trim(($creator->first_name ?? '') . ' ' . ($creator->middle_name ?? '') . ' ' . ($creator->last_name ?? ''));
+        $designation = $creator->designation->designation_name ?? '';
+        return $designation ? $name . ' - ' . $designation : $name;
+    }
+
+    protected function assignedToName(IssueLogManagement $issue): string
+    {
+        if (empty($issue->assigned_to) || trim((string) $issue->assigned_to) === '') {
+            return 'Not assigned';
+        }
+        if (is_numeric($issue->assigned_to)) {
+            $emp = EmployeeMaster::findByIdOrPkOld($issue->assigned_to);
+            return $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : (string) $issue->assigned_to;
+        }
+        return $issue->assigned_to;
+    }
+
+    protected function effectiveClearedAt(IssueLogManagement $issue): ?Carbon
+    {
+        if (!empty($issue->clear_date)) {
+            return Carbon::parse($issue->clear_date);
+        }
+        if ((int) $issue->issue_status === 2 && $issue->relationLoaded('statusHistory')) {
+            $completed = $issue->statusHistory->where('issue_status', 2)->sortByDesc('issue_date')->first();
+            return $completed && $completed->issue_date ? Carbon::parse($completed->issue_date) : null;
+        }
+        return null;
+    }
+
+    protected function timeTaken(IssueLogManagement $issue): string
+    {
+        $created = $issue->created_date ? Carbon::parse($issue->created_date) : null;
+        $cleared = $this->effectiveClearedAt($issue);
+        if (!$created || !$cleared) {
+            return '';
+        }
+        $diff = $created->diff($cleared);
+        return sprintf('%02d:%02d:%02d', $diff->h + $diff->days * 24, $diff->i, $diff->s);
     }
 
     public function styles(Worksheet $sheet): array
@@ -193,7 +243,6 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
         $lastRow = $sheet->getHighestRow();
         $lastCol = 'N';
 
-        // Table header row (row 1) - yellow background, bold
         $sheet->getStyle('A1:N1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
@@ -206,7 +255,6 @@ class IssueManagementExport implements FromCollection, WithStyles, ShouldAutoSiz
             ],
         ]);
 
-        // Data area border and alignment (from row 1 to end)
         if ($lastRow >= 1) {
             $sheet->getStyle('A1:' . $lastCol . $lastRow)->applyFromArray([
                 'borders' => [

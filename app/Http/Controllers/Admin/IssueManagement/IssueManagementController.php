@@ -46,11 +46,15 @@ class IssueManagementController extends Controller
 
         $applyUserScope = function ($builder) {
             if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
-                $builder->where(function ($q) {
-                    $q->where('employee_master_pk', Auth::user()->user_id)
-                        ->orWhere('issue_logger', Auth::user()->user_id)
-                        ->orWhere('assigned_to', Auth::user()->user_id)
-                        ->orWhere('created_by', Auth::user()->user_id);
+                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+                if (empty($ids)) {
+                    $ids = [Auth::user()->user_id];
+                }
+                $builder->where(function ($q) use ($ids) {
+                    $q->whereIn('employee_master_pk', $ids)
+                        ->orWhereIn('issue_logger', $ids)
+                        ->orWhereIn('assigned_to', $ids)
+                        ->orWhereIn('created_by', $ids);
                 });
             }
         };
@@ -58,7 +62,8 @@ class IssueManagementController extends Controller
         // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
         $applyRaisedBy = function ($builder) use ($request) {
             if ($request->get('raised_by') === 'self') {
-                $builder->where('created_by', Auth::user()->user_id);
+                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+                $builder->whereIn('created_by', empty($ids) ? [Auth::user()->user_id] : $ids);
             }
         };
 
@@ -155,16 +160,18 @@ class IssueManagementController extends Controller
             'raised_by' => $request->get('raised_by'),
         ];
         $export = new IssueManagementExport($filters);
-        $collection = $export->collection();
-        $header = $collection->first();
-        $rows = $collection->slice(1)->values();
+        $header = $export->headings();
+        $pdfData = $export->getRowsForPdf(5000);
         $filterLabels = $this->getExportFilterLabels($filters);
 
         $data = [
             'header' => $header,
-            'rows' => $rows,
+            'rows' => $pdfData['rows'],
             'filters' => $filterLabels,
             'export_date' => now()->format('d-M-Y H:i'),
+            'truncated' => $pdfData['truncated'],
+            'total_count' => $pdfData['total_count'],
+            'limit' => $pdfData['limit'],
         ];
 
         $pdf = Pdf::loadView('admin.issue_management.export_pdf', $data)
@@ -219,11 +226,15 @@ class IssueManagementController extends Controller
                 'hostelMapping.hostelBuilding',
                 'statusHistory'
             ])->orderBy('created_date', 'desc');
-            $query->where(function ($q) {
-                $q->where('assigned_to', Auth::user()->user_id)
-                    ->orWhere('employee_master_pk', Auth::user()->user_id)
-                    ->orWhere('issue_logger', Auth::user()->user_id)
-                    ->orWhere('created_by', Auth::user()->user_id);
+            $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+            if (empty($ids)) {
+                $ids = [Auth::user()->user_id];
+            }
+            $query->where(function ($q) use ($ids) {
+                $q->whereIn('assigned_to', $ids)
+                    ->orWhereIn('employee_master_pk', $ids)
+                    ->orWhereIn('issue_logger', $ids)
+                    ->orWhereIn('created_by', $ids);
             });
 
         // Search (ID, description, category name, sub-category)
@@ -332,7 +343,12 @@ class IssueManagementController extends Controller
     {
         try {
             $all = DB::table('issue_category_employee_map as b')
-                ->join('employee_master as d', 'b.employee_master_pk', '=', 'd.pk')
+                ->join('employee_master as d', function ($join) {
+                    $join->on('b.employee_master_pk', '=', 'd.pk');
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $join->orOn('b.employee_master_pk', '=', 'd.pk_old');
+                    }
+                })
                 ->where('b.issue_category_master_pk', $categoryId)
                 ->select(
                     'b.priority',
@@ -425,8 +441,16 @@ class IssueManagementController extends Controller
                 'issue_sub_category_id' => 'required|integer',
                 'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
                 'sub_category_name' => 'required|string',
-                'created_by' => 'required|integer',
-                'nodal_employee_id' => 'nullable|integer',
+                'created_by' => ['required', 'integer', function ($attr, $v, $fail) {
+                    if (!EmployeeMaster::findByIdOrPkOld($v)) {
+                        $fail('The selected complainant is invalid.');
+                    }
+                }],
+                'nodal_employee_id' => ['nullable', 'integer', function ($attr, $v, $fail) {
+                    if ($v && !EmployeeMaster::findByIdOrPkOld($v)) {
+                        $fail('The selected nodal employee is invalid.');
+                    }
+                }],
                 'mobile_number' => 'nullable|string',
                 'location' => 'required|string|in:H,R,O',
                 'building_master_pk' => 'required|integer',
@@ -553,15 +577,20 @@ class IssueManagementController extends Controller
 
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
             $userId = Auth::user()->user_id;
-            $canView = $issue->created_by == $userId || $issue->issue_logger == $userId
-                || $issue->employee_master_pk == $userId || $issue->assigned_to == $userId;
+            $ids = getEmployeeIdsForUser($userId);
+            if (empty($ids)) {
+                $ids = [(string) $userId];
+            }
+            $canView = in_array((string) $issue->created_by, $ids) || in_array((string) $issue->issue_logger, $ids)
+                || in_array((string) $issue->employee_master_pk, $ids) || in_array((string) $issue->assigned_to, $ids);
             if (!$canView) {
                 return redirect()->route('admin.issue-management.index')
                     ->with('error', 'You do not have access to view this issue.');
             }
         }
 
-        $department_id = $issue->nodal_officer?->department_master_pk ?? null;
+        $nodalOfficer = EmployeeMaster::findByIdOrPkOld($issue->employee_master_pk);
+        $department_id = $nodalOfficer?->department_master_pk ?? null;
         // Complaint section: employees + faculty only (user_credentials.user_category != 'S'), optional department filter
         $employees = User::getEmployeesAndFacultyForComplaint($department_id);
 
@@ -572,7 +601,12 @@ class IssueManagementController extends Controller
             if (!$alreadyInList) {
                 $assigned = DB::table('employee_master as e')
                     ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
-                    ->where('e.pk', $issue->assigned_to)
+                    ->where(function ($q) use ($issue) {
+                        $q->where('e.pk', $issue->assigned_to);
+                        if (Schema::hasColumn('employee_master', 'pk_old')) {
+                            $q->orWhere('e.pk_old', $issue->assigned_to);
+                        }
+                    })
                     ->select(
                         'e.pk as employee_pk',
                         DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
@@ -647,7 +681,12 @@ class IssueManagementController extends Controller
         ])->findOrFail($id);
         
         // Allow complainant (created_by) OR logger (issue_logger) to edit
-        if($issue->issue_logger != Auth::user()->user_id && $issue->created_by != Auth::user()->user_id){
+        $editIds = getEmployeeIdsForUser(Auth::user()->user_id);
+        if (empty($editIds)) {
+            $editIds = [(string) Auth::user()->user_id];
+        }
+        $canEdit = in_array((string) $issue->issue_logger, $editIds) || in_array((string) $issue->created_by, $editIds);
+        if (!$canEdit) {
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
@@ -723,7 +762,12 @@ class IssueManagementController extends Controller
       
         
         // Allow complainant (created_by) OR logger (issue_logger) to update
-        if($issue->issue_logger != Auth::user()->user_id && $issue->created_by != Auth::user()->user_id){
+        $editIds = getEmployeeIdsForUser(Auth::user()->user_id);
+        if (empty($editIds)) {
+            $editIds = [(string) Auth::user()->user_id];
+        }
+        $canEdit = in_array((string) $issue->issue_logger, $editIds) || in_array((string) $issue->created_by, $editIds);
+        if (!$canEdit) {
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
@@ -732,9 +776,17 @@ class IssueManagementController extends Controller
             'issue_category_id' => 'required|integer|exists:issue_category_master,pk',
             'issue_sub_category_id' => 'required|integer|exists:issue_sub_category_master,pk',
             'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
-            'created_by' => 'required|integer|exists:employee_master,pk',
+            'created_by' => ['required', 'integer', function ($attr, $v, $fail) {
+                if (!EmployeeMaster::findByIdOrPkOld($v)) {
+                    $fail('The selected complainant is invalid.');
+                }
+            }],
             'mobile_number' => 'nullable|string',
-            'nodal_employee_id' => 'required|integer|exists:employee_master,pk',
+            'nodal_employee_id' => ['required', 'integer', function ($attr, $v, $fail) {
+                if (!EmployeeMaster::findByIdOrPkOld($v)) {
+                    $fail('The selected nodal employee is invalid.');
+                }
+            }],
             'location' => 'required|in:H,R,O',
             // Building details can be empty for legacy/partial records
             'building_select' => 'nullable|integer',
@@ -1123,10 +1175,14 @@ class IssueManagementController extends Controller
     {
         $issue = IssueLogManagement::findOrFail($id);
         $userId = Auth::user()->user_id ?? null;
+        $ids = getEmployeeIdsForUser($userId);
+        if (empty($ids)) {
+            $ids = [(string) $userId];
+        }
 
-        $isNodalOrAssigned = ($issue->employee_master_pk == $userId) || ((string)$issue->assigned_to === (string)$userId);
-        $isComplainant = ($issue->created_by == $userId);
-        $isLogger = ($issue->issue_logger == $userId);
+        $isNodalOrAssigned = in_array((string) $issue->employee_master_pk, $ids) || in_array((string) $issue->assigned_to, $ids);
+        $isComplainant = in_array((string) $issue->created_by, $ids);
+        $isLogger = in_array((string) $issue->issue_logger, $ids);
         $isCompleted = (int) $issue->issue_status === 2;
         $requestedStatus = (int) $request->issue_status;
         $isReopenOnly = $isCompleted && $requestedStatus === 6;
@@ -1142,7 +1198,7 @@ class IssueManagementController extends Controller
         }
 
         $isAssigned = !empty($issue->assigned_to);
-        $isNodalOfficer = ($issue->employee_master_pk == $userId);
+        $isNodalOfficer = in_array((string) $issue->employee_master_pk, $ids);
 
         $rules = [
             'issue_status' => 'required|in:0,1,2,3,6',

@@ -5,6 +5,30 @@
 @section('setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Log New Issue" />
+   @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+    <strong>Success - </strong> {{ session('success') }}
+    </div>
+   @endif
+   @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+    <strong>Error - </strong> {{ session('error') }}
+    </div>
+   @endif
+   @if($errors->any())
+   <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+    <strong>Validation Error - </strong>
+    <ul class="mb-0 mt-1">
+        @foreach($errors->all() as $message)
+        <li>{{ $message }}</li>
+        @endforeach
+    </ul>
+   </div>
+   @endif
+
     <div class="datatables">
         <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3 overflow-hidden">
             <div class="card-body p-4 p-md-5">
@@ -17,7 +41,7 @@
                             <select name="issue_category_id" id="issue_category" class="form-select" required>
                                 <option value="">— Select category —</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
+                                    <option value="{{ $category->pk }}" {{ old('issue_category_id') == $category->pk ? 'selected' : '' }}>{{ $category->issue_category }}</option>
                                 @endforeach
                             </select>
                             @error('issue_category_id')
@@ -41,7 +65,7 @@
                             <select name="issue_priority_id" id="issue_priority" class="form-select" required>
                                 <option value="">— Select priority —</option>
                                 @foreach($priorities as $priority)
-                                    <option value="{{ $priority->pk }}">{{ $priority->priority }}</option>
+                                    <option value="{{ $priority->pk }}" {{ old('issue_priority_id') == $priority->pk ? 'selected' : '' }}>{{ $priority->priority }}</option>
                                 @endforeach
                             </select>
                             @error('issue_priority_id')
@@ -59,7 +83,7 @@
                                 <option value="">Search complainant by name...</option>
                                 @if(isset($employees))
                                     @foreach($employees as $employee)
-                                        <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (isset($currentUserEmployeeId) && $currentUserEmployeeId == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
+                                        <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}" {{ (old('created_by', isset($currentUserEmployeeId) ? $currentUserEmployeeId : null) == $employee->employee_pk) ? 'selected' : '' }}>{{ $employee->employee_name }}</option>
                                     @endforeach
                                 @endif
                             </select>
@@ -85,7 +109,7 @@
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
-                        <input type="hidden" name="sub_category_name" id="sub_category_name" required value="">
+                        <input type="hidden" name="sub_category_name" id="sub_category_name" required value="{{ old('sub_category_name') }}">
                     </div>
 
                     <div id="escalation_levels_display" class="mb-0 d-none">
@@ -457,6 +481,72 @@ $(document).ready(function() {
         $('#attachment_validation_error').addClass('d-none').text('');
         $(this).removeClass('is-invalid');
     });
+
+    // Restore form state after validation error (old input)
+    var oldCategory = {!! json_encode(old('issue_category_id')) !!};
+    var oldSubCategory = {!! json_encode(old('issue_sub_category_id')) !!};
+    var oldLocation = {!! json_encode(old('location')) !!};
+    var oldBuilding = {!! json_encode(old('building_master_pk')) !!};
+    var oldNodal = {!! json_encode(old('nodal_employee_id')) !!};
+    if (oldCategory) {
+        $('#issue_category').val(oldCategory).trigger('change');
+        if (oldSubCategory) {
+            setTimeout(function() {
+                $.ajax({
+                    url: '/admin/issue-management/sub-categories/' + oldCategory,
+                    type: 'GET',
+                    success: function(data) {
+                        $('#sub_categories').html('<option value="">— Select sub-category —</option>');
+                        $.each(data, function(k, v) {
+                            $('#sub_categories').append(new Option(v.issue_sub_category, v.pk, v.pk == oldSubCategory, v.pk == oldSubCategory));
+                        });
+                        initSelect2($('#sub_categories'), '— Select sub-category —');
+                        var selText = $('#sub_categories option:selected').text();
+                        if (selText) $('#sub_category_name').val(selText);
+                    }
+                });
+            }, 200);
+        }
+        if (oldNodal) {
+            setTimeout(function() {
+                $.ajax({
+                    url: '/admin/issue-management/nodal-employees/' + oldCategory,
+                    type: 'GET',
+                    success: function(res) {
+                        if (res.success && res.level1) {
+                            $('#nodal_employee').html('<option value="">- Select -</option>');
+                            $.each(res.level1, function(k, emp) {
+                                var pk = emp.employee_pk;
+                                var name = emp.employee_name || ((emp.first_name || '') + ' ' + (emp.middle_name ? emp.middle_name + ' ' : '') + (emp.last_name || ''));
+                                $('#nodal_employee').append(new Option(name, pk, pk == oldNodal, pk == oldNodal));
+                            });
+                            initSelect2($('#nodal_employee'), '— Select —');
+                        }
+                    }
+                });
+            }, 400);
+        }
+    }
+    if (oldLocation) {
+        $('input[name="location"][value="' + oldLocation + '"]').prop('checked', true);
+        $('#building_section').removeClass('d-none');
+        if (oldBuilding) {
+            $.ajax({
+                url: '/admin/issue-management/buildings',
+                type: 'GET',
+                data: { type: oldLocation },
+                success: function(response) {
+                    if (response.status && response.data) {
+                        $('#building_select').html('<option value="">— Select —</option>');
+                        $.each(response.data, function(k, v) {
+                            $('#building_select').append(new Option(v.building_name, v.pk, v.pk == oldBuilding, v.pk == oldBuilding));
+                        });
+                        initSelect2($('#building_select'), '— Select —');
+                    }
+                }
+            });
+        }
+    }
 
 });
 </script>
