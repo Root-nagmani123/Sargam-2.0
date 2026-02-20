@@ -297,11 +297,11 @@
     </form>
 
     <!-- Last Login -->
-    <div class="d-flex align-items-center gap-1 text-body-secondary small">
-        <i class="material-icons material-symbols-rounded fs-6 opacity-50">
+    <div class="d-flex align-items-center gap-1 small">
+        <i class="material-icons material-symbols-rounded fs-6">
             history
         </i>
-        <span>Last login:</span>
+        <span class="fw-semibold">Last login:</span>
 
         @php
             $lastLogin = Auth::user()->last_login ?? null;
@@ -315,7 +315,7 @@
             }
         @endphp
 
-        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}">
+        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}" class="fw-medium">
             {{ $formattedDate }}
         </time>
     </div>

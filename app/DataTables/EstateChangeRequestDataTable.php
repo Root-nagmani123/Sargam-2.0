@@ -77,16 +77,42 @@ class EstateChangeRequestDataTable extends DataTable
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (!empty($searchValue)) {
-                    $query->whereHas('estateHomeRequestDetails', function ($q) use ($searchValue) {
-                        $q->where('estate_home_request_details.emp_name', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.employee_id', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.emp_designation', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.pay_scale', 'like', "%{$searchValue}%");
-                    })->orWhere('estate_change_home_req_details.estate_change_req_ID', 'like', "%{$searchValue}%")
-                      ->orWhere('estate_change_home_req_details.change_house_no', 'like', "%{$searchValue}%")
-                      ->orWhere('estate_change_home_req_details.remarks', 'like', "%{$searchValue}%");
+                    $query->where(function ($q) use ($searchValue) {
+                        $q->whereHas('estateHomeRequestDetails', function ($sub) use ($searchValue) {
+                            $sub->where('estate_home_request_details.emp_name', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.employee_id', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.emp_designation', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.pay_scale', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhere('estate_change_home_req_details.estate_change_req_ID', 'like', "%{$searchValue}%")
+                        ->orWhere('estate_change_home_req_details.change_house_no', 'like', "%{$searchValue}%")
+                        ->orWhere('estate_change_home_req_details.remarks', 'like', "%{$searchValue}%");
+                    });
                 }
             }, true)
+            ->filterColumn('emp_name', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.emp_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('employee_id', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.employee_id', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('emp_designation', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.emp_designation', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('pay_scale', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.pay_scale', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('availability_as_per_request', function ($query, $keyword) {
+                $query->where('estate_change_home_req_details.change_house_no', 'like', "%{$keyword}%");
+            })
             ->setRowId('pk');
     }
 
@@ -102,12 +128,13 @@ class EstateChangeRequestDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('estateChangeRequestTable')
-            ->addTableClass('table table-bordered table-hover align-middle mb-0')
+            ->addTableClass('table table-bordered table-striped table-hover align-middle mb-0')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
+                'scrollX' => true,
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
@@ -127,8 +154,8 @@ class EstateChangeRequestDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                'initComplete' => "function() { var tbl = document.getElementById('estateChangeRequestTable'); if (tbl && tbl.parentNode) { var wrap = document.createElement('div'); wrap.className = 'table-scroll-only'; wrap.style.overflowX = 'auto'; wrap.style.webkitOverflowScrolling = 'touch'; tbl.parentNode.insertBefore(wrap, tbl); wrap.appendChild(tbl); } }",
+                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
+                'initComplete' => "function() { var tbl = document.getElementById('estateChangeRequestTable'); if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) { var wrap = document.createElement('div'); wrap.className = 'table-responsive'; wrap.style.overflowX = 'auto'; wrap.style.webkitOverflowScrolling = 'touch'; tbl.parentNode.insertBefore(wrap, tbl); wrap.appendChild(tbl); } }",
             ]);
     }
 
