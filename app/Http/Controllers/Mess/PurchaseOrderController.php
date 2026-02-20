@@ -58,12 +58,14 @@ class PurchaseOrderController extends Controller
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
             'delivery_address' => 'nullable|string|max:500',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'string', 'regex:/^[0-9]{10}$/'],
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -162,12 +164,14 @@ class PurchaseOrderController extends Controller
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
             'delivery_address' => 'nullable|string|max:500',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'string', 'regex:/^[0-9]{10}$/'],
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
         ]);
 
         DB::transaction(function () use ($request, $purchaseOrder) {
