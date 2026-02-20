@@ -71,8 +71,8 @@ class ItemSubcategoryController extends Controller
         $validated = $request->validate([
             'category_id'      => ['nullable', 'exists:mess_item_categories,id'],
             'item_name'        => ['required', 'string', 'max:255'],
-            'unit_measurement' => ['nullable', 'string', 'max:50'],
-            'standard_cost'   => ['nullable', 'numeric', 'min:0'],
+            'unit_measurement' => ['required', 'string', 'max:50'],
+            'standard_cost'   => ['required', 'numeric', 'min:0'],
             'description'     => ['nullable', 'string'],
             'status'          => ['nullable', 'in:active,inactive'],
         ]);
@@ -95,12 +95,12 @@ class ItemSubcategoryController extends Controller
 
         // Only add unit_measurement if the column exists
         if (Schema::hasColumn('mess_item_subcategories', 'unit_measurement')) {
-            $data['unit_measurement'] = $validated['unit_measurement'] ?? null;
+            $data['unit_measurement'] = $validated['unit_measurement'];
         }
 
         // Only add standard_cost if the column exists
         if (Schema::hasColumn('mess_item_subcategories', 'standard_cost')) {
-            $data['standard_cost'] = $validated['standard_cost'] ?? null;
+            $data['standard_cost'] = $validated['standard_cost'];
         }
 
         // Only add status if the column exists
