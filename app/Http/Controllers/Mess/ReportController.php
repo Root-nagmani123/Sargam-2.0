@@ -139,6 +139,7 @@ class ReportController extends Controller
         foreach ($items as $item) {
             $itemData = [
                 'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
+                'item_code' => $item->item_code ?? $item->subcategory_code ?? '—',
                 'unit' => $item->unit_measurement ?? 'Unit',
                 'opening_qty' => 0,
                 'opening_rate' => $item->standard_cost ?? 0,

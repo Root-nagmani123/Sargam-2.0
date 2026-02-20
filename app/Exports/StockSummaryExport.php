@@ -22,6 +22,8 @@ class StockSummaryExport implements FromCollection, WithHeadings
             $rows[] = [
                 $index + 1,
                 $item['item_name'],
+                $item['item_code'] ?? '—',
+                $item['unit'] ?? '—',
                 number_format($item['opening_qty'], 2),
                 number_format($item['opening_rate'], 2),
                 number_format($item['opening_amount'], 2),
@@ -44,6 +46,8 @@ class StockSummaryExport implements FromCollection, WithHeadings
         return [
             'SR No',
             'Item Name',
+            'Item Code',
+            'Unit',
             'Opening Qty',
             'Opening Rate',
             'Opening Amount',
