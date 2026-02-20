@@ -90,11 +90,12 @@
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <div class="col-md-2 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list</i>
                             Apply
                         </button>
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
                     </div>
                 </div>
             </form>
