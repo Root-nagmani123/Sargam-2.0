@@ -51,8 +51,6 @@ class EstateRequestForEstateDataTable extends DataTable
                 $dojPayScale = $row->doj_pay_scale ? \Carbon\Carbon::parse($row->doj_pay_scale)->format('Y-m-d') : '';
                 $dojAcademic = $row->doj_academic ? \Carbon\Carbon::parse($row->doj_academic)->format('Y-m-d') : '';
                 $dojService = $row->doj_service ? \Carbon\Carbon::parse($row->doj_service)->format('Y-m-d') : '';
-                $eligPk = (int) ($row->eligibility_type_pk ?? 0);
-                $eligMap = [61 => 'I', 62 => 'II', 63 => 'III', 64 => 'IV', 65 => 'V', 66 => 'VI', 69 => 'IX', 70 => 'X', 71 => 'XI', 73 => 'XIII'];
                 $attrs = [
                     'data-id' => (int) $row->pk,
                     'data-employee_pk' => (int) ($row->employee_pk ?? 0),

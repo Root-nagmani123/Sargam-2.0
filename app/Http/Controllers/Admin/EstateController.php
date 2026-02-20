@@ -205,6 +205,32 @@ class EstateController extends Controller
     }
 
     /**
+     * Get next Request ID for Add Estate Request (e.g. home-req-01, home-req-02).
+     */
+    // public function getNextRequestForEstateId()
+    // {
+    //     $nextId = $this->getNextEstateRequestId();
+    //     return response()->json(['next_req_id' => $nextId]);
+    // }
+
+    /**
+     * Compute next req_id from DB (home-req-01, home-req-02, ...).
+     */
+    // private function getNextEstateRequestId(): string
+    // {
+    //     $latestReqId = EstateHomeRequestDetails::whereNotNull('req_id')
+    //         ->where('req_id', 'like', 'home-req-%')
+    //         ->orderBy('pk', 'desc')
+    //         ->value('req_id');
+
+    //     $nextNumber = 1;
+    //     if ($latestReqId && preg_match('/home-req-(\d+)/', $latestReqId, $m)) {
+    //         $nextNumber = ((int) $m[1]) + 1;
+    //     }
+    //     return 'home-req-' . sprintf('%02d', $nextNumber);
+    // }
+
+    /**
      * Store or update Request For Estate (estate_home_request_details).
      */
     public function storeRequestForEstate(Request $request)
@@ -242,11 +268,6 @@ class EstateController extends Controller
             $reqId = $this->getNextEstateRequestId();
         }
 
-        $existingCurrentAlot = null;
-        if ($isEdit) {
-            $existingCurrentAlot = EstateHomeRequestDetails::where('pk', $request->id)->value('current_alot');
-        }
-
         $data = [
             'req_id' => $reqId,
             'req_date' => $validated['req_date'],
@@ -260,9 +281,7 @@ class EstateController extends Controller
             'eligibility_type_pk' => (int) $validated['eligibility_type_pk'],
             'status' => $isEdit ? (int) $validated['status'] : 0,
             'remarks' => $validated['remarks'] ?? null,
-            'current_alot' => array_key_exists('current_alot', $validated)
-                ? \Illuminate\Support\Str::limit((string) ($validated['current_alot'] ?? ''), 20)
-                : ($isEdit ? $existingCurrentAlot : null),
+            'current_alot' => isset($validated['current_alot']) ? \Illuminate\Support\Str::limit($validated['current_alot'], 20) : null,
             'employee_pk' => (int) ($request->input('employee_pk', 0)),
             'app_status' => (int) ($request->input('app_status', 0)),
             'hac_status' => (int) ($request->input('hac_status', 0)),
