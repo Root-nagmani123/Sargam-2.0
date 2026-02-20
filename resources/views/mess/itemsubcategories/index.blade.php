@@ -192,9 +192,11 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemsubcategory');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editItemSubcategoryForm').action = '{{ url("admin/mess/itemsubcategories") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_item_name').value = btn.getAttribute('data-item-name') || '';
         document.getElementById('edit_item_code_display').value = btn.getAttribute('data-item-code') || '-';
@@ -203,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush

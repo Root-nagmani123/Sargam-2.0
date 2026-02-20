@@ -28,7 +28,7 @@ class PurchaseOrderController extends Controller
                 'item_code' => $s->item_code ?? '—',
                 'unit_measurement' => $s->unit_measurement ?? '—',
             ]);
-        $po_number = 'PO' . date('Ymd') . str_pad(PurchaseOrder::count() + 1, 4, '0', STR_PAD_LEFT);
+        $po_number = $this->generatePoNumber();
         $paymentModes = ['Cash' => 'Cash', 'Card' => 'Card', 'UPI' => 'UPI', 'Bank Transfer' => 'Bank Transfer', 'Credit' => 'Credit', 'Other' => 'Other'];
         return view('mess.purchaseorders.index', compact('purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes'));
     }
@@ -44,7 +44,7 @@ class PurchaseOrderController extends Controller
             $materialRequest = MaterialRequest::with('items.inventory')->findOrFail($request->material_request_id);
         }
         
-        $po_number = 'PO' . date('Ymd') . str_pad(PurchaseOrder::count() + 1, 4, '0', STR_PAD_LEFT);
+        $po_number = $this->generatePoNumber();
         return view('mess.purchaseorders.create', compact('vendors', 'stores', 'inventories', 'po_number', 'materialRequest'));
     }
 
@@ -282,5 +282,21 @@ class PurchaseOrderController extends Controller
             ]);
         
         return response()->json($items);
+    }
+
+    /**
+     * Generate a unique Purchase Order number in format PO/{number}/NM.
+     */
+    protected function generatePoNumber(): string
+    {
+        $next = ((int) PurchaseOrder::max('id')) + 1;
+        $code = 'PO/' . $next . '/NM';
+
+        while (PurchaseOrder::where('po_number', $code)->exists()) {
+            $next++;
+            $code = 'PO/' . $next . '/NM';
+        }
+
+        return $code;
     }
 }

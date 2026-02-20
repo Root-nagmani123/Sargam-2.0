@@ -105,4 +105,12 @@ class SellingVoucherDateRangeReport extends Model
             self::STATUS_APPROVED => 'Approved',
         ];
     }
+
+    /**
+     * Get status label for display
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        return self::statusLabels()[$this->status] ?? 'Unknown';
+    }
 }
