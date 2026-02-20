@@ -48,6 +48,9 @@
     <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-sidebar.css')}}">
     <!-- Custom css-->
     <link rel="stylesheet" type="text/css" href="{{asset('css/custom.css')}}">
+    <!-- Select2 (global dropdowns) -->
+    <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/select2-enhancements.css') }}">
 </head>
 
 <body>
@@ -61,6 +64,9 @@
      <script src="{{asset('admin_assets/js/jquery.min.js')}}"></script>
     <!-- Bootstrap js (local) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <!-- Select2 (global dropdowns) -->
+    <script src="{{ asset('admin_assets/libs/select2/dist/js/select2.full.min.js') }}"></script>
+    <script src="{{ asset('js/dropdown-search.js') }}"></script>
     <!-- feather icon js-->
     <script src="{{asset('admin_assets/js/icons/feather-icon/feather.min.js')}}"></script>
     <script src="{{asset('admin_assets/js/icons/feather-icon/feather-icon.js')}}"></script>
