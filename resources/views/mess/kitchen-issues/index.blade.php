@@ -768,6 +768,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.setAttribute('data-unit', item.unit_measurement || '');
                 option.setAttribute('data-rate', item.standard_cost || 0);
                 option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.price_tiers && item.price_tiers.length > 0) {
+                    option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+                }
                 if (item.id == currentValue) {
                     option.selected = true;
                 }
@@ -779,9 +782,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getRowHtml(index) {
-        const options = filteredItems.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
-        ).join('');
+        const options = filteredItems.map(s => {
+            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
+            if (s.price_tiers && s.price_tiers.length > 0) {
+                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
+            }
+            return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        }).join('');
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
@@ -807,14 +814,43 @@ document.addEventListener('DOMContentLoaded', function() {
         enforceQtyWithinAvailable(row);
     }
 
+    function calcFifoAmount(tiers, qty) {
+        if (!tiers || tiers.length === 0 || qty <= 0) return null;
+        let remaining = qty;
+        let amount = 0;
+        for (let i = 0; i < tiers.length && remaining > 0; i++) {
+            const take = Math.min(remaining, parseFloat(tiers[i].quantity) || 0);
+            amount += take * (parseFloat(tiers[i].unit_price) || 0);
+            remaining -= take;
+        }
+        return remaining <= 0 ? amount : null;
+    }
+
     function calcRow(row) {
         const avail = parseFloat(row.querySelector('.sv-avail').value) || 0;
         const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
-        const rate = parseFloat(row.querySelector('.sv-rate').value) || 0;
+        const rateInp = row.querySelector('.sv-rate');
+        let rate = parseFloat(rateInp.value) || 0;
+        const sel = row.querySelector('.sv-item-select');
+        const opt = sel && sel.options[sel.selectedIndex];
+        const tiersJson = opt && opt.getAttribute('data-price-tiers');
+        const tiers = tiersJson ? (function(){ try { return JSON.parse(tiersJson); } catch(e) { return null; } })() : null;
+        let total;
+        if (tiers && tiers.length > 0 && qty > 0) {
+            const fifoAmount = calcFifoAmount(tiers, qty);
+            if (fifoAmount !== null) {
+                total = fifoAmount;
+                rate = qty > 0 ? total / qty : 0;
+                rateInp.value = rate.toFixed(2);
+            } else {
+                total = qty * rate;
+            }
+        } else {
+            total = qty * rate;
+        }
         const left = Math.max(0, avail - qty);
-        const total = qty * rate;
         row.querySelector('.sv-left').value = left;
-        row.querySelector('.sv-total').value = total.toFixed(2);
+        row.querySelector('.sv-total').value = (total || 0).toFixed(2);
         enforceQtyWithinAvailable(row);
     }
 
