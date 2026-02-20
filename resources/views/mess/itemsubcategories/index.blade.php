@@ -103,13 +103,13 @@
                             <small class="text-muted">Mandatory. Auto-generated.</small>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Unit Measurement</label>
-                            <input type="text" name="unit_measurement" class="form-control" value="{{ old('unit_measurement') }}" placeholder="e.g., kg, liter, piece">
+                            <label class="form-label">Unit Measurement <span class="text-danger">*</span></label>
+                            <input type="text" name="unit_measurement" class="form-control" value="{{ old('unit_measurement') }}" placeholder="e.g., kg, liter, piece" required>
                             @error('unit_measurement')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Standard Cost</label>
-                            <input type="number" name="standard_cost" class="form-control" step="0.01" min="0" value="{{ old('standard_cost') }}" placeholder="0.00">
+                            <label class="form-label">Standard Cost <span class="text-danger">*</span></label>
+                            <input type="number" name="standard_cost" class="form-control" step="0.01" min="0" value="{{ old('standard_cost') }}" placeholder="0.00" required>
                             @error('standard_cost')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
@@ -159,12 +159,12 @@
                             <small class="text-muted">Mandatory. Auto-generated; read-only.</small>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Unit Measurement</label>
-                            <input type="text" name="unit_measurement" id="edit_unit_measurement" class="form-control">
+                            <label class="form-label">Unit Measurement <span class="text-danger">*</span></label>
+                            <input type="text" name="unit_measurement" id="edit_unit_measurement" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Standard Cost</label>
-                            <input type="number" name="standard_cost" id="edit_standard_cost" class="form-control" step="0.01" min="0" placeholder="0.00">
+                            <label class="form-label">Standard Cost <span class="text-danger">*</span></label>
+                            <input type="number" name="standard_cost" id="edit_standard_cost" class="form-control" step="0.01" min="0" placeholder="0.00" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
