@@ -157,19 +157,6 @@
                                     </div>
                                 </td>
                             </tr>
-                            @empty
-                            <tr>
-                                <td colspan="8" class="p-0">
-                                    <div class="empty-state">
-                                        <div class="empty-state-icon">
-                                            <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1"></iconify-icon>
-                                        </div>
-                                        <h6 class="text-body-secondary mb-1">No issues</h6>
-                                        <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
-                                        <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm mt-3">Log New Issue</a>
-                                    </div>
-                                </td>
-                            </tr>
                             @endforelse
                         </tbody>
                     </table>
