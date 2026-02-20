@@ -179,16 +179,18 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemcategory');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editItemCategoryForm').action = '{{ url("admin/mess/itemcategories") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_category_name').value = btn.getAttribute('data-category-name') || '';
         document.getElementById('edit_category_type').value = btn.getAttribute('data-category-type') || '';
         document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editItemCategoryModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush

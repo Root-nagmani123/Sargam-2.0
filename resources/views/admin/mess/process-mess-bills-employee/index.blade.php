@@ -506,10 +506,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var invoiceBtn = e.target.closest('.generate-invoice-btn');
         if (invoiceBtn) {
             e.preventDefault();
+            e.stopPropagation();
             var billId = invoiceBtn.getAttribute('data-bill-id');
             var buyerName = invoiceBtn.getAttribute('data-buyer-name') || '';
             if (confirm('Generate invoice and send notification to ' + (buyerName || 'this employee') + '?')) {
@@ -520,6 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var paymentBtn = e.target.closest('.generate-payment-btn');
         if (paymentBtn) {
             e.preventDefault();
+            e.stopPropagation();
             var billId = paymentBtn.getAttribute('data-bill-id');
             var buyerName = paymentBtn.getAttribute('data-buyer-name') || '';
             if (confirm('Mark as paid and send notification to ' + (buyerName || 'this employee') + '?')) {
@@ -527,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return;
         }
-    });
+    }, true);
 
     // Bulk actions
     document.getElementById('modalBulkInvoiceBtn').addEventListener('click', function() {

@@ -140,14 +140,16 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-substore');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editSubStoreForm').action = '{{ url("admin/mess/sub-stores") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_sub_store_name').value = btn.getAttribute('data-sub-store-name') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editSubStoreModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush
