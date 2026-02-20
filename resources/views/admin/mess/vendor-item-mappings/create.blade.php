@@ -38,7 +38,10 @@
                             <input class="form-check-input" type="checkbox" name="item_subcategory_ids[]"
                                    id="item_{{ $sub->id }}" value="{{ $sub->id }}"
                                    {{ in_array($sub->id, old('item_subcategory_ids', [])) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="item_{{ $sub->id }}">{{ $sub->item_name ?? $sub->subcategory_name ?? 'Item #'.$sub->id }}</label>
+                            <label class="form-check-label" for="item_{{ $sub->id }}">
+                                {{ $sub->item_name ?? $sub->subcategory_name ?? 'Item #'.$sub->id }}
+                                <span class="text-muted small">({{ $sub->item_code ?? '—' }}) — {{ $sub->unit_measurement ?? '—' }}</span>
+                            </label>
                         </div>
                     @endforeach
                 </div>
