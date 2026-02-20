@@ -117,13 +117,13 @@
                                         <tr>
                                             <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
                                             <td class="text-end">{{ number_format($qty, 2) }}</td>
-                                            <td class="text-end">{{ number_format($rate, 1) }}</td>
-                                            <td class="text-end">{{ number_format($total, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format($rate, 1) }}</td>
+                                            <td class="text-end">₹{{ number_format($total, 2) }}</td>
                                         </tr>
                                     @endforeach
                                     <tr class="bill-total-row">
                                         <td colspan="3" class="text-end fw-bold">Bill Total:</td>
-                                        <td class="text-end fw-bold">{{ number_format($billTotal, 2) }}</td>
+                                        <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
                                     </tr>
                                 @empty
                                     <tr>

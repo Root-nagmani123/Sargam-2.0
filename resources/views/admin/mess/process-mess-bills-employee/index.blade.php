@@ -2,8 +2,26 @@
 @section('title', 'Process Mess Bills')
 @section('setup_content')
 <div class="container-fluid">
+    {{-- Report Header (Print Only) --}}
+    @php
+        $dateFromDisplay = $effectiveDateFrom ?? now()->startOfMonth()->format('d-m-Y');
+        $dateToDisplay = $effectiveDateTo ?? now()->endOfMonth()->format('d-m-Y');
+        try {
+            $dateFromDisplay = \Carbon\Carbon::parse($dateFromDisplay)->format('d-F-Y');
+            $dateToDisplay = \Carbon\Carbon::parse($dateToDisplay)->format('d-F-Y');
+        } catch (\Exception $e) {
+            $dateFromDisplay = $effectiveDateFrom ?? '';
+            $dateToDisplay = $effectiveDateTo ?? '';
+        }
+    @endphp
+    <div class="report-header text-center mb-4">
+        <h4 class="fw-bold">Process Mess Bills</h4>
+        <p class="mb-1">Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}</p>
+        <p class="text-muted mb-0 small">Generated on: {{ now()->format('d-m-Y H:i:s') }}</p>
+    </div>
+
     {{-- Page header --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4 no-print">
         <div>
             <h4 class="mb-1 fw-bold">Process Mess Bills</h4>
             <p class="text-muted small mb-0">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
@@ -15,6 +33,7 @@
     </div>
 
     {{-- Summary cards --}}
+    <div class="no-print">
     @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-lg-3">
@@ -70,25 +89,41 @@
             </div>
         </div>
     </div>
+    </div>
 
     {{-- Filters card --}}
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm mb-4 no-print">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm">
                 <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
                 <input type="hidden" name="search" value="{{ request('search') }}">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
                         <input type="text" name="date_from" id="date_from" class="form-control form-control-sm"
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
                         <input type="text" name="date_to" id="date_to" class="form-control form-control-sm"
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Client Type</label>
+                        <select name="client_type" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="employee" {{ ($clientType ?? '') === 'employee' ? 'selected' : '' }}>Employee</option>
+                            <option value="ot" {{ ($clientType ?? '') === 'ot' ? 'selected' : '' }}>OT</option>
+                            <option value="course" {{ ($clientType ?? '') === 'course' ? 'selected' : '' }}>Course</option>
+                            <option value="other" {{ ($clientType ?? '') === 'other' ? 'selected' : '' }}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Buyer Name</label>
+                        <input type="text" name="buyer_name" class="form-control form-control-sm"
+                               value="{{ $buyerName ?? request('buyer_name') }}" placeholder="Filter by buyer name...">
                     </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
@@ -108,7 +143,9 @@
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm">
                 <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
+                <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 no-print">
                     <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted">Show</span>
                         <select name="per_page" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit();">
@@ -120,10 +157,10 @@
                         <span class="small text-muted">entries</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-link btn-sm p-0 text-dark" title="Export">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn btn-link btn-sm p-0 text-dark" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.35rem;">file_download</i>
-                        </button>
-                        <button type="button" class="btn btn-link btn-sm p-0 text-dark" title="Print" onclick="window.print()">
+                        </a>
+                        <button type="button" class="btn btn-link btn-sm p-0 text-dark no-print" title="Print" onclick="window.print()">
                             <i class="material-symbols-rounded" style="font-size: 1.35rem;">print</i>
                         </button>
                         <label class="small text-muted mb-0">Search:</label>
@@ -145,7 +182,7 @@
                             <th class="text-nowrap py-2 text-end">Total</th>
                             <th class="text-nowrap py-2">Payment Type</th>
                             <th class="text-nowrap py-2">Status</th>
-                            <th class="text-nowrap py-2 text-center">Actions</th>
+                            <th class="text-nowrap py-2 text-center no-print">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -173,7 +210,7 @@
                                         <span class="badge bg-secondary">Unpaid</span>
                                     @endif
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center no-print">
                                     <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $billId) }}" target="_blank"
                                        class="btn btn-sm btn-outline-primary" title="Print receipt">
                                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
@@ -193,7 +230,7 @@
             </div>
 
             @if($bills->hasPages())
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top no-print">
                     <div class="small text-muted">
                         Showing {{ $bills->firstItem() ?? 0 }} to {{ $bills->lastItem() ?? 0 }} of {{ $bills->total() }} entries
                     </div>
@@ -207,7 +244,7 @@
 </div>
 
 {{-- Toast container for feedback --}}
-<div class="toast-container position-fixed bottom-0 end-0 p-3" id="processBillsToastContainer"></div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3 no-print" id="processBillsToastContainer"></div>
 
 {{-- Generate Invoice & Payment Modal --}}
 <style>
@@ -216,6 +253,38 @@
 #addProcessMessBillsModal .modal-header { border-radius: 0.5rem 0.5rem 0 0; }
 #addProcessMessBillsModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
 #addProcessMessBillsModal .modal-footer { border-top: 1px solid var(--bs-border-color); }
+
+/* Print styles */
+@media screen {
+    .report-header { display: none; }
+}
+@media print {
+    .no-print { display: none !important; }
+    .topbar,
+    .side-mini-panel,
+    aside.side-mini-panel,
+    #mainSidebar,
+    .sidebar-google-hamburger,
+    #mainNavbar,
+    header.topbar {
+        display: none !important;
+    }
+    .page-wrapper { margin-left: 0 !important; padding-left: 0 !important; }
+    .body-wrapper { margin-left: 0 !important; }
+    .report-header {
+        display: block !important;
+        margin-top: 0;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #333;
+    }
+    .report-header h4 { margin-bottom: 8px; color: #000; font-weight: bold; }
+    .report-header p { color: #333; font-size: 14px; margin: 4px 0; }
+    body { font-size: 12px; }
+    .table { font-size: 11px; }
+    .table th, .table td { padding: 6px !important; }
+    @page { margin: 1cm; size: A4; }
+}
 </style>
 <div class="modal fade" id="addProcessMessBillsModal" tabindex="-1" aria-labelledby="addProcessMessBillsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -230,7 +299,7 @@
             <div class="modal-body">
                 <form id="addModalFilterForm">
                     @csrf
-                    <div class="row g-3 mb-4">
+                    <div class="row g-3 mb-2">
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_from" id="modal_date_from" class="form-control form-control-sm"
@@ -242,21 +311,41 @@
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Client Type</label>
+                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                <option value="employee">Employee</option>
+                                <option value="ot">OT</option>
+                                <option value="course">Course</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Buyer Name</label>
+                            <input type="text" name="modal_buyer_name" id="modal_buyer_name" class="form-control form-control-sm"
+                                   placeholder="Filter by buyer name...">
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label small fw-semibold">Invoice Date</label>
                             <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control form-control-sm"
                                    value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Mode of Payment</label>
-                            <select name="mode_of_payment" class="form-select form-select-sm">
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
                             </select>
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="button" class="btn btn-primary btn-sm w-100" id="modalLoadBillsBtn">
+                    </div>
+                    <div class="row g-2 mb-4">
+                        <div class="col-md-12 d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-primary btn-sm" id="modalLoadBillsBtn">
                                 <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i> Load Bills
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="modalClearFiltersBtn">
+                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list_off</i> Clear Filters
                             </button>
                         </div>
                     </div>
@@ -295,14 +384,13 @@
                                 <th class="text-nowrap py-2">Invoice No.</th>
                                 <th class="text-nowrap py-2">Payment Type</th>
                                 <th class="text-nowrap py-2 text-end">Total</th>
-                                <th class="text-nowrap py-2 text-end">Paid</th>
                                 <th class="text-nowrap py-2 text-center">Actions</th>
                                 <th class="text-nowrap py-2 text-center">Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="modalBillsTableBody">
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted">Select date range and click <strong>Load Bills</strong> to load unpaid bills.</td>
+                                <td colspan="8" class="text-center py-4 text-muted">Select date range and click <strong>Load Bills</strong> to load unpaid bills.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -359,9 +447,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadModalBills() {
         var df = document.getElementById('modal_date_from');
         var dt = document.getElementById('modal_date_to');
+        var ct = document.getElementById('modal_client_type');
+        var bn = document.getElementById('modal_buyer_name');
         var dateFrom = (df && df.value) ? toYmd(df.value) : '';
         var dateTo = (dt && dt.value) ? toYmd(dt.value) : '';
+        var clientType = (ct && ct.value) ? ct.value : '';
+        var buyerName = (bn && bn.value) ? bn.value.trim() : '';
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
+        if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
+        if (buyerName) url += '&buyer_name=' + encodeURIComponent(buyerName);
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -398,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageData = filtered.slice(start, start + perPage);
 
         if (pageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
                 var sn = start + i + 1;
@@ -410,7 +504,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<td>' + (b.invoice_no || '—') + '</td>' +
                     '<td>' + (b.payment_type || '—') + '</td>' +
                     '<td class="text-end">' + (b.total || '0') + '</td>' +
-                    '<td class="text-end">' + (b.paid_amount || '0') + '</td>' +
                     '<td class="text-center"><div class="btn-group btn-group-sm">' +
                     '<button type="button" class="btn btn-outline-primary generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Generate Invoice">Invoice</button>' +
                     '<button type="button" class="btn btn-outline-success generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Mark as Paid">Payment</button>' +
@@ -437,8 +530,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function clearModalFilters() {
+        document.getElementById('modal_date_from').value = '{{ now()->startOfMonth()->format("d-m-Y") }}';
+        document.getElementById('modal_date_to').value = '{{ now()->endOfMonth()->format("d-m-Y") }}';
+        document.getElementById('modal_client_type').value = '';
+        document.getElementById('modal_buyer_name').value = '';
+        document.getElementById('modal_invoice_date').value = '{{ now()->format("d-m-Y") }}';
+        document.getElementById('modal_mode_of_payment').value = 'deduct_from_salary';
+        document.getElementById('modalSearch').value = '';
+        modalBillsData = [];
+        renderModalTable();
+        document.getElementById('modalPaginationInfo').textContent = 'Showing 0 to 0 of 0 entries';
+    }
+
     document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
     document.getElementById('modalLoadBillsBtn').addEventListener('click', loadModalBills);
+    document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
     document.getElementById('modalSearch').addEventListener('input', renderModalTable);
     document.getElementById('modalPerPage').addEventListener('change', renderModalTable);
 
