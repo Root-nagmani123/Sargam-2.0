@@ -38,10 +38,37 @@ class EstateController extends Controller
     }
 
     /**
+     * Get next Request ID for Add Estate Request (e.g. home-req-01, home-req-02).
+     */
+    public function getNextRequestForEstateId()
+    {
+        $nextId = $this->getNextEstateRequestId();
+        return response()->json(['next_req_id' => $nextId]);
+    }
+
+    /**
+     * Compute next req_id from DB (home-req-01, home-req-02, ...).
+     */
+    private function getNextEstateRequestId(): string
+    {
+        $latestReqId = EstateHomeRequestDetails::whereNotNull('req_id')
+            ->where('req_id', 'like', 'home-req-%')
+            ->orderBy('pk', 'desc')
+            ->value('req_id');
+
+        $nextNumber = 1;
+        if ($latestReqId && preg_match('/home-req-(\d+)/', $latestReqId, $m)) {
+            $nextNumber = ((int) $m[1]) + 1;
+        }
+        return 'home-req-' . sprintf('%02d', $nextNumber);
+    }
+
+    /**
      * Store or update Request For Estate (estate_home_request_details).
      */
     public function storeRequestForEstate(Request $request)
     {
+        $isEdit = $request->filled('id');
         $rules = [
             'req_id' => 'nullable|string|max:50',
             'req_date' => 'required|date',
@@ -53,17 +80,16 @@ class EstateController extends Controller
             'doj_academic' => 'required|date',
             'doj_service' => 'required|date',
             'eligibility_type_pk' => 'required|integer',
-            'status' => 'required|integer|in:0,1,2',
             'remarks' => 'nullable|string|max:500',
-            'current_alot' => 'nullable|string|max:100',
-            'pos_from' => 'nullable|date',
-            'pos_to' => 'nullable|date',
-            'extension' => 'nullable|string|max:255',
+            'current_alot' => 'nullable|string|max:20',
         ];
+        if ($isEdit) {
+            $rules['status'] = 'required|integer|in:0,1,2';
+        }
         $validated = $request->validate($rules);
 
         // Generate / resolve Request ID
-        if ($request->filled('id')) {
+        if ($isEdit) {
             // Editing: keep existing ID if none provided, otherwise use given one
             $reqId = $validated['req_id'] ?? null;
             if ($reqId === null || $reqId === '') {
@@ -71,17 +97,8 @@ class EstateController extends Controller
                 $reqId = $existing->req_id;
             }
         } else {
-            // Creating: always auto-generate in the format home-req-{number}
-            $latestReqId = EstateHomeRequestDetails::whereNotNull('req_id')
-                ->where('req_id', 'like', 'home-req-%')
-                ->orderBy('pk', 'desc')
-                ->value('req_id');
-
-            $nextNumber = 1;
-            if ($latestReqId && preg_match('/home-req-(\d+)/', $latestReqId, $m)) {
-                $nextNumber = ((int) $m[1]) + 1;
-            }
-            $reqId = 'home-req-' . $nextNumber;
+            // Creating: always auto-generate (home-req-01, home-req-02, ...)
+            $reqId = $this->getNextEstateRequestId();
         }
 
         $data = [
@@ -95,12 +112,9 @@ class EstateController extends Controller
             'doj_academic' => $validated['doj_academic'],
             'doj_service' => $validated['doj_service'],
             'eligibility_type_pk' => (int) $validated['eligibility_type_pk'],
-            'status' => (int) $validated['status'],
+            'status' => $isEdit ? (int) $validated['status'] : 0,
             'remarks' => $validated['remarks'] ?? null,
-            'current_alot' => $validated['current_alot'] ?? null,
-            'pos_from' => $validated['pos_from'] ?? null,
-            'pos_to' => $validated['pos_to'] ?? null,
-            'extension' => $validated['extension'] ?? null,
+            'current_alot' => isset($validated['current_alot']) ? \Illuminate\Support\Str::limit($validated['current_alot'], 20) : null,
             'employee_pk' => (int) ($request->input('employee_pk', 0)),
             'app_status' => (int) ($request->input('app_status', 0)),
             'hac_status' => (int) ($request->input('hac_status', 0)),
@@ -209,15 +223,12 @@ class EstateController extends Controller
         }
 
         $houses = $query->get()->map(function ($row) {
-            $label = trim(($row->block_name ?? '') . ' - ' . ($row->house_no ?? ''));
-            if ($label === '-') {
-                $label = $row->house_no ?? (string) $row->pk;
-            }
+            $houseNo = trim($row->house_no ?? '') ?: (string) $row->pk;
             return [
                 'pk' => (int) $row->pk,
                 'house_no' => $row->house_no ?? '',
                 'block_name' => $row->block_name ?? '',
-                'label' => $label,
+                'label' => $houseNo,
             ];
         });
 
