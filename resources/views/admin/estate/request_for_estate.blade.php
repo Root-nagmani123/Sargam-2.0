@@ -8,12 +8,12 @@
 
     <x-session_message />
 
-    <div class="card">
-        <div class="card-body p-4">
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
                 <div class="flex-grow-1">
                     <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
-                    <p class="text-muted small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
+                    <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
                 </div>
                 <div class="flex-shrink-0">
                     <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
@@ -23,7 +23,7 @@
             <div id="request-for-estate-card-body">
             <div class="table-responsive request-for-estate-table-wrap">
                 {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0',
+                    'class' => 'table table-bordered table-striped table-hover text-nowrap align-middle mb-0',
                     'aria-describedby' => 'request-for-estate-caption'
                 ]) !!}
             </div>
@@ -171,31 +171,68 @@
     .request-for-estate-table-wrap table {
         min-width: 992px;
     }
-    /* DataTable toolbar: "Show X entries" left, "Search" right */
-    #requestForEstateTable_wrapper .request-for-estate-search-col {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-    }
-    #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter {
-        margin: 0;
-    }
-    #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter label {
+    /* DataTables controls: Bootstrap 5 form classes */
+    #requestForEstateTable_wrapper .dataTables_length label {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
         gap: 0.5rem;
-        margin: 0;
         flex-wrap: wrap;
     }
-    #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter input {
-        width: 240px;
-        margin-left: 0;
+    #requestForEstateTable_wrapper .dataTables_length select {
+        width: auto;
+        min-width: 4.5rem;
+        display: inline-block;
+        padding: 0.25rem 2rem 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border-radius: 0.375rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+    }
+    #requestForEstateTable_wrapper .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    #requestForEstateTable_wrapper .dataTables_filter input {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.375rem;
+        margin-left: 0.25rem;
+    }
+    /* Blue header row (Bootstrap 5 table-primary style) */
+    #requestForEstateTable_wrapper thead th {
+        background-color: var(--bs-primary);
+        color: #fff;
+        font-weight: 600;
+        border-color: var(--bs-primary);
+        padding: 0.75rem;
+        white-space: nowrap;
+    }
+    /* Pagination: Bootstrap 5 classes */
+    #requestForEstateTable_wrapper .dataTables_paginate {
+        margin-top: 0.5rem;
+    }
+    #requestForEstateTable_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.25rem 0.5rem;
+        margin: 0 1px;
+        border-radius: 0.375rem;
+        border: 1px solid var(--bs-border-color);
+    }
+    #requestForEstateTable_wrapper .dataTables_paginate .paginate_button.current {
+        background: var(--bs-primary);
+        color: #fff !important;
+        border-color: var(--bs-primary);
+    }
+    #requestForEstateTable_wrapper .dataTables_info {
+        padding-top: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--bs-body-secondary);
     }
     @media (max-width: 767.98px) {
-        #requestForEstateTable_wrapper .request-for-estate-search-col { justify-content: flex-start; }
-        #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter label { justify-content: flex-start; }
-        #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter input { width: 100%; }
+        #requestForEstateTable_wrapper .col-md-6,
+        #requestForEstateTable_wrapper .col-md-4,
+        #requestForEstateTable_wrapper .col-md-5 { max-width: 100%; }
     }
 </style>
 @endpush

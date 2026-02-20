@@ -141,7 +141,7 @@ class EstateRequestForEstateDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('requestForEstateTable')
-            ->addTableClass('table text-nowrap align-middle mb-0')
+            ->addTableClass('table table-bordered table-striped table-hover text-nowrap align-middle mb-0')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([

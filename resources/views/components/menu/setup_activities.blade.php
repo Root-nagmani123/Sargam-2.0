@@ -205,6 +205,18 @@
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.estate-approval-setting') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.estate-approval-setting') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Approval Setting</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.add-approved-request-house') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.add-approved-request-house') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Add Approved Request House</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
@@ -234,6 +246,12 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession View</span>
                                     </a>
                                 </li> -->
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.list-meter-reading') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
+                                    </a>
+                                </li>
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.update-meter-reading') }}">
@@ -268,6 +286,12 @@
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.define-house') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.define-house') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define House</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-electric-slab.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-electric-slab.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
                                     </a>
                                 </li>
                             </ul>
