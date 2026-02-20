@@ -158,6 +158,10 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.family_idcard_approval.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Family ID Card Approval</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.duplicate_idcard.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
                                     </a></li>
@@ -168,6 +172,10 @@
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.security.duplicate_vehicle_pass.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Duplicate Vehicle Pass Request</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.duplicate_vehicle_pass_approval.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Duplicate Vehicle Pass Approval</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
                                         href="{{ route('admin.security.employee_idcard_approval.approval1') }}">

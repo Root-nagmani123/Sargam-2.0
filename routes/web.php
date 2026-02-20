@@ -345,7 +345,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
-    // Duplicate / Extended Vehicle Pass Routes
+    // Duplicate / Extended Vehicle Pass Routes (Case 7: vehicle_pass_duplicate_apply_twfw / vehicle_pass_duplicate_apply_approval_twfw)
     Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -354,6 +354,24 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    // Family ID Card Approval Routes
+    Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::post('/approve/{id}', 'approve')->name('approve');
+        Route::post('/reject/{id}', 'reject')->name('reject');
+    });
+
+    // Duplicate Vehicle Pass Approval Routes (Case 7: inserts into vehicle_pass_duplicate_apply_approval_twfw at approval time)
+    Route::prefix('security/duplicate-vehicle-pass-approval')->name('admin.security.duplicate_vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassApprovalController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::post('/approve/{id}', 'approve')->name('approve');
+        Route::post('/reject/{id}', 'reject')->name('reject');
     });
 
     // Vehicle Pass Approval Routes
