@@ -28,34 +28,8 @@ class GroupMappingController extends Controller
         $this->smsService = $smsService;
     }
 
-    public function index_org19022026(GroupMappingDataTable $dataTable)
-    {
-        $data_course_id =  get_Role_by_course();
-
-        //$courses = CourseMaster::where('active_inactive', '1')
-        //    ->where('end_date', '>', now());
-        $courses = CourseMaster::where('active_inactive', 1);
-
-
-        if(!empty($data_course_id))
-        {
-            $courses = $courses->whereIn('pk',$data_course_id);
-        }
-
-        $courses = $courses->orderBy('course_name')
-            ->pluck('course_name', 'pk')
-            ->toArray();
-
-        $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
-                ->orderBy('type_name')
-                ->pluck('type_name', 'pk')
-                ->toArray();
-
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
-    }
-
     public function index(GroupMappingDataTable $dataTable)
-{
+    {
     $data_course_id = get_Role_by_course();
     $today = now()->toDateString();
 
@@ -80,9 +54,7 @@ class GroupMappingController extends Controller
         ->toArray();
 
     return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
-}
-
-
+    }
 
     /**
      * Show the form for creating a new group mapping.
@@ -93,8 +65,16 @@ class GroupMappingController extends Controller
     {
         $data_course_id =  get_Role_by_course();
 
-        $courses = CourseMaster::where('active_inactive', '1');
+       /* $courses = CourseMaster::where('active_inactive', '1');
            $courses->where('end_date', '>', now());
+           */
+
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                ->orWhere('end_date', '>=', now());
+            });
+
               if(!empty($data_course_id))
             {
                 $courses = CourseMaster::whereIn('pk',$data_course_id);
