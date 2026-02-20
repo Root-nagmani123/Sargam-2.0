@@ -156,6 +156,7 @@
                         <tr>
                             <th class="th-slip-no">SLIP NO.</th>
                             <th class="th-buyer">BUYER NAME</th>
+                            <th class="th-status">STATUS</th>
                             <th class="th-item">ITEM NAME</th>
                             <th class="th-date">REQUEST DATE</th>
                             <th class="th-qty">QTY.</th>
@@ -176,11 +177,13 @@
                                     $itemAmount = ($item->quantity ?? 0) * ($item->rate ?? 0);
                                     $sectionTotal += $itemAmount;
                                     $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                                    $statusLabel = $voucher->status_label ?? 'N/A';
                                 @endphp
                                 <tr>
                                     @if($itemIndex === 0)
                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
                                         <td class="align-middle" rowspan="{{ $rowCount }}">{{ $buyerName }}</td>
+                                        <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $statusLabel }}</td>
                                     @endif
                                     <td>{{ $itemName }}</td>
                                     <td class="text-center">{{ $requestDate }}</td>
@@ -191,7 +194,7 @@
                             @endforeach
                         @endforeach
                         <tr class="total-row">
-                            <td colspan="5"></td>
+                            <td colspan="6"></td>
                             <td class="text-end"><strong>TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
                         </tr>
@@ -276,7 +279,7 @@
         font-weight: 600;
         padding: 8px 6px;
     }
-    .print-slip-table .th-slip-no, .print-slip-table .th-date { text-align: center; }
+    .print-slip-table .th-slip-no, .print-slip-table .th-date, .print-slip-table .th-status { text-align: center; }
     .print-slip-table .th-qty, .print-slip-table .th-price, .print-slip-table .th-amount { text-align: right; }
     .print-slip-table tbody td { padding: 6px 8px; vertical-align: middle; }
     .print-slip-table .total-row { background-color: #f0f0f0; font-weight: bold; }

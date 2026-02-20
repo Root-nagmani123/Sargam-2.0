@@ -348,9 +348,9 @@ class ReportController extends Controller
         }
 
         // --- 2. Kitchen Issue (Selling Voucher type only, not Date Range) ---
+        // Include all statuses (Pending, Processing, Approved, Rejected, Completed)
         $kiQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items.itemSubcategory'])
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-            ->where('status', KitchenIssueMaster::STATUS_APPROVED)
             ->whereHas('items');
 
         if ($request->filled('from_date')) {
@@ -630,8 +630,12 @@ class ReportController extends Controller
             $query->where('client_name', 'LIKE', '%' . $request->buyer_name . '%');
         }
         
-        // Only show approved vouchers
-        $query->where('status', \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED);
+        // Include all statuses (Draft, Final, Approved)
+        $query->whereIn('status', [
+            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+        ]);
         
         $vouchers = $query->orderBy('issue_date', 'desc')->get();
         

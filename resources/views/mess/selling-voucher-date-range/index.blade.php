@@ -747,6 +747,9 @@
                 option.setAttribute('data-unit', item.unit_measurement || '');
                 option.setAttribute('data-rate', item.standard_cost || 0);
                 option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.price_tiers && item.price_tiers.length > 0) {
+                    option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+                }
                 if (item.id == currentValue) {
                     option.selected = true;
                 }
@@ -758,9 +761,13 @@
     }
 
     function getAddRowHtml(index) {
-        const options = filteredItems.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
-        ).join('');
+        const options = filteredItems.map(s => {
+            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
+            if (s.price_tiers && s.price_tiers.length > 0) {
+                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
+            }
+            return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        }).join('');
         return '<tr class="dr-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>' +
@@ -794,11 +801,41 @@
         if (leftInp) leftInp.value = Math.max(0, avail - qty).toFixed(2);
     }
 
+    function calcDrFifoAmount(tiers, qty) {
+        if (!tiers || tiers.length === 0 || qty <= 0) return null;
+        let remaining = qty;
+        let amount = 0;
+        for (let i = 0; i < tiers.length && remaining > 0; i++) {
+            const take = Math.min(remaining, parseFloat(tiers[i].quantity) || 0);
+            amount += take * (parseFloat(tiers[i].unit_price) || 0);
+            remaining -= take;
+        }
+        return remaining <= 0 ? amount : null;
+    }
+
     function updateAddRowTotal(row) {
         const qty = parseFloat(row.querySelector('.dr-qty').value) || 0;
-        const rate = parseFloat(row.querySelector('.dr-rate').value) || 0;
+        const rateInp = row.querySelector('.dr-rate');
+        let rate = parseFloat(rateInp.value) || 0;
         const totalInp = row.querySelector('.dr-total');
-        if (totalInp) totalInp.value = (qty * rate).toFixed(2);
+        const sel = row.querySelector('.dr-item-select');
+        const opt = sel && sel.options[sel.selectedIndex];
+        const tiersJson = opt && opt.getAttribute('data-price-tiers');
+        const tiers = tiersJson ? (function(){ try { return JSON.parse(tiersJson); } catch(e) { return null; } })() : null;
+        let total;
+        if (tiers && tiers.length > 0 && qty > 0) {
+            const fifoAmount = calcDrFifoAmount(tiers, qty);
+            if (fifoAmount !== null) {
+                total = fifoAmount;
+                rate = qty > 0 ? total / qty : 0;
+                rateInp.value = rate.toFixed(2);
+            } else {
+                total = qty * rate;
+            }
+        } else {
+            total = qty * rate;
+        }
+        if (totalInp) totalInp.value = (total || 0).toFixed(2);
         updateAddRowLeft(row);
         enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
     }
