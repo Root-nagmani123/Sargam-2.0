@@ -1307,11 +1307,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // View button handler (use closest() for reliable single-click on DataTables rows)
-    document.addEventListener('click', function(e) {
+    // View button handler (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-view-sv');
         if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found');
@@ -1370,11 +1371,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, true);
 
-    // Return button handler (use closest() for reliable single-click on DataTables rows)
-    document.addEventListener('click', function(e) {
+    // Return button handler (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-return-sv');
         if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for return');
@@ -1480,11 +1482,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }, true);
     }
 
-    // Edit button handler (use closest() for reliable single-click on DataTables rows)
-    document.addEventListener('click', function(e) {
+    // Edit button handler (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-edit-sv');
         if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for edit');
