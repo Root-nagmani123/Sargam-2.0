@@ -50,13 +50,18 @@ class IssueEscalationMatrixController extends Controller
      */
     public function store(Request $request)
     {
+        $empRule = ['required', 'integer', function ($attr, $v, $fail) {
+            if (!\App\Models\EmployeeMaster::findByIdOrPkOld($v)) {
+                $fail('The selected employee is invalid.');
+            }
+        }];
         $request->validate([
             'issue_category_master_pk' => 'required|exists:issue_category_master,pk',
-            'level1_employee_pk' => 'required|exists:employee_master,pk',
+            'level1_employee_pk' => $empRule,
             'level1_days' => 'required|integer|min:0',
-            'level2_employee_pk' => 'required|exists:employee_master,pk',
+            'level2_employee_pk' => $empRule,
             'level2_days' => 'required|integer|min:0',
-            'level3_employee_pk' => 'required|exists:employee_master,pk',
+            'level3_employee_pk' => $empRule,
             'level3_days' => 'required|integer|min:0',
         ]);
 

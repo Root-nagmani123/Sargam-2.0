@@ -48,6 +48,12 @@
     </div>
     @endif
 
+    @if(!empty($truncated))
+    <div class="filters" style="background: #fff3cd; border-color: #ffc107;">
+        <strong>Note:</strong> Showing first {{ $limit ?? 5000 }} of {{ $total_count ?? 0 }} records. Use <strong>Excel export</strong> for the full dataset.
+    </div>
+    @endif
+
     <table class="main-table">
         <thead>
             <tr>
