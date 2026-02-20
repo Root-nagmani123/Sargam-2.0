@@ -16,9 +16,9 @@
                 </div>
             </div>
 
-            <div class="estate-change-request-table-wrapper">
+            <div class="estate-change-request-table-wrapper table-responsive">
                 {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0 estate-change-request-table',
+                    'class' => 'table table-bordered table-striped table-hover text-nowrap align-middle mb-0 estate-change-request-table',
                     'aria-describedby' => 'change-request-caption'
                 ]) !!}
             </div>
@@ -54,14 +54,79 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+    /* DataTables controls: Bootstrap 5 form styling */
+    #estateChangeRequestTable_wrapper .dataTables_length label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    #estateChangeRequestTable_wrapper .dataTables_length select {
+        width: auto;
+        min-width: 4.5rem;
+        display: inline-block;
+        padding: 0.25rem 2rem 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border-radius: 0.375rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+    }
+    #estateChangeRequestTable_wrapper .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    #estateChangeRequestTable_wrapper .dataTables_filter input {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.375rem;
+        margin-left: 0.25rem;
+    }
+    /* Blue header row (Bootstrap 5 table-primary style) */
+    #estateChangeRequestTable_wrapper thead th {
+        background-color: var(--bs-primary);
+        color: #fff;
+        font-weight: 600;
+        border-color: var(--bs-primary);
+        padding: 0.75rem;
+        white-space: nowrap;
+    }
+    .estate-change-request-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    #estateChangeRequestTable_wrapper table {
+        min-width: 992px;
+    }
+    #estateChangeRequestTable_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.25rem 0.5rem;
+        margin: 0 1px;
+        border-radius: 0.375rem;
+        border: 1px solid var(--bs-border-color);
+    }
+    #estateChangeRequestTable_wrapper .dataTables_paginate .paginate_button.current {
+        background: var(--bs-primary);
+        color: #fff !important;
+        border-color: var(--bs-primary);
+    }
+    #estateChangeRequestTable_wrapper .dataTables_info {
+        font-size: 0.875rem;
+        color: var(--bs-body-secondary);
+    }
+</style>
+@endpush
+
 @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
     function wrapTableScroll() {
         var tbl = document.getElementById('estateChangeRequestTable');
-        if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-scroll-only')) {
+        if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) {
             var wrap = document.createElement('div');
-            wrap.className = 'table-scroll-only';
+            wrap.className = 'table-responsive';
             wrap.style.overflowX = 'auto';
             wrap.style.webkitOverflowScrolling = 'touch';
             tbl.parentNode.insertBefore(wrap, tbl);

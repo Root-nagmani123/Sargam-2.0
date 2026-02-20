@@ -130,7 +130,7 @@ class EstateRequestForEstateDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('requestForEstateTable')
-            ->addTableClass('table text-nowrap align-middle mb-0')
+            ->addTableClass('table table-bordered table-striped table-hover text-nowrap align-middle mb-0')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
@@ -156,7 +156,7 @@ class EstateRequestForEstateDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row flex-wrap align-items-center gap-2"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
             ]);
     }
 
