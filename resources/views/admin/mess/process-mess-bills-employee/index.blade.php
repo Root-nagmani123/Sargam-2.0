@@ -110,21 +110,6 @@
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Client Type</label>
-                        <select name="client_type" class="form-select form-select-sm">
-                            <option value="">All</option>
-                            <option value="employee" {{ ($clientType ?? '') === 'employee' ? 'selected' : '' }}>Employee</option>
-                            <option value="ot" {{ ($clientType ?? '') === 'ot' ? 'selected' : '' }}>OT</option>
-                            <option value="course" {{ ($clientType ?? '') === 'course' ? 'selected' : '' }}>Course</option>
-                            <option value="other" {{ ($clientType ?? '') === 'other' ? 'selected' : '' }}>Other</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Buyer Name</label>
-                        <input type="text" name="buyer_name" class="form-control form-control-sm"
-                               value="{{ $buyerName ?? request('buyer_name') }}" placeholder="Filter by buyer name...">
-                    </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list</i>
