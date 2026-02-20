@@ -11,12 +11,12 @@
     <div class="card">
         <div class="card-body p-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-                <div>
+                <div class="flex-grow-1">
                     <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
                     <p class="text-muted small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-primary" id="btn-open-add-request-estate" title="Add"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
+                <div class="flex-shrink-0">
+                    <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
                 </div>
             </div>
 
@@ -49,17 +49,17 @@
                     @csrf
                     <input type="hidden" name="id" id="request_estate_id" value="">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="modal_req_id" class="form-label">Request ID <span class="text-muted small">(leave blank to auto-generate)</span></label>
-                            <input type="text" class="form-control" id="modal_req_id" name="req_id" placeholder="e.g. home-req-1" maxlength="50">
+                        <div class="col-md-6">
+                            <label for="modal_req_id" class="form-label">Request ID</label>
+                            <input type="text" class="form-control" id="modal_req_id" name="req_id" maxlength="50" readonly>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="modal_req_date" class="form-label">Request Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="modal_req_date" name="req_date" required>
+                            <input type="date" class="form-control" id="modal_req_date" name="req_date" required readonly>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 d-none" id="modal_status_wrap">
                             <label for="modal_status" class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="modal_status" name="status" required>
+                            <select class="form-select" id="modal_status" name="status">
                                 <option value="0">Pending</option>
                                 <option value="1">Allotted</option>
                                 <option value="2">Rejected</option>
@@ -125,19 +125,7 @@
                         </div>
                         <div class="col-md-4">
                             <label for="modal_current_alot" class="form-label">Alloted House</label>
-                            <input type="text" class="form-control" id="modal_current_alot" name="current_alot" maxlength="100" placeholder="e.g. Block - 14 or type manually">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_pos_from" class="form-label">Possession From</label>
-                            <input type="date" class="form-control" id="modal_pos_from" name="pos_from">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_pos_to" class="form-label">Possession To</label>
-                            <input type="date" class="form-control" id="modal_pos_to" name="pos_to">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_extension" class="form-label">Extension</label>
-                            <input type="text" class="form-control" id="modal_extension" name="extension" maxlength="255" placeholder="e.g. extension details">
+                            <input type="text" class="form-control" id="modal_current_alot" name="current_alot" maxlength="20" placeholder="e.g. TTP-II-07" title="House no (max 20 characters)">
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -174,7 +162,7 @@
 
 @push('styles')
 <style>
-    /* Responsive table: horizontal scroll on all screen sizes, no expand arrow */
+    /* Responsive table: horizontal scroll */
     .request-for-estate-table-wrap {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -183,19 +171,31 @@
     .request-for-estate-table-wrap table {
         min-width: 992px;
     }
-    /* Stack length menu and search on small screens */
-    #requestForEstateTable_wrapper .row:first-child {
-        flex-wrap: wrap;
-        gap: 0.5rem;
+    /* DataTable toolbar: "Show X entries" left, "Search" right */
+    #requestForEstateTable_wrapper .request-for-estate-search-col {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
     }
-    #requestForEstateTable_wrapper .dataTables_length,
-    #requestForEstateTable_wrapper .dataTables_filter {
-        margin-bottom: 0.5rem;
+    #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter {
+        margin: 0;
+    }
+    #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin: 0;
+        flex-wrap: wrap;
+    }
+    #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter input {
+        width: 240px;
+        margin-left: 0;
     }
     @media (max-width: 767.98px) {
-        #requestForEstateTable_wrapper .col-md-6 { max-width: 100%; }
-        #requestForEstateTable_wrapper .dataTables_length label,
-        #requestForEstateTable_wrapper .dataTables_filter label { flex-wrap: wrap; }
+        #requestForEstateTable_wrapper .request-for-estate-search-col { justify-content: flex-start; }
+        #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter label { justify-content: flex-start; }
+        #requestForEstateTable_wrapper .request-for-estate-search-col .dataTables_filter input { width: 100%; }
     }
 </style>
 @endpush
@@ -271,12 +271,19 @@
             $('#request_estate_id').val('');
             $('#modal_employee_pk').val('');
             $('#modal_vacant_house_select').val('');
+            $('#modal_req_id').val('');
+            $('#modal_req_date').val(new Date().toISOString().slice(0, 10));
+            $('#modal_status_wrap').addClass('d-none');
+            $('#modal_status').removeAttr('required');
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees();
             var defElig = $('#modal_eligibility_type_pk').val();
             loadVacantHouses(defElig || 62);
-            if (addEditModal) addEditModal.show();
+            $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
+                if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
+                if (addEditModal) addEditModal.show();
+            });
         });
 
         $(document).on('click', '.btn-edit-request-estate', function(e) {
@@ -297,14 +304,13 @@
             $('#modal_eligibility_type_pk').val($btn.data('eligibility_type_pk') !== undefined ? String($btn.data('eligibility_type_pk')) : '62');
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
             $('#modal_current_alot').val($btn.data('current_alot') || '');
-            $('#modal_pos_from').val($btn.data('pos_from') || '');
-            $('#modal_pos_to').val($btn.data('pos_to') || '');
-            $('#modal_extension').val($btn.data('extension') || '');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees(rowPk, rowPk);
             var eligPk = $btn.data('eligibility_type_pk');
-            loadVacantHouses(eligPk, $btn.data('current_alot'));
+            var currentAlot = $btn.data('current_alot') || '';
+            var valueForSelect = (currentAlot.indexOf(' - ') !== -1) ? currentAlot.split(' - ').pop().trim() : currentAlot;
+            loadVacantHouses(eligPk, valueForSelect);
             if (addEditModal) addEditModal.show();
         });
 
