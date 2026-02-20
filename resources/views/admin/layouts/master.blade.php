@@ -588,6 +588,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');
     const input  = document.getElementById('searchInput');
+    if (!toggle || !input) return;
 
     toggle.addEventListener('click', () => {
         input.classList.toggle('active');
@@ -617,6 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.getElementById("main-wrapper");
     const toggleBtn = document.getElementById("headerCollapse");
+    if (!sidebar || !toggleBtn) return;
     // Query all icons across all tabs (multiple instances due to tab structure)
     const icons = document.querySelectorAll("#sidebarToggleIcon");
     const body = document.body;

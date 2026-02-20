@@ -35,6 +35,8 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     MemoDisciplineController,
     DashboardController,
+    DashboardStatisticsController,
+    ParticipantHistoryController,
     CourseRepositoryController,
     EmployeeIDCardRequestController,
     FamilyIDCardRequestController,
@@ -54,6 +56,7 @@ use App\Http\Controllers\Admin\IssueManagement\{
 };
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
+    EstateElectricSlabController,
     UnitTypeController,
     UnitSubTypeController,
     EstateBlockController,
@@ -152,6 +155,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::get('/dashboard/students/{id}/history', [ParticipantHistoryController::class, 'show'])->name('admin.dashboard.students.history');
 
 
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
@@ -853,6 +857,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
+    // Participant / Dashboard Statistics (charts data)
+    Route::get('/dashboard-statistics/charts', [DashboardStatisticsController::class, 'charts'])->name('admin.dashboard-statistics.charts');
+    Route::post('/dashboard-statistics/save-from-course', [DashboardStatisticsController::class, 'saveSnapshotFromCourse'])->name('admin.dashboard-statistics.save-from-course');
+    Route::post('/dashboard-statistics/{dashboard_statistic}/set-default', [DashboardStatisticsController::class, 'setDefault'])->name('admin.dashboard-statistics.set-default');
+    Route::resource('dashboard-statistics', DashboardStatisticsController::class)->names('admin.dashboard-statistics')->parameters(['dashboard_statistics' => 'dashboard_statistic']);
+
     Route::get('/upcoming-events', function () {
         return view('admin.dashboard.upcoming_events');
     })->name('admin.dashboard.upcoming_events');
@@ -989,6 +999,19 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         // Estate Request for Others
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
 
+        // Request For Estate (estate_home_request_details + possession)
+        Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
+        Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
+        Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
+        Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
+        Route::post('request-for-estate', [EstateController::class, 'storeRequestForEstate'])->name('request-for-estate.store');
+        Route::delete('request-for-estate/{id}', [EstateController::class, 'destroyRequestForEstate'])->name('request-for-estate.destroy');
+
+        // Estate Approval Setting & Add Approved Request House
+        Route::get('estate-approval-setting', [EstateController::class, 'estateApprovalSetting'])->name('estate-approval-setting');
+        Route::get('add-approved-request-house', [EstateController::class, 'addApprovedRequestHouse'])->name('add-approved-request-house');
+        Route::post('store-approved-request-house', [EstateController::class, 'storeApprovedRequestHouse'])->name('store-approved-request-house');
+
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
@@ -1019,6 +1042,8 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 
         // Update Meter
         Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
+        Route::get('list-meter-reading', [EstateController::class, 'listMeterReading'])->name('list-meter-reading');
+        Route::get('list-meter-reading/data', [EstateController::class, 'getListMeterReadingData'])->name('list-meter-reading.data');
         Route::get('update-meter-reading/list', [EstateController::class, 'getMeterReadingList'])->name('update-meter-reading.list');
         Route::get('update-meter-reading/meter-reading-dates', [EstateController::class, 'getMeterReadingDates'])->name('update-meter-reading.meter-reading-dates');
         Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
@@ -1045,9 +1070,21 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         })->name('return-house');
 
         // Define House
-        Route::get('define-house', function () {
-            return view('admin.estate.define_house');
-        })->name('define-house');
+        Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
+        Route::post('define-house', [EstateController::class, 'storeDefineHouse'])->name('define-house.store');
+        Route::get('define-house/data', [EstateController::class, 'getDefineHouseData'])->name('define-house.data');
+        Route::get('define-house/blocks', [EstateController::class, 'getDefineHouseBlocks'])->name('define-house.blocks');
+        Route::get('define-house/{id}', [EstateController::class, 'showDefineHouse'])->name('define-house.show');
+        Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
+        Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
+
+        // Define Electric Slab
+        Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+        Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
+        Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
+        Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
+        Route::put('define-electric-slab/{id}', [EstateElectricSlabController::class, 'update'])->name('define-electric-slab.update');
+        Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
 
         // Define Estate/Campus
         Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
@@ -1099,6 +1136,12 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 
         // Estate Reports
         Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('pending-meter-reading/data', [EstateController::class, 'getPendingMeterReadingData'])->name('pending-meter-reading.data');
+            Route::get('pending-meter-reading', [EstateController::class, 'pendingMeterReading'])->name('pending-meter-reading');
+            
+            Route::get('house-status/data', [EstateController::class, 'getHouseStatusData'])->name('house-status.data');
+            Route::get('house-status', [EstateController::class, 'houseStatus'])->name('house-status');
+            
             Route::get('pending-meter-reading', function () {
                 return view('admin.estate.pending_meter_reading');
             })->name('pending-meter-reading');
