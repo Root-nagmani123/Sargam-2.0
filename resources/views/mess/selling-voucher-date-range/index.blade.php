@@ -48,8 +48,9 @@
                         <label class="form-label small">End Date</label>
                         <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end gap-1">
                         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                        <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
                     </div>
                 </div>
             </form>
