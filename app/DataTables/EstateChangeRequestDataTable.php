@@ -128,12 +128,13 @@ class EstateChangeRequestDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('estateChangeRequestTable')
-            ->addTableClass('table table-bordered table-hover align-middle mb-0')
+            ->addTableClass('table table-bordered table-striped table-hover align-middle mb-0')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
+                'scrollX' => true,
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
@@ -153,8 +154,8 @@ class EstateChangeRequestDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                'initComplete' => "function() { var tbl = document.getElementById('estateChangeRequestTable'); if (tbl && tbl.parentNode) { var wrap = document.createElement('div'); wrap.className = 'table-scroll-only'; wrap.style.overflowX = 'auto'; wrap.style.webkitOverflowScrolling = 'touch'; tbl.parentNode.insertBefore(wrap, tbl); wrap.appendChild(tbl); } }",
+                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
+                'initComplete' => "function() { var tbl = document.getElementById('estateChangeRequestTable'); if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) { var wrap = document.createElement('div'); wrap.className = 'table-responsive'; wrap.style.overflowX = 'auto'; wrap.style.webkitOverflowScrolling = 'touch'; tbl.parentNode.insertBefore(wrap, tbl); wrap.appendChild(tbl); } }",
             ]);
     }
 
