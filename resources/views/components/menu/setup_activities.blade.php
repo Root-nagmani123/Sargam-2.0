@@ -388,6 +388,12 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
                                     </a>
                                 </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.migration-report') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.reports.migration-report') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Migration Report (1998–2026)</span>
+                                    </a>
+                                </li>
                             </ul>
                             
                             @endif

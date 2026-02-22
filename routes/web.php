@@ -1159,6 +1159,9 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
             Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
             Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
+
+            Route::get('migration-report', [EstateController::class, 'estateMigrationReport'])->name('migration-report');
+            Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
         });
     });
 });
