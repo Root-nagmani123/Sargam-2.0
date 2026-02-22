@@ -147,7 +147,11 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" class="form-control" placeholder="Contact number">
+                                    <input type="text" name="contact_number" id="createContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" value="{{ old('contact_number') }}" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
+                                    @error('contact_number')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
@@ -274,7 +278,11 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" id="editContactNumber" class="form-control">
+                                    <input type="text" name="contact_number" id="editContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
+                                    @error('contact_number')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
@@ -614,11 +622,12 @@
         });
     }
 
-    // View button: fetch PO and open view modal (event delegation - works with DataTables redraws)
-    document.addEventListener('click', function(e) {
+    // View button: fetch PO and open view modal (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-view-po');
         if (!btn) return;
         e.preventDefault();
+        e.stopPropagation();
         const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
@@ -655,7 +664,7 @@
                     new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-    });
+    }, true);
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -696,11 +705,12 @@
         });
     }
 
-    // Edit button: fetch PO and open modal (event delegation - works with DataTables redraws)
-    document.addEventListener('click', function(e) {
+    // Edit button: fetch PO and open modal (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-edit-po');
         if (!btn) return;
         e.preventDefault();
+        e.stopPropagation();
         const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
@@ -754,7 +764,7 @@
                     }
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-    });
+    }, true);
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('editPoItemsBody');
@@ -808,6 +818,88 @@
             }
         });
     }
+
+    // Contact number: restrict to digits only, max 10
+    function initContactNumberValidation(inputEl) {
+        if (!inputEl) return;
+        inputEl.addEventListener('keydown', function(e) {
+            const key = e.key;
+            if (key === 'Backspace' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Delete') return;
+            if (key.length === 1 && !/^[0-9]$/.test(key)) {
+                e.preventDefault();
+            }
+        });
+        inputEl.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+            if (validateContactNumber(this.value)) {
+                this.classList.remove('is-invalid');
+                const fb = this.parentNode.querySelector('.invalid-feedback.d-block');
+                if (fb) fb.textContent = '';
+            }
+        });
+        inputEl.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const digits = text.replace(/[^0-9]/g, '').slice(0, 10);
+            const start = this.selectionStart, end = this.selectionEnd;
+            this.value = this.value.slice(0, start) + digits + this.value.slice(end);
+            this.setSelectionRange(start + digits.length, start + digits.length);
+        });
+    }
+    initContactNumberValidation(document.getElementById('createContactNumber'));
+    document.getElementById('editPurchaseOrderModal').addEventListener('shown.bs.modal', function() {
+        initContactNumberValidation(document.getElementById('editContactNumber'));
+    }, { once: false });
+
+    // Validate contact number before form submit (optional field: if provided, must be exactly 10 digits)
+    function validateContactNumber(val) {
+        if (!val || val.trim() === '') return true;
+        return /^[0-9]{10}$/.test(val.replace(/\s/g, ''));
+    }
+    document.getElementById('createPOForm').addEventListener('submit', function(e) {
+        const input = document.getElementById('createContactNumber');
+        if (input && !validateContactNumber(input.value)) {
+            e.preventDefault();
+            input.classList.add('is-invalid');
+            const msg = input.parentNode.querySelector('.invalid-feedback.d-block') || document.createElement('div');
+            if (!msg.classList || !msg.classList.contains('invalid-feedback')) {
+                const m = document.createElement('div');
+                m.className = 'invalid-feedback d-block';
+                m.textContent = 'Contact number must be exactly 10 digits (numbers only).';
+                input.parentNode.appendChild(m);
+            } else {
+                msg.textContent = 'Contact number must be exactly 10 digits (numbers only).';
+            }
+            input.focus();
+            return false;
+        }
+    });
+    document.getElementById('editPOForm').addEventListener('submit', function(e) {
+        const input = document.getElementById('editContactNumber');
+        if (input && !validateContactNumber(input.value)) {
+            e.preventDefault();
+            input.classList.add('is-invalid');
+            let msg = input.parentNode.querySelector('.invalid-feedback.d-block');
+            if (!msg) {
+                msg = document.createElement('div');
+                msg.className = 'invalid-feedback d-block';
+                input.parentNode.appendChild(msg);
+            }
+            msg.textContent = 'Contact number must be exactly 10 digits (numbers only).';
+            input.focus();
+            return false;
+        }
+    });
+
+    // Auto-open create modal when validation errors exist (e.g. after failed submit)
+    @if($errors->any())
+    document.addEventListener('DOMContentLoaded', function() {
+        const createModal = document.getElementById('createPurchaseOrderModal');
+        if (createModal && (document.getElementById('createPOForm') || document.querySelector('[name="po_number"]'))) {
+            new bootstrap.Modal(createModal).show();
+        }
+    });
+    @endif
 
     // Reset create modal when opened
     if (createPOModal) {

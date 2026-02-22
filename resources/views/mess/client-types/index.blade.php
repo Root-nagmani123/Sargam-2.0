@@ -168,15 +168,17 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($errors->isNotEmpty())
     new bootstrap.Modal(document.getElementById('createClientTypeModal')).show();
     @endif
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-clienttype');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editClientTypeForm').action = '{{ url("admin/mess/client-types") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_client_type').value = btn.getAttribute('data-client-type') || '';
         document.getElementById('edit_client_name').value = btn.getAttribute('data-client-name') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editClientTypeModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush

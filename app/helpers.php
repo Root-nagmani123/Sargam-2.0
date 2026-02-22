@@ -2,8 +2,36 @@
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Auth;
+
+/**
+ * Get all employee ids (pk and pk_old) that represent the given user/employee id.
+ * employee_master: pk and pk_old both identify the same employee.
+ *
+ * @param int|string $userId
+ * @return array
+ */
+function getEmployeeIdsForUser($userId)
+{
+    if ($userId === null || $userId === '') {
+        return [];
+    }
+    $userId = (string) $userId;
+    $ids = [$userId];
+    if (Schema::hasTable('employee_master') && Schema::hasColumn('employee_master', 'pk_old')) {
+        $row = DB::table('employee_master')
+            ->where('pk', $userId)
+            ->orWhere('pk_old', $userId)
+            ->select('pk', 'pk_old')
+            ->first();
+        if ($row) {
+            $ids = array_filter(array_unique([$row->pk, $row->pk_old]));
+        }
+    }
+    return array_map('strval', $ids);
+}
 
 function view_file_link($path)
 {

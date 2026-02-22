@@ -28,8 +28,8 @@ class PurchaseOrderController extends Controller
                 'item_code' => $s->item_code ?? '—',
                 'unit_measurement' => $s->unit_measurement ?? '—',
             ]);
-        $po_number = 'PO' . date('Ymd') . str_pad(PurchaseOrder::count() + 1, 4, '0', STR_PAD_LEFT);
-        $paymentModes = ['Cash' => 'Cash', 'Card' => 'Card', 'UPI' => 'UPI', 'Bank Transfer' => 'Bank Transfer', 'Credit' => 'Credit', 'Other' => 'Other'];
+        $po_number = $this->generatePoNumber();
+        $paymentModes = ['Cash' => 'Cash', 'Card' => 'Card', 'UPI' => 'UPI', 'Bank Transfer' => 'Bank Transfer', 'Credit' => 'Credit'];
         return view('mess.purchaseorders.index', compact('purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes'));
     }
 
@@ -44,7 +44,7 @@ class PurchaseOrderController extends Controller
             $materialRequest = MaterialRequest::with('items.inventory')->findOrFail($request->material_request_id);
         }
         
-        $po_number = 'PO' . date('Ymd') . str_pad(PurchaseOrder::count() + 1, 4, '0', STR_PAD_LEFT);
+        $po_number = $this->generatePoNumber();
         return view('mess.purchaseorders.create', compact('vendors', 'stores', 'inventories', 'po_number', 'materialRequest'));
     }
 
@@ -58,12 +58,14 @@ class PurchaseOrderController extends Controller
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
             'delivery_address' => 'nullable|string|max:500',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'string', 'regex:/^[0-9]{10}$/'],
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -162,12 +164,14 @@ class PurchaseOrderController extends Controller
             'delivery_date' => 'nullable|date',
             'payment_code' => 'nullable|string|max:50',
             'delivery_address' => 'nullable|string|max:500',
-            'contact_number' => 'nullable|string|max:20',
+            'contact_number' => ['nullable', 'string', 'regex:/^[0-9]{10}$/'],
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
         ]);
 
         DB::transaction(function () use ($request, $purchaseOrder) {
@@ -282,5 +286,21 @@ class PurchaseOrderController extends Controller
             ]);
         
         return response()->json($items);
+    }
+
+    /**
+     * Generate a unique Purchase Order number in format PO/{number}/NM.
+     */
+    protected function generatePoNumber(): string
+    {
+        $next = ((int) PurchaseOrder::max('id')) + 1;
+        $code = 'PO/' . $next . '/NM';
+
+        while (PurchaseOrder::where('po_number', $code)->exists()) {
+            $next++;
+            $code = 'PO/' . $next . '/NM';
+        }
+
+        return $code;
     }
 }

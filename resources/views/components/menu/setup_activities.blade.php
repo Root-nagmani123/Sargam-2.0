@@ -205,6 +205,18 @@
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.put-in-hac') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.put-in-hac') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Put In HAC</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.hac-forward') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.hac-forward') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">HAC Forward</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.estate-approval-setting') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.estate-approval-setting') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Approval Setting</span>
@@ -386,6 +398,12 @@
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.bill-report-print') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.bill-report-print') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.migration-report') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.reports.migration-report') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Migration Report (1998–2026)</span>
                                     </a>
                                 </li>
                             </ul>

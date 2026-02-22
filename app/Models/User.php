@@ -108,7 +108,12 @@ class User extends Authenticatable
     public static function getEmployeesAndFacultyForComplaint($departmentId = null)
     {
         $query = DB::table('user_credentials as uc')
-            ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
+            ->join('employee_master as e', function ($join) {
+                $join->on('uc.user_id', '=', 'e.pk');
+                if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('uc.user_id', '=', 'e.pk_old');
+                }
+            })
             ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
             ->where('uc.user_category', '!=', 'S')
             ->select(

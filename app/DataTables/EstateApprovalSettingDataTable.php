@@ -44,8 +44,15 @@ class EstateApprovalSettingDataTable extends DataTable
             ->orderColumn('DT_RowIndex', 'estate_home_req_approval_mgmt.pk $1')
             ->addColumn('action', function ($row) {
                 $editUrl = route('admin.estate.add-approved-request-house', ['approver' => $row->employees_pk]);
+                $deleteUrl = route('admin.estate.estate-approval-setting.destroy', ['id' => $row->pk]);
+                $token = csrf_token();
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">' .
-                    '<a href="' . e($editUrl) . '" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil-square"></i> Edit</a>' .
+                    '<a href="' . e($editUrl) . '" class="text-primary" title="Edit"><i class="material-icons menu-icon material-symbols-rounded">edit</i></a>' .
+                    '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this approval setting?\');">' .
+                    '<input type="hidden" name="_token" value="' . e($token) . '">' .
+                    '<input type="hidden" name="_method" value="DELETE">' .
+                    '<button type="submit" class="btn btn-link p-0 text-primary border-0" title="Delete"><i class="material-icons material-symbols-rounded">delete</i></button>' .
+                    '</form>' .
                     '</div>';
             })
             ->rawColumns(['action'])
@@ -67,16 +74,16 @@ class EstateApprovalSettingDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
-                'searching' => true,
+                'searching' => false,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'order' => [[0, 'asc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
-                    'search' => 'Search within table:',
+                    'search' => 'Search:',
                     'lengthMenu' => 'Show _MENU_ entries',
                     'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
                     'infoEmpty' => 'Showing 0 to 0 of 0 entries',
