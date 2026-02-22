@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\{
+    HostelController,
     RoleController,
     PermissionController,
     UserController,
@@ -592,6 +593,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/export', 'export')->name('export');
         Route::post('/update-comment', 'updateComment')->name('update.comment');
+    });
+
+    // Hostel Management (ROD: Room Allotment, Check-in/Check-out, Issue Tracking)
+    Route::prefix('admin/hostel')->name('admin.hostel.')->controller(HostelController::class)->group(function () {
+        Route::get('/dashboard', 'dashboard')->name('dashboard');
+        Route::get('/hostel-wise-list', 'hostelWiseList')->name('hostel-wise-list');
+        Route::get('/room-allotment', 'roomAllotment')->name('room-allotment');
+        Route::post('/room-allotment', 'storeAllotment')->name('room-allotment.store');
+        Route::get('/room-issues', 'roomIssues')->name('room-issues');
+        Route::post('/room-issues', 'storeIssue')->name('room-issues.store');
+        Route::get('/rooms', 'rooms')->name('rooms');
+        Route::get('/rooms-by-building', 'roomsByBuilding')->name('rooms-by-building');
     });
 
     // Mess Management

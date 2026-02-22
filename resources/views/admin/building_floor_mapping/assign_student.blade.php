@@ -36,7 +36,7 @@
                             </div>
                         </div>
                         <hr class="mt-3 mb-3">
-                        {!! $dataTable->table(['class' => 'table table-striped table-hover align-middle text-nowrap hostel-assign-table']) !!}
+                        {!! $dataTable->table(['class' => 'table align-middle text-nowrap hostel-assign-table']) !!}
                     </div>
                 </div>
             </div>

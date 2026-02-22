@@ -70,6 +70,26 @@
                                 </a>
                             </li>
                             <div class="collapse" id="hostelMenu">
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.hostel.dashboard') ? 'active' : '' }}"
+                                        href="{{ route('admin.hostel.dashboard') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Hostel Dashboard</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.hostel.hostel-wise-list') ? 'active' : '' }}"
+                                        href="{{ route('admin.hostel.hostel-wise-list') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Hostel-wise List</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.hostel.room-allotment') ? 'active' : '' }}"
+                                        href="{{ route('admin.hostel.room-allotment') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Room Allotment</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.hostel.room-issues') ? 'active' : '' }}"
+                                        href="{{ route('admin.hostel.room-issues') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Room Issues</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.hostel.rooms') ? 'active' : '' }}"
+                                        href="{{ route('admin.hostel.rooms') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Room List</span>
+                                    </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.hostel.building.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Building Master</span>
