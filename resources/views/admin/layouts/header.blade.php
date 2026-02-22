@@ -23,7 +23,8 @@
         str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
         str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
         str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
-        str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
+        str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo') ||
+        request()->routeIs('admin.hostel.*') || str_starts_with($path, 'admin/hostel')
     ) {
         $activeNavTab = '#tab-setup';
     } elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
