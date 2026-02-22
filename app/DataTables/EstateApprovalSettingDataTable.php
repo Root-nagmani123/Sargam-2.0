@@ -25,6 +25,23 @@ class EstateApprovalSettingDataTable extends DataTable
                 $name = $emp ? (trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) ?: '—') : '—';
                 return e($name);
             })
+            ->filterColumn('requested_by', function ($query, $keyword) {
+                $this->applyNameSearch($query, $keyword, false);
+            })
+            ->filterColumn('approved_by', function ($query, $keyword) {
+                $this->applyNameSearch($query, $keyword, true);
+            })
+            ->filter(function ($query) {
+                $search = request()->get('search');
+                $searchValue = is_array($search) && isset($search['value'])
+                    ? trim((string) $search['value'])
+                    : trim((string) request()->input('search.value', ''));
+                if ($searchValue === '') {
+                    return;
+                }
+                $this->applyNameSearch($query, $searchValue, false);
+            }, true)
+            ->orderColumn('DT_RowIndex', 'estate_home_req_approval_mgmt.pk $1')
             ->addColumn('action', function ($row) {
                 $editUrl = route('admin.estate.add-approved-request-house', ['approver' => $row->employees_pk]);
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">' .
@@ -32,20 +49,6 @@ class EstateApprovalSettingDataTable extends DataTable
                     '</div>';
             })
             ->rawColumns(['action'])
-            ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
-                if (!empty($searchValue)) {
-                    $query->where(function ($q) use ($searchValue) {
-                        $q->whereHas('requestedBy', function ($sub) use ($searchValue) {
-                            $sub->where('first_name', 'like', "%{$searchValue}%")
-                                ->orWhere('last_name', 'like', "%{$searchValue}%");
-                        })->orWhereHas('approvedBy', function ($sub) use ($searchValue) {
-                            $sub->where('first_name', 'like', "%{$searchValue}%")
-                                ->orWhere('last_name', 'like', "%{$searchValue}%");
-                        });
-                    });
-                }
-            }, true)
             ->setRowId('pk');
     }
 
@@ -53,8 +56,7 @@ class EstateApprovalSettingDataTable extends DataTable
     {
         return $model->newQuery()
             ->with(['requestedBy', 'approvedBy'])
-            ->select('estate_home_req_approval_mgmt.*')
-            ->orderBy('estate_home_req_approval_mgmt.pk', 'desc');
+            ->select('estate_home_req_approval_mgmt.*');
     }
 
     public function html(): HtmlBuilder
@@ -86,14 +88,14 @@ class EstateApprovalSettingDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row flex-wrap align-items-center gap-2"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8 estate-approval-search-col"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('60px'),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('60px'),
             Column::make('requested_by')->title('Requested By')->orderable(false)->searchable(true),
             Column::make('approved_by')->title('Approved By')->orderable(false)->searchable(true),
             Column::computed('action')->title('Action')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
@@ -103,5 +105,38 @@ class EstateApprovalSettingDataTable extends DataTable
     protected function filename(): string
     {
         return 'EstateApprovalSetting_' . date('YmdHis');
+    }
+
+    /**
+     * Apply search on requested_by (employee_master_pk) and approved_by (employees_pk) via employee_master names.
+     * Both columns point to employee_master.pk; we search first_name, last_name and full name.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $keyword
+     * @param  bool  $useOrWhere  true for second column so condition is OR'd (requested_by OR approved_by)
+     */
+    protected function applyNameSearch($query, string $keyword, bool $useOrWhere): void
+    {
+        $keyword = trim($keyword);
+        if ($keyword === '') {
+            return;
+        }
+        $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
+        $closure = function ($q) use ($searchLike) {
+            $q->whereHas('requestedBy', function ($sub) use ($searchLike) {
+                $sub->where('first_name', 'like', $searchLike)
+                    ->orWhere('last_name', 'like', $searchLike)
+                    ->orWhereRaw('CONCAT(COALESCE(first_name,""), " ", COALESCE(last_name,"")) LIKE ?', [$searchLike]);
+            })->orWhereHas('approvedBy', function ($sub) use ($searchLike) {
+                $sub->where('first_name', 'like', $searchLike)
+                    ->orWhere('last_name', 'like', $searchLike)
+                    ->orWhereRaw('CONCAT(COALESCE(first_name,""), " ", COALESCE(last_name,"")) LIKE ?', [$searchLike]);
+            });
+        };
+        if ($useOrWhere) {
+            $query->orWhere($closure);
+        } else {
+            $query->where($closure);
+        }
     }
 }

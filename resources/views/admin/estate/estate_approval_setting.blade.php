@@ -22,7 +22,7 @@
                 </div>
             </div>
 
-            <div class="table-responsive">
+            <div class="table-responsive estate-approval-table-wrap">
                 {!! $dataTable->table([
                     'class' => 'table text-nowrap align-middle mb-0',
                     'aria-describedby' => 'estate-approval-caption'
@@ -32,6 +32,29 @@
         </div>
     </div>
 </div>
+
+@push('styles')
+<style>
+    #estateApprovalSettingTable_wrapper .estate-approval-search-col {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+    #estateApprovalSettingTable_wrapper .estate-approval-search-col .dataTables_filter {
+        margin: 0;
+    }
+    #estateApprovalSettingTable_wrapper .estate-approval-search-col .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin: 0;
+    }
+    #estateApprovalSettingTable_wrapper .estate-approval-search-col .dataTables_filter input {
+        margin-left: 0;
+    }
+</style>
+@endpush
 
 @push('scripts')
     {!! $dataTable->scripts(attributes: ['type' => 'module']) !!}

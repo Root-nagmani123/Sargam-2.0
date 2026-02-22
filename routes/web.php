@@ -1064,10 +1064,11 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         // Generate Estate Bill / Estate Bill Summary
         Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
 
-        // Return House
-        Route::get('return-house', function () {
-            return view('admin.estate.return_house');
-        })->name('return-house');
+        // Return House (estate_possession_other where return_home_status = 0)
+        Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+        Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
+        Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
+        Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
 
         // Define House
         Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
