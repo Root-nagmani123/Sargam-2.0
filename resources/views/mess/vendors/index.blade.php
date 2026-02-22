@@ -272,9 +272,11 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var viewBtn = e.target.closest('.btn-view-vendor');
         if (viewBtn) {
+            e.preventDefault();
+            e.stopPropagation();
             var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = val || '—'; };
             set('view_vendor_name', viewBtn.getAttribute('data-name'));
             set('view_vendor_email', viewBtn.getAttribute('data-email'));
@@ -290,6 +292,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var btn = e.target.closest('.btn-edit-vendor');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editVendorForm').action = '{{ url("admin/mess/vendors") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_vendor_name').value = btn.getAttribute('data-name') || '';
         document.getElementById('edit_vendor_email').value = btn.getAttribute('data-email') || '';
@@ -301,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('edit_vendor_ifsc_code').value = btn.getAttribute('data-ifsc-code') || '';
         document.getElementById('edit_vendor_account_number').value = btn.getAttribute('data-account-number') || '';
         new bootstrap.Modal(document.getElementById('editVendorModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush

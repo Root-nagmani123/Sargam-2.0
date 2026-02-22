@@ -129,6 +129,7 @@
                 <tr>
                     <th style="color: #fff; border-color: #af2910; width: 60px;">S. No.</th>
                     <th style="color: #fff; border-color: #af2910;">Buyer Name</th>
+                    <th style="color: #fff; border-color: #af2910; width: 90px;">Status</th>
                     <th style="color: #fff; border-color: #af2910;">Item Name</th>
                     <th style="color: #fff; border-color: #af2910; width: 120px;">Request No.</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right; width: 100px;">Quantity</th>
@@ -167,6 +168,7 @@
                                     <br>
                                     <small class="text-muted">Type: {{ $clientType }}</small>
                                 </td>
+                                <td class="text-center align-middle" rowspan="{{ $voucher->items->count() }}">{{ $voucher->status_label ?? 'N/A' }}</td>
                             @endif
                             <td>{{ $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A') }}</td>
                             @if($itemIndex === 0)
@@ -183,13 +185,13 @@
                     @endforeach
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">No selling vouchers found</td>
+                        <td colspan="8" class="text-center text-muted py-4">No selling vouchers found</td>
                     </tr>
                 @endforelse
                 
                 @if($vouchers->count() > 0)
                     <tr style="background-color: #f8f9fa; font-weight: bold;">
-                        <td colspan="6" class="text-end">Grand Total:</td>
+                        <td colspan="7" class="text-end">Grand Total:</td>
                         <td class="text-end">₹{{ number_format($totalAmount, 2) }}</td>
                     </tr>
                 @endif

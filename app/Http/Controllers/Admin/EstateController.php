@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\DataTables\EstateApprovalSettingDataTable;
 use App\DataTables\EstateChangeRequestDataTable;
+use App\DataTables\EstateMigrationReportDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\DataTables\EstateRequestForEstateDataTable;
@@ -14,6 +15,7 @@ use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
 use App\Models\EstateHomeRequestDetails;
 use App\Models\EstateHomeReqApprovalMgmt;
+use App\Models\EstateMigrationReport;
 use App\Models\EstateOtherRequest;
 use App\Models\EstatePossessionOther;
 use App\Models\EmployeeMaster;
@@ -1917,6 +1919,174 @@ class EstateController extends Controller
     public function houseStatus()
     {
         return view('admin.estate.house_status');
+    }
+
+    /**
+     * Estate Migration Report (1998–2026) – historical allotment data with filters.
+     * Filter options come from distinct values in the report table.
+     */
+    public function estateMigrationReport(EstateMigrationReportDataTable $dataTable)
+    {
+        $years = EstateMigrationReport::select('allotment_year')
+            ->whereNotNull('allotment_year')
+            ->distinct()
+            ->orderBy('allotment_year', 'desc')
+            ->pluck('allotment_year');
+
+        $campuses = EstateMigrationReport::select('campus_name')
+            ->whereNotNull('campus_name')
+            ->where('campus_name', '!=', '')
+            ->distinct()
+            ->orderBy('campus_name')
+            ->pluck('campus_name');
+
+        $buildings = EstateMigrationReport::select('building_name')
+            ->whereNotNull('building_name')
+            ->where('building_name', '!=', '')
+            ->distinct()
+            ->orderBy('building_name')
+            ->pluck('building_name');
+
+        $buildingTypes = EstateMigrationReport::select('type_of_building')
+            ->whereNotNull('type_of_building')
+            ->where('type_of_building', '!=', '')
+            ->distinct()
+            ->orderBy('type_of_building')
+            ->pluck('type_of_building');
+
+        $departments = EstateMigrationReport::select('department_name')
+            ->whereNotNull('department_name')
+            ->where('department_name', '!=', '')
+            ->distinct()
+            ->orderBy('department_name')
+            ->pluck('department_name');
+
+        $employeeTypes = EstateMigrationReport::select('employee_type')
+            ->whereNotNull('employee_type')
+            ->where('employee_type', '!=', '')
+            ->distinct()
+            ->orderBy('employee_type')
+            ->pluck('employee_type');
+
+        return $dataTable->render('admin.estate.estate_migration_report', compact(
+            'years', 'campuses', 'buildings', 'buildingTypes', 'departments', 'employeeTypes'
+        ));
+    }
+
+    /**
+     * API: Get cascading filter options for Estate Migration Report.
+     * Options depend on upstream filters: year → campus → building → type → department → employee type.
+     * Each dropdown only considers filters that come before it in the chain.
+     */
+    public function getEstateMigrationReportFilterOptions(Request $request)
+    {
+        $year = $request->query('year');
+        $campus = $request->query('campus');
+        $building = $request->query('building');
+        $type = $request->query('type');
+        $department = $request->query('department');
+
+        $response = [];
+
+        // Years: no upstream filters
+        $yearsQuery = EstateMigrationReport::query();
+        $response['years'] = $yearsQuery->select('allotment_year')
+            ->whereNotNull('allotment_year')
+            ->distinct()
+            ->orderBy('allotment_year', 'desc')
+            ->pluck('allotment_year');
+
+        // Campuses: filtered by year
+        $campusesQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $campusesQuery->where('allotment_year', (int) $year);
+        }
+        $response['campuses'] = $campusesQuery->select('campus_name')
+            ->whereNotNull('campus_name')
+            ->where('campus_name', '!=', '')
+            ->distinct()
+            ->orderBy('campus_name')
+            ->pluck('campus_name');
+
+        // Buildings: filtered by year, campus
+        $buildingsQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $buildingsQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $buildingsQuery->where('campus_name', $campus);
+        }
+        $response['buildings'] = $buildingsQuery->select('building_name')
+            ->whereNotNull('building_name')
+            ->where('building_name', '!=', '')
+            ->distinct()
+            ->orderBy('building_name')
+            ->pluck('building_name');
+
+        // Type of building: filtered by year, campus, building
+        $typesQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $typesQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $typesQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $typesQuery->where('building_name', $building);
+        }
+        $response['buildingTypes'] = $typesQuery->select('type_of_building')
+            ->whereNotNull('type_of_building')
+            ->where('type_of_building', '!=', '')
+            ->distinct()
+            ->orderBy('type_of_building')
+            ->pluck('type_of_building');
+
+        // Departments: filtered by year, campus, building, type
+        $deptQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $deptQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $deptQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $deptQuery->where('building_name', $building);
+        }
+        if ($type !== null && $type !== '') {
+            $deptQuery->where('type_of_building', $type);
+        }
+        $response['departments'] = $deptQuery->select('department_name')
+            ->whereNotNull('department_name')
+            ->where('department_name', '!=', '')
+            ->distinct()
+            ->orderBy('department_name')
+            ->pluck('department_name');
+
+        // Employee types: filtered by year, campus, building, type, department
+        $empTypeQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $empTypeQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $empTypeQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $empTypeQuery->where('building_name', $building);
+        }
+        if ($type !== null && $type !== '') {
+            $empTypeQuery->where('type_of_building', $type);
+        }
+        if ($department !== null && $department !== '') {
+            $empTypeQuery->where('department_name', $department);
+        }
+        $response['employeeTypes'] = $empTypeQuery->select('employee_type')
+            ->whereNotNull('employee_type')
+            ->where('employee_type', '!=', '')
+            ->distinct()
+            ->orderBy('employee_type')
+            ->pluck('employee_type');
+
+        return response()->json($response);
     }
 
     /**

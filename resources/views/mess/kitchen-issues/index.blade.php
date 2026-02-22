@@ -48,8 +48,9 @@
                         <label class="form-label small">End Date</label>
                         <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end gap-1">
                         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
                     </div>
                 </div>
             </form>
@@ -768,6 +769,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.setAttribute('data-unit', item.unit_measurement || '');
                 option.setAttribute('data-rate', item.standard_cost || 0);
                 option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.price_tiers && item.price_tiers.length > 0) {
+                    option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+                }
                 if (item.id == currentValue) {
                     option.selected = true;
                 }
@@ -779,9 +783,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getRowHtml(index) {
-        const options = filteredItems.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
-        ).join('');
+        const options = filteredItems.map(s => {
+            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
+            if (s.price_tiers && s.price_tiers.length > 0) {
+                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
+            }
+            return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        }).join('');
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
@@ -807,14 +815,43 @@ document.addEventListener('DOMContentLoaded', function() {
         enforceQtyWithinAvailable(row);
     }
 
+    function calcFifoAmount(tiers, qty) {
+        if (!tiers || tiers.length === 0 || qty <= 0) return null;
+        let remaining = qty;
+        let amount = 0;
+        for (let i = 0; i < tiers.length && remaining > 0; i++) {
+            const take = Math.min(remaining, parseFloat(tiers[i].quantity) || 0);
+            amount += take * (parseFloat(tiers[i].unit_price) || 0);
+            remaining -= take;
+        }
+        return remaining <= 0 ? amount : null;
+    }
+
     function calcRow(row) {
         const avail = parseFloat(row.querySelector('.sv-avail').value) || 0;
         const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
-        const rate = parseFloat(row.querySelector('.sv-rate').value) || 0;
+        const rateInp = row.querySelector('.sv-rate');
+        let rate = parseFloat(rateInp.value) || 0;
+        const sel = row.querySelector('.sv-item-select');
+        const opt = sel && sel.options[sel.selectedIndex];
+        const tiersJson = opt && opt.getAttribute('data-price-tiers');
+        const tiers = tiersJson ? (function(){ try { return JSON.parse(tiersJson); } catch(e) { return null; } })() : null;
+        let total;
+        if (tiers && tiers.length > 0 && qty > 0) {
+            const fifoAmount = calcFifoAmount(tiers, qty);
+            if (fifoAmount !== null) {
+                total = fifoAmount;
+                rate = qty > 0 ? total / qty : 0;
+                rateInp.value = rate.toFixed(2);
+            } else {
+                total = qty * rate;
+            }
+        } else {
+            total = qty * rate;
+        }
         const left = Math.max(0, avail - qty);
-        const total = qty * rate;
         row.querySelector('.sv-left').value = left;
-        row.querySelector('.sv-total').value = total.toFixed(2);
+        row.querySelector('.sv-total').value = (total || 0).toFixed(2);
         enforceQtyWithinAvailable(row);
     }
 
@@ -1116,7 +1153,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
         if (isOt || isCourse) {
-            nameInput.style.display = 'none';
+            nameInput.style.display = 'block';
+            nameInput.readOnly = true;
             nameInput.removeAttribute('required');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
             if (isCourse && editCourseSelect) { editCourseSelect.style.display = 'block'; }
@@ -1150,13 +1188,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
                 if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                 if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.readOnly = true; nameInput.placeholder = 'Select course above'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = true; nameInput.placeholder = 'Select course above'; nameInput.value = nameInput.value || ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
                 if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
                 if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
                 if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = true; nameInput.value = nameInput.value || ''; nameInput.removeAttribute('required'); }
             } else {
                 if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
@@ -1269,11 +1307,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // View button handler (use closest() for reliable single-click on DataTables rows)
-    document.addEventListener('click', function(e) {
+    // View button handler (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-view-sv');
         if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found');
@@ -1330,13 +1369,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Failed to load selling voucher: ' + err.message); 
                 });
         }
-    });
+    }, true);
 
-    // Return button handler (use closest() for reliable single-click on DataTables rows)
-    document.addEventListener('click', function(e) {
+    // Return button handler (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-return-sv');
         if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for return');
@@ -1376,7 +1416,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Failed to load return data: ' + err.message); 
                 });
         }
-    });
+    }, true);
 
     function enforceReturnQtyWithinIssued(inputEl) {
         if (!inputEl) return;
@@ -1442,11 +1482,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }, true);
     }
 
-    // Edit button handler (use closest() for reliable single-click on DataTables rows)
-    document.addEventListener('click', function(e) {
+    // Edit button handler (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-edit-sv');
         if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
                 console.error('No voucher ID found for edit');
@@ -1518,13 +1559,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
                         if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
-                        if (editNameInp) { editNameInp.readOnly = true; editNameInp.placeholder = 'Select course above'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
+                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.placeholder = 'Name (from course/student)'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else if (isCourse) {
                         if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
                         if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
                         if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
                         if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_type_pk || ''; }
-                        if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
+                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else {
                         if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (v.client_type_slug || 'employee'); }); }
                         if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
@@ -1543,7 +1584,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Failed to load selling voucher: ' + err.message); 
                 });
         }
-    });
+    }, true);
 
     const editModalAddItemRow = document.getElementById('editModalAddItemRow');
     if (editModalAddItemRow) {
