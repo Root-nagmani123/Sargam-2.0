@@ -15,7 +15,9 @@
                     <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
                     <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
                 </div>
-                <div class="flex-shrink-0">
+                <div class="flex-shrink-0 d-flex flex-wrap gap-2">
+                    <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
+                    <a href="{{ route('admin.estate.hac-forward') }}" class="btn btn-outline-primary px-3" title="HAC Forward"><i class="bi bi-send-fill me-1"></i> HAC Forward</a>
                     <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
                 </div>
             </div>
@@ -23,7 +25,7 @@
             <div id="request-for-estate-card-body">
             <div class="table-responsive request-for-estate-table-wrap">
                 {!! $dataTable->table([
-                    'class' => 'table table-bordered table-striped table-hover text-nowrap align-middle mb-0',
+                    'class' => 'table text-nowrap align-middle mb-0',
                     'aria-describedby' => 'request-for-estate-caption'
                 ]) !!}
             </div>

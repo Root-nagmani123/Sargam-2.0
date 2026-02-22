@@ -1002,6 +1002,12 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         // Request For Estate (estate_home_request_details + possession)
         Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
         Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
+
+        // Put In HAC & HAC Forward workflow
+        Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
+        Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
+        Route::get('hac-forward', [EstateController::class, 'hacForward'])->name('hac-forward');
+        Route::post('request-for-estate/forward/{id}', [EstateController::class, 'forwardToAllotment'])->name('request-for-estate.forward');
         Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
         Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
         Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
