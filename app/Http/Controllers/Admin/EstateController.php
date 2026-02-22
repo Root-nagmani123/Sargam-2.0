@@ -9,8 +9,6 @@ use App\DataTables\EstatePossessionDetailsDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\DataTables\EstateRequestForEstateDataTable;
 use App\DataTables\EstateReturnHouseDataTable;
-use App\DataTables\EstateRequestPutInHacDataTable;
-use App\DataTables\EstateHacApprovedDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateHouse;
 use App\Models\EstateMonthReadingDetails;
@@ -2468,8 +2466,8 @@ class EstateController extends Controller
     }
 
     /**
-     * Return House - Listing (estate_possession_other where return_home_status = 1).
-     * Pass requesters & campuses for Add Request Details modal.
+     * Return House - Listing (estate_possession_other where return_home_status = 0).
+     * Pass requesters & campuses for Add Request Details modal (dynamic dropdowns).
      */
     public function returnHouse(EstateReturnHouseDataTable $dataTable)
     {
@@ -2499,17 +2497,15 @@ class EstateController extends Controller
     public function markReturnHouse(Request $request, $id)
     {
         $record = EstatePossessionOther::find($id);
-        if (! $record) {
+        if (!$record) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
             }
             return redirect()->route('admin.estate.return-house')->with('error', 'Record not found.');
         }
 
-        $housePk = (int) ($record->estate_house_master_pk ?? 0);
         $record->return_home_status = 1;
         $record->save();
-        $this->refreshHouseUsedStatusFromPossession($housePk);
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'House marked as returned successfully.']);
@@ -2543,39 +2539,17 @@ class EstateController extends Controller
     {
         $type = $request->get('employee_type', 'Other Employee');
         if ($type === 'LBSNAA') {
-            $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
-            $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
-
-            $empIdJoinColumn = $hasEmpId
-                ? 'em.emp_id'
-                : ($hasEmployeeId ? 'em.employee_id' : null);
-
-            $nameSelect = "COALESCE(NULLIF(TRIM(ehrd.emp_name), ''), NULLIF(TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.last_name, ''))), ''), NULLIF(TRIM(ehrd.employee_id), ''), CONCAT('Request #', ehrd.pk))";
-
-            $list = DB::table('estate_home_request_details as ehrd')
-                ->leftJoin('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-                ->leftJoin('employee_master as em', function ($join) use ($empIdJoinColumn) {
-                    $join->on('em.pk', '=', 'ehrd.employee_pk');
-                    if ($empIdJoinColumn) {
-                        $join->orOn(DB::raw($empIdJoinColumn), '=', 'ehrd.employee_id');
-                    }
-                })
-                ->select('ehrd.pk as id', DB::raw($nameSelect . ' as name'), 'ehrd.req_id as request_no')
-                ->distinct()
-                ->orderByRaw($nameSelect . ' asc')
+            $list = DB::table('estate_possession_details as epd')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('epd.return_home_status', 0)
+                ->whereNotNull('epd.estate_house_master_pk')
+                ->select('epd.pk as id', 'ehrd.emp_name as name', 'ehrd.req_id as request_no')
+                ->orderBy('ehrd.emp_name')
                 ->get();
         } else {
-            $otherNameSelect = "COALESCE(NULLIF(TRIM(emp_name), ''), NULLIF(TRIM(request_no_oth), ''), CONCAT('Request #', pk))";
-
-            $list = DB::table('estate_other_req')
-                ->select(
-                    'pk as id',
-                    DB::raw($otherNameSelect . ' as name'),
-                    'request_no_oth as request_no',
-                    'section'
-                )
-                ->orderByRaw($otherNameSelect . ' asc')
-                ->get();
+            $list = EstateOtherRequest::orderBy('emp_name')
+                ->get(['pk as id', 'emp_name as name', 'request_no_oth as request_no', 'section'])
+                ->map(fn ($r) => (object) ['id' => $r->id, 'name' => $r->name, 'request_no' => $r->request_no, 'section' => $r->section ?? '']);
         }
         return response()->json(['status' => true, 'data' => $list]);
     }
@@ -2592,15 +2566,15 @@ class EstateController extends Controller
             return response()->json(['status' => false, 'data' => null]);
         }
         if ($type === 'LBSNAA') {
-            $row = DB::table('estate_home_request_details as ehrd')
-                ->leftJoin('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-                ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
-                ->leftJoin('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
-                ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
-                ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+            $row = DB::table('estate_possession_details as epd')
+                ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->join('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
+                ->join('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
+                ->join('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->leftJoin('estate_unit_master as eum', 'ehm.estate_unit_master_pk', '=', 'eum.pk')
                 ->leftJoin('estate_unit_type_master as eut', 'eum.estate_unit_type_master_pk', '=', 'eut.pk')
-                ->where('ehrd.pk', $id)
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('epd.pk', $id)
                 ->select(
                     'ec.pk as estate_campus_master_pk',
                     'ec.campus_name',
@@ -2616,7 +2590,6 @@ class EstateController extends Controller
                     'epd.possession_date as possession_date_oth',
                     'ehrd.remarks as section_display'
                 )
-                ->orderByDesc('epd.pk')
                 ->first();
             if (!$row) {
                 return response()->json(['status' => false, 'data' => null]);
@@ -2640,8 +2613,6 @@ class EstateController extends Controller
             ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
             ->where('epo.estate_other_req_pk', $id)
-            ->where('epo.return_home_status', 0)
-            ->whereNotNull('epo.estate_house_master_pk')
             ->orderBy('epo.pk', 'desc')
             ->select(
                 'ec.pk as estate_campus_master_pk',
