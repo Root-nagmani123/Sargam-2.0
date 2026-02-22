@@ -177,6 +177,25 @@ class EstateController extends Controller
     }
 
     /**
+     * Delete a single estate approval setting record.
+     */
+    public function destroyEstateApprovalSetting(Request $request, $id)
+    {
+        $record = EstateHomeReqApprovalMgmt::find($id);
+        if (!$record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.estate-approval-setting')->with('error', 'Record not found.');
+        }
+        $record->delete();
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Approval setting deleted successfully.']);
+        }
+        return redirect()->route('admin.estate.estate-approval-setting')->with('success', 'Approval setting deleted successfully.');
+    }
+
+    /**
      * Store or update Request For Estate (estate_home_request_details).
      */
     public function storeRequestForEstate(Request $request)
