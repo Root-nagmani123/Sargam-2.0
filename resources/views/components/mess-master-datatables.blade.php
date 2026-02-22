@@ -12,6 +12,7 @@
     $actionColumnIndices = is_array($actionColumnIndex) ? $actionColumnIndex : ($actionColumnIndex >= 0 ? [$actionColumnIndex] : []);
     $infoLabel = $infoLabel ?? 'entries';
     $searchDelay = (int) ($searchDelay ?? 300);
+    $responsive = isset($responsive) ? (bool) $responsive : true;
     $ordering = isset($ordering) ? (bool) $ordering : true;
     $pageLength = (int) ($pageLength ?? 10);
     $lengthMenu = $lengthMenu ?? [[10, 25, 50, 100], [10, 25, 50, 100]];
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var lengthMenu = @json($lengthMenu);
 
     $table.DataTable({
+        responsive: {{ $responsive ? 'true' : 'false' }},
         ordering: {{ $ordering ? 'true' : 'false' }},
         order: order,
         pageLength: {{ $pageLength }},

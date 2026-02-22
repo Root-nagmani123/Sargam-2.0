@@ -2,154 +2,156 @@
 @section('title', 'Selling Voucher')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Selling Voucher</h4>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">ADD Selling Voucher</button>
+    <x-breadcrum title="Selling Voucher" />
+    <x-session_message />
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h4 class="mb-0 fw-semibold">Selling Voucher</h4>
+        <button type="button" class="btn btn-primary rounded-2 px-3" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Selling Voucher
+        </button>
     </div>
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    <div class="card mb-3">
-        <div class="card-body">
+    <div class="card mb-4 shadow-sm border-0 rounded-3">
+        <div class="card-body p-3 p-md-4">
             <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                <div class="row g-2">
-                    <div class="col-md-2">
-                        <label class="form-label small">Status</label>
-                        <select name="status" class="form-select form-select-sm">
+                <div class="row g-3">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small text-body-secondary fw-medium">Status</label>
+                        <select name="status" class="form-select form-select-sm rounded-2">
                             <option value="">All</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                             <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
                             <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Completed</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Store</label>
-                        <select name="store" class="form-select form-select-sm">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small text-body-secondary fw-medium">Store</label>
+                        <select name="store" class="form-select form-select-sm rounded-2">
                             <option value="">All</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Start Date</label>
-                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small text-body-secondary fw-medium">Start Date</label>
+                        <input type="date" name="start_date" class="form-control form-control-sm rounded-2" value="{{ request('start_date') }}">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">End Date</label>
-                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small text-body-secondary fw-medium">End Date</label>
+                        <input type="date" name="end_date" class="form-control form-control-sm rounded-2" value="{{ request('end_date') }}">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end gap-1">
-                        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    <div class="col-12 col-md-2 d-flex align-items-end gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-2">Filter</button>
+                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm rounded-2">Clear</a>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle" id="sellingVouchersTable">
-            <thead style="background-color: #af2910;">
-                <tr>
-                    <th style="color: #fff; width: 50px;">Serial No.</th>
-                    <th style="color: #fff;">Item Name</th>
-                    <th style="color: #fff;">Item Quantity</th>
-                    <th style="color: #fff;">Return Quantity</th>
-                    <th style="color: #fff;">Transfer From Store</th>
-                    <th style="color: #fff;">Client Type</th>
-                    <th style="color: #fff;">Client Name</th>
-                    <th style="color: #fff;">Name</th>
-                    <th style="color: #fff;">Payment Type</th>
-                    <th style="color: #fff;">Request Date</th>
-                    <th style="color: #fff;">Status</th>
-                    <th style="color: #fff;">Return Item</th>
-                    <th style="color: #fff; min-width: 120px;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @php $serial = 1; @endphp
-                @forelse($kitchenIssues as $voucher)
-                    @forelse($voucher->items as $item)
+   <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-body">
+            <div class="table-responsive table-scroll-vertical">
+                <table class="table table-hover text-nowrap align-middle mb-0" id="sellingVouchersTable">
+                    <thead class="table-light">
                         <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'Online' : '—')) }}</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td>
-                                @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
-                                @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
-                                @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
-                                @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
-                            </td>
-                            <td>
-                                @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge bg-info">Returned</span>
-                                @endif
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
+                            <th class="col py-3 fw-semibold text-body-secondary">Serial No.</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Item Name</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Item Quantity</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Return Quantity</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Transfer From Store</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Client Type</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Client Name</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Name</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Payment Type</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Request Date</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Status</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Return Item</th>
+                            <th class="col py-3 fw-semibold text-body-secondary">Action</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>{{ $voucher->resolved_store_name }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>{{ $voucher->display_client_name }}</td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>—</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                </form>
-                            </td>
+                    </thead>
+                    <tbody>
+                        @php $serial = 1; @endphp
+                        @forelse($kitchenIssues as $voucher)
+                            @forelse($voucher->items as $item)
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
+                                    <td>{{ $item->quantity }}</td>
+                                    <td>{{ $item->return_quantity ?? 0 }}</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'Online' : '—')) }}</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td>
+                                        @if($voucher->status == 0)<span class="badge bg-warning text-dark rounded-pill px-2">Pending</span>
+                                        @elseif($voucher->status == 2)<span class="badge bg-success rounded-pill px-2">Approved</span>
+                                        @elseif($voucher->status == 4)<span class="badge bg-primary rounded-pill px-2">Completed</span>
+                                        @else<span class="badge bg-secondary rounded-pill px-2">{{ $voucher->status }}</span>@endif
+                                    </td>
+                                    <td>
+                                        @if(($item->return_quantity ?? 0) > 0)
+                                            <span class="badge bg-info rounded-pill px-2">Returned</span>
+                                        @endif
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-2 ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                        <button type="button" class="btn btn-sm btn-info btn-view-sv rounded-2" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
+                                        <button type="button" class="btn btn-sm btn-warning text-dark btn-edit-sv rounded-2" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
+                                        <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger rounded-2" title="Delete" style="display: none;">Delete</button>
+                                        </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td>{{ $serial++ }}</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->resolved_store_name }}</td>
+                                    <td>{{ $voucher->client_type_label ?? '—' }}</td>
+                                    <td>{{ $voucher->display_client_name }}</td>
+                                    <td>{{ $voucher->client_name ?? '—' }}</td>
+                                    <td>—</td>
+                                    <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
+                                    <td><span class="badge bg-secondary rounded-pill px-2">{{ $voucher->status }}</span></td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-2 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                        <a href="{{ route('admin.mess.material-management.show', $voucher->pk) }}" class="btn btn-sm btn-outline-info rounded-2" data-voucher-id="{{ $voucher->pk }}" title="View"><i class="bi bi-eye"></i></a>
+                                        <a href="{{ route('admin.mess.material-management.edit', $voucher->pk) }}" class="btn btn-sm btn-outline-warning rounded-2 text-dark" data-voucher-id="{{ $voucher->pk }}" title="Edit"><i class="bi bi-pencil"></i></a>
+                                        <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <a href="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" class="btn btn-sm btn-outline-danger rounded-2" title="Delete" style="display: none;"><i class="bi bi-trash"></i></a>
+                                        </form>
+                                        </div>
+                                    </td>
                         </tr>
-                    @endforelse
+                            @endforelse
                 @empty
                     <tr>
-                        <td></td><td></td><td></td><td></td><td></td><td></td>
-                        <td class="text-center py-4">No selling vouchers found.</td>
-                        <td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td colspan="13" class="text-center py-5 text-body-secondary">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                            No selling vouchers found.
+                        </td>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+   </div>
 
     @include('components.mess-master-datatables', [
         'tableId' => 'sellingVouchersTable',
@@ -157,28 +159,33 @@
         'ordering' => false,
         'actionColumnIndex' => 12,
         'infoLabel' => 'selling vouchers',
-        'searchDelay' => 0
+        'searchDelay' => 0,
+        'responsive' => false
     ])
 </div>
 
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
+@media (max-width: 991.98px) {
+    .table-scroll-vertical { max-height: 70vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+}
+#sellingVouchersTable tbody td { padding: 0.75rem 1rem; vertical-align: middle; }
 #addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content shadow-lg rounded-3 border-0">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-0 pb-0 pt-3 px-4 bg-body">
                     <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body pt-2 px-4">
                     @if($errors->any())
-                        <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+                        <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">
                             <ul class="mb-0 small">
                                 @foreach($errors->all() as $error)
                                     <li>{{ $error }}</li>
@@ -189,14 +196,14 @@
                     @endif
 
                     {{-- Voucher Details (same pattern as Order Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
+                    <div class="card mb-4 shadow-sm border rounded-3 overflow-hidden">
+                        <div class="card-header bg-body py-3 border-bottom">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    <label class="form-label">Client Type <span class="text-danger">*</span></label>
+                                    <label class="form-label fw-medium">Client Type <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3 pt-1">
                                         @foreach($clientTypes as $slug => $label)
                                             <div class="form-check">
@@ -207,8 +214,8 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select" required>
+                                    <label class="form-label fw-medium">Payment Type <span class="text-danger">*</span></label>
+                                    <select name="payment_type" class="form-select rounded-2" required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                                         <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
                                         <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
@@ -291,11 +298,11 @@
                     </div>
 
                     {{-- Item Details (same pattern as Purchase Order Item Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card mb-4 shadow-sm border rounded-3 overflow-hidden">
+                        <div class="card-header bg-body d-flex justify-content-between align-items-center py-3 border-bottom">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="modalAddItemRow">
-                                + Add Item
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-2" id="modalAddItemRow">
+                                <i class="bi bi-plus-lg me-1"></i>Add Item
                             </button>
                         </div>
                         <div class="card-body p-0">
@@ -338,17 +345,17 @@
                                 </table>
                             </div>
                         </div>
-                        <div class="card-footer bg-light d-flex justify-content-end align-items-center">
+                        <div class="card-footer bg-body border-top d-flex justify-content-end align-items-center py-3">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="fw-semibold">Grand Total:</span>
+                                <span class="fw-semibold text-body-secondary">Grand Total:</span>
                                 <span class="fs-5 text-primary fw-bold" id="modalGrandTotal">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Selling Voucher</button>
+                <div class="modal-footer border-0 bg-body pt-0 pb-4 px-4 gap-2">
+                    <button type="button" class="btn btn-secondary rounded-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-2 px-4">Save Selling Voucher</button>
                 </div>
             </form>
         </div>
@@ -362,21 +369,21 @@
 #editSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
 </style>
 <div class="modal fade" id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content shadow-lg rounded-3 border-0">
             <form id="editSellingVoucherForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-0 pb-0 pt-3 px-4 bg-body">
                     <h5 class="modal-title fw-semibold" id="editSellingVoucherModalLabel">Edit Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
+                <div class="modal-body pt-2 px-4">
+                    <div class="card mb-4 shadow-sm border rounded-3 overflow-hidden">
+                        <div class="card-header bg-body py-3 border-bottom">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <div class="row g-3">
                                 <div class="col-md-12">
                                     <label class="form-label">Client Type <span class="text-danger">*</span></label>
@@ -468,10 +475,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card mb-4 shadow-sm border rounded-3 overflow-hidden">
+                        <div class="card-header bg-body d-flex justify-content-between align-items-center py-3 border-bottom">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="editModalAddItemRow">+ Add Item</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-2" id="editModalAddItemRow"><i class="bi bi-plus-lg me-1"></i>Add Item</button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -492,17 +499,17 @@
                                 </table>
                             </div>
                         </div>
-                        <div class="card-footer bg-light d-flex justify-content-end align-items-center">
+                        <div class="card-footer bg-body border-top d-flex justify-content-end align-items-center py-3">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="fw-semibold">Grand Total:</span>
+                                <span class="fw-semibold text-body-secondary">Grand Total:</span>
                                 <span class="fs-5 text-primary fw-bold" id="editModalGrandTotal">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Selling Voucher</button>
+                <div class="modal-footer border-0 bg-body pt-0 pb-4 px-4 gap-2">
+                    <button type="button" class="btn btn-secondary rounded-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-2 px-4">Update Selling Voucher</button>
                 </div>
             </form>
         </div>
@@ -536,15 +543,15 @@
 #viewSellingVoucherModal .modal-footer { background: #fff; border-color: #dee2e6; }
 </style>
 <div class="modal fade" id="viewSellingVoucherModal" tabindex="-1" aria-labelledby="viewSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header border-bottom bg-light">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content shadow-lg rounded-3 border-0">
+            <div class="modal-header border-0 pb-0 pt-3 px-4 bg-body">
                 <h5 class="modal-title fw-semibold" id="viewSellingVoucherModalLabel" style="color: #212529;">View Selling Voucher</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="card mb-4">
-                    <div class="card-header bg-white py-2">
+            <div class="modal-body pt-2 px-4">
+                <div class="card mb-4 shadow-sm border rounded-3 overflow-hidden">
+                    <div class="card-header bg-body py-3 border-bottom">
                         <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                     </div>
                     <div class="card-body" style="color: #212529;">
@@ -568,8 +575,8 @@
                         <p class="mb-0 mt-2" id="viewRemarksWrap" style="display:none; color: #212529;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
                     </div>
                 </div>
-                <div class="card mb-4" id="viewItemsCard">
-                    <div class="card-header bg-white py-2">
+                <div class="card mb-4 shadow-sm border rounded-3 overflow-hidden" id="viewItemsCard">
+                    <div class="card-header bg-body py-3 border-bottom">
                         <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                     </div>
                     <div class="card-body p-0">
@@ -589,7 +596,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-light d-flex justify-content-end" style="color: #212529;">
+                    <div class="card-footer bg-body border-top d-flex justify-content-end py-3" style="color: #212529;">
                         <strong>Grand Total: ₹<span id="viewModalGrandTotal">0.00</span></strong>
                     </div>
                 </div>
@@ -598,8 +605,8 @@
                     <span class="ms-3" id="viewUpdatedAtWrap" style="display:none;">Last Updated: <span id="viewUpdatedAt" style="color: #212529;"></span></span>
                 </div>
             </div>
-            <div class="modal-footer border-top">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0 bg-body pt-0 pb-4 px-4">
+                <button type="button" class="btn btn-secondary rounded-2" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -607,22 +614,22 @@
 
 {{-- Return Item Modal (Transfer To) --}}
 <div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content shadow-lg rounded-3 border-0">
             <form id="returnItemForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-0 pb-0 pt-3 px-4 bg-body">
                     <h5 class="modal-title fw-semibold" id="returnItemModalLabel">Transfer To</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Transfer From Store</label>
-                        <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
+                <div class="modal-body pt-2 px-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-body-secondary">Transfer From Store</label>
+                        <p class="mb-0 form-control-plaintext fw-medium" id="returnTransferFromStore">—</p>
                     </div>
-                    <div class="card">
-                        <div class="card-header bg-white py-2">
+                    <div class="card shadow-sm border rounded-3 overflow-hidden">
+                        <div class="card-header bg-body py-3 border-bottom">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                         </div>
                         <div class="card-body p-0">
@@ -643,9 +650,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
+                <div class="modal-footer border-0 bg-body pt-0 pb-4 px-4 gap-2">
+                    <button type="button" class="btn btn-secondary rounded-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-2 px-4">Update</button>
                 </div>
             </form>
         </div>
