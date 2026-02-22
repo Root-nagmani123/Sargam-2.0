@@ -920,6 +920,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('estate-approval-setting', [EstateController::class, 'estateApprovalSetting'])->name('estate-approval-setting');
         Route::get('add-approved-request-house', [EstateController::class, 'addApprovedRequestHouse'])->name('add-approved-request-house');
         Route::post('store-approved-request-house', [EstateController::class, 'storeApprovedRequestHouse'])->name('store-approved-request-house');
+        Route::delete('estate-approval-setting/{id}', [EstateController::class, 'destroyEstateApprovalSetting'])->name('estate-approval-setting.destroy');
 
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
