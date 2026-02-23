@@ -1,13 +1,13 @@
 @extends('admin.layouts.master')
-@section('title', 'Pending Duplicate Vehicle Pass Approvals')
+@section('title', 'Vehicle Pass Approvals')
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Pending Duplicate Vehicle Pass Approvals"></x-breadcrum>
+    <x-breadcrum title="Vehicle Pass Approvals"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Pending Duplicate Vehicle Pass Approvals</h4>
-                <a href="{{ route('admin.security.duplicate_vehicle_pass_approval.all') }}" class="btn btn-secondary">
+                <h4 class="mb-0">Vehicle Pass Approvals</h4>
+                <a href="{{ route('admin.security.vehicle_pass_approval.all') }}" class="btn btn-secondary">
                     View All Applications
                 </a>
             </div>
@@ -59,11 +59,11 @@
                                 <td>{{ $app->created_date ? $app->created_date->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
                                     <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.duplicate_vehicle_pass_approval.show', encrypt($app->vehicle_tw_pk)) }}"
+                                        <a href="{{ route('admin.security.vehicle_pass_approval.show', encrypt('dup-' . $app->vehicle_tw_pk)) }}"
                                            class="btn btn-sm btn-info" title="View Details">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                         </a>
-                                        <form action="{{ route('admin.security.duplicate_vehicle_pass_approval.approve', encrypt($app->vehicle_tw_pk)) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('admin.security.vehicle_pass_approval.approve', encrypt('dup-' . $app->vehicle_tw_pk)) }}" method="POST" class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-success" title="Approve"
                                                     onclick="return confirm('Approve this application?')">
@@ -123,7 +123,7 @@
 <script>
 function openRejectModal(btn) {
     const encryptedId = btn.getAttribute('data-encrypted-id');
-    const url = "{{ route('admin.security.duplicate_vehicle_pass_approval.reject', ':id') }}".replace(':id', encryptedId);
+    const url = "{{ route('admin.security.vehicle_pass_approval.reject', ':id') }}".replace(':id', encryptedId);
     document.getElementById('rejectForm').action = url;
     document.getElementById('reject_remarks').value = '';
     new bootstrap.Modal(document.getElementById('rejectModal')).show();

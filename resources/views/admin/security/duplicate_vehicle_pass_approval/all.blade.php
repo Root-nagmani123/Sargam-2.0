@@ -7,7 +7,7 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">All Duplicate Vehicle Pass Applications</h4>
-                <a href="{{ route('admin.security.duplicate_vehicle_pass_approval.index') }}" class="btn btn-primary">
+                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-primary">
                     Pending Approvals
                 </a>
             </div>
@@ -46,7 +46,7 @@
                                 </td>
                                 <td>{{ $app->created_date ? $app->created_date->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
-                                    <a href="{{ route('admin.security.duplicate_vehicle_pass_approval.show', encrypt($app->vehicle_tw_pk)) }}"
+                                    <a href="{{ route('admin.security.vehicle_pass_approval.show', encrypt('dup-' . $app->vehicle_tw_pk)) }}"
                                        class="btn btn-sm btn-info" title="View">
                                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                     </a>

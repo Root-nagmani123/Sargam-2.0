@@ -43,6 +43,8 @@ class SecurityFamilyIdApply extends Model
         'telephone_no',
         'vender_name',
         'emp_id_apply',
+        'employee_type',
+        'department_approval_emp_pk',
         'family_photo',
         'dup_pk',
         'dup_reason',

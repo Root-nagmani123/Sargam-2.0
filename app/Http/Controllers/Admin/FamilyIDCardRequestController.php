@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Exports\FamilyIDCardExport;
+use App\Models\EmployeeMaster;
 use App\Models\SecurityFamilyIdApply;
 use App\Support\IdCardSecurityMapper;
+use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,10 +22,12 @@ class FamilyIDCardRequestController extends Controller
 {
     /**
      * Group rows by (emp_id_apply, created_by, created_date) and return paginated group list.
+     * Filtered to show only requests created by current user (created_by = Auth::id())
      */
     private function groupedFamilyRequests(int $idStatus, int $perPage, string $pageName = 'page'): LengthAwarePaginator
     {
         $query = SecurityFamilyIdApply::query();
+        $query->where('created_by', Auth::user()->user_id);
         if ($idStatus === 1) {
             $query->where('id_status', 1);
         } else {
@@ -95,12 +99,40 @@ class FamilyIDCardRequestController extends Controller
 
     public function create()
     {
-        return view('admin.family_idcard.create');
+        $userDepartmentName = null;
+        $approvalAuthorityEmployees = collect();
+        $defaultApprovalAuthorityPk = null;
+        $authUserId = Auth::user()->user_id ?? null;
+        if ($authUserId) {
+            $authEmp = EmployeeMaster::with('department')
+                ->where('pk', $authUserId)
+                ->orWhere('pk_old', $authUserId)
+                ->first();
+            if ($authEmp) {
+                $defaultApprovalAuthorityPk = $authEmp->pk;
+                if ($authEmp->department_master_pk) {
+                    $userDepartmentName = $authEmp->department->department_name ?? null;
+                    $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                        ->where('department_master_pk', $authEmp->department_master_pk)
+                        ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                        ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                        ->orderBy('first_name')
+                        ->orderBy('last_name')
+                        ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+                }
+            }
+        }
+
+        return view('admin.family_idcard.create', [
+            'userDepartmentName' => $userDepartmentName,
+            'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+            'defaultApprovalAuthorityPk' => $defaultApprovalAuthorityPk,
+        ]);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'employee_id' => 'required|string|max:100',
             'designation' => 'required|string|max:255',
             'card_type' => 'required|string|max:100',
@@ -113,10 +145,18 @@ class FamilyIDCardRequestController extends Controller
             'members.*.dob' => 'nullable|date',
             'members.*.valid_from' => 'nullable|date',
             'members.*.valid_to' => 'nullable|date',
-        ]);
+        ];
+        if ($request->input('employee_type') === 'Contractual Employee') {
+            $rules['approval_authority'] = 'required|exists:employee_master,pk';
+        }
+        $request->validate($rules);
 
         $employeeId = $request->input('employee_id');
-        $createdBy = Auth::id();
+        $createdBy = Auth::user()->user_id;
+        $employeeType = $request->input('employee_type', 'Permanent Employee');
+        $approvalAuthorityPk = $request->input('employee_type') === 'Contractual Employee'
+            ? (int) $request->input('approval_authority')
+            : null;
         $members = $request->input('members', []);
         $count = 0;
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
@@ -168,7 +208,7 @@ class FamilyIDCardRequestController extends Controller
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
         $request = IdCardSecurityMapper::toFamilyRequestDto($row);
-        $existingFamilyMembers = SecurityFamilyIdApply::where('created_by', Auth::id())
+        $existingFamilyMembers = SecurityFamilyIdApply::where('created_by', Auth::user()->user_id)
             ->where('fml_id_apply', '!=', $id)->orderBy('created_date', 'desc')->limit(50)->get()
             ->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
         return view('admin.family_idcard.edit', [

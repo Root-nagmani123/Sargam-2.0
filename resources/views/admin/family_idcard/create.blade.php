@@ -7,6 +7,24 @@
     <form action="{{ route('admin.family_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
         @csrf
 
+        <!-- Employee Type: Government / Contractual -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body py-4 px-4">
+                <div class="d-flex flex-wrap gap-4 align-items-center">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="employee_type" id="emp_type_govt" value="Permanent Employee"
+                               {{ old('employee_type', 'Permanent Employee') == 'Permanent Employee' ? 'checked' : '' }} required>
+                        <label class="form-check-label" for="emp_type_govt">Government Employee</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="employee_type" id="emp_type_cont" value="Contractual Employee"
+                               {{ old('employee_type') == 'Contractual Employee' ? 'checked' : '' }} required>
+                        <label class="form-check-label" for="emp_type_cont">Contractual Employee</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
                 <h6 class="fw-semibold mb-4">Please add the Request For Family Member ID Card.</h6>
@@ -15,7 +33,8 @@
                     $oldEmployeeId = old('employee_id', 'ITS005');
                     $oldDesignation = old('designation', 'Assistant Programmer');
                     $oldCardType = old('card_type', 'Family');
-                    $oldSection = old('section', 'NIELIT');
+                    $oldSection = old('section', $userDepartmentName ?? 'NIELIT');
+                    $oldApprovalAuthority = old('approval_authority', $defaultApprovalAuthorityPk ?? '');
                 @endphp
 
                 <div class="row g-3 mb-4">
@@ -43,6 +62,19 @@
                         <input type="text" name="section" id="section" class="form-control" value="{{ $oldSection }}" placeholder="Enter Section" required>
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                    {{-- Approval Authority: shown only when Contractual --}}
+                  {{--  <div class="col-md-6 fml-approval-authority-wrap" id="fmlApprovalAuthorityWrap" style="display: none;">
+                        <label for="approval_authority" class="form-label">Approval Authority <span class="text-danger">*</span></label>
+                        <select name="approval_authority" id="approval_authority" class="form-select" disabled>
+                            <option value="">-- Select --</option>
+                            @foreach($approvalAuthorityEmployees ?? [] as $emp)
+                                @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
+                                <option value="{{ $emp->pk }}" {{ $oldApprovalAuthority == $emp->pk ? 'selected' : '' }}>{{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}</option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">On behalf of your section</small>
+                        @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div> --}}
                     <div class="col-12">
                         <label class="form-label">Upload Group Photo <span class="text-danger">*</span></label>
                         <div class="family-idcard-upload-zone position-relative" id="groupPhotoUploadZone">
@@ -289,6 +321,28 @@
 <script>
 (function() {
     'use strict';
+
+    // Employee type toggle: show Approval Authority when Contractual
+    function toggleFmlApprovalAuthority() {
+        var contRad = document.getElementById('emp_type_cont');
+        var wrap = document.getElementById('fmlApprovalAuthorityWrap');
+        var sel = document.getElementById('approval_authority');
+        if (!contRad || !wrap || !sel) return;
+        if (contRad.checked) {
+            wrap.style.display = 'block';
+            sel.disabled = false;
+            sel.required = true;
+        } else {
+            wrap.style.display = 'none';
+            sel.disabled = true;
+            sel.required = false;
+            sel.value = '';
+        }
+    }
+    document.getElementById('emp_type_govt')?.addEventListener('change', toggleFmlApprovalAuthority);
+    document.getElementById('emp_type_cont')?.addEventListener('change', toggleFmlApprovalAuthority);
+    toggleFmlApprovalAuthority();
+
     var tbody = document.getElementById('familyMembersBody');
     var addBtn = document.getElementById('addFamilyMemberBtn');
     var template = document.getElementById('familyMemberRowTemplate');

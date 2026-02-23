@@ -2,30 +2,27 @@
 @section('title', 'Employee ID Card Request - Sargam | Lal Bahadur Shastri')
 @section('setup_content')
 <div class="container-fluid idcard-index-page">
-    <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
     <x-breadcrum title="Request Employee ID Card"></x-breadcrum>
 
-    @php $showArchiveTab = request()->has('archive_page'); @endphp
-    <!-- Tabs + Generate Button Row - Bootstrap 5.3 enhanced -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <ul class="nav nav-pills nav-fill gap-2 idcard-index-tabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link {{ $showArchiveTab ? '' : 'active' }} rounded-1 px-4 py-2" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="{{ $showArchiveTab ? 'false' : 'true' }}">
-                    Active
-                    @if(($activeTotal ?? 0) > 0)
-                        <span class="badge text-bg-light text-primary ms-1">{{ $activeTotal }}</span>
-                    @endif
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link {{ $showArchiveTab ? 'active' : '' }} rounded-1 px-4 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="{{ $showArchiveTab ? 'true' : 'false' }}">
-                    Archive
-                    @if(($archivedTotal ?? 0) > 0)
-                        <span class="badge text-bg-secondary ms-1">{{ $archivedTotal }}</span>
-                    @endif
-                </button>
-            </li>
-        </ul>
+        <form method="GET" action="{{ request()->url() }}" class="d-flex flex-wrap align-items-center gap-3" id="filterForm">
+            <label class="mb-0 fw-medium text-muted">Filter:</label>
+            <select name="filter" class="form-select form-select-sm" style="width:auto; min-width:140px;">
+                <option value="active" {{ ($filter ?? 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                <option value="archive" {{ ($filter ?? '') === 'archive' ? 'selected' : '' }}>Archive</option>
+                <option value="all" {{ ($filter ?? '') === 'all' ? 'selected' : '' }}>All</option>
+            </select>
+            <label class="mb-0 fw-medium text-muted">Date From:</label>
+            <input type="date" name="date_from" class="form-control form-control-sm" style="width:auto; max-width:150px;" value="{{ $dateFrom ?? '' }}" placeholder="dd-mm-yyyy">
+            <label class="mb-0 fw-medium text-muted">Date To:</label>
+            <input type="date" name="date_to" class="form-control form-control-sm" style="width:auto; max-width:150px;" value="{{ $dateTo ?? '' }}" placeholder="dd-mm-yyyy">
+            <label class="mb-0 fw-medium text-muted">Name:</label>
+            <input type="text" name="search" class="form-control form-control-sm" style="width:auto; min-width:180px;" value="{{ $search ?? '' }}" placeholder="Search by name">
+            <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+            @if(($dateFrom ?? '') || ($dateTo ?? '') || ($search ?? ''))
+                <a href="{{ request()->url() }}?filter={{ $filter ?? 'active' }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+            @endif
+        </form>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <div class="dropdown">
                 <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -101,406 +98,167 @@
         </div>
     </div>
 
-    <!-- Table Card - Bootstrap 5.3 enhanced -->
     <div class="card border-0 shadow idcard-index-card overflow-hidden">
         <div class="card-body p-0">
-            <div class="tab-content">
-                <div class="tab-pane fade {{ $showArchiveTab ? '' : 'show active' }}" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle idcard-index-table">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th class="text-nowrap">S.No.</th>
-                                    <th>ID Card</th>
-                                    <th>Request date</th>
-                                    <th>Employee Name</th>
-                                    <th>Designation</th>
-                                    <th>Card Type</th>
-                                    <th>Request For</th>
-                                    <th>Duplication</th>
-                                    <th>Extension</th>
-                                    <th>Valid Upto</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($activeRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}">
-                                        <td class="fw-medium">{{ $activeRequests->firstItem() + $index }}</td>
-                                        <td>
-                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
-                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td>{{ $request->name }}</td>
-                                        <td>{{ $request->designation ?? '--' }}</td>
-                                        <td>{{ $request->card_type ?? '--' }}</td>
-                                        <td>{{ $request->request_for ?? '--' }}</td>
-                                        <td>
-                                            <a href="#" class="amend-dup-ext-btn text-decoration-none" data-request-id="{{ $request->id }}" data-type="duplication" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '' }}" data-extension="{{ $request->id_card_valid_upto ?? '' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-request-for="{{ $request->request_for }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-status="{{ $request->status ?? '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                @if(in_array($request->request_for, ['Replacement', 'Duplication']) && $request->duplication_reason)
-                                                    @php $dupBadge = match($request->duplication_reason ?? '') { 'Lost' => 'danger', 'Damage' => 'warning', 'Expired Card' => 'info', default => 'secondary' }; @endphp
-                                                    <span class="badge bg-{{ $dupBadge }} text-dark">{{ $request->duplication_reason }}</span>
-                                                @else
-                                                    <span class="text-primary">Duplication</span>
-                                                @endif
-                                            </a>
-                                        </td>
-                                        <td>
-                                            <a href="#" class="amend-dup-ext-btn text-decoration-none" data-request-id="{{ $request->id }}" data-type="extension" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '' }}" data-extension="{{ $request->id_card_valid_upto ?? '' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-request-for="{{ $request->request_for }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-status="{{ $request->status ?? '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                @if($request->request_for == 'Extension' && $request->id_card_valid_upto)
-                                                    <span class="badge bg-info">{{ $request->id_card_valid_upto }}</span>
-                                                @else
-                                                    <span class="text-primary">Extension</span>
-                                                @endif
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
-                                        <td>
-                                            @php
-                                                $statusClass = match($request->status ?? '') {
-                                                    'Pending' => 'warning',
-                                                    'Approved' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Issued' => 'primary',
-                                                    default => 'secondary'
-                                                };
-                                                $statusLabel = $request->status ?? '--';
-                                                if ($request->status === 'Pending') {
-                                                    $statusLabel = $request->approved_by_a1 ? 'Pending (A2)' : 'Pending (A1)';
-                                                }
-                                            @endphp
-                                            <span class="badge bg-{{ $statusClass }}">{{ $statusLabel }}</span>
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="d-flex align-items-center justify-content-end gap-1" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
-                                                   class="btn btn-sm btn-outline-primary rounded-2 view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                                </a>
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
-                                                   class="btn btn-sm btn-outline-secondary rounded-2 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                                </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" 
-                                                      method="POST" class="d-inline" 
-                                                      onsubmit="return confirm('Are you sure you want to archive this request?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="12" class="text-center py-5 table-empty-state">
-                                            <div class="d-inline-flex flex-column align-items-center p-4 bg-light rounded-3">
-                                                <i class="material-icons material-symbols-rounded mb-3 text-muted" style="font-size:56px;">inbox</i>
-                                                <p class="mb-1 fw-medium">No active ID card requests found.</p>
-                                                <small class="text-muted mb-3">Click "Generate New ID Card" to create one.</small>
-                                                <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary btn-sm rounded-pill px-4 py-2">
-                                                    <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
-                                                    Create Request
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $activeRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $activeRequests->lastItem() ?? 0 }}</strong> active requests (this page)
-                        </div>
-                        <nav aria-label="Active requests pagination">
-                            {{ $activeRequests->links('pagination::bootstrap-5') }}
-                        </nav>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="duplication-panel" role="tabpanel" aria-labelledby="duplication-tab">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle idcard-index-table">
-                            <thead>
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>ID Card</th>
-                                    <th>Request date</th>
-                                    <th>Employee Name</th>
-                                    <th>Designation</th>
-                                    <th>Duplication</th>
-                                    <th>Extension</th>
-                                    <th>Valid Upto</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($duplicationRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}">
-                                        <td class="fw-medium">{{ $duplicationRequests->firstItem() + $index }}</td>
-                                        <td>
-                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
-                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td>{{ $request->name }}</td>
-                                        <td>{{ $request->designation ?? '--' }}</td>
-                                        <td>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle idcard-index-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-nowrap">S.No.</th>
+                            <th>ID Card</th>
+                            <th>Request date</th>
+                            <th>Employee Name</th>
+                            <th>Designation</th>
+                            <th>Card Type</th>
+                            <th>Request For</th>
+                            <th>Duplication</th>
+                            <th>Extension</th>
+                            <th>Valid Upto</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($requests as $index => $request)
+                            <tr data-request-id="{{ $request->id }}">
+                                <td class="fw-medium">{{ $requests->firstItem() + $index }}</td>
+                                <td>
+                                    <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
+                                        <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
+                                    </a>
+                                </td>
+                                <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
+                                <td>{{ $request->name }}</td>
+                                <td>{{ $request->designation ?? '--' }}</td>
+                                <td>{{ $request->card_type ?? '--' }}</td>
+                                <td>{{ $request->request_for ?? '--' }}</td>
+                                <td>
+                                    @if(($filter ?? 'active') !== 'archive')
+                                    <a href="#" class="amend-dup-ext-btn text-decoration-none" data-request-id="{{ $request->id }}" data-type="duplication" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '' }}" data-extension="{{ $request->id_card_valid_upto ?? '' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-request-for="{{ $request->request_for }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-status="{{ $request->status ?? '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                        @if(in_array($request->request_for ?? '', ['Replacement', 'Duplication']) && $request->duplication_reason)
                                             @php $dupBadge = match($request->duplication_reason ?? '') { 'Lost' => 'danger', 'Damage' => 'warning', 'Expired Card' => 'info', default => 'secondary' }; @endphp
-                                            <span class="badge bg-{{ $dupBadge }} text-dark">
-                                                {{ $request->duplication_reason ?? '--' }}
-                                            </span>
-                                        </td>
-                                        <td><span class="text-muted">--</span></td>
-                                        <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
-                                        <td>
-                                            @php
-                                                $statusClass = match($request->status ?? '') {
-                                                    'Pending' => 'warning',
-                                                    'Approved' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Issued' => 'primary',
-                                                    default => 'secondary'
-                                                };
-                                            @endphp
-                                            <span class="badge bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="text-primary d-inline-flex align-items-center gap-1 view-details-btn" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->request_for == 'Extension' ? ($request->id_card_valid_upto ?? '--') : '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded">visibility</i>
-                                                </a>
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="text-primary d-inline-flex align-items-center gap-1" title="Edit">
-                                                    <i class="material-icons material-symbols-rounded">edit</i>
-                                                </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-link text-danger p-0 border-0" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded">delete</i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">
-                                            <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">content_copy</i>
-                                            <p class="mb-1">No ID card duplication requests found.</p>
-                                            <small>Duplication requests (Lost/Damage) will appear here when request for is "Replacement" or "Duplication".</small>
-                                            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-warning btn-sm mt-2 rounded-pill px-3 d-inline-block">
-                                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
-                                                Request Duplication
+                                            <span class="badge bg-{{ $dupBadge }} text-dark">{{ $request->duplication_reason }}</span>
+                                        @else
+                                            <span class="text-primary">Duplication</span>
+                                        @endif
+                                    </a>
+                                    @else
+                                        @if(in_array($request->request_for ?? '', ['Replacement', 'Duplication']) && $request->duplication_reason)
+                                            @php $dupBadge = match($request->duplication_reason ?? '') { 'Lost' => 'danger', 'Damage' => 'warning', 'Expired Card' => 'info', default => 'secondary' }; @endphp
+                                            <span class="badge bg-{{ $dupBadge }} text-dark">{{ $request->duplication_reason }}</span>
+                                        @else
+                                            --
+                                        @endif
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(($filter ?? 'active') !== 'archive')
+                                    <a href="#" class="amend-dup-ext-btn text-decoration-none" data-request-id="{{ $request->id }}" data-type="extension" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '' }}" data-extension="{{ $request->id_card_valid_upto ?? '' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-request-for="{{ $request->request_for }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-status="{{ $request->status ?? '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                        @if(($request->request_for ?? '') == 'Extension' && $request->id_card_valid_upto)
+                                            <span class="badge bg-info">{{ $request->id_card_valid_upto }}</span>
+                                        @else
+                                            <span class="text-primary">Extension</span>
+                                        @endif
+                                    </a>
+                                    @else
+                                        @if(($request->request_for ?? '') == 'Extension' && $request->id_card_valid_upto)
+                                            <span class="badge bg-info">{{ $request->id_card_valid_upto }}</span>
+                                        @else
+                                            --
+                                        @endif
+                                    @endif
+                                </td>
+                                <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
+                                <td>
+                                    @php
+                                        $statusClass = match($request->status ?? '') {
+                                            'Pending' => 'warning',
+                                            'Approved' => 'success',
+                                            'Rejected' => 'danger',
+                                            'Issued' => 'primary',
+                                            default => 'secondary'
+                                        };
+                                        $statusLabel = $request->status ?? '--';
+                                        if (($request->status ?? '') === 'Pending') {
+                                            $statusLabel = $request->approved_by_a1 ?? false ? 'Pending (A2)' : 'Pending (A1)';
+                                        }
+                                    @endphp
+                                    <span class="badge bg-{{ $statusClass }}">{{ $statusLabel }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex align-items-center justify-content-end gap-1" role="group">
+                                        <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
+                                           class="btn btn-sm btn-outline-primary rounded-2 view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
+                                        </a>
+                                        @if(($filter ?? 'active') !== 'archive')
+                                            <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
+                                               class="btn btn-sm btn-outline-secondary rounded-2 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                                             </a>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                                            <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" 
+                                                  method="POST" class="d-inline" 
+                                                  onsubmit="return confirm('Are you sure you want to archive this request?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" title="Archive">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form action="{{ route('admin.employee_idcard.restore', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-2 px-2 py-1" title="Restore">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i>
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('admin.employee_idcard.forceDelete', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this request? This action cannot be undone.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" title="Delete Permanently">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="12" class="text-center py-5 table-empty-state">
+                                    <div class="d-inline-flex flex-column align-items-center p-4 bg-light rounded-3">
+                                        <i class="material-icons material-symbols-rounded mb-3 text-muted" style="font-size:56px;">inbox</i>
+                                        <p class="mb-1 fw-medium">No ID card requests found.</p>
+                                        <small class="text-muted mb-3">
+                                            @if(($filter ?? 'active') === 'archive')
+                                                No archived records.
+                                            @elseif(($filter ?? '') === 'all')
+                                                No records in system.
+                                            @else
+                                                Click "Generate New ID Card" to create one.
+                                            @endif
+                                        </small>
+                                        @if(($filter ?? 'active') === 'active')
+                                        <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary btn-sm rounded-pill px-4 py-2">
+                                            <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
+                                            Create Request
+                                        </a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $duplicationRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $duplicationRequests->lastItem() ?? 0 }}</strong> duplication requests (this page)
-                        </div>
-                        <nav>
-                            {{ $duplicationRequests->links('pagination::bootstrap-5', ['pageName' => 'page']) }}
-                        </nav>
-                    </div>
+            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light flex-wrap gap-2">
+                <div class="small text-muted">
+                    Showing <strong>{{ $requests->firstItem() ?? 0 }}</strong> to <strong>{{ $requests->lastItem() ?? 0 }}</strong> of <strong>{{ $requests->total() }}</strong> requests
                 </div>
-
-                <div class="tab-pane fade" id="extension-panel" role="tabpanel" aria-labelledby="extension-tab">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle idcard-index-table">
-                            <thead>
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>ID Card</th>
-                                    <th>Request date</th>
-                                    <th>Employee Name</th>
-                                    <th>Designation</th>
-                                    <th>Duplication</th>
-                                    <th>Extension</th>
-                                    <th>Valid Upto</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($extensionRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}">
-                                        <td class="fw-medium">{{ $extensionRequests->firstItem() + $index }}</td>
-                                        <td>
-                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
-                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td>{{ $request->name }}</td>
-                                        <td>{{ $request->designation ?? '--' }}</td>
-                                        <td><span class="text-muted">--</span></td>
-                                        <td>
-                                            <span class="badge bg-info">{{ $request->id_card_valid_upto ?? '--' }}</span>
-                                        </td>
-                                        <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
-                                        <td>
-                                            @php
-                                                $statusClass = match($request->status ?? '') {
-                                                    'Pending' => 'warning',
-                                                    'Approved' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Issued' => 'primary',
-                                                    default => 'secondary'
-                                                };
-                                            @endphp
-                                            <span class="badge bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="text-primary d-inline-flex align-items-center gap-1 view-details-btn" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="--" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded">visibility</i>
-                                                </a>
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="text-primary d-inline-flex align-items-center gap-1" title="Edit">
-                                                    <i class="material-icons material-symbols-rounded">edit</i>
-                                                </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-link text-danger p-0 border-0" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded">delete</i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">
-                                            <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">schedule</i>
-                                            <p class="mb-1">No ID card extension requests found.</p>
-                                            <small>Extension requests will appear here when request for is "Extension".</small>
-                                            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-info btn-sm mt-2 rounded-pill px-3 d-inline-block">
-                                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
-                                                Request Extension
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $extensionRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $extensionRequests->lastItem() ?? 0 }}</strong> extension requests (this page)
-                        </div>
-                        <nav>
-                            {{ $extensionRequests->links('pagination::bootstrap-5', ['pageName' => 'page']) }}
-                        </nav>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade {{ $showArchiveTab ? 'show active' : '' }}" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle idcard-index-table">
-                            <thead>
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>ID Card</th>
-                                    <th>Request date</th>
-                                    <th>Employee Name</th>
-                                    <th>Designation</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($archivedRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}">
-                                        <td class="fw-medium">{{ $archivedRequests->firstItem() + $index }}</td>
-                                        <td>
-                                            <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="d-inline-block" title="View details">
-                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded img-thumbnail" loading="lazy">
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td>{{ $request->name }}</td>
-                                        <td>{{ $request->designation ?? '--' }}</td>
-                                        <td>
-                                            @php
-                                                $statusClass = match($request->status) {
-                                                    'Pending' => 'warning',
-                                                    'Approved' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Issued' => 'primary',
-                                                    default => 'secondary'
-                                                };
-                                                $statusIcon = match($request->status) {
-                                                    'Pending' => 'schedule',
-                                                    'Approved' => 'check_circle',
-                                                    'Rejected' => 'cancel',
-                                                    'Issued' => 'card_giftcard',
-                                                    default => 'help'
-                                                };
-                                            @endphp
-                                            <span class="badge bg-{{ $statusClass }}">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:12px;">{{ $statusIcon }}</i>
-                                                {{ $request->status }}
-                                            </span>
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="d-flex align-items-center gap-2 justify-content-end" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="text-primary d-inline-flex align-items-center gap-1" title="View Details">
-                                                    <i class="material-icons material-symbols-rounded">visibility</i>
-                                                </a>
-                                                <form action="{{ route('admin.employee_idcard.restore', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-link text-success p-0 border-0" title="Restore">
-                                                        <i class="material-icons material-symbols-rounded">restore</i>
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('admin.employee_idcard.forceDelete', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this request? This action cannot be undone.');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-link text-danger p-0 border-0" title="Delete Permanently">
-                                                        <i class="material-icons material-symbols-rounded">delete_forever</i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">archive</i>
-                                            <p class="mb-1">No archived ID card requests found.</p>
-                                            <small>Deleted records will appear here.</small>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $archivedRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $archivedRequests->lastItem() ?? 0 }}</strong> archived requests (this page)
-                        </div>
-                        <nav aria-label="Archived requests pagination">
-                            {{ $archivedRequests->links('pagination::bootstrap-5', ['pageName' => 'archive_page']) }}
-                        </nav>
-                    </div>
-                </div>
+                <nav aria-label="Pagination">
+                    {{ $requests->links('pagination::bootstrap-5') }}
+                </nav>
             </div>
         </div>
     </div>
@@ -787,34 +545,6 @@ a.amend-dup-ext-btn:hover { opacity: 0.85; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // If URL has archive_page (pagination on Archive tab), keep Archive tab active; otherwise Active
-    const activeTab = document.getElementById('active-tab');
-    const archiveTab = document.getElementById('archive-tab');
-    const activePanel = document.getElementById('active-panel');
-    const archivePanel = document.getElementById('archive-panel');
-    const urlParams = new URLSearchParams(window.location.search);
-    const isArchivePage = urlParams.has('archive_page');
-    if (activeTab && archiveTab && activePanel && archivePanel) {
-        if (isArchivePage) {
-            archiveTab.classList.add('active');
-            archiveTab.setAttribute('aria-selected', 'true');
-            activeTab.classList.remove('active');
-            activeTab.setAttribute('aria-selected', 'false');
-            archivePanel.classList.add('show', 'active');
-            activePanel.classList.remove('show', 'active');
-        } else {
-            activeTab.classList.add('active');
-            activeTab.setAttribute('aria-selected', 'true');
-            archiveTab.classList.remove('active');
-            archiveTab.setAttribute('aria-selected', 'false');
-            activePanel.classList.add('show', 'active');
-            archivePanel.classList.remove('show', 'active');
-        }
-        if (window.location.hash === '#archive-panel' && !isArchivePage) {
-            history.replaceState(null, null, window.location.pathname + window.location.search);
-        }
-    }
-
     function openViewAmendModal(btn) {
         const modal = document.getElementById('viewDetailsModal');
         document.getElementById('modalName').textContent = btn.dataset.name || '--';

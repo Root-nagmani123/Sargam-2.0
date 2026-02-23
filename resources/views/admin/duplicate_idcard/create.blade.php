@@ -101,7 +101,7 @@
 
                     <div class="col-md-6">
                         <label class="form-label">Reason for Applying Duplicate Card <span class="text-danger">*</span></label>
-                        <select name="card_reason" class="form-select" required>
+                        <select name="card_reason" id="card_reason_select" class="form-select" required>
                             <option value="">--Select--</option>
                             <option value="Damage Card" {{ old('card_reason')==='Damage Card'?'selected':'' }}>Damage Card</option>
                             <option value="Card Lost" {{ old('card_reason')==='Card Lost'?'selected':'' }}>Card Lost</option>
@@ -110,6 +110,40 @@
                             <option value="Designation Change" {{ old('card_reason')==='Designation Change'?'selected':'' }}>Designation Change</option>
                         </select>
                         @error('card_reason')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <!-- Card Lost - FIR Document -->
+                    <div class="col-md-6" id="fir_doc_section" style="display: none;">
+                        <label class="form-label">Upload FIR Copy / Document Proof <span class="text-danger">*</span></label>
+                        <input type="file" name="fir_doc" class="form-control">
+                        @error('fir_doc')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <!-- Service Extended - Extension Proof -->
+                    <div class="col-md-6" id="service_ext_section" style="display: none;">
+                        <label class="form-label">Upload Service Extension / Renewal Proof <span class="text-danger">*</span></label>
+                        <input type="file" name="service_ext" class="form-control">
+                        @error('service_ext')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <!-- Change in Name - New Name & Name Proof -->
+                    <div class="col-md-6" id="new_name_section" style="display: none;">
+                        <label class="form-label">New Employee Name <span class="text-danger">*</span></label>
+                        <input type="text" name="new_employee_name" class="form-control" value="{{ old('new_employee_name') }}" placeholder="Enter new name">
+                        @error('new_employee_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="col-md-6" id="name_proof_section" style="display: none;">
+                        <label class="form-label">Upload Name Change Proof <span class="text-danger">*</span></label>
+                        <input type="file" name="name_proof" class="form-control">
+                        @error('name_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <!-- Designation Change - Official Order -->
+                    <div class="col-md-6" id="designation_order_section" style="display: none;">
+                        <label class="form-label">Upload Official Order / Transfer Letter <span class="text-danger">*</span></label>
+                        <input type="file" name="designation_order" class="form-control">
+                        @error('designation_order')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
                     <div class="col-md-3">
@@ -135,5 +169,46 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.getElementById('card_reason_select').addEventListener('change', function() {
+        // Hide all conditional sections first
+        document.getElementById('fir_doc_section').style.display = 'none';
+        document.getElementById('service_ext_section').style.display = 'none';
+        document.getElementById('new_name_section').style.display = 'none';
+        document.getElementById('name_proof_section').style.display = 'none';
+        document.getElementById('designation_order_section').style.display = 'none';
+
+        // Clear required attribute from all conditional fields
+        document.querySelector('input[name="fir_doc"]').removeAttribute('required');
+        document.querySelector('input[name="service_ext"]').removeAttribute('required');
+        document.querySelector('input[name="new_employee_name"]').removeAttribute('required');
+        document.querySelector('input[name="name_proof"]').removeAttribute('required');
+        document.querySelector('input[name="designation_order"]').removeAttribute('required');
+
+        // Show and set required for selected reason
+        const reason = this.value;
+        if (reason === 'Card Lost') {
+            document.getElementById('fir_doc_section').style.display = 'block';
+            document.querySelector('input[name="fir_doc"]').setAttribute('required', 'required');
+        } else if (reason === 'Service Extended') {
+            document.getElementById('service_ext_section').style.display = 'block';
+            document.querySelector('input[name="service_ext"]').setAttribute('required', 'required');
+        } else if (reason === 'Change in Name') {
+            document.getElementById('new_name_section').style.display = 'block';
+            document.getElementById('name_proof_section').style.display = 'block';
+            document.querySelector('input[name="new_employee_name"]').setAttribute('required', 'required');
+            document.querySelector('input[name="name_proof"]').setAttribute('required', 'required');
+        } else if (reason === 'Designation Change') {
+            document.getElementById('designation_order_section').style.display = 'block';
+            document.querySelector('input[name="designation_order"]').setAttribute('required', 'required');
+        }
+    });
+
+    // Trigger on page load if there's old data
+    if (document.getElementById('card_reason_select').value) {
+        document.getElementById('card_reason_select').dispatchEvent(new Event('change'));
+    }
+</script>
 @endsection
 
