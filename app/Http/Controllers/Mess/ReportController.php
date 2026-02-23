@@ -555,10 +555,16 @@ class ReportController extends Controller
             
             // Only include items with remaining stock
             if ($remainingQty > 0) {
+                $alertQty = null;
+                if (Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
+                    $alertQty = $item->alert_quantity;
+                }
                 $reportData[] = [
                     'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
                     'unit' => $item->unit_measurement ?? 'Unit',
                     'remaining_qty' => $remainingQty,
+                    'remaining_quantity' => $remainingQty,
+                    'alert_quantity' => $alertQty,
                     'rate' => $rate,
                     'amount' => $amount,
                 ];
@@ -582,6 +588,66 @@ class ReportController extends Controller
             'storeId',
             'selectedStoreName'
         ));
+    }
+
+    /**
+     * Get items where remaining_quantity <= alert_quantity (for login alert).
+     * Uses same calculation as Stock Balance till date. Default: till_date = today, store_id = null.
+     *
+     * @return array<int, array{item_name: string, unit: string, remaining_quantity: float, alert_quantity: float}>
+     */
+    public static function getLowStockAlertItems(?string $tillDate = null, $storeId = null): array
+    {
+        if (!Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
+            return [];
+        }
+        $tillDate = $tillDate ?? now()->format('Y-m-d');
+        $items = ItemSubcategory::where('status', 'active')
+            ->whereNotNull('alert_quantity')
+            ->orderBy('name')
+            ->get();
+        $out = [];
+        foreach ($items as $item) {
+            $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
+                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
+                    $q->where('status', 'approved')->whereDate('po_date', '<=', $tillDate);
+                    if ($storeId) {
+                        $q->where('store_id', $storeId);
+                    }
+                })
+                ->sum('quantity');
+            $totalIssuedKi = \DB::table('kitchen_issue_items as kii')
+                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                ->where('kii.item_subcategory_id', $item->id)
+                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('kim.store_type', 'store')
+                ->whereDate('kim.issue_date', '<=', $tillDate)
+                ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
+                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+            $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->where('svi.item_subcategory_id', $item->id)
+                ->where('svr.store_type', 'store')
+                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
+                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
+            $alertQty = (float) $item->alert_quantity;
+            if ($alertQty <= 0) {
+                continue;
+            }
+            if ($remainingQty <= $alertQty) {
+                $out[] = [
+                    'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
+                    'unit' => $item->unit_measurement ?? 'Unit',
+                    'remaining_quantity' => $remainingQty,
+                    'alert_quantity' => $alertQty,
+                ];
+            }
+        }
+        return $out;
     }
 
     /**
@@ -652,6 +718,47 @@ class ReportController extends Controller
             'vouchers',
             'clientTypes',
             'clientTypeCategories'
+        ));
+    }
+
+    /**
+     * Minimum Stock Alert
+     * Lists inventory items where current_stock < minimum_stock (low stock).
+     */
+    public function minimumStockAlert(Request $request)
+    {
+        $with = ['category', 'subcategory'];
+        if (Schema::hasColumn('mess_inventories', 'store_id')) {
+            $with[] = 'store';
+        }
+        $query = Inventory::with($with)->whereColumn('current_stock', '<', 'minimum_stock');
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if (Schema::hasColumn('mess_inventories', 'store_id') && $request->filled('store_id')) {
+            $query->where('store_id', $request->store_id);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('item_name', 'like', '%' . $search . '%')
+                    ->orWhere('item_code', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (Schema::hasColumn('mess_inventories', 'is_active')) {
+            $query->where('is_active', true);
+        }
+
+        $items = $query->orderBy('item_name')->paginate(20)->withQueryString();
+        $categories = ItemCategory::orderBy('category_name')->get();
+        $stores = Store::where('status', 'active')->get();
+
+        return view('admin.mess.reports.minimum-stock-alert', compact(
+            'items',
+            'categories',
+            'stores'
         ));
     }
 }
