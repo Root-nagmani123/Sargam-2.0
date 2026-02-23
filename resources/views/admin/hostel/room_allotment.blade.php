@@ -31,7 +31,7 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-medium">Room Number <span class="text-danger">*</span></label>
-                                <select name="room_no" id="room_no" class="form-select form-select-sm rounded-3 focus-ring focus-ring-primary" required disabled>
+                                <select name="room_no" id="room_no" class="form-select form-select-sm rounded-3 focus-ring focus-ring-primary" required>
                                     <option value="">— Select Building First —</option>
                                 </select>
                                 <div id="roomNoSpinner" class="spinner-border spinner-border-sm text-primary mt-2 d-none" role="status"><span class="visually-hidden">Loading...</span></div>
@@ -45,11 +45,11 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-label fw-medium">Bed No</label>
-                                <input type="number" name="bed_no" class="form-control form-control-sm rounded-3 focus-ring focus-ring-primary" min="1" placeholder="1">
+                                <input type="number" name="bed_no" class="form-control focus-ring-primary" min="1" placeholder="1">
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-medium">Participant Name <span class="text-danger">*</span></label>
-                                <input type="text" name="participant_name" class="form-control form-control-sm rounded-3 focus-ring focus-ring-primary" required>
+                                <input type="text" name="participant_name" class="form-control focus-ring-primary" required>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-medium">Course <span class="text-danger">*</span></label>
@@ -62,11 +62,11 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-label fw-medium">Check-in Date <span class="text-danger">*</span></label>
-                                <input type="date" name="check_in_date" class="form-control form-control-sm rounded-3 focus-ring focus-ring-primary" required value="{{ date('Y-m-d') }}">
+                                <input type="date" name="check_in_date" class="form-control focus-ring-primary" required value="{{ date('Y-m-d') }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label fw-medium">Check-out Date</label>
-                                <input type="date" name="check_out_date" class="form-control form-control-sm rounded-3 focus-ring focus-ring-primary">
+                                <input type="date" name="check_out_date" class="form-control focus-ring-primary">
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-medium">Issue at Check-in</label>
@@ -79,13 +79,13 @@
                             </div>
                             <div class="col-12" id="issueDetailsWrap" style="display: none;">
                                 <label class="form-label fw-medium">Issue Details <span class="text-danger">*</span></label>
-                                <textarea name="issue_details" class="form-control form-control-sm rounded-3 focus-ring focus-ring-primary" rows="3" placeholder="Describe the issue..."></textarea>
+                                <textarea name="issue_details" class="form-control focus-ring-primary" rows="3" placeholder="Describe the issue..."></textarea>
                             </div>
                             <div class="col-12 d-flex flex-wrap gap-2">
-                                <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2 rounded-3 focus-ring focus-ring-primary">
+                                <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2 rounded-1 focus-ring focus-ring-primary">
                                     <i class="bi bi-check-lg"></i> Save Check-in
                                 </button>
-                                <a href="{{ route('admin.hostel.dashboard') }}" class="btn btn-outline-secondary rounded-3 icon-link link-underline-opacity-0 focus-ring focus-ring-secondary">Cancel</a>
+                                <a href="{{ route('admin.hostel.dashboard') }}" class="btn btn-outline-secondary rounded-1 icon-link link-underline-opacity-0 focus-ring focus-ring-secondary">Cancel</a>
                             </div>
                         </div>
                     </form>
@@ -119,15 +119,15 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 table-striped-columns table-borderless">
-                            <thead class="table-light">
+                        <table class="table text-nowrap align-middle mb-0">
+                            <thead>
                                 <tr>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Room</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Type</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Participant</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Course</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Check-in</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Status</th>
+                                    <th class="col">Room</th>
+                                    <th class="col">Type</th>
+                                    <th class="col">Participant</th>
+                                    <th class="col">Course</th>
+                                    <th class="col">Check-in</th>
+                                    <th class="col">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
