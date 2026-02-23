@@ -138,28 +138,46 @@
     table-layout: auto;
     margin-bottom: 0;
 }
+/* Override DataTables striping - plain white rows like Activity design */
+.datatables #medicalExemptionTable.display tbody tr:nth-child(odd) td,
+.datatables #medicalExemptionTable.stripe tbody tr:nth-child(odd) td {
+    background: #fff !important;
+}
 .datatables #medicalExemptionTable thead th,
 .datatables #medicalExemptionTable tbody td {
     white-space: nowrap !important;
 }
+/* Table - Activity-style: subtle header, minimal borders, clean rows */
+.datatables #medicalExemptionTable {
+    border: none !important;
+}
 .datatables #medicalExemptionTable thead th {
-    background: linear-gradient(180deg, var(--me-primary) 0%, var(--me-primary-hover) 100%);
-    color: #fff !important;
+    background: rgba(0, 74, 147, 0.06) !important;
+    color: #4a5568 !important;
     font-weight: 600;
-    font-size: 0.8rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
     border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
     vertical-align: middle;
+}
+.datatables #medicalExemptionTable thead th:last-child {
+    border-right: none;
 }
 .datatables #medicalExemptionTable tbody td {
     padding: 0.75rem 1rem;
     vertical-align: middle !important;
-    transition: background-color 0.15s ease;
+    color: #6b7280;
+    background: #fff !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-right: 1px solid rgba(0, 0, 0, 0.04);
+}
+.datatables #medicalExemptionTable tbody td:last-child {
+    border-right: none;
 }
 .datatables #medicalExemptionTable tbody tr:hover td {
-    background-color: var(--me-primary-subtle) !important;
+    background: rgba(0, 74, 147, 0.03) !important;
 }
 /* Action column - 2 distinct Bootstrap 5 buttons */
 .datatables #medicalExemptionTable .action-btn-edit,
@@ -190,25 +208,82 @@
     line-height: 1.4;
 }
 
-/* DataTables wrapper - Bootstrap 5.3 consistency */
-.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_info,
+/* DataTables wrapper - Bootstrap 5.3 new design */
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_length label,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-length label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter label,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-search label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
 .student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_length select,
-.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input {
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-length select,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-search input {
+    width: auto;
+    min-width: 4.5rem;
     font-size: 0.875rem;
-}
-.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_length select,
-.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input {
-    border-radius: var(--me-radius);
+    border-radius: 0.375rem;
     padding: 0.35rem 0.75rem;
-    border: 1px solid var(--bs-border-color);
+    border: 1px solid #d1d5db;
+    background: #fff;
 }
-.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input:focus {
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-search input {
+    margin-left: 0.25rem;
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input:focus,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-search input:focus {
     border-color: var(--me-primary);
     box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
 }
-.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate .page-link {
-    border-radius: var(--me-radius);
-    font-weight: 500;
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_info,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-info {
+    font-size: 0.875rem;
+    color: var(--bs-body-secondary);
+}
+/* Pagination - Bootstrap 5 style */
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-paging {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate .paginate_button,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-paging .dt-paging-button {
+    padding: 0.35rem 0.65rem;
+    margin: 0 2px;
+    border-radius: 0.375rem;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #4b5563;
+    transition: all 0.15s ease;
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate .paginate_button.current,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate .paginate_button.current:hover,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-paging .dt-paging-button.current {
+    background: rgba(0, 74, 147, 0.1) !important;
+    color: var(--me-primary) !important;
+    border-color: rgba(0, 74, 147, 0.3) !important;
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled),
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-paging .dt-paging-button:hover:not(.disabled) {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+    color: #374151 !important;
+}
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_paginate .paginate_button.disabled,
+.student-medical-exemption-index #medicalExemptionTable_wrapper .dt-paging .dt-paging-button.disabled {
+    opacity: 0.5;
+    color: #9ca3af !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -248,6 +323,18 @@
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
         font-size: 0.875rem;
+    }
+    /* DataTables controls - stack length & filter on small screens */
+    .student-medical-exemption-index #medicalExemptionTable_wrapper [class*="col-"] {
+        max-width: 100%;
+    }
+    .student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_length,
+    .student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter {
+        text-align: left !important;
+    }
+    .student-medical-exemption-index #medicalExemptionTable_wrapper .dataTables_filter input {
+        width: 100%;
+        max-width: 100%;
     }
 }
 
@@ -553,6 +640,26 @@ $(document).ready(function() {
         scrollX: true,
         scrollCollapse: true,
         autoWidth: false,
+
+        /* Bootstrap 5.3 new design: grid layout for length, filter, info, pagination */
+        dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        language: {
+            search: '',
+            searchPlaceholder: 'Search',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Page _START_ to _END_ of _TOTAL_ Entries',
+            infoEmpty: 'Page 0 to 0 of 0 Entries',
+            infoFiltered: '(filtered from _MAX_ total)',
+            paginate: { first: '«', last: '»', next: '>', previous: '<' },
+            processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
+        },
+        drawCallback: function() {
+            if (typeof window.adjustAllDataTables === 'function') {
+                try { window.adjustAllDataTables(); } catch (e) {}
+            }
+        },
 
         ajax: {
             url: "{{ route('student.medical.exemption.index') }}",
