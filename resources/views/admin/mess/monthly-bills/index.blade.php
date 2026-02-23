@@ -23,7 +23,7 @@
         <form method="GET" action="{{ route('admin.mess.monthly-bills.index') }}" class="mb-3">
             <div class="row g-2">
                 <div class="col-md-2">
-                    <select name="month" class="form-select form-select-sm">
+                    <select name="month" class="form-select form-select-sm select2">
                         <option value="">All Months</option>
                         @for($i = 1; $i <= 12; $i++)
                             <option value="{{ $i }}" {{ request('month') == $i ? 'selected' : '' }}>
@@ -33,7 +33,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select name="year" class="form-select form-select-sm">
+                    <select name="year" class="form-select form-select-sm select2">
                         <option value="">All Years</option>
                         @for($y = date('Y'); $y >= 2020; $y--)
                             <option value="{{ $y }}" {{ request('year') == $y ? 'selected' : '' }}>{{ $y }}</option>
@@ -41,7 +41,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select name="status" class="form-select form-select-sm">
+                    <select name="status" class="form-select form-select-sm select2">
                         <option value="">All Status</option>
                         <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="paid" {{ request('status') == 'paid' ? 'selected' : '' }}>Paid</option>
@@ -157,7 +157,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Month</label>
-                        <select name="month" class="form-select" required>
+                        <select name="month" class="form-select select2" required>
                             @for($i = 1; $i <= 12; $i++)
                                 <option value="{{ $i }}" {{ date('n') == $i ? 'selected' : '' }}>
                                     {{ date('F', mktime(0, 0, 0, $i, 1)) }}
@@ -167,7 +167,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Year</label>
-                        <select name="year" class="form-select" required>
+                        <select name="year" class="form-select select2" required>
                             @for($y = date('Y'); $y >= 2020; $y--)
                                 <option value="{{ $y }}" {{ date('Y') == $y ? 'selected' : '' }}>{{ $y }}</option>
                             @endfor

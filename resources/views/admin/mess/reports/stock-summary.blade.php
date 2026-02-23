@@ -23,14 +23,14 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select">
+                        <select name="store_type" id="store_type" class="form-select select2">
                             <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
                             <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
                         </select>
                     </div>
                     <div class="col-md-4" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
                         <label class="form-label">Main Store</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select select2">
                             <option value="">All Main Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
@@ -41,7 +41,7 @@
                     </div>
                     <div class="col-md-4" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
                         <label class="form-label">Sub Store</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select select2">
                             <option value="">All Sub Stores</option>
                             @foreach($subStores as $subStore)
                                 <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>

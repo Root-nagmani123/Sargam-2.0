@@ -23,7 +23,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Employee / OT/Course</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select select2">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Client Type</label>
-                        <select id="clientTypePk" class="form-select" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
+                        <select id="clientTypePk" class="form-select select2" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -57,7 +57,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
+                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select select2">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php

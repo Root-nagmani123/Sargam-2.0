@@ -21,7 +21,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Select Vendor Name</label>
-                        <select name="vendor_id" class="form-select">
+                        <select name="vendor_id" class="form-select select2">
                             <option value="">All Vendors</option>
                             @foreach($vendors as $vendor)
                                 <option value="{{ $vendor->id }}" {{ request('vendor_id') == $vendor->id ? 'selected' : '' }}>{{ $vendor->name }}</option>
@@ -30,7 +30,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Select Store Name</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select select2">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>

@@ -16,7 +16,7 @@
             </div>
             <div class="col-md-4 mb-3">
                 <label>Store</label>
-                <select name="store_id" class="form-control">
+                <select name="store_id" class="form-select select2">
                     <option value="">Select Store</option>
                     @foreach($stores as $store)
                         <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -33,7 +33,7 @@
         <div id="itemsContainer">
             <div class="row mb-2 item-row">
                 <div class="col-md-5">
-                    <select name="items[0][inventory_id]" class="form-control" required>
+                    <select name="items[0][inventory_id]" class="form-select select2" required>
                         <option value="">Select Item</option>
                         @foreach($inventories as $inv)
                             <option value="{{ $inv->id }}">{{ $inv->item_name }}</option>

@@ -76,12 +76,18 @@
             return null;
         }
 
-        // Default options
+        // Default options (Bootstrap 5 theme + UX)
         const defaultOptions = {
+            theme: 'bootstrap-5',
             placeholder: 'Search and select...',
             allowClear: false,
             width: '100%',
-            dropdownParent: $select.closest('.card-body, .modal-body, body')
+            dropdownParent: $select.closest('.modal').length ? $select.closest('.modal') : undefined,
+            language: {
+                noResults: function() { return 'No results found'; },
+                searching: function() { return 'Searching...'; },
+                inputTooShort: function(args) { return 'Please enter ' + (args.minimum - args.input.length) + ' or more characters'; }
+            }
         };
 
         // Merge user options with defaults

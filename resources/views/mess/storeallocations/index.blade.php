@@ -86,7 +86,7 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Store Name <span class="text-danger">*</span></label>
-                                    <select name="sub_store_id" class="form-select" required>
+                                    <select name="sub_store_id" class="form-select select2" required>
                                         <option value="">Select Sub Store</option>
                                         @foreach($subStores as $store)
                                             <option value="{{ $store->id }}">{{ $store->sub_store_name }}</option>
@@ -122,7 +122,7 @@
                                     <tbody id="allocationItemsBody">
                                         <tr class="allocation-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm alloc-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm select2 alloc-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}">{{ $sub['item_name'] }}</option>
@@ -170,7 +170,7 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Store Name <span class="text-danger">*</span></label>
-                                    <select name="sub_store_id" id="editSubStoreId" class="form-select" required>
+                                    <select name="sub_store_id" id="editSubStoreId" class="form-select select2" required>
                                         <option value="">Select Sub Store</option>
                                         @foreach($subStores as $store)
                                             <option value="{{ $store->id }}">{{ $store->sub_store_name }}</option>
@@ -236,7 +236,7 @@
         return `
         <tr class="allocation-item-row edit-alloc-item-row">
             <td>
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm alloc-item-select" required>
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm select2 alloc-item-select" required>
                     <option value="">Select Item</option>
                     ${options}
                 </select>
@@ -280,10 +280,21 @@
         });
     }
 
+    function initSelect2OnAllocSelects(container, dropdownParent) {
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            var opts = { theme: 'bootstrap-5', width: '100%' };
+            if (dropdownParent) opts.dropdownParent = dropdownParent;
+            $(container).find('.alloc-item-select.select2').each(function() {
+                if (!$(this).hasClass('select2-hidden-accessible')) $(this).select2(opts);
+            });
+        }
+    }
+
     document.getElementById('addAllocationItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('allocationItemsBody');
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(createRowIndex, null));
         createRowIndex++;
+        initSelect2OnAllocSelects(tbody.lastElementChild, $('#createStoreAllocationModal').length ? $('#createStoreAllocationModal') : null);
         updateCreateRemoveButtons();
     });
 
@@ -335,7 +346,18 @@
                     editRowIndex = items.length;
                 }
                 updateEditRemoveButtons();
-                new bootstrap.Modal(document.getElementById('editStoreAllocationModal')).show();
+                var editModalEl = document.getElementById('editStoreAllocationModal');
+                new bootstrap.Modal(editModalEl).show();
+                editModalEl.addEventListener('shown.bs.modal', function onShown() {
+                    editModalEl.removeEventListener('shown.bs.modal', onShown);
+                    if (typeof $ !== 'undefined' && $.fn.select2) {
+                        $('#editSubStoreId').select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#editStoreAllocationModal') });
+                        $('#editAllocationItemsBody .alloc-item-select.select2').each(function() {
+                            if (!$(this).hasClass('select2-hidden-accessible'))
+                                $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#editStoreAllocationModal') });
+                        });
+                    }
+                }, { once: true });
             })
             .catch(err => { console.error(err); alert('Failed to load store allocation.'); });
     }, true);
@@ -344,6 +366,10 @@
         const tbody = document.getElementById('editAllocationItemsBody');
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editRowIndex, null));
         editRowIndex++;
+        initSelect2OnAllocSelects(tbody.lastElementChild);
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $(tbody.lastElementChild).find('.alloc-item-select.select2').select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#editStoreAllocationModal') });
+        }
         updateEditRemoveButtons();
     });
 

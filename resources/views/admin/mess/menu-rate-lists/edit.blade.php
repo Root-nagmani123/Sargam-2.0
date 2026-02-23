@@ -30,7 +30,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="inventory_id" class="form-label">Inventory Item (Optional)</label>
-                        <select class="form-select @error('inventory_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('inventory_id') is-invalid @enderror" 
                                 id="inventory_id" name="inventory_id">
                             <option value="">-- Select Inventory Item --</option>
                             @foreach($items as $item)

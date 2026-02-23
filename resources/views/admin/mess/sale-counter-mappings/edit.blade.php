@@ -17,7 +17,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="sale_counter_id" class="form-label">Sale Counter <span class="text-danger">*</span></label>
-                        <select class="form-select @error('sale_counter_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('sale_counter_id') is-invalid @enderror" 
                                 id="sale_counter_id" name="sale_counter_id" required>
                             <option value="">-- Select Sale Counter --</option>
                             @foreach($counters as $counter)
@@ -36,7 +36,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="inventory_id" class="form-label">Item <span class="text-danger">*</span></label>
-                        <select class="form-select @error('inventory_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('inventory_id') is-invalid @enderror" 
                                 id="inventory_id" name="inventory_id" required>
                             <option value="">-- Select Item --</option>
                             @foreach($items as $item)

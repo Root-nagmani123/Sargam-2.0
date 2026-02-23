@@ -16,7 +16,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="inve_store_master_pk" class="form-label">Store/Mess <span class="text-danger">*</span></label>
-                            <select class="form-select @error('inve_store_master_pk') is-invalid @enderror"
+                            <select class="form-select select2 @error('inve_store_master_pk') is-invalid @enderror"
                                 id="inve_store_master_pk" name="inve_store_master_pk" required>
                                 <option value="">Select Store</option>
                                 @foreach($stores as $store)
@@ -34,7 +34,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="inve_item_master_pk" class="form-label">Item <span class="text-danger">*</span></label>
-                            <select class="form-select @error('inve_item_master_pk') is-invalid @enderror"
+                            <select class="form-select select2 @error('inve_item_master_pk') is-invalid @enderror"
                                 id="inve_item_master_pk" name="inve_item_master_pk" required>
                                 <option value="">Select Item</option>
                                 @foreach($items as $item)
@@ -74,7 +74,7 @@
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label for="payment_type" class="form-label">Payment Type <span class="text-danger">*</span></label>
-                            <select class="form-select @error('payment_type') is-invalid @enderror"
+                            <select class="form-select select2 @error('payment_type') is-invalid @enderror"
                                 id="payment_type" name="payment_type" required>
                                 <option value="">Select Payment Type</option>
                                 <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
@@ -91,7 +91,7 @@
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label for="client_type" class="form-label">Client Type</label>
-                            <select class="form-select @error('client_type') is-invalid @enderror"
+                            <select class="form-select select2 @error('client_type') is-invalid @enderror"
                                 id="client_type" name="client_type">
                                 <option value="">Select Client Type</option>
                                 <option value="2" {{ old('client_type') == '2' ? 'selected' : '' }}>Student</option>

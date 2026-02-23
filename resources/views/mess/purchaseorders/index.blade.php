@@ -120,7 +120,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Store Name</label>
-                                    <select name="store_id" class="form-select">
+                                    <select name="store_id" class="form-select select2">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -129,7 +129,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" class="form-select" required>
+                                    <select name="vendor_id" class="form-select select2" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
                                             <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -138,7 +138,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Mode</label>
-                                    <select name="payment_code" class="form-select">
+                                    <select name="payment_code" class="form-select select2">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
                                             <option value="{{ $value }}">{{ $label }}</option>
@@ -203,7 +203,7 @@
                                     <tbody id="poItemsBody">
                                         <tr class="po-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm select2 po-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
@@ -267,7 +267,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Store Name</label>
-                                    <select name="store_id" id="editStoreId" class="form-select">
+                                    <select name="store_id" id="editStoreId" class="form-select select2">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -276,7 +276,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" id="editVendorId" class="form-select" required>
+                                    <select name="vendor_id" id="editVendorId" class="form-select select2" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
                                             <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -285,7 +285,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Mode</label>
-                                    <select name="payment_code" id="editPaymentCode" class="form-select">
+                                    <select name="payment_code" id="editPaymentCode" class="form-select select2">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
                                             <option value="{{ $value }}">{{ $label }}</option>
@@ -483,7 +483,7 @@
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
             <td>
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select" required>
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm select2 po-item-select" required>
                     <option value="">Select Item</option>
                     ${options}
                 </select>

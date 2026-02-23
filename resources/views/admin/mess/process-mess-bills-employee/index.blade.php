@@ -112,7 +112,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Client Type</label>
-                        <select name="client_type" class="form-select form-select-sm">
+                        <select name="client_type" class="form-select form-select-sm select2">
                             <option value="">All</option>
                             <option value="employee" {{ ($clientType ?? '') === 'employee' ? 'selected' : '' }}>Employee</option>
                             <option value="ot" {{ ($clientType ?? '') === 'ot' ? 'selected' : '' }}>OT</option>
@@ -148,7 +148,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 no-print">
                     <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted">Show</span>
-                        <select name="per_page" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit();">
+                        <select name="per_page" class="form-select form-select-sm select2" style="width: auto;" onchange="this.form.submit();">
                             <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
                             <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
                             <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
@@ -312,7 +312,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Client Type</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm">
+                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm select2">
                                 <option value="">All</option>
                                 <option value="employee">Employee</option>
                                 <option value="ot">OT</option>
@@ -332,7 +332,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Mode of Payment</label>
-                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm">
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm select2">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
@@ -361,7 +361,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted">Show</span>
-                        <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
+                        <select id="modalPerPage" class="form-select form-select-sm select2" style="width: auto;">
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
@@ -418,6 +418,16 @@ document.addEventListener('DOMContentLoaded', function() {
         flatpickr('#modal_date_from', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#modal_date_to', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#modal_invoice_date', { dateFormat: 'd-m-Y', allowInput: true });
+    }
+
+    var addModalEl = document.getElementById('addProcessMessBillsModal');
+    if (addModalEl && typeof $ !== 'undefined' && $.fn.select2) {
+        addModalEl.addEventListener('shown.bs.modal', function() {
+            $('#addProcessMessBillsModal .select2').each(function() {
+                if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
+                $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addProcessMessBillsModal') });
+            });
+        });
     }
 
     var modalBillsData = [];
