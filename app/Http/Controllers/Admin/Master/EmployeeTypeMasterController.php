@@ -23,9 +23,10 @@ class EmployeeTypeMasterController extends Controller
         }
         return view('admin.master.employee_type.create');
     }
-    
+
     function store(Request $request)
     {
+        //dd($request->all);
         $id = $request->pk ? decrypt($request->pk) : null;
 
         $rules = [
@@ -39,16 +40,27 @@ class EmployeeTypeMasterController extends Controller
 
         $request->validate($rules);
 
-        $employeeType = $id ? EmployeeTypeMaster::find($id) : new EmployeeTypeMaster();
+       // $employeeType = $id ? EmployeeTypeMaster::find($id) : new EmployeeTypeMaster();
 
-        if ($id && !$employeeType) {
+      $employeeType = $id  ? EmployeeTypeMaster::findOrFail($id) : new EmployeeTypeMaster();
+
+       if ($id && !$employeeType) {
             if ($request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Employee Type not found.'], 422);
             }
             return redirect()->back()->with('error', 'Employee Type not found.');
         }
-        
+
+        //$employeeType->category_type_name = $request->employee_type_name;
         $employeeType->category_type_name = $request->employee_type_name;
+
+        if (!$id) {
+                $employeeType->created_date = now();
+        }
+
+        $employeeType->modified_date = now();
+
+
         $employeeType->save();
 
         $message = $id ? 'Employee Type updated successfully.' : 'Employee Type created successfully.';
@@ -62,16 +74,16 @@ class EmployeeTypeMasterController extends Controller
 
         return redirect()->route('master.employee.type.index')->with('success', $message);
     }
-    
+
     function edit($id)
     {
         try {
             $employeeTypeMaster = EmployeeTypeMaster::find(decrypt($id));
-            
+
             if (request()->ajax()) {
                 return view('admin.master.employee_type._form', compact('employeeTypeMaster'));
             }
-            
+
             return view('admin.master.employee_type.create', compact('employeeTypeMaster'));
         } catch (\Exception $e) {
             if (request()->ajax()) {
@@ -80,7 +92,7 @@ class EmployeeTypeMasterController extends Controller
             return redirect()->back()->with('error', 'Failed to edit employee type: ' . $e->getMessage());
         }
     }
-    
+
     function delete($id)
     {
         try {

@@ -1,12 +1,27 @@
 @php
     /** @var \App\Models\Mess\ItemSubcategory|null $itemsubcategory */
     $itemsubcategory = $itemsubcategory ?? null;
+    $categories = $categories ?? collect();
+    $oldCategoryId = old('category_id', $itemsubcategory ? $itemsubcategory->category_id : '');
     $oldItemName = old('item_name', $itemsubcategory ? $itemsubcategory->item_name : '');
     $oldUnitMeasurement = old('unit_measurement', $itemsubcategory ? $itemsubcategory->unit_measurement : '');
     $oldStandardCost = old('standard_cost', $itemsubcategory ? $itemsubcategory->standard_cost : '');
     $oldDesc = old('description', $itemsubcategory ? $itemsubcategory->description : '');
     $oldStatus = old('status', $itemsubcategory ? ($itemsubcategory->status ?? 'active') : 'active');
 @endphp
+
+<div class="row">
+    <div class="col-md-12 mb-3">
+        <label class="form-label">Category <span class="text-danger">*</span></label>
+        <select name="category_id" class="form-select" required>
+            <option value="">Select Category</option>
+            @foreach($categories as $cat)
+                <option value="{{ $cat->id }}" {{ (string)$oldCategoryId === (string)$cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
+            @endforeach
+        </select>
+        @error('category_id')<div class="text-danger small">{{ $message }}</div>@enderror
+    </div>
+</div>
 
 <div class="row">
     <div class="col-md-12 mb-3">

@@ -29,6 +29,7 @@ class KitchenIssueMaster extends Model
         'status',
         'client_type_pk',
         'client_name',
+        'bill_path',
     ];
 
     protected $casts = [
