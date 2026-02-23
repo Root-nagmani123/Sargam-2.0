@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\MessageBag;
 
@@ -178,6 +179,10 @@ class SellingVoucherDateRangeController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ], [
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         // Enforce: Issue Qty cannot exceed available qty (server-side, cannot be bypassed)
@@ -238,6 +243,11 @@ class SellingVoucherDateRangeController extends Controller
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                $report->update(['bill_path' => $path]);
+            }
 
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
             $grandTotal = 0;
@@ -300,6 +310,8 @@ class SellingVoucherDateRangeController extends Controller
                 'remarks' => $report->remarks ?? '',
                 'created_at' => $report->created_at ? $report->created_at->format('d/m/Y H:i') : '—',
                 'updated_at' => $report->updated_at ? $report->updated_at->format('d/m/Y H:i') : null,
+                'bill_path' => $report->bill_path,
+                'bill_url' => $report->bill_path ? asset('storage/' . $report->bill_path) : null,
             ];
             $items = $report->items->map(function ($item) use ($issueDateFormatted) {
                 $qty = (float) $item->quantity;
@@ -356,6 +368,8 @@ class SellingVoucherDateRangeController extends Controller
                 'client_name' => $report->client_name,
                 'payment_type' => (int) $report->payment_type,
                 'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
+                'bill_path' => $report->bill_path,
+                'bill_url' => $report->bill_path ? asset('storage/' . $report->bill_path) : null,
             ];
             $items = $report->items->map(function ($item) use ($availableMap) {
                 $itemId = (int) ($item->item_subcategory_id ?? 0);
@@ -414,6 +428,10 @@ class SellingVoucherDateRangeController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ], [
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         try {
@@ -464,6 +482,14 @@ class SellingVoucherDateRangeController extends Controller
                 'issue_date' => $issueDate,
                 'updated_by' => Auth::id(),
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                if ($report->bill_path && Storage::disk('public')->exists($report->bill_path)) {
+                    Storage::disk('public')->delete($report->bill_path);
+                }
+                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                $report->update(['bill_path' => $path]);
+            }
 
             $report->items()->delete();
 

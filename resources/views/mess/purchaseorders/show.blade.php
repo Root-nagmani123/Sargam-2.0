@@ -31,6 +31,13 @@
                         <p><strong>Approved At:</strong> {{ $purchaseOrder->approved_at->format('d/m/Y H:i') }}</p>
                     @endif
                     <p><strong>Remarks:</strong> {{ $purchaseOrder->remarks ?? 'N/A' }}</p>
+                    <p><strong>Bill:</strong>
+                        @if($purchaseOrder->bill_path)
+                            <a href="{{ asset('storage/' . $purchaseOrder->bill_path) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">View / Download Bill</a>
+                        @else
+                            <span class="text-muted">No bill uploaded</span>
+                        @endif
+                    </p>
                 </div>
             </div>
 

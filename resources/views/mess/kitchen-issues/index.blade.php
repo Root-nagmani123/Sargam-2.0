@@ -170,7 +170,7 @@
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm">
+            <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
@@ -290,6 +290,22 @@
                         </div>
                     </div>
 
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
+                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- Item Details (same pattern as Purchase Order Item Details) --}}
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
@@ -364,7 +380,7 @@
 <div class="modal fade" id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form id="editSellingVoucherForm" method="POST" action="">
+            <form id="editSellingVoucherForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
@@ -468,6 +484,28 @@
                             </div>
                         </div>
                     </div>
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
+                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
+                                        <span id="editBillCurrentFileName" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
+                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                            Choose file
+                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
+                                        </label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
+                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
@@ -566,6 +604,7 @@
                             </div>
                         </div>
                         <p class="mb-0 mt-2" id="viewRemarksWrap" style="display:none; color: #212529;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
+                        <p class="mb-0 mt-2" style="color: #212529;"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
                 <div class="card mb-4" id="viewItemsCard">
@@ -1343,6 +1382,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         document.getElementById('viewRemarksWrap').style.display = 'none';
                     }
+                    var viewBillLink = document.getElementById('viewBillLink');
+                    var viewBillNone = document.getElementById('viewBillNone');
+                    if (v.bill_url) {
+                        viewBillLink.href = v.bill_url;
+                        viewBillLink.style.display = 'inline-block';
+                        viewBillNone.style.display = 'none';
+                    } else {
+                        viewBillLink.style.display = 'none';
+                        viewBillNone.style.display = 'inline';
+                    }
                     const tbody = document.getElementById('viewModalItemsBody');
                     tbody.innerHTML = '';
                     if (data.has_items && items.length > 0) {
@@ -1536,6 +1585,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (storeSelect) storeSelect.value = v.inve_store_master_pk || v.store_id || '';
                     
                     document.querySelector('#editSellingVoucherModal input.edit-remarks').value = v.remarks || '';
+                    var editBillFileNameEl = document.getElementById('editBillCurrentFileName');
+                    if (editBillFileNameEl) {
+                        if (v.bill_path) {
+                            var billFileName = v.bill_path.split('/').pop() || v.bill_path;
+                            editBillFileNameEl.textContent = billFileName;
+                            editBillFileNameEl.setAttribute('title', billFileName);
+                        } else {
+                            editBillFileNameEl.textContent = 'No file chosen';
+                            editBillFileNameEl.removeAttribute('title');
+                        }
+                    }
+                    var editSvBillFileInputEl = document.getElementById('editSvBillFileInput');
+                    if (editSvBillFileInputEl) editSvBillFileInputEl.value = '';
+                    var editBillLinkEl = document.getElementById('editCurrentBillLink');
+                    if (editBillLinkEl) {
+                        if (v.bill_url) {
+                            editBillLinkEl.innerHTML = 'Current bill: <a href="' + (v.bill_url || '').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" class="text-primary">View Bill</a>';
+                        } else {
+                            editBillLinkEl.innerHTML = '';
+                        }
+                    }
                     const tbody = document.getElementById('editModalItemsBody');
                     tbody.innerHTML = '';
                     if (items.length === 0) {
@@ -1595,6 +1665,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 editRowIndex++;
                 updateEditRemoveButtons();
             }
+        });
+    }
+
+    // Edit modal: show selected file name when user picks a new bill (same as Selling Voucher with Date Range)
+    var editSvBillFileInputEl = document.getElementById('editSvBillFileInput');
+    if (editSvBillFileInputEl) {
+        editSvBillFileInputEl.addEventListener('change', function() {
+            var pathEl = document.getElementById('editBillCurrentFileName');
+            if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
         });
     }
 

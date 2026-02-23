@@ -93,7 +93,7 @@
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm">
+            <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="createPurchaseOrderModalLabel">Create Purchase Order</h5>
@@ -156,6 +156,22 @@
                                 <div class="col-md-12">
                                     <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
                                     <textarea name="delivery_address" class="form-control" rows="2" placeholder="Delivery address"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
+                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
                         </div>
@@ -227,7 +243,7 @@
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" id="editPOForm" action="">
+            <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
@@ -287,6 +303,28 @@
                                 <div class="col-md-12">
                                     <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
                                     <textarea name="delivery_address" id="editDeliveryAddress" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
+                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
+                                        <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
+                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                            Choose file
+                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
+                                        </label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
+                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
                                 </div>
                             </div>
                         </div>
@@ -376,6 +414,10 @@
                             <div class="col-md-12">
                                 <label class="form-label text-muted small">Delivery Address</label>
                                 <p class="mb-0 fw-medium" id="viewDeliveryAddress">—</p>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label text-muted small">Bill</label>
+                                <p class="mb-0" id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></p>
                             </div>
                         </div>
                     </div>
@@ -641,6 +683,17 @@
                     document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
                     document.getElementById('viewContactNumber').textContent = po.contact_number || '—';
                     document.getElementById('viewDeliveryAddress').textContent = po.delivery_address || '—';
+                    const billLink = document.getElementById('viewBillLink');
+                    const billNone = document.getElementById('viewBillNone');
+                    if (po.bill_url) {
+                        billLink.href = po.bill_url;
+                        billLink.style.display = '';
+                        if (billNone) billNone.style.display = 'none';
+                    } else {
+                        billLink.href = '#';
+                        billLink.style.display = 'none';
+                        if (billNone) billNone.style.display = '';
+                    }
                     const statusEl = document.getElementById('viewStatus');
                     statusEl.textContent = (po.status || '—').charAt(0).toUpperCase() + (po.status || '').slice(1);
                     statusEl.className = 'badge bg-' + (po.status === 'approved' ? 'success' : po.status === 'rejected' ? 'danger' : po.status === 'completed' ? 'primary' : 'warning');
@@ -725,6 +778,22 @@
                     document.getElementById('editPaymentCode').value = po.payment_code || '';
                     document.getElementById('editContactNumber').value = po.contact_number || '';
                     document.getElementById('editDeliveryAddress').value = po.delivery_address || '';
+                    var editBillPathEl = document.getElementById('editCurrentBillPath');
+                    if (editBillPathEl) {
+                        editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po.bill_path) : 'No file chosen';
+                    }
+                    var editBillFileInput = document.getElementById('editBillFileInput');
+                    if (editBillFileInput) {
+                        editBillFileInput.value = '';
+                    }
+                    var editBillLinkEl = document.getElementById('editCurrentBillLink');
+                    if (editBillLinkEl) {
+                        if (po.bill_url) {
+                            editBillLinkEl.innerHTML = 'Current bill: <a href="' + escapeHtml(po.bill_url) + '" target="_blank" rel="noopener" class="text-primary">View Bill</a>';
+                        } else {
+                            editBillLinkEl.innerHTML = '';
+                        }
+                    }
                     editCurrentVendorId = po.vendor_id;
 
                     function buildEditRows(vendorItemList) {
@@ -772,6 +841,14 @@
         editItemRowIndex++;
         updateEditRemoveButtons();
     });
+
+    var editBillFileInputEl = document.getElementById('editBillFileInput');
+    if (editBillFileInputEl) {
+        editBillFileInputEl.addEventListener('change', function() {
+            var pathEl = document.getElementById('editCurrentBillPath');
+            if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+        });
+    }
 
     document.getElementById('editPoItemsBody').addEventListener('change', function(e) {
         if (
