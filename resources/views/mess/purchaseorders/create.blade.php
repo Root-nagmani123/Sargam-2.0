@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Create Purchase Order</h4>
-    <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}">
+    <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="row">
             <div class="col-md-3 mb-3">
@@ -97,6 +97,17 @@
             @endif
         </div>
         <button type="button" class="btn btn-secondary btn-sm mb-3" id="addItem">Add Item</button>
+
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-light py-2">
+                <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+            </div>
+            <div class="card-body">
+                <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
+                <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
+            </div>
+        </div>
         
         <div>
             <button type="submit" class="btn btn-success">Create PO</button>

@@ -13,6 +13,7 @@ use App\Models\Mess\ItemSubcategory;
 use App\Models\Mess\MaterialRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PurchaseOrderController extends Controller
 {
@@ -64,8 +65,11 @@ class PurchaseOrderController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
         ], [
             'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -92,6 +96,12 @@ class PurchaseOrderController extends Controller
                 'created_by' => Auth::id(),
                 'status' => 'approved',
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                $file = $request->file('bill_file');
+                $path = $file->store('mess/purchase-orders/bills', 'public');
+                $purchaseOrder->update(['bill_path' => $path]);
+            }
 
             foreach ($request->items as $item) {
                 $qty = (float) $item['quantity'];
@@ -138,6 +148,8 @@ class PurchaseOrderController extends Controller
             'delivery_address' => $purchaseOrder->delivery_address,
             'remarks' => $purchaseOrder->remarks,
             'status' => $purchaseOrder->status,
+            'bill_path' => $purchaseOrder->bill_path,
+            'bill_url' => $purchaseOrder->bill_path ? asset('storage/' . $purchaseOrder->bill_path) : null,
         ];
         $items = $purchaseOrder->items->map(function ($item) {
             return [
@@ -170,8 +182,11 @@ class PurchaseOrderController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
         ], [
             'contact_number.regex' => 'The contact number must be exactly 10 digits and contain only numbers (no letters or special characters).',
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         DB::transaction(function () use ($request, $purchaseOrder) {
@@ -195,6 +210,14 @@ class PurchaseOrderController extends Controller
                 'contact_number' => $request->contact_number,
                 'remarks' => $request->remarks,
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                if ($purchaseOrder->bill_path && Storage::disk('public')->exists($purchaseOrder->bill_path)) {
+                    Storage::disk('public')->delete($purchaseOrder->bill_path);
+                }
+                $path = $request->file('bill_file')->store('mess/purchase-orders/bills', 'public');
+                $purchaseOrder->update(['bill_path' => $path]);
+            }
 
             $purchaseOrder->items()->delete();
             foreach ($request->items as $item) {
