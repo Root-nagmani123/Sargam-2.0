@@ -22,7 +22,6 @@
         box-shadow: none !important;
         padding: 10px 5px !important;
         font-weight: 600 !important;
-        color: #666 !important;
         border-bottom: 2px solid #e0e0e0 !important;
     }
     
