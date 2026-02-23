@@ -5,6 +5,7 @@
 @section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Put In HAC" />
+    <x-estate-workflow-stepper current="put-in-hac" />
 
     <x-session_message />
 
