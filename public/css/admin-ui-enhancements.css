@@ -534,3 +534,63 @@ button:focus-visible,
     outline: 3px solid var(--admin-primary);
     outline-offset: 2px;
 }
+
+/* ============================================
+   Global DataTables UI polish (Bootstrap 5)
+   ============================================ */
+.body-wrapper .dataTables_wrapper .dataTables_length label,
+.body-wrapper .dataTables_wrapper .dataTables_filter label,
+.body-wrapper .dt-container .dt-length label,
+.body-wrapper .dt-container .dt-search label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_filter input,
+.body-wrapper .dt-container .dt-search input {
+    min-width: 16rem;
+    border-radius: 0.5rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_length select,
+.body-wrapper .dt-container .dt-length select {
+    min-width: 5.5rem;
+    border-radius: 0.5rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_info,
+.body-wrapper .dt-container .dt-info {
+    font-size: 0.875rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_paginate .pagination,
+.body-wrapper .dt-container .dt-paging .pagination {
+    gap: 0.25rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_paginate .page-link,
+.body-wrapper .dt-container .dt-paging .page-link {
+    border-radius: 0.5rem !important;
+    border-color: var(--bs-border-color);
+    min-width: 2rem;
+    text-align: center;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_paginate .page-item.active .page-link,
+.body-wrapper .dt-container .dt-paging .page-item.active .page-link {
+    background-color: var(--admin-primary);
+    border-color: var(--admin-primary);
+    box-shadow: 0 0.25rem 0.6rem rgba(0, 74, 147, 0.22);
+}
+
+@media (max-width: 767.98px) {
+    .body-wrapper .dataTables_wrapper .dataTables_filter input,
+    .body-wrapper .dt-container .dt-search input {
+        min-width: 0;
+        width: 100%;
+    }
+}
