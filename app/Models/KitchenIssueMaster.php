@@ -201,7 +201,7 @@ class KitchenIssueMaster extends Model
     }
 
     /**
-     * Get client type label
+     * Get client type label (e.g. Employee, OT, Course, Other)
      */
     public function getClientTypeLabelAttribute()
     {
@@ -213,6 +213,19 @@ class KitchenIssueMaster extends Model
         ];
 
         return $labels[$this->client_type] ?? 'Unknown';
+    }
+
+    /**
+     * Get client type with category name for display, e.g. "Employee(ACADEMY STAFF)"
+     */
+    public function getClientTypeDisplayAttribute()
+    {
+        $typeLabel = $this->client_type_label ?? '—';
+        $categoryName = $this->clientTypeCategory?->client_name;
+        if ($categoryName !== null && $categoryName !== '') {
+            return $typeLabel . '(' . strtoupper($categoryName) . ')';
+        }
+        return $typeLabel;
     }
 
     /**
