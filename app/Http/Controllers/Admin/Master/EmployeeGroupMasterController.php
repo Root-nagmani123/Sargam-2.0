@@ -78,6 +78,8 @@ class EmployeeGroupMasterController extends Controller
     }
     public function edit($id)
     {
+          //$decryptedId = decrypt($id);
+          //dd($decryptedId);
         try {
             $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
 
