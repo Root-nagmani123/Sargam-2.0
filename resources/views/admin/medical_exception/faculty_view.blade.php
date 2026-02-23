@@ -69,7 +69,7 @@
                             <th scope="col">OT Code</th>
                             <th scope="col">Medical Document</th>
                             <th scope="col">Application Type</th>
-                            <th scope="col">Exemption Count</th>
+                           {{--<th scope="col">Exemption Count</th>--}}
                             <th scope="col">Submitted On</th>
                         </tr>
                     </thead>
@@ -106,7 +106,7 @@
                                     @endif
                                 </td>
                                 <td>{{ $record->application_type ?? 'N/A' }}</td>
-                                <td>{{ $record->exemption_count ?? 0 }}</td>
+                                {{--<td>{{ $record->exemption_count ?? 0 }}</td>--}}
                                 <td>
                                     @if($record->submitted_on)
                                         {{ \Carbon\Carbon::parse($record->submitted_on)->format('d-m-Y h:i A') }}
