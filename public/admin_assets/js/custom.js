@@ -872,7 +872,30 @@ $(document).ready(function () {
         });
     });
 
-    $(".select2").select2();
+    /* Select2 with Bootstrap 5 theme and UX defaults */
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        $('.select2').each(function() {
+            var $el = $(this);
+            if ($el.hasClass('select2-hidden-accessible')) {
+                $el.select2('destroy');
+            }
+            var opts = {
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: $el.data('placeholder') || $el.attr('placeholder') || 'Select...',
+                allowClear: $el.data('allow-clear') === true || $el.attr('data-allow-clear') === 'true',
+                language: {
+                    noResults: function() { return 'No results found'; },
+                    searching: function() { return 'Searching...'; }
+                }
+            };
+            var $modal = $el.closest('.modal');
+            if ($modal.length) {
+                opts.dropdownParent = $modal;
+            }
+            $el.select2(opts);
+        });
+    }
 });
 
 
