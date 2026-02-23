@@ -12,7 +12,7 @@
                     placeholder="Group Name" 
                     formLabelClass="form-label fw-semibold"
                     required="true"
-                    value="{{ old('group_name', optional($employeeGroupMaster)->group_name ?? '') }}"
+                    value="{{ old('group_name', optional($employeeGroupMaster)->emp_group_name ?? '') }}"
                     />
             </div>
         </div>
