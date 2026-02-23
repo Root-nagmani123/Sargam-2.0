@@ -49,9 +49,32 @@ class EmployeeGroupMasterController extends Controller
     }
     public function edit($id)
     {
+<<<<<<< HEAD
         $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
         // dd($employeeGroupMaster);
         return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
+=======
+          //$decryptedId = decrypt($id);
+          //dd($decryptedId);
+        try {
+            $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
+
+            // Return only form HTML for AJAX requests (modal)
+            if (request()->ajax()) {
+                return view('admin.master.employee_group._form', compact('employeeGroupMaster'))->render();
+            }
+
+            return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
+        } catch (\Exception $e) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to edit employee group: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'Failed to edit employee group: ' . $e->getMessage());
+        }
+>>>>>>> 2ab4dd78 (recent log issue fixed)
     }
 
     public function update(Request $request, $id)
