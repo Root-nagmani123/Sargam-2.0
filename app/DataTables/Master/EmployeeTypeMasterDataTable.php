@@ -74,7 +74,7 @@ class EmployeeTypeMasterDataTable extends DataTable
      */
     public function query(EmployeeTypeMaster $model): QueryBuilder
     {
-        return $model->newQuery();
+        return $model->newQuery()->orderBy('pk', 'desc');
     }
 
     /**
