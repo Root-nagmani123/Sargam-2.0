@@ -10,31 +10,31 @@
         <!-- start Zero Configuration -->
         <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
             <div class="card-body p-4">
-                
+
                 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
                     <div>
                         <h4 class="fw-semibold text-dark mb-1">Employee Group Master</h4>
                         <p class="text-muted small mb-0">Manage and organize employee group categories</p>
                     </div>
                     <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
-                        <button type="button" 
+                        <button type="button"
                                 class="btn btn-primary px-4 py-2 rounded-1 shadow-sm d-flex align-items-center gap-2 transition-all"
-                                data-bs-toggle="modal" 
+                                data-bs-toggle="modal"
                                 data-bs-target="#employeeGroupModal"
                                 onclick="openEmployeeGroupModal('{{ route('master.employee.group.create') }}', 'Create Employee Group')">
-                            <i class="material-icons menu-icon material-symbols-rounded" 
+                            <i class="material-icons menu-icon material-symbols-rounded"
                                style="font-size: 20px; vertical-align: middle;">add</i>
                             <span>Add Employee Group</span>
                         </button>
                     </div>
                 </div>
-                
+
                 <hr class="my-4">
-                
+
                 <div class="table-responsive rounded overflow-auto">
                     {{ $dataTable->table(['class' => 'table text-nowrap mb-0 align-middle']) }}
                 </div>
-                
+
             </div>
         </div>
         <!-- end Zero Configuration -->
@@ -45,43 +45,43 @@
     .employee-group-index .card {
         transition: box-shadow 0.3s ease;
     }
-    
+
     .employee-group-index .card:hover {
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
     }
-    
+
     .employee-group-index .btn-primary {
         transition: all 0.3s ease;
         font-weight: 500;
     }
-    
+
     .employee-group-index .btn-primary:hover {
         transform: translateY(-2px);
         box-shadow: 0 0.5rem 1rem rgba(0, 74, 147, 0.3) !important;
     }
-    
+
     /* Table: full row visible on all screens, horizontal scroll on small */
     .employee-group-index .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-    
+
     .employee-group-index #employeegroupmaster-table {
         width: 100% !important;
         min-width: 320px;
     }
-    
+
     .employee-group-index #employeegroupmaster-table th,
     .employee-group-index #employeegroupmaster-table td {
         white-space: nowrap;
         min-width: 0;
     }
-    
+
     .employee-group-index .table {
         border-collapse: separate;
         border-spacing: 0;
     }
-    
+
     .employee-group-index .table thead th {
         background-color: #f8f9fa;
         border-bottom: 2px solid #dee2e6;
@@ -92,45 +92,45 @@
         font-size: 0.875rem;
         letter-spacing: 0.5px;
     }
-    
+
     .employee-group-index .table tbody td {
         padding: 1rem;
         vertical-align: middle;
         border-bottom: 1px solid #f0f0f0;
     }
-    
+
     .employee-group-index .table tbody tr:hover {
         background-color: #f8f9fa;
         transition: background-color 0.2s ease;
     }
-    
+
     .employee-group-index .table tbody tr:last-child td {
         border-bottom: none;
     }
-    
+
     /* Action buttons styling */
     .employee-group-index .table tbody td .btn {
         transition: all 0.2s ease;
         margin: 0 2px;
     }
-    
+
     .employee-group-index .table tbody td .btn:hover:not(:disabled) {
         transform: translateY(-1px);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
+
     .employee-group-index .table tbody td .btn-outline-primary:hover {
         background-color: #0d6efd;
         border-color: #0d6efd;
         color: #fff;
     }
-    
+
     .employee-group-index .table tbody td .btn-outline-danger:hover {
         background-color: #dc3545;
         border-color: #dc3545;
         color: #fff;
     }
-    
+
     /* Hide DataTables responsive control column if it ever appears */
     .employee-group-index #employeegroupmaster-table .dtr-control,
     .employee-group-index #employeegroupmaster-table th.dtr-control,
@@ -143,7 +143,7 @@
         position: absolute !important;
         left: -9999px !important;
     }
-    
+
     /* Action buttons container */
     .employee-group-index .action-buttons {
         display: flex;
@@ -151,57 +151,57 @@
         justify-content: center;
         flex-wrap: wrap;
     }
-    
+
     @media (max-width: 768px) {
         .employee-group-index .d-flex.justify-content-between {
             flex-direction: column;
             align-items: flex-start !important;
         }
-        
+
         .employee-group-index .btn-primary {
             width: 100%;
             justify-content: center;
         }
-        
+
         .employee-group-index .card-body {
             padding: 1rem !important;
         }
-        
+
         .employee-group-index #employeegroupmaster-table th,
         .employee-group-index #employeegroupmaster-table td {
             padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
         }
-        
+
         .employee-group-index .action-buttons {
             flex-direction: column;
             width: 100%;
         }
-        
+
         .employee-group-index .action-buttons .btn {
             width: 100%;
             margin: 2px 0;
         }
     }
-    
+
     @media (max-width: 576px) {
         .employee-group-index .table thead th {
             font-size: 0.75rem;
             padding: 0.5rem 0.5rem;
         }
-        
+
         .employee-group-index .table tbody td {
             padding: 0.5rem 0.5rem;
             font-size: 0.8125rem;
         }
     }
-    
+
     /* Modal styling */
     .employee-group-index .modal-header {
         background-color: #f8f9fa;
         border-bottom: 2px solid #dee2e6;
     }
-    
+
     .employee-group-index .modal-footer {
         border-top: 1px solid #dee2e6;
     }
@@ -244,13 +244,20 @@
         const modalEl = document.getElementById('employeeGroupModal');
         const modalTitle = modalEl.querySelector('#employeeGroupModalLabel');
         const modalBody = modalEl.querySelector('#employeeGroupModalBody');
-        
+
         modalTitle.textContent = title || 'Employee Group';
         modalBody.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-        
-        const bsModal = new bootstrap.Modal(modalEl);
+
+       /* const bsModal = new bootstrap.Modal(modalEl);
+        bsModal.show();*/
+
+        let bsModal = bootstrap.Modal.getInstance(modalEl);
+
+        if (!bsModal) {
+            bsModal = new bootstrap.Modal(modalEl);
+        }
         bsModal.show();
-        
+
         fetch(url, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
@@ -275,7 +282,7 @@
             modalBody.innerHTML = '<div class="alert alert-danger">Failed to load form.</div>';
         });
     };
-    
+
     // Handle form submission
     $(document).on('submit', '#employeeGroupForm', function(e) {
         e.preventDefault();
@@ -283,10 +290,10 @@
         const submitBtn = $('#saveEmployeeGroupBtn');
         const btnText = submitBtn.find('.btn-text');
         const originalText = btnText.text();
-        
+
         submitBtn.prop('disabled', true);
         btnText.html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
-        
+
         $.ajax({
             url: form.attr('action'),
             method: form.attr('method') || 'POST',
@@ -301,18 +308,18 @@
                         response.message +
                         '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
                         '</div>';
-                    
+
                     $('.employee-group-index').prepend(alertHtml);
-                    
+
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('employeeGroupModal'));
                     if (modal) modal.hide();
-                    
+
                     // Reload DataTable
                     if ($.fn.DataTable.isDataTable('#employeegroupmaster-table')) {
                         $('#employeegroupmaster-table').DataTable().ajax.reload(null, false);
                     }
-                    
+
                     // Auto-hide alert after 3 seconds
                     setTimeout(function() {
                         $('.alert-success').fadeOut(function() {
@@ -325,12 +332,12 @@
                 if (xhr.status === 422) {
                     const errors = xhr.responseJSON?.errors || {};
                     let errorHtml = '<div class="alert alert-danger"><ul class="mb-0">';
-                    
+
                     $.each(errors, function(key, value) {
                         errorHtml += '<li>' + value[0] + '</li>';
                     });
                     errorHtml += '</ul></div>';
-                    
+
                     $('#employeeGroupModalBody').prepend(errorHtml);
                 } else {
                     const message = xhr.responseJSON?.message || 'An error occurred. Please try again.';
@@ -343,32 +350,32 @@
             }
         });
     });
-    
+
     // Handle edit button clicks in DataTable
     $(document).on('click', '.edit-employee-group', function(e) {
         e.preventDefault();
         const url = $(this).attr('href');
         openEmployeeGroupModal(url, 'Edit Employee Group');
     });
-    
+
     // Clear modal on close and update button text
     $('#employeeGroupModal').on('hidden.bs.modal', function() {
         $('#employeeGroupModalBody').html('<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
         $('#saveEmployeeGroupBtn').find('.btn-text').text('Save');
         $('#employeeGroupModalLabel').text('Create Employee Group');
     });
-    
+
     function removeResponsiveControl() {
         var sel = '.employee-group-index #employeegroupmaster-table';
         $(sel + ' .dtr-control, ' + sel + ' th.dtr-control, ' + sel + ' td.dtr-control').remove();
     }
-    
+
     // Handle delete button clicks
     $(document).on('click', '.delete-employee-group', function(e) {
         e.preventDefault();
         const url = $(this).attr('href');
         const groupName = $(this).data('name') || 'this employee group';
-        
+
         if (confirm('Are you sure you want to delete ' + groupName + '? This action cannot be undone.')) {
             $.ajax({
                 url: url,
@@ -384,15 +391,15 @@
                             'Employee Group deleted successfully.' +
                             '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
                             '</div>';
-                        
+
                         // Insert alert at top of page
                         $('.employee-group-index').prepend(alertHtml);
-                        
+
                         // Reload DataTable
                         if ($.fn.DataTable.isDataTable('#employeegroupmaster-table')) {
                             $('#employeegroupmaster-table').DataTable().ajax.reload(null, false);
                         }
-                        
+
                         // Auto-hide alert after 3 seconds
                         setTimeout(function() {
                             $('.alert-success').fadeOut(function() {
@@ -408,7 +415,7 @@
                         '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
                         '</div>';
                     $('.employee-group-index').prepend(alertHtml);
-                    
+
                     setTimeout(function() {
                         $('.alert-danger').fadeOut(function() {
                             $(this).remove();
@@ -418,7 +425,7 @@
             });
         }
     });
-    
+
     $(document).ready(function() {
         setTimeout(removeResponsiveControl, 100);
         $(document).on('preInit.dt', function(e, settings) {
