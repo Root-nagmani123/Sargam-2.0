@@ -58,9 +58,8 @@ class DuplicateVehiclePassRequest extends Model
     public static function reasonOptions(): array
     {
         return [
-            'Lost' => 'Lost',
+            'Lost/Stolen' => 'Lost/Stolen',
             'Damaged' => 'Damaged',
-            'Stolen' => 'Stolen',
             'Expired' => 'Expired (Extension)',
             'Other' => 'Other',
         ];

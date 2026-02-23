@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeMaster;
 use App\Models\SecVehicleType;
 use App\Models\VehiclePassDuplicateApplyTwfw;
+use App\Models\VehiclePassTWApply;
+use App\Models\VehiclePassFWApply;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -57,6 +59,92 @@ class DuplicateVehiclePassController extends Controller
             });
 
         return view('admin.security.duplicate_vehicle_pass.create', compact('vehicleTypes', 'employees'));
+    }
+
+    /**
+     * API Endpoint: Fetch vehicle details by vehicle number
+     * Returns previously stored vehicle details to autofill the form
+     * Searches in both TW (Two Wheeler) and FW (Four Wheeler) tables
+     */
+    public function getVehicleDetails(Request $request)
+    {
+        $vehicleNumber = trim($request->get('vehicle_number', ''));
+        
+        if (empty($vehicleNumber)) {
+            return response()->json(['success' => false, 'message' => 'Vehicle number is required.']);
+        }
+
+        $vehiclePass = null;
+        $vehiclePassPk = null;
+
+        // First, try to find in the TW (Two Wheeler) table - approved passes
+        $vehiclePassTW = VehiclePassTWApply::where('vehicle_no', $vehicleNumber)
+            ->where('vech_card_status', 2) // Only approved passes
+            ->latest('created_date')
+            ->first();
+
+        // Also try FW (Four Wheeler) table - approved passes
+        $vehiclePassFW = VehiclePassFWApply::where('vehicle_no', $vehicleNumber)
+            ->where('vech_card_status', 2) // Only approved passes
+            ->latest('created_date')
+            ->first();
+
+        // Use the most recent one from either TW or FW
+        if ($vehiclePassTW && $vehiclePassFW) {
+            // Compare dates and use the most recent
+            if ($vehiclePassTW->created_date >= $vehiclePassFW->created_date) {
+                $vehiclePass = $vehiclePassTW;
+                $vehiclePassPk = $vehiclePassTW->vehicle_tw_pk;
+            } else {
+                $vehiclePass = $vehiclePassFW;
+                $vehiclePassPk = $vehiclePassFW->vehicle_fw_pk;
+            }
+        } elseif ($vehiclePassTW) {
+            $vehiclePass = $vehiclePassTW;
+            $vehiclePassPk = $vehiclePassTW->vehicle_tw_pk;
+        } elseif ($vehiclePassFW) {
+            $vehiclePass = $vehiclePassFW;
+            $vehiclePassPk = $vehiclePassFW->vehicle_fw_pk;
+        }
+
+        // If not found in TW/FW tables, try duplicate vehicle pass table
+        if (!$vehiclePass) {
+            $vehiclePass = VehiclePassDuplicateApplyTwfw::where('vehicle_no', $vehicleNumber)
+                ->latest('created_date')
+                ->first();
+            
+            if ($vehiclePass) {
+                $vehiclePassPk = $vehiclePass->vehicle_primary_pk ?? $vehiclePass->vehicle_tw_pk;
+            }
+        }
+
+        if (!$vehiclePass) {
+            return response()->json(['success' => false, 'message' => 'Vehicle not found in TW or FW records.']);
+        }
+
+        // Get employee details if available
+        $employee = null;
+        if ($vehiclePass->emp_master_pk) {
+            $employee = EmployeeMaster::with(['designation', 'department'])
+                ->find($vehiclePass->emp_master_pk);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'vehicle_pass_no' => $vehiclePassPk,
+                'vehicle_type' => $vehiclePass->vehicle_type,
+                'vehicle_type_name' => $vehiclePass->vehicleType?->vehicle_type ?? '',
+                'emp_master_pk' => $vehiclePass->emp_master_pk,
+                'employee_name' => $employee ? trim($employee->first_name . ' ' . ($employee->last_name ?? '')) : '',
+                'id_card_number' => $vehiclePass->employee_id_card ?? '',
+                'designation' => $employee?->designation?->designation_name ?? '',
+                'department' => $employee?->department?->department_name ?? '',
+                'start_date' => $vehiclePass->veh_card_valid_from ? $vehiclePass->veh_card_valid_from->format('Y-m-d') : '',
+                'end_date' => $vehiclePass->vech_card_valid_to ? $vehiclePass->vech_card_valid_to->format('Y-m-d') : '',
+                'reason_for_duplicate' => $vehiclePass->card_reason ?? '',
+            ]
+        ]);
     }
 
     /**

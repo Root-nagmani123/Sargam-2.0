@@ -21,7 +21,7 @@ class DuplicateIDCardRequestController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $employeePk = $user->user_id ?? $user->pk ?? null;
+        $employeePk = $user->user_id;
         if (!$employeePk) {
             abort(403);
         }
@@ -150,7 +150,8 @@ class DuplicateIDCardRequestController extends Controller
             abort(403);
         }
 
-        $validated = $request->validate([
+        // Base validation
+        $baseRules = [
             'id_card_type' => 'required|in:Permanent,Contractual,Family',
             'id_card_number' => 'required|string|max:20',
             'photo' => 'required|file|image|max:2048',
@@ -165,7 +166,22 @@ class DuplicateIDCardRequestController extends Controller
             'card_reason' => 'required|string|max:255',
             'card_valid_from' => 'nullable|date',
             'card_valid_to' => 'nullable|date|after_or_equal:card_valid_from',
-        ]);
+        ];
+
+        // Conditional validation based on card_reason
+        $cardReason = $request->get('card_reason');
+        if ($cardReason === 'Card Lost') {
+            $baseRules['fir_doc'] = 'required|file|max:5120';
+        } elseif ($cardReason === 'Service Extended') {
+            $baseRules['service_ext'] = 'required|file|max:5120';
+        } elseif ($cardReason === 'Change in Name') {
+            $baseRules['new_employee_name'] = 'required|string|max:100';
+            $baseRules['name_proof'] = 'required|file|max:5120';
+        } elseif ($cardReason === 'Designation Change') {
+            $baseRules['designation_order'] = 'required|file|max:5120';
+        }
+
+        $validated = $request->validate($baseRules);
 
         // Build approver chain from idcard_request_approvar_master_new
         // Prefer duplicate_status=1; fallback to per_status=1 or cont_status=1 if not configured
@@ -196,7 +212,7 @@ class DuplicateIDCardRequestController extends Controller
 
         $photoPath = $request->file('photo')->store('idcard/photos', 'public');
 
-        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request) {
+        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request, $cardReason) {
             if ($validated['id_card_type'] === 'Permanent') {
                 $nextPk = (int) DB::table('security_dup_perm_id_apply')->max('pk') + 1;
                 $applyId = 'DUP' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
@@ -208,6 +224,9 @@ class DuplicateIDCardRequestController extends Controller
                     $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
                     $aadharFile = $file;
                 }
+
+                // Handle reason-specific documents for Permanent
+                $reasonDocData = $this->handleReasonDocuments($request, $applyId, $cardReason);
 
                 // Permanent duplicate table doesn't have id_proof/aadhar_doc columns; store in service_ext as fallback doc.
                 SecurityDupPermIdApply::create([
@@ -225,9 +244,18 @@ class DuplicateIDCardRequestController extends Controller
                     'employee_dob' => $validated['date_of_birth'] ?? null,
                     'mobile_no' => $validated['mobile_number'] ?? null,
                     'blood_group' => $validated['blood_group'] ?? null,
-                    'service_ext' => $aadharFile,
+                    'service_ext' => $reasonDocData['service_ext'] ?? $aadharFile,
                     'card_reason' => $validated['card_reason'],
+                    'payment_receipt' => $reasonDocData['payment_receipt'] ?? null,
+                    'fir_doc' => $reasonDocData['fir_doc'] ?? null,
                 ]);
+
+                // Additional fields for Change in Name
+                if ($cardReason === 'Change in Name' && isset($reasonDocData['new_name'])) {
+                    DB::table('security_dup_perm_id_apply')
+                        ->where('emp_id_apply', $applyId)
+                        ->update(['employee_name' => $reasonDocData['new_name']]);
+                }
 
                 // Case 2 - Extension/Duplicate ID Card (Own Permanent): Only security_dup_perm_id_apply at request time.
                 // security_dup_perm_id_apply_approval rows are inserted when approvers approve.
@@ -243,8 +271,13 @@ class DuplicateIDCardRequestController extends Controller
                     $aadharFile = $file;
                 }
 
+                // Handle reason-specific documents for Other
+                $reasonDocData = $this->handleReasonDocuments($request, $applyId, $cardReason);
+
                 $authEmp = EmployeeMaster::where('pk', $employeePk)->orWhere('pk_old', $employeePk)->first(['department_master_pk']);
                 $sectionPk = $authEmp->department_master_pk ?? null;
+                // Approval I shows requests where department_approval_emp_pk = current user; set to first approver so request appears in approval list
+                $firstApproverPk = $approvers->isNotEmpty() ? (int) $approvers->first() : null;
 
                 SecurityDupOtherIdApply::create([
                     'emp_id_apply' => $applyId,
@@ -264,9 +297,20 @@ class DuplicateIDCardRequestController extends Controller
                     'card_reason' => $validated['card_reason'],
                     'card_type' => $validated['id_card_type'],
                     'section' => $sectionPk,
+                    'department_approval_emp_pk' => $firstApproverPk,
                     'id_proof' => (int) $validated['id_proof'],
                     'aadhar_doc' => $aadharFile,
+                    'service_ext' => $reasonDocData['service_ext'] ?? null,
+                    'payment_receipt' => $reasonDocData['payment_receipt'] ?? null,
+                    'fir_doc' => $reasonDocData['fir_doc'] ?? null,
                 ]);
+
+                // Additional fields for Change in Name
+                if ($cardReason === 'Change in Name' && isset($reasonDocData['new_name'])) {
+                    DB::table('security_dup_other_id_apply')
+                        ->where('emp_id_apply', $applyId)
+                        ->update(['employee_name' => $reasonDocData['new_name']]);
+                }
 
                 // Case 4 - Extension/Duplicate ID Card (Other/Contractual): Only security_dup_other_id_apply at request time.
                 // security_dup_other_id_apply_approval rows are inserted when approvers approve.
@@ -274,6 +318,43 @@ class DuplicateIDCardRequestController extends Controller
         });
 
         return redirect()->route('admin.duplicate_idcard.index')->with('success', 'Duplicate ID Card request submitted successfully.');
+    }
+
+    /**
+     * Handle reason-specific document uploads and processing
+     */
+    private function handleReasonDocuments(Request $request, string $applyId, string $cardReason): array
+    {
+        $data = [];
+
+        if ($cardReason === 'Card Lost' && $request->hasFile('fir_doc')) {
+            $ext = $request->file('fir_doc')->getClientOriginalExtension();
+            $file = $applyId . '_FIR_' . time() . '.' . $ext;
+            $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
+            $data['fir_doc'] = $file;
+        } elseif ($cardReason === 'Service Extended' && $request->hasFile('service_ext')) {
+            $ext = $request->file('service_ext')->getClientOriginalExtension();
+            $file = $applyId . '_SERVICE_EXT_' . time() . '.' . $ext;
+            $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
+            $data['service_ext'] = $file;
+        } elseif ($cardReason === 'Change in Name') {
+            if ($request->has('new_employee_name')) {
+                $data['new_name'] = $request->get('new_employee_name');
+            }
+            if ($request->hasFile('name_proof')) {
+                $ext = $request->file('name_proof')->getClientOriginalExtension();
+                $file = $applyId . '_NAME_PROOF_' . time() . '.' . $ext;
+                $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
+                $data['payment_receipt'] = $file; // Reusing payment_receipt column for name proof
+            }
+        } elseif ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
+            $ext = $request->file('designation_order')->getClientOriginalExtension();
+            $file = $applyId . '_DESIG_ORDER_' . time() . '.' . $ext;
+            $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
+            $data['payment_receipt'] = $file; // Reusing payment_receipt column for designation order
+        }
+
+        return $data;
     }
 
     private function statusLabelForDup(string $source, string $applyId): string

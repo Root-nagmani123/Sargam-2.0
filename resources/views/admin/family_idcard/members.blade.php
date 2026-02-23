@@ -61,7 +61,7 @@
                             <th class="col-valid_to">VALID TO</th>
                             <th class="col-family_photo">FAMILY PHOTO</th>
                             <th class="col-status">STATUS</th>
-                            <th class="col-duplicate">DUPLICATE</th>
+                           
                         </tr>
                     </thead>
                     <tbody>
@@ -93,9 +93,7 @@
                                     @endif
                                 </td>
                                 <td class="col-status">{{ $member->status_label ?? 'Pending' }}</td>
-                                <td class="col-duplicate">
-                                    <button type="button" class="btn btn-link btn-sm p-0 duplicate-btn" data-member-id="{{ $member->id }}" data-member-name="{{ e($member->name ?? '') }}" title="Request Duplicate ID">DUPLICATE</button>
-                                </td>
+                               
                             </tr>
                         @empty
                             <tr>
@@ -119,59 +117,6 @@
         </div>
     </div>
 
-    <!-- Duplicate ID Card Request Modal -->
-    <div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light">
-                    <h6 class="modal-title fw-bold" id="duplicateModalLabel">Duplicate ID Card Request</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="duplicateForm" method="POST" action="" enctype="multipart/form-data">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">Family Name</label>
-                            <input type="text" class="form-control" id="duplicateFamilyName" readonly placeholder="--">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">Duplicate Reason <span class="text-danger">*</span></label>
-                            <select name="duplicate_reason" class="form-select" required>
-                                <option value="">Select reason</option>
-                                <option value="Card Lost">Card Lost</option>
-                                <option value="Card Damage">Card Damage</option>
-                                <option value="Card Extended">Card Extended</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">From date</label>
-                            <input type="date" name="from_date" class="form-control" id="duplicateFromDate">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">To Date</label>
-                            <input type="date" name="to_date" class="form-control" id="duplicateToDate">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">Upload Doc</label>
-                            <input type="file" name="dup_doc" class="form-control" accept=".pdf,.jpeg,.jpg,.png">
-                            <small class="text-muted">PDF, JPEG, PNG max 5MB</small>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 bg-light">
-                        <button type="submit" class="btn btn-primary d-flex align-items-center gap-1">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">send</i>
-                            Send
-                        </button>
-                        <button type="button" class="btn btn-danger d-flex align-items-center gap-1" data-bs-dismiss="modal">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">close</i>
-                            Close
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
 <style>
 .family-members-page .card { border-radius: 0.5rem; overflow: hidden; }

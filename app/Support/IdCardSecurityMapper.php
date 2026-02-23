@@ -14,6 +14,36 @@ use stdClass;
 class IdCardSecurityMapper
 {
     /**
+     * Generate ID card number for government (Permanent) employees.
+     * Format: DDMMYYYY(dob) + first 4 letters of name (uppercase).
+     * Example: 20022026MAYA (20-Feb-2026, name "Maya").
+     *
+     * @param \DateTimeInterface|string|null $dob Date of birth
+     * @param string $name Employee full name (first_name + last_name)
+     * @return string|null Generated ID or null if dob/name insufficient
+     */
+    public static function generateGovernmentEmployeeIdCardNumber($dob, string $name): ?string
+    {
+        if (empty($dob)) {
+            return null;
+        }
+        try {
+            $date = $dob instanceof \DateTimeInterface
+                ? $dob
+                : \Carbon\Carbon::parse($dob);
+            $ddmmyyyy = $date->format('dmY'); // DDMMYYYY
+        } catch (\Exception $e) {
+            return null;
+        }
+        $alphaOnly = preg_replace('/[^a-zA-Z]/', '', $name);
+        $first4 = strtoupper(substr($alphaOnly, 0, 4));
+        if (empty($first4)) {
+            return null;
+        }
+        return $ddmmyyyy . $first4;
+    }
+
+    /**
      * Map SecurityParmIdApply to object compatible with employee_idcard views.
      */
     public static function toEmployeeRequestDto(SecurityParmIdApply $row): stdClass

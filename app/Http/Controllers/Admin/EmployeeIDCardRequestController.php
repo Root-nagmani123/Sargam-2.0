@@ -23,7 +23,7 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class EmployeeIDCardRequestController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $with = [
             'employee:pk,first_name,last_name,designation_master_pk',
@@ -33,68 +33,79 @@ class EmployeeIDCardRequestController extends Controller
         ];
         $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
         $perPage = 25;
+        $filter = $request->get('filter', 'active');
+        if (! in_array($filter, ['active', 'archive', 'all'], true)) {
+            $filter = 'active';
+        }
 
-        // Permanent: active (id_status = 1) and archived (2, 3)
-        $permActive = SecurityParmIdApply::select($columns)->with($with)
-            ->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-            ->orderBy('created_date', 'desc')
-            ->get();
-        $permArchived = SecurityParmIdApply::select($columns)->with($with)
-            ->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED])
-            ->orderBy('created_date', 'desc')
-            ->get();
+        // Permanent
+        $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
+        if ($filter === 'active') {
+            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING);
+        } elseif ($filter === 'archive') {
+            $permQuery->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED]);
+        }
+        $permRows = $permQuery->get();
 
-        // Contractual: same status logic (security_con_oth_id_apply.id_status 1=Pending, 2=Approved, 3=Rejected)
+        // Contractual
         $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
-        $contActive = DB::table('security_con_oth_id_apply')
-            ->select($contCols)
-            ->where('id_status', 1)
-            ->orderBy('created_date', 'desc')
-            ->get();
-        $contArchived = DB::table('security_con_oth_id_apply')
-            ->select($contCols)
-            ->whereIn('id_status', [2, 3])
-            ->orderBy('created_date', 'desc')
-            ->get();
+        $contQuery = DB::table('security_con_oth_id_apply')->select($contCols)->orderBy('created_date', 'desc');
+        if ($filter === 'active') {
+            $contQuery->where('id_status', 1);
+        } elseif ($filter === 'archive') {
+            $contQuery->whereIn('id_status', [2, 3]);
+        }
+        $contRows = $contQuery->get();
 
-        $permActiveDto = $permActive->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
-        $permArchivedDto = $permArchived->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
-        $contActiveDto = $contActive->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
-        $contArchivedDto = $contArchived->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
+        $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $contDto = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
+        $merged = $permDto->concat($contDto)->sortByDesc('created_at')->values();
 
-        $activeMerged = $permActiveDto->concat($contActiveDto)->sortByDesc('created_at')->values();
-        $archivedMerged = $permArchivedDto->concat($contArchivedDto)->sortByDesc('created_at')->values();
+        // Date range filter (created_date)
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        if ($dateFrom) {
+            try {
+                $from = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+                $merged = $merged->filter(fn ($r) => $r->created_at && $r->created_at->gte($from))->values();
+            } catch (\Exception $e) {
+            }
+        }
+        if ($dateTo) {
+            try {
+                $to = \Carbon\Carbon::parse($dateTo)->endOfDay();
+                $merged = $merged->filter(fn ($r) => $r->created_at && $r->created_at->lte($to))->values();
+            } catch (\Exception $e) {
+            }
+        }
 
-        $activeTotal = $activeMerged->count();
-        $archivedTotal = $archivedMerged->count();
+        // Name search (case-insensitive)
+        $search = trim($request->get('search', ''));
+        if ($search !== '') {
+            $searchLower = mb_strtolower($search);
+            $merged = $merged->filter(function ($r) use ($searchLower) {
+                $name = mb_strtolower($r->name ?? '');
+                return str_contains($name, $searchLower);
+            })->values();
+        }
 
-        $activePage = (int) request()->get('page', 1);
-        $archivePage = (int) request()->get('archive_page', 1);
-        $activeRequests = new LengthAwarePaginator(
-            $activeMerged->forPage($activePage, $perPage),
-            $activeTotal,
+        $total = $merged->count();
+        $page = (int) $request->get('page', 1);
+        $requests = new LengthAwarePaginator(
+            $merged->forPage($page, $perPage),
+            $total,
             $perPage,
-            $activePage,
+            $page,
             ['path' => request()->url(), 'pageName' => 'page']
         );
-        $archivedRequests = new LengthAwarePaginator(
-            $archivedMerged->forPage($archivePage, $perPage),
-            $archivedTotal,
-            $perPage,
-            $archivePage,
-            ['path' => request()->url(), 'pageName' => 'archive_page']
-        );
-
-        $duplicationRequests = $activeRequests;
-        $extensionRequests = $activeRequests;
+        $requests->withQueryString();
 
         return view('admin.employee_idcard.index', [
-            'activeRequests' => $activeRequests,
-            'archivedRequests' => $archivedRequests,
-            'duplicationRequests' => $duplicationRequests,
-            'extensionRequests' => $extensionRequests,
-            'activeTotal' => $activeTotal,
-            'archivedTotal' => $archivedTotal,
+            'requests' => $requests,
+            'filter' => $filter,
+            'dateFrom' => $dateFrom ?? '',
+            'dateTo' => $dateTo ?? '',
+            'search' => $search ?? '',
         ]);
     }
 
@@ -542,8 +553,8 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * Resolve list id to source: permanent (pk int) or contractual (c-{pk}).
-     * @return array{type: 'perm'|'cont', pk: int, id: string|int}
+     * Resolve list id to source: permanent (emp_id_apply: int or string e.g. PID00523) or contractual (c-{pk}).
+     * @return array{type: 'perm'|'cont', pk: int|string, id: string|int}
      */
     private static function resolveId($id): array
     {
@@ -551,8 +562,11 @@ class EmployeeIDCardRequestController extends Controller
             $pk = (int) substr($id, 2);
             return ['type' => 'cont', 'pk' => $pk, 'id' => $id];
         }
-        $pk = (int) $id;
-        return ['type' => 'perm', 'pk' => $pk, 'id' => $pk];
+        // emp_id_apply can be numeric or string (e.g. PID00523)
+        if (is_numeric($id)) {
+            return ['type' => 'perm', 'pk' => (int) $id, 'id' => (int) $id];
+        }
+        return ['type' => 'perm', 'pk' => $id, 'id' => $id];
     }
 
     public function show($id)
@@ -566,8 +580,9 @@ class EmployeeIDCardRequestController extends Controller
             $request = IdCardSecurityMapper::toContractualRequestDto($row);
             return view('admin.employee_idcard.show', ['request' => $request]);
         }
+        // SecurityParmIdApply primary key is emp_id_apply (string or int)
         $row = SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])
-            ->where('pk', $res['pk'])->firstOrFail();
+            ->findOrFail($res['pk']);
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
         return view('admin.employee_idcard.show', ['request' => $request]);
     }
@@ -610,7 +625,7 @@ class EmployeeIDCardRequestController extends Controller
             ]);
         }
         $row = SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])
-            ->where('pk', $res['pk'])->firstOrFail();
+            ->findOrFail($res['pk']);
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
         return view('admin.employee_idcard.edit', [
             'request' => $request,
@@ -708,7 +723,7 @@ class EmployeeIDCardRequestController extends Controller
                 ->with('success', 'Employee ID Card request updated successfully!');
         }
 
-        $row = SecurityParmIdApply::where('pk', $res['pk'])->firstOrFail();
+        $row = SecurityParmIdApply::findOrFail($res['pk']);
 
         $employeeType = $validated['employee_type'] ?? 'Permanent Employee';
         $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
@@ -771,7 +786,7 @@ class EmployeeIDCardRequestController extends Controller
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
         ]);
 
-        $row = SecurityParmIdApply::where('pk', $res['pk'])->firstOrFail();
+        $row = SecurityParmIdApply::findOrFail($res['pk']);
         if (array_key_exists('id_card_valid_from', $validated) && $validated['id_card_valid_from']) {
             $row->card_valid_from = static::parseDateToYmd($validated['id_card_valid_from']);
         }
@@ -810,7 +825,7 @@ class EmployeeIDCardRequestController extends Controller
                 ->route('admin.employee_idcard.index')
                 ->with('success', 'Employee ID Card request archived successfully!');
         }
-        $row = SecurityParmIdApply::where('pk', $res['pk'])->firstOrFail();
+        $row = SecurityParmIdApply::findOrFail($res['pk']);
         SecurityParmIdApplyApproval::where('security_parm_id_apply_pk', $row->emp_id_apply)->delete();
         $row->delete();
 

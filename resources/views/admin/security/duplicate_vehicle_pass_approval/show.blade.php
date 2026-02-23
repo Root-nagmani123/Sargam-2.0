@@ -10,7 +10,7 @@
                     <small class="text-muted">Request ID: <code>{{ $application->vehicle_tw_pk }}</code></small>
                 </div>
                 <div>
-                    <a href="{{ route('admin.security.duplicate_vehicle_pass_approval.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-secondary">
                         <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">arrow_back</i>
                         Back to Pending
                     </a>
@@ -154,7 +154,7 @@
                     <div class="col-md-12">
                         <h5 class="text-primary mb-3">Approval Actions</h5>
                         <div class="d-flex gap-3 flex-wrap">
-                            <form action="{{ route('admin.security.duplicate_vehicle_pass_approval.approve', encrypt($application->vehicle_tw_pk)) }}" method="POST" class="d-inline">
+                            <form action="{{ route('admin.security.vehicle_pass_approval.approve', encrypt('dup-' . $application->vehicle_tw_pk)) }}" method="POST" class="d-inline">
                                 @csrf
                                 <div class="mb-2">
                                     <label class="form-label">Remarks (Optional)</label>
@@ -165,7 +165,7 @@
                                     Approve
                                 </button>
                             </form>
-                            <form action="{{ route('admin.security.duplicate_vehicle_pass_approval.reject', encrypt($application->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Reject this application?')">
+                            <form action="{{ route('admin.security.vehicle_pass_approval.reject', encrypt('dup-' . $application->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Reject this application?')">
                                 @csrf
                                 <div class="mb-2">
                                     <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
@@ -184,7 +184,7 @@
             @endif
 
             <div class="mt-4">
-                <a href="{{ route('admin.security.duplicate_vehicle_pass_approval.index') }}" class="btn btn-secondary">Close</a>
+                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-secondary">Close</a>
             </div>
         </div>
     </div>

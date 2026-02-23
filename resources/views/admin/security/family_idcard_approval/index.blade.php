@@ -30,61 +30,62 @@
                 <table class="table table-striped mb-0">
                     <thead>
                         <tr>
-                            <th>Request ID</th>
-                            <th>Family Member</th>
+                            <th>Submitted By</th>
+                            <th>Employee Type</th>
                             <th>Employee ID</th>
-                            <th>Relation</th>
-                            <th>Validity Period</th>
+                            <th>Member Count</th>
                             <th>Applied On</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($pendingApplications as $app)
+                        @forelse($groups as $group)
                             <tr>
-                                <td><code>{{ $app->fml_id_apply }}</code></td>
+                                <td><strong>{{ $group->submitted_by ?? '--' }}</strong></td>
                                 <td>
-                                    <strong>{{ $app->family_name ?? '--' }}</strong>
+                                    @if(isset($group->employee_type) && $group->employee_type === 'Contractual Employee')
+                                        <span class="badge bg-warning">Contractual</span>
+                                    @else
+                                        <span class="badge bg-info">Permanent</span>
+                                    @endif
                                 </td>
-                                <td>{{ $app->emp_id_apply ?? '--' }}</td>
-                                <td>{{ $app->family_relation ?? '--' }}</td>
+                                <td><code>{{ $group->emp_id_apply ?? '--' }}</code></td>
                                 <td>
-                                    {{ $app->card_valid_from ? $app->card_valid_from->format('d-m-Y') : '--' }}
-                                    to
-                                    {{ $app->card_valid_to ? $app->card_valid_to->format('d-m-Y') : '--' }}
+                                    <span class="badge bg-primary">{{ $group->member_count }}</span>
                                 </td>
-                                <td>{{ $app->created_date ? $app->created_date->format('d-m-Y H:i') : '--' }}</td>
+                                <td>{{ $group->created_date ? \Carbon\Carbon::parse($group->created_date)->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.family_idcard_approval.show', encrypt($app->fml_id_apply)) }}"
-                                           class="btn btn-sm btn-info" title="View Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ route('admin.family_idcard.members', $group->first_id) }}"
+                                           class="btn btn-sm btn-info" title="View Members">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i> View
                                         </a>
-                                        <form action="{{ route('admin.security.family_idcard_approval.approve', encrypt($app->fml_id_apply)) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('admin.security.family_idcard_approval.approve_group', encrypt($group->first_id)) }}" method="POST" class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-success" title="Approve"
-                                                    onclick="return confirm('Approve this Family ID Card?')">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i>
+                                                    onclick="return confirm('Approve all {{ $group->member_count }} family member(s)?')">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i> Approve
                                             </button>
                                         </form>
                                         <button type="button" class="btn btn-sm btn-danger" title="Reject"
-                                                data-encrypted-id="{{ encrypt($app->fml_id_apply) }}"
+                                                data-encrypted-id="{{ encrypt($group->first_id) }}"
+                                                data-member-count="{{ $group->member_count }}"
                                                 onclick="openRejectModal(this)">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i>
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i> Reject
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No pending Family ID Card applications found.</td>
+                                <td colspan="5" class="text-center text-muted py-4">No pending Family ID Card applications found.</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
             <div class="mt-3">
-                {{ $pendingApplications->links() }}
+                {{ $groups->links() }}
             </div>
         </div>
     </div>
@@ -101,6 +102,7 @@
             <form id="rejectForm" method="POST">
                 @csrf
                 <div class="modal-body">
+                    <p class="text-muted mb-2" id="rejectMemberInfo"></p>
                     <div class="mb-3">
                         <label for="reject_remarks" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="reject_remarks" name="approval_remarks" rows="3" required></textarea>
@@ -120,9 +122,11 @@
 <script>
 function openRejectModal(btn) {
     const encryptedId = btn.getAttribute('data-encrypted-id');
-    const url = "{{ route('admin.security.family_idcard_approval.reject', ':id') }}".replace(':id', encryptedId);
+    const memberCount = btn.getAttribute('data-member-count') || 'all';
+    const url = "{{ route('admin.security.family_idcard_approval.reject_group', ':id') }}".replace(':id', encryptedId);
     document.getElementById('rejectForm').action = url;
     document.getElementById('reject_remarks').value = '';
+    document.getElementById('rejectMemberInfo').textContent = 'This will reject ' + memberCount + ' family member(s) in this application.';
     new bootstrap.Modal(document.getElementById('rejectModal')).show();
 }
 </script>

@@ -37,6 +37,7 @@ use App\Http\Controllers\Admin\{
     DashboardController,
     CourseRepositoryController,
     EmployeeIDCardRequestController,
+    DuplicateIDCardRequestController,
     FamilyIDCardRequestController,
     WhosWhoController,
     EstateController,
@@ -240,6 +241,10 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('stream', StreamController::class);
      Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
     ->name('admin.stream.toggleStatus');
+    // Section (placeholder: redirects to Stream until Section CRUD is implemented)
+    Route::get('section', function () {
+        return redirect()->route('stream.index');
+    })->name('section.index');
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
@@ -393,11 +398,24 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
+    // Duplicate Vehicle Pass Application Routes
+    Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+        Route::get('/api/vehicle-details', 'getVehicleDetails')->name('api.vehicle_details');
+    });
+
     // Vehicle Pass Approval Routes
     Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/all', 'allApplications')->name('all');
         Route::get('/show/{id}', 'show')->name('show');
+        
         Route::post('/approve/{id}', 'approve')->name('approve');
         Route::post('/reject/{id}', 'reject')->name('reject');
     });
@@ -412,6 +430,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/approve2/{id}', 'approve2')->name('approve2');
         Route::post('/reject1/{id}', 'reject1')->name('reject1');
         Route::post('/reject2/{id}', 'reject2')->name('reject2');
+    });
+
+    // Family ID Card Approval Routes
+    Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::post('/approve/{id}', 'approve')->name('approve');
+        Route::post('/reject/{id}', 'reject')->name('reject');
+        Route::post('/approve-group/{id}', 'approveGroup')->name('approve_group');
+        Route::post('/reject-group/{id}', 'rejectGroup')->name('reject_group');
     });
 
     // Visitor/Gate Pass Routes
@@ -760,14 +789,23 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
+        Route::get('/sub-types', 'subTypes')->name('subTypes');
+        Route::get('/me', 'me')->name('me');
         Route::post('/store', 'store')->name('store');
-        Route::get('/show/{employeeIDCardRequest}', 'show')->name('show');
-        Route::get('/edit/{employeeIDCardRequest}', 'edit')->name('edit');
-        Route::put('/update/{employeeIDCardRequest}', 'update')->name('update');
-        Route::patch('/amend-dup-ext/{employeeIDCardRequest}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
-        Route::delete('/delete/{employeeIDCardRequest}', 'destroy')->name('destroy');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::patch('/amend-dup-ext/{id}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
         Route::post('/restore/{id}', 'restore')->name('restore');
         Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
+    });
+
+    // Duplicate ID Card Request Routes
+    Route::prefix('admin/duplicate-idcard')->name('admin.duplicate_idcard.')->controller(DuplicateIDCardRequestController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
     });
 
     // Family ID Card Request Routes
@@ -776,6 +814,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/export', 'export')->name('export');
+        Route::get('/members/{id}', 'members')->name('members');
+        Route::post('/duplicate/{id}', 'duplicateRequest')->name('duplicate');
         Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
         Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
         Route::put('/update/{familyIDCardRequest}', 'update')->name('update');

@@ -8,14 +8,14 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h4 class="mb-0">Approval II</h4>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">
+                   {{-- <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">arrow_back</i>
                         Approval I
                     </a>
                     <a href="{{ route('admin.security.employee_idcard_approval.all') }}" class="btn btn-secondary btn-sm">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">list</i>
                         All Requests
-                    </a>
+                    </a> --}}
                 </div>
             </div>
 

@@ -14,6 +14,10 @@
                     <div class="col-md-6">
                         <label for="vehicle_number" class="form-label">Vehicle Number <span class="text-danger">*</span></label>
                         <input type="text" name="vehicle_number" id="vehicle_number" class="form-control" value="{{ old('vehicle_number') }}" placeholder="Enter Vehicle Number" required>
+                        <small class="text-muted d-block mt-1">
+                            <i class="material-icons material-symbols-rounded" style="font-size:14px;vertical-align:middle;">info</i>
+                            Press Tab or click outside the field to auto-fill details
+                        </small>
                         @error('vehicle_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -27,19 +31,9 @@
                         @error('id_card_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
-                        <label for="emp_master_pk" class="form-label">Name <span class="text-danger">*</span></label>
-                        <select name="emp_master_pk" id="emp_master_pk" class="form-select" required>
-                            <option value="">-- Select Employee --</option>
-                            @foreach($employees as $emp)
-                                <option value="{{ $emp->pk }}"
-                                    data-designation="{{ $emp->designation }}"
-                                    data-department="{{ $emp->department }}"
-                                    data-emp-id="{{ $emp->emp_id }}"
-                                    {{ (string)old('emp_master_pk') === (string)$emp->pk ? 'selected' : '' }}>
-                                    {{ $emp->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <label for="employee_name_display" class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" id="employee_name_display" class="form-control" value="{{ old('employee_name_display') }}" placeholder="Enter Employee Name" readonly>
+                        <input type="hidden" name="emp_master_pk" id="emp_master_pk" value="{{ old('emp_master_pk') }}" required>
                         @error('emp_master_pk')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -60,17 +54,7 @@
                         </select>
                         @error('vehicle_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-md-6">
-                        <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
-                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ old('start_date') }}" required>
-                        @error('start_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
-                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ old('end_date') }}" required>
-                        @error('end_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-12">
+                     <div class="col-6">
                         <label for="reason_for_duplicate" class="form-label">Reason For Duplicate Card <span class="text-danger">*</span></label>
                         <p class="small text-muted mb-1">Enter Reason For Duplicate Card</p>
                         <select name="reason_for_duplicate" id="reason_for_duplicate" class="form-select" required>
@@ -81,12 +65,23 @@
                         </select>
                         @error('reason_for_duplicate')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-12">
+                    <div class="col-6">
                         <label for="doc_upload" class="form-label">Upload Document</label>
                         <input type="file" name="doc_upload" id="doc_upload" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
                         <small class="text-muted">PDF or image (max 2MB)</small>
                         @error('doc_upload')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                    <div class="col-md-6">
+                        <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ old('start_date') }}" required>
+                        @error('start_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ old('end_date') }}" required>
+                        @error('end_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                   
                 </div>
 
                 <div class="d-flex gap-2 mt-4">
@@ -107,28 +102,90 @@
 @push('scripts')
 <script>
 (function() {
-    var sel = document.getElementById('emp_master_pk');
+    var empMasterPk = document.getElementById('emp_master_pk');
+    var empNameDisplay = document.getElementById('employee_name_display');
     var designation = document.getElementById('designation');
     var department = document.getElementById('department');
     var idCard = document.getElementById('id_card_number');
+    var vehicleNumberInput = document.getElementById('vehicle_number');
+    var vehiclePassNo = document.getElementById('vehicle_pass_no');
+    var vehicleType = document.getElementById('vehicle_type');
+    var startDate = document.getElementById('start_date');
+    var endDate = document.getElementById('end_date');
+    var reasonForDuplicate = document.getElementById('reason_for_duplicate');
 
-    function fillFromEmployee() {
-        var opt = sel.options[sel.selectedIndex];
-        if (!opt || !opt.value) {
-            designation.value = '';
-            department.value = '';
-            if (idCard && !idCard.value) idCard.value = '';
-            return;
-        }
-        designation.value = opt.getAttribute('data-designation') || '';
-        department.value = opt.getAttribute('data-department') || '';
-        if (idCard && !idCard.value) idCard.value = opt.getAttribute('data-emp-id') || '';
+    // Handle vehicle number change for auto-fill
+    if (vehicleNumberInput) {
+        vehicleNumberInput.addEventListener('blur', function() {
+            var vehicleNo = this.value.trim();
+            if (!vehicleNo) {
+                return;
+            }
+
+            // Fetch vehicle details via API
+            fetch('{{ route("admin.security.duplicate_vehicle_pass.api.vehicle_details") }}?vehicle_number=' + encodeURIComponent(vehicleNo))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        var vehData = data.data;
+                        
+                        // Auto-fill vehicle pass number
+                        if (vehData.vehicle_pass_no && !vehiclePassNo.value) {
+                            vehiclePassNo.value = vehData.vehicle_pass_no;
+                        }
+
+                        // Auto-fill vehicle type
+                        if (vehData.vehicle_type && !vehicleType.value) {
+                            vehicleType.value = vehData.vehicle_type;
+                        }
+
+                        // Auto-fill employee name and PK
+                        if (vehData.emp_master_pk && !empMasterPk.value) {
+                            empMasterPk.value = vehData.emp_master_pk;
+                        }
+                        if (vehData.employee_name && !empNameDisplay.value) {
+                            empNameDisplay.value = vehData.employee_name;
+                        }
+
+                        // Auto-fill designation
+                        if (vehData.designation && !designation.value) {
+                            designation.value = vehData.designation;
+                        }
+
+                        // Auto-fill department
+                        if (vehData.department && !department.value) {
+                            department.value = vehData.department;
+                        }
+
+                        // Auto-fill ID card number
+                        if (vehData.id_card_number && !idCard.value) {
+                            idCard.value = vehData.id_card_number;
+                        }
+
+                        // Auto-fill dates
+                        if (vehData.start_date && !startDate.value) {
+                            startDate.value = vehData.start_date;
+                        }
+
+                        if (vehData.end_date && !endDate.value) {
+                            endDate.value = vehData.end_date;
+                        }
+
+                        // Show success message
+                        showNotification('Vehicle details loaded successfully!', 'success');
+                    } else {
+                        showNotification(data.message || 'Vehicle not found.', 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching vehicle details:', error);
+                    showNotification('Error loading vehicle details.', 'danger');
+                });
+        });
     }
 
-    if (sel) {
-        sel.addEventListener('change', fillFromEmployee);
-        fillFromEmployee();
-    }
+    // No need for fillFromEmployee since it's now a text input
+    // Employee details are handled by vehicle autofill
 
     document.getElementById('dupVehPassForm')?.addEventListener('submit', function() {
         var end = document.getElementById('end_date').value;
@@ -139,6 +196,20 @@
         }
         return true;
     });
+
+    // Helper function to show notifications
+    function showNotification(message, type = 'info') {
+        var alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        
+        var container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertBefore(alertDiv, container.firstChild);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+    }
 })();
 </script>
 @endpush
