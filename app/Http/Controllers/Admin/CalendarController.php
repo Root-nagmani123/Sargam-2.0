@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\User;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
 
 
 
@@ -156,7 +157,7 @@ class CalendarController extends Controller
     }
     public function store(Request $request)
     {
-        // print_r($request->all());die;
+        Log::info('Store method called', $request->all());
         $validated = $request->validate([
             'Course_name' => 'required|integer',
             'subject_name' => 'required|integer',
@@ -200,26 +201,40 @@ class CalendarController extends Controller
             ->format('Y-m-d');
         $event->session_type = $request->shift_type;
         if ($request->shift_type == 1) {
-            $event->class_session = $request->shift;
-        } else {
-            if ($request->has('fullDayCheckbox') && $request->fullDayCheckbox == 1) {
-                $event->full_day = $request->fullDayCheckbox;
-            }
-            $startTime = Carbon::parse($request->start_time)->format('h:i A');
-            $endTime = Carbon::parse($request->end_time)->format('h:i A');
-            $event->class_session = $startTime . ' - ' . $endTime;
-        }
+
+    // Example shift value: "09:00 to 10:25"
+      list($startTime, $endTime) = explode(' to ', $request->shift);
+
+    } else {
+
+    $startTime = $request->start_time;
+    $endTime   = $request->end_time;
+    }
+
+    // 🔥 Create proper datetime
+     $startDateTime = Carbon::parse($request->start_datetime . ' ' . $startTime);
+     $endDateTime   = Carbon::parse($request->start_datetime . ' ' . $endTime);
+
+    // Optional: Keep formatted session text for display
+        $event->class_session =
+        $startDateTime->format('h:i A') . ' - ' .
+        $endDateTime->format('h:i A');
         $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
         $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
         $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
         $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
 
+        Log::info('Event data before save', $event->toArray()); //log before save
+
         $event->save();
+
+        Log::info('Event saved successfully. ID: ' . $event->pk); //log after save
 
         $group_pks = $request->type_names ?? [];
 
         foreach ($group_pks as $group_pk) {
+             Log::info('Creating mapping for group_pk: ' . $group_pk);
             CourseGroupTimetableMapping::create([
                 'group_pk' => $group_pk,
                 'course_group_type_master' => $request->group_type,
