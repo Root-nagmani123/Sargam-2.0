@@ -5,18 +5,21 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Mess\ItemSubcategory;
+use App\Models\Mess\ItemCategory;
 
 class ItemSubcategoryController extends Controller
 {
     public function index()
     {
-        $itemsubcategories = ItemSubcategory::orderByDesc('id')->get();
-        return view('mess.itemsubcategories.index', compact('itemsubcategories'));
+        $itemsubcategories = ItemSubcategory::with('category')->orderByDesc('id')->get();
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        return view('mess.itemsubcategories.index', compact('itemsubcategories', 'categories'));
     }
 
     public function create()
     {
-        return view('mess.itemsubcategories.create');
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        return view('mess.itemsubcategories.create', compact('categories'));
     }
 
     public function store(Request $request)
@@ -39,7 +42,8 @@ class ItemSubcategoryController extends Controller
     public function edit($id)
     {
         $itemsubcategory = ItemSubcategory::findOrFail($id);
-        return view('mess.itemsubcategories.edit', compact('itemsubcategory'));
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        return view('mess.itemsubcategories.edit', compact('itemsubcategory', 'categories'));
     }
 
     public function update(Request $request, $id)
@@ -69,7 +73,7 @@ class ItemSubcategoryController extends Controller
     protected function validatedData(Request $request, ?ItemSubcategory $itemsubcategory = null): array
     {
         $validated = $request->validate([
-            'category_id'      => ['nullable', 'exists:mess_item_categories,id'],
+            'category_id'      => ['required', 'exists:mess_item_categories,id'],
             'item_name'        => ['required', 'string', 'max:255'],
             'unit_measurement' => ['required', 'string', 'max:50'],
             'standard_cost'   => ['required', 'numeric', 'min:0'],
@@ -80,7 +84,7 @@ class ItemSubcategoryController extends Controller
         $status = $validated['status'] ?? ItemSubcategory::STATUS_ACTIVE;
 
         $data = [
-            'category_id' => $validated['category_id'] ?? null,
+            'category_id' => $validated['category_id'],
             'description' => $validated['description'] ?? null,
         ];
 
