@@ -72,11 +72,15 @@
         border-radius: 0.375rem;
         border: 1px solid var(--bs-border-color, #dee2e6);
     }
+    #estateChangeRequestTable_wrapper .dataTables_filter {
+        text-align: right;
+    }
     #estateChangeRequestTable_wrapper .dataTables_filter label {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         flex-wrap: wrap;
+        justify-content: flex-end;
     }
     #estateChangeRequestTable_wrapper .dataTables_filter input {
         padding: 0.25rem 0.5rem;
@@ -122,22 +126,6 @@
 @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
-    function wrapTableScroll() {
-        var tbl = document.getElementById('estateChangeRequestTable');
-        if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) {
-            var wrap = document.createElement('div');
-            wrap.className = 'table-responsive';
-            wrap.style.overflowX = 'auto';
-            wrap.style.webkitOverflowScrolling = 'touch';
-            tbl.parentNode.insertBefore(wrap, tbl);
-            wrap.appendChild(tbl);
-        }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', wrapTableScroll);
-    } else {
-        wrapTableScroll();
-    }
     document.addEventListener('DOMContentLoaded', function() {
         var disapproveModalEl = document.getElementById('disapproveChangeRequestModal');
         var disapproveModal = disapproveModalEl ? new bootstrap.Modal(disapproveModalEl) : null;

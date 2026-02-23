@@ -1065,9 +1065,8 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
         Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
 
-        Route::get('update-meter-no', function () {
-            return view('admin.estate.update_meter_no');
-        })->name('update-meter-no');
+        Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
+        Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
 
         // Generate Estate Bill / Estate Bill Summary
         Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');

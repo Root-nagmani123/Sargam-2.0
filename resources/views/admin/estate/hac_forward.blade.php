@@ -34,7 +34,7 @@
             </div>
 
             <div id="hac-forward-card-body">
-                <div class="table-responsive hac-forward-table-wrap">
+                <div class="table-responsive text-nowraphac-forward-table-wrap">
                     {!! $dataTable->table([
                         'class' => 'table table-bordered table-striped table-hover align-middle mb-0',
                         'aria-describedby' => 'hac-forward-caption'

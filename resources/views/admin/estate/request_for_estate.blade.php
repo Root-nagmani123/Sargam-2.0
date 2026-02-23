@@ -106,16 +106,10 @@
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
                             <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
-                                <option value="61">I</option>
-                                <option value="62">II</option>
-                                <option value="63">III</option>
-                                <option value="64">IV</option>
-                                <option value="65">V</option>
-                                <option value="66">VI</option>
-                                <option value="69">IX</option>
-                                <option value="70">X</option>
-                                <option value="71">XI</option>
-                                <option value="73">XIII</option>
+                                <option value="">— Select eligibility type —</option>
+                                @foreach($eligibilityTypes ?? [] as $pk => $name)
+                                    <option value="{{ (string) $pk }}">{{ $name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -264,6 +258,16 @@
             });
         }
 
+        function ensureEligibilityOptionAndSetVal(pk, label) {
+            var $sel = $('#modal_eligibility_type_pk');
+            var val = (pk !== undefined && pk !== null && pk !== '') ? String(pk) : '';
+            if (val && $sel.find('option[value="' + val + '"]').length === 0) {
+                $sel.append($('<option></option>').attr('value', val).text(label || ('Type ' + val)));
+            }
+            $sel.find('option').prop('selected', false);
+            $sel.find('option[value="' + val + '"]').prop('selected', true);
+        }
+
         function fillFromEmployeeDetails(data) {
             $('#modal_emp_name').val(data.emp_name || '');
             $('#modal_employee_id').val(data.employee_id || '');
@@ -272,7 +276,7 @@
             $('#modal_doj_pay_scale').val(data.doj_pay_scale || '');
             $('#modal_doj_academic').val(data.doj_academic || '');
             $('#modal_doj_service').val(data.doj_service || '');
-            $('#modal_eligibility_type_pk').val(data.eligibility_type_pk !== undefined ? String(data.eligibility_type_pk) : '62');
+            ensureEligibilityOptionAndSetVal(data.eligibility_type_pk, data.eligibility_type_name);
         }
 
         function clearEmployeeDerivedFields() {
@@ -318,7 +322,7 @@
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees();
             var defElig = $('#modal_eligibility_type_pk').val();
-            loadVacantHouses(defElig || 62);
+            loadVacantHouses(defElig);
             $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
                 if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
                 if (addEditModal) addEditModal.show();
@@ -340,13 +344,14 @@
             $('#modal_doj_pay_scale').val($btn.data('doj_pay_scale') || '');
             $('#modal_doj_academic').val($btn.data('doj_academic') || '');
             $('#modal_doj_service').val($btn.data('doj_service') || '');
-            $('#modal_eligibility_type_pk').val($btn.data('eligibility_type_pk') !== undefined ? String($btn.data('eligibility_type_pk')) : '62');
+            var eligPk = $btn.data('eligibility_type_pk');
+            var eligLabel = $btn.data('eligibility_type_label');
+            ensureEligibilityOptionAndSetVal(eligPk, eligLabel);
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
             $('#modal_current_alot').val($btn.data('current_alot') || '');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees(rowPk, rowPk);
-            var eligPk = $btn.data('eligibility_type_pk');
             var currentAlot = $btn.data('current_alot') || '';
             var valueForSelect = (currentAlot.indexOf(' - ') !== -1) ? currentAlot.split(' - ').pop().trim() : currentAlot;
             loadVacantHouses(eligPk, valueForSelect);
