@@ -160,6 +160,11 @@
                     <span class="hide-menu small text-nowrap">Stock Balance as of Till Date</span>
                 </a>
             </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link {{ request()->routeIs('admin.mess.reports.minimum-stock-alert') ? 'active' : '' }}" href="{{ route('admin.mess.reports.minimum-stock-alert') }}">
+                    <span class="hide-menu small text-nowrap">Minimum Stock Alert</span>
+                </a>
+            </li>
         </ul>
 
         <!-- ======= OTHER MODULES ======= -->

@@ -596,6 +596,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
             Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
+            Route::get('minimum-stock-alert', [\App\Http\Controllers\Mess\ReportController::class, 'minimumStockAlert'])->name('minimum-stock-alert');
         });
     });
 });
