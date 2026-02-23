@@ -40,7 +40,7 @@
                     </div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="display-6 fw-bold lh-1 mb-1" id="stat-total">{{ $totals['total'] ?? 0 }}</div>
-                        <small class="text-body-secondary text-uppercase tracking-tight opacity-75">Total Rooms</small>
+                        <small class="text-dark">Total Rooms</small>
                     </div>
                 </div>
             </div>
@@ -53,7 +53,7 @@
                     </div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="display-6 fw-bold lh-1 mb-1" id="stat-allotted">{{ $totals['allotted'] ?? 0 }}</div>
-                        <small class="text-body-secondary text-uppercase tracking-tight opacity-75">Allotted</small>
+                        <small class="text-dark">Allotted</small>
                     </div>
                 </div>
             </div>
@@ -66,7 +66,7 @@
                     </div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="display-6 fw-bold lh-1 mb-1" id="stat-available">{{ $totals['available'] ?? 0 }}</div>
-                        <small class="text-body-secondary text-uppercase tracking-tight opacity-75">Available</small>
+                        <small class="text-dark">Available</small>
                     </div>
                 </div>
             </div>
@@ -79,7 +79,7 @@
                     </div>
                     <div class="flex-grow-1 min-w-0">
                         <div class="display-6 fw-bold lh-1 mb-1" id="stat-maintenance">{{ $totals['maintenance'] ?? 0 }}</div>
-                        <small class="text-body-secondary text-uppercase tracking-tight opacity-75">Under Maintenance</small>
+                        <small class="text-dark">Under Maintenance</small>
                     </div>
                 </div>
             </div>
@@ -97,9 +97,9 @@
         @forelse($buildings ?? [] as $h)
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden hostel-building-card position-relative">
-                <div class="card-header bg-primary bg-opacity-10 border-0 py-3">
-                    <h3 class="h6 fw-semibold mb-0 text-dark d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-building-fill-gear text-primary"></i>
+                <div class="card-header bg-primary py-3">
+                    <h3 class="h6 fw-semibold mb-0 text-white d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-building-fill-gear text-white"></i>
                         {{ $h->name ?? 'Hostel' }}
                     </h3>
                 </div>
@@ -114,25 +114,25 @@
                         <div class="col-3">
                             <div class="rounded-3 p-2 p-sm-3 bg-body-tertiary">
                                 <div class="fw-bold fs-5 text-dark">{{ $total }}</div>
-                                <small class="text-body-secondary opacity-90">Total</small>
+                                <small class="text-dark opacity-90">Total</small>
                             </div>
                         </div>
                         <div class="col-3">
                             <div class="rounded-3 p-2 p-sm-3 bg-primary bg-opacity-10">
                                 <div class="fw-bold fs-5 text-primary">{{ $allotted }}</div>
-                                <small class="text-body-secondary opacity-90">Allotted</small>
+                                <small class="text-dark opacity-90">Allotted</small>
                             </div>
                         </div>
                         <div class="col-3">
                             <div class="rounded-3 p-2 p-sm-3 bg-success bg-opacity-10">
                                 <div class="fw-bold fs-5 text-success">{{ $available }}</div>
-                                <small class="text-body-secondary opacity-90">Available</small>
+                                <small class="text-dark opacity-90">Available</small>
                             </div>
                         </div>
                         <div class="col-3">
                             <div class="rounded-3 p-2 p-sm-3 bg-warning bg-opacity-25">
                                 <div class="fw-bold fs-5 text-warning-emphasis">{{ $maintenance }}</div>
-                                <small class="text-body-secondary opacity-90">Maint.</small>
+                                <small class="text-dark opacity-90">Maint.</small>
                             </div>
                         </div>
                     </div>
@@ -140,13 +140,6 @@
             </div>
         </div>
         @empty
-        @php
-            $hostels = [
-                ['name' => 'Hostel Block A', 'total' => 48, 'allotted' => 42, 'available' => 4, 'maintenance' => 2],
-                ['name' => 'Hostel Block B', 'total' => 52, 'allotted' => 45, 'available' => 5, 'maintenance' => 2],
-                ['name' => 'Hostel Block C', 'total' => 36, 'allotted' => 32, 'available' => 2, 'maintenance' => 2],
-            ];
-        @endphp
         @foreach($hostels as $h)
         <div class="col-12 col-lg-4">
             <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden hostel-building-card">
@@ -182,13 +175,13 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 table-striped-columns table-borderless">
-                            <thead class="table-light">
+                        <table class="table text-nowrapalign-middle mb-0">
+                            <thead>
                                 <tr>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Room</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Participant</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Course</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Check-in</th>
+                                    <th>Room</th>
+                                    <th>Participant</th>
+                                    <th>Course</th>
+                                    <th>Check-in</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -228,13 +221,13 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 table-striped-columns table-borderless">
-                            <thead class="table-light">
+                        <table class="table text-nowrap align-middle mb-0">
+                            <thead>
                                 <tr>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Room</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Participant</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Course</th>
-                                    <th class="text-uppercase small fw-semibold opacity-75">Check-out</th>
+                                    <th>Room</th>
+                                    <th>Participant</th>
+                                    <th>Course</th>
+                                    <th>Check-out</th>
                                 </tr>
                             </thead>
                             <tbody>
