@@ -107,7 +107,7 @@
                         </div>
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="modal_eligibility_type_pk" disabled>
+                            <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
                                 <option value="">— Select eligibility type —</option>
                                 @foreach($eligibilityTypes ?? [] as $pk => $name)
                                     <option value="{{ (string) $pk }}">{{ $name }}</option>
@@ -251,18 +251,12 @@
 
         function ensureEligibilityOptionAndSetVal(pk, label) {
             var $sel = $('#modal_eligibility_type_pk');
-            var $hidden = $('#modal_eligibility_type_pk_hidden');
             var val = (pk !== undefined && pk !== null && pk !== '') ? String(pk) : '';
-            if (!val) {
-                $sel.val('').trigger('change');
-                $hidden.val('');
-                return;
+            if (val && $sel.find('option[value="' + val + '"]').length === 0) {
+                $sel.append($('<option></option>').attr('value', val).text(label || ('Type ' + val)));
             }
-            if ($sel.find('option[value="' + val + '"]').length === 0) {
-                $sel.append(new Option(label || ('Type ' + val), val, false, false));
-            }
-            $sel.val(val).trigger('change');
-            $hidden.val(val);
+            $sel.find('option').prop('selected', false);
+            $sel.find('option[value="' + val + '"]').prop('selected', true);
         }
 
         function fillFromEmployeeDetails(data) {
@@ -294,6 +288,8 @@
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees();
+            var defElig = $('#modal_eligibility_type_pk').val();
+            loadVacantHouses(defElig);
             $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
                 if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
                 if (addEditModal) addEditModal.show();
@@ -324,6 +320,9 @@
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees(rowPk, rowPk);
+            var currentAlot = $btn.data('current_alot') || '';
+            var valueForSelect = (currentAlot.indexOf(' - ') !== -1) ? currentAlot.split(' - ').pop().trim() : currentAlot;
+            loadVacantHouses(eligPk, valueForSelect);
             if (addEditModal) addEditModal.show();
         });
 

@@ -26,7 +26,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 
 class EstateController extends Controller
@@ -3076,7 +3075,7 @@ class EstateController extends Controller
             ->leftJoin('estate_block_master as b', 'ehm.estate_block_master_pk', '=', 'b.pk')
             ->leftJoin('estate_unit_type_master as ut', 'ehm.estate_unit_master_pk', '=', 'ut.pk')
             ->leftJoin('estate_unit_sub_type_master as ust', 'ehm.estate_unit_sub_type_master_pk', '=', 'ust.pk')
-            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
+            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.pk')
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
             ->where('epd.return_home_status', 0)
             ->whereNotNull('epd.estate_house_master_pk')
@@ -3727,9 +3726,6 @@ class EstateController extends Controller
             return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
         }
         $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1)); // e.g. "December"
-        $billMonthShortStr = date('M', mktime(0, 0, 0, $monthNum, 1)); // e.g. "Dec"
-        $billMonthNumStr = (string) $monthNum; // e.g. "12"
-        $billMonthNumPadded = str_pad($billMonthNumStr, 2, '0', STR_PAD_LEFT); // e.g. "12"/"02"
 
         $query = DB::table('estate_month_reading_details as emrd')
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')

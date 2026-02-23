@@ -1,0 +1,99 @@
+@extends('admin.layouts.master')
+
+@section('title', 'Update Meter No. - Sargam')
+
+@section('setup_content')
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+<x-breadcrum title="Update Meter No."></x-breadcrum>
+
+    <!-- Data Table Card -->
+    <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h5 mb-0">Update Meter No.</h2>
+                <div>
+                    <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary text-decoration-none">Update Reading & Meter No.</a>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table text-nowrap" id="updateMeterNoTable">
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Name</th>
+                            <th>Employee Type</th>
+                            <th>Unit Type</th>
+                            <th>Unit Sub Type</th>
+                            <th>Building Name</th>
+                            <th>House No.</th>
+                            <th>Old Meter1 No.</th>
+                            <th>New Meter1 No.</th>
+                            <th>Old Meter2 No.</th>
+                            <th>New Meter2 No.</th>
+                            <th>Old Meter1 Reading</th>
+                            <th>New Meter1 Reading</th>
+                            <th>Old Meter2 Reading</th>
+                            <th>New Meter2 Reading</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    $('#updateMeterNoTable').DataTable({
+        ajax: {
+            url: "{{ route('admin.estate.update-meter-no.list') }}",
+            dataSrc: function(json) {
+                return (json.status && json.data) ? json.data : [];
+            }
+        },
+        columns: [
+            { data: 'sn', title: 'S.No.' },
+            { data: 'name', title: 'Name' },
+            { data: 'employee_type', title: 'Employee Type' },
+            { data: 'unit_type', title: 'Unit Type' },
+            { data: 'unit_sub_type', title: 'Unit Sub Type' },
+            { data: 'building_name', title: 'Building Name' },
+            { data: 'house_no', title: 'House No.' },
+            { data: 'old_meter1_no', title: 'Old Meter1 No.', defaultContent: '—' },
+            { data: 'new_meter1_no', title: 'New Meter1 No.', defaultContent: '—' },
+            { data: 'old_meter2_no', title: 'Old Meter2 No.', defaultContent: '—' },
+            { data: 'new_meter2_no', title: 'New Meter2 No.', defaultContent: '—' },
+            { data: 'old_meter1_reading', title: 'Old Meter1 Reading', defaultContent: '—' },
+            { data: 'new_meter1_reading', title: 'New Meter1 Reading', defaultContent: '—' },
+            { data: 'old_meter2_reading', title: 'Old Meter2 Reading', defaultContent: '—' },
+            { data: 'new_meter2_reading', title: 'New Meter2 Reading', defaultContent: '—' }
+        ],
+        order: [[0, 'asc']],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            infoEmpty: "Showing 0 to 0 of 0 entries",
+            infoFiltered: "(filtered from _MAX_ total entries)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        responsive: false,
+        autoWidth: true,
+        scrollX: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    });
+});
+</script>
+@endpush

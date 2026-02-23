@@ -262,7 +262,10 @@
         border: 1px solid var(--bs-border-color);
         background-color: var(--bs-body-bg);
     }
-    #estateHacApprovedTable_wrapper .dataTables_filter label {
+    #estateChangeRequestTable_wrapper .dataTables_filter {
+        text-align: right;
+    }
+    #estateChangeRequestTable_wrapper .dataTables_filter label {
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -342,22 +345,6 @@
 @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
-    function wrapTableScroll() {
-        var tbl = document.getElementById('estateHacApprovedTable');
-        if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) {
-            var wrap = document.createElement('div');
-            wrap.className = 'table-responsive';
-            wrap.style.overflowX = 'auto';
-            wrap.style.webkitOverflowScrolling = 'touch';
-            tbl.parentNode.insertBefore(wrap, tbl);
-            wrap.appendChild(tbl);
-        }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', wrapTableScroll);
-    } else {
-        wrapTableScroll();
-    }
     document.addEventListener('DOMContentLoaded', function() {
         var approveModalEl = document.getElementById('approveChangeRequestModal');
         var approveModal = approveModalEl ? new bootstrap.Modal(approveModalEl) : null;
