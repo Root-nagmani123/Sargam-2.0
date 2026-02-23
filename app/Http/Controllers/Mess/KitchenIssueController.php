@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
@@ -261,6 +262,10 @@ class KitchenIssueController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ], [
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         try {
@@ -307,6 +312,11 @@ class KitchenIssueController extends Controller
                 'status' => KitchenIssueMaster::STATUS_PENDING, // Unpaid by default; Process Mess Bills "Generate Payment" sets to APPROVED (Paid)
                 'remarks' => $request->remarks,
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                $master->update(['bill_path' => $path]);
+            }
 
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
 
@@ -389,6 +399,8 @@ class KitchenIssueController extends Controller
                 'remarks' => $kitchenIssue->remarks ?? '',
                 'created_at' => $kitchenIssue->created_at ? $kitchenIssue->created_at->format('d/m/Y H:i') : '-',
                 'updated_at' => $kitchenIssue->updated_at ? $kitchenIssue->updated_at->format('d/m/Y H:i') : null,
+                'bill_path' => $kitchenIssue->bill_path,
+                'bill_url' => $kitchenIssue->bill_path ? asset('storage/' . $kitchenIssue->bill_path) : null,
             ];
             $items = $kitchenIssue->items->map(function ($item) {
                 $qty = (float) $item->quantity;
@@ -456,6 +468,8 @@ class KitchenIssueController extends Controller
                 'store_id' => $storeIdentifier,
                 'inve_store_master_pk' => $storeIdentifier, // For backward compatibility with view
                 'remarks' => $kitchenIssue->remarks,
+                'bill_path' => $kitchenIssue->bill_path,
+                'bill_url' => $kitchenIssue->bill_path ? asset('storage/' . $kitchenIssue->bill_path) : null,
             ];
             $items = $kitchenIssue->items->map(function ($item) use ($availableMap) {
                 $itemId = (int) ($item->item_subcategory_id ?? 0);
@@ -541,6 +555,10 @@ class KitchenIssueController extends Controller
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ], [
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         try {
@@ -585,6 +603,14 @@ class KitchenIssueController extends Controller
                 'issue_date' => $request->issue_date,
                 'remarks' => $request->remarks,
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                if ($kitchenIssue->bill_path && Storage::disk('public')->exists($kitchenIssue->bill_path)) {
+                    Storage::disk('public')->delete($kitchenIssue->bill_path);
+                }
+                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                $kitchenIssue->update(['bill_path' => $path]);
+            }
 
             $kitchenIssue->items()->delete();
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
