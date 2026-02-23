@@ -3,131 +3,119 @@
 @section('title', 'Employee Type Master')
 
 @section('setup_content')
-<div class="container-fluid employee-type-index">
+<div class="container-fluid employee-type-index py-2 py-md-3">
     <x-breadcrum title="Employee Type Master" />
     <x-session_message />
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden border-start border-primary border-4">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3 mb-4">
                     <div class="flex-grow-1 min-w-0">
-                        <h4 class="fw-semibold text-dark mb-1">Employee Type Master</h4>
-                        <p class="text-muted small mb-0">Manage and organize employee type categories</p>
+                        <h1 class="h4 fw-bold text-body mb-1 lh-sm">Employee Type Master</h1>
+                        <p class="text-body-secondary small mb-0 opacity-90">Manage and organize employee type categories</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2 w-100 w-md-auto justify-content-start">
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
                         <button type="button"
-                                class="btn btn-primary px-4 py-2 rounded-1"
+                                class="btn btn-primary rounded-1 px-4 py-2 d-inline-flex align-items-center gap-2"
                                 data-bs-toggle="modal"
                                 data-bs-target="#employeeTypeModal"
                                 onclick="openEmployeeTypeModal('{{ route('master.employee.type.create') }}', 'Create Employee Type')">
-                            <i class="material-icons menu-icon material-symbols-rounded"
-                               style="font-size: 20px; vertical-align: middle;">add</i>
+                            <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">add</i>
                             <span>Add Employee Type</span>
                         </button>
                     </div>
                 </div>
-                <hr class="my-4">
-                <div class="table-responsive rounded overflow-auto">
-                    {{ $dataTable->table(['class' => 'table text-nowrap mb-0 align-middle']) }}
+                <hr class="my-4 opacity-25">
+                <div class="table-responsive rounded-3 overflow-hidden border">
+                    {{ $dataTable->table(['class' => 'table text-nowrap mb-0 align-middle employee-type-table']) }}
                 </div>
-
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
 <style>
     .employee-type-index .card {
-        transition: box-shadow 0.3s ease;
+        transition: box-shadow 0.25s ease, transform 0.25s ease;
     }
-
     .employee-type-index .card:hover {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        box-shadow: var(--bs-box-shadow) !important;
     }
 
     .employee-type-index .btn-primary {
-        transition: all 0.3s ease;
         font-weight: 500;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-
     .employee-type-index .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 74, 147, 0.3) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 0.5rem 1rem rgba(var(--bs-primary-rgb), 0.35);
+    }
+    .employee-type-index .btn-primary:focus-visible {
+        box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.5);
     }
 
-    /* Table: full row visible on all screens, horizontal scroll on small */
     .employee-type-index .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-
     .employee-type-index #employeetypemaster-table {
         width: 100% !important;
         min-width: 320px;
     }
-
     .employee-type-index #employeetypemaster-table th,
     .employee-type-index #employeetypemaster-table td {
         white-space: nowrap;
         min-width: 0;
     }
-
-    .employee-type-index .table {
-        border-collapse: separate;
-        border-spacing: 0;
+    .employee-type-index .employee-type-table {
+        --bs-table-bg: transparent;
+        --bs-table-striped-bg: rgba(0, 0, 0, 0.02);
+        --bs-table-hover-bg: rgba(var(--bs-primary-rgb), 0.06);
+        --bs-table-hover-color: inherit;
     }
-
-    .employee-type-index .table thead th {
-        background-color: #f8f9fa;
-        border-bottom: 2px solid #dee2e6;
+    .employee-type-index .employee-type-table thead th {
+        background: var(--bs-tertiary-bg);
+        border-bottom: 2px solid var(--bs-border-color);
         font-weight: 600;
-        color: #495057;
-        padding: 1rem;
+        color: var(--bs-body-color);
+        padding: 1rem 1.25rem;
+        font-size: 0.8125rem;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
-        font-size: 0.875rem;
-        letter-spacing: 0.5px;
     }
-
-    .employee-type-index .table tbody td {
-        padding: 1rem;
+    .employee-type-index .employee-type-table tbody td {
+        padding: 1rem 1.25rem;
         vertical-align: middle;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
     }
-
-    .employee-type-index .table tbody tr:hover {
-        background-color: #f8f9fa;
-        transition: background-color 0.2s ease;
-    }
-
-    .employee-type-index .table tbody tr:last-child td {
+    .employee-type-index .employee-type-table tbody tr:last-child td {
         border-bottom: none;
     }
-
-    /* Action buttons styling */
-    .employee-type-index .table tbody td .btn {
-        transition: all 0.2s ease;
+    .employee-type-index .employee-type-table tbody tr:hover td {
+        background: var(--bs-table-hover-bg);
     }
 
+    .employee-type-index .table tbody td .btn {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
     .employee-type-index .table tbody td .btn:hover:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+    .employee-type-index .table tbody td a.text-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    .employee-type-index .table tbody td a.text-primary:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.12);
+        color: var(--bs-primary) !important;
     }
 
-    .employee-type-index .table tbody td .btn-outline-primary:hover {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-        color: #fff;
-    }
-
-    .employee-type-index .table tbody td .btn-outline-danger:hover {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        color: #fff;
-    }
-
-    /* Hide DataTables responsive control column if it ever appears */
     .employee-type-index #employeetypemaster-table .dtr-control,
     .employee-type-index #employeetypemaster-table th.dtr-control,
     .employee-type-index #employeetypemaster-table td.dtr-control {
@@ -141,72 +129,70 @@
     }
 
     @media (max-width: 768px) {
-        .employee-type-index .d-flex.justify-content-between {
-            flex-direction: column;
-            align-items: flex-start !important;
-        }
-
         .employee-type-index .btn-primary {
             width: 100%;
             justify-content: center;
         }
-
         .employee-type-index .card-body {
             padding: 1rem !important;
         }
-
         .employee-type-index #employeetypemaster-table th,
         .employee-type-index #employeetypemaster-table td {
-            padding: 0.5rem 0.75rem;
+            padding: 0.75rem 1rem;
             font-size: 0.875rem;
         }
     }
-
     @media (max-width: 576px) {
-        .employee-type-index .table thead th {
+        .employee-type-index .employee-type-table thead th {
             font-size: 0.75rem;
-            padding: 0.5rem 0.5rem;
+            padding: 0.625rem 0.75rem;
         }
-
-        .employee-type-index .table tbody td {
-            padding: 0.5rem 0.5rem;
+        .employee-type-index .employee-type-table tbody td {
+            padding: 0.625rem 0.75rem;
             font-size: 0.8125rem;
         }
     }
 
-    /* Modal styling */
-    .employee-type-index .modal-header {
-        background-color: #f8f9fa;
-        border-bottom: 2px solid #dee2e6;
+    .employee-type-index .modal-content {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
     }
-
+    .employee-type-index .modal-header {
+        background: var(--bs-tertiary-bg);
+        border-bottom: 1px solid var(--bs-border-color);
+        padding: 1.25rem 1.5rem;
+        border-radius: 1rem 1rem 0 0;
+    }
+    .employee-type-index .modal-body {
+        padding: 1.5rem;
+    }
     .employee-type-index .modal-footer {
-        border-top: 1px solid #dee2e6;
+        border-top: 1px solid var(--bs-border-color);
+        padding: 1rem 1.5rem 1.25rem;
+        gap: 0.5rem;
     }
 </style>
 
 <!-- Employee Type Modal -->
-<div class="modal fade" id="employeeTypeModal" tabindex="-1" aria-labelledby="employeeTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
+<div class="modal fade" id="employeeTypeModal" tabindex="-1" aria-labelledby="employeeTypeModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content shadow">
+            <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title fw-semibold" id="employeeTypeModalLabel">Create Employee Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="employeeTypeModalBody">
-                <div class="text-center p-4">
+            <div class="modal-body px-4 pt-2" id="employeeTypeModalBody">
+                <div class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
+                    <p class="text-body-secondary small mt-2 mb-0">Loading form...</p>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-                <button type="submit" form="employeeTypeForm" class="btn btn-primary btn-sm
-                " id="saveEmployeeTypeBtn"
-                style="font-size: 14px;">
+            <div class="modal-footer border-0 pt-0 flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="employeeTypeForm" class="btn btn-primary rounded-3" id="saveEmployeeTypeBtn">
                     <span class="btn-text">Save</span>
                 </button>
             </div>
@@ -231,7 +217,7 @@
         const modalBody = modalEl.querySelector('#employeeTypeModalBody');
 
         modalTitle.textContent = title || 'Employee Type';
-        modalBody.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="text-body-secondary small mt-2 mb-0">Loading form...</p></div>';
 
         const bsModal = new bootstrap.Modal(modalEl);
         bsModal.show();
@@ -282,9 +268,9 @@
             success: function(response) {
                 if (response.success) {
                     // Show success message
-                    const alertHtml = '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                    const alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">' +
                         response.message +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '<button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>' +
                         '</div>';
 
                     // Insert alert at top of page
@@ -326,7 +312,7 @@ const modalInstance = bootstrap.Modal.getInstance(modalEl);
                 if (xhr.status === 422) {
                     // Validation errors
                     const errors = xhr.responseJSON?.errors || {};
-                    let errorHtml = '<div class="alert alert-danger"><ul class="mb-0">';
+                    let errorHtml = '<div class="alert alert-danger rounded-3"><ul class="mb-0 ps-3">';
 
                     $.each(errors, function(key, value) {
                         errorHtml += '<li>' + value[0] + '</li>';
@@ -355,7 +341,7 @@ const modalInstance = bootstrap.Modal.getInstance(modalEl);
 
     // Clear modal on close and update button text
     $('#employeeTypeModal').on('hidden.bs.modal', function() {
-        $('#employeeTypeModalBody').html('<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+        $('#employeeTypeModalBody').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="text-body-secondary small mt-2 mb-0">Loading form...</p></div>');
         $('#saveEmployeeTypeBtn').find('.btn-text').text('Save');
         $('#employeeTypeModalLabel').text('Create Employee Type');
     });
