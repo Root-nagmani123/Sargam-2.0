@@ -35,11 +35,56 @@
   <!-- Optional: Responsive CSS (can be moved to <head> if desired) -->
   <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
   <script>
-    // Global DataTables defaults: disable auto column width to reduce header jitter
+    // Global DataTables defaults + Bootstrap 5 presentation for controls
     (function() {
       try {
         if (window.jQuery && $.fn && $.fn.dataTable) {
-          $.extend(true, $.fn.dataTable.defaults, { autoWidth: false, responsive: true });
+          $.extend(true, $.fn.dataTable.defaults, {
+            autoWidth: false,
+            responsive: true,
+            pagingType: 'simple_numbers',
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            language: {
+              search: '',
+              searchPlaceholder: 'Search records...',
+              lengthMenu: '_MENU_ per page',
+              info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+              infoEmpty: 'No entries to show',
+              infoFiltered: '(filtered from _MAX_ total entries)',
+              paginate: {
+                previous: '<span aria-hidden="true">&lsaquo;</span>',
+                next: '<span aria-hidden="true">&rsaquo;</span>'
+              }
+            }
+          });
+
+          var styleDataTableUi = function(settings) {
+            var wrapper = settings && settings.nTableWrapper ? settings.nTableWrapper : null;
+            if (!wrapper) return;
+            var $wrapper = $(wrapper);
+
+            // DataTables v1 + v2 selectors
+            $wrapper.find('.dataTables_length select, .dt-length select')
+              .addClass('form-select form-select-sm')
+              .attr('aria-label', 'Rows per page');
+
+            $wrapper.find('.dataTables_filter input, .dt-search input')
+              .addClass('form-control form-control-sm')
+              .attr('placeholder', 'Search records...')
+              .attr('aria-label', 'Search records');
+
+            $wrapper.find('.dataTables_info, .dt-info').addClass('text-muted small');
+            $wrapper.find('.dataTables_paginate .pagination, .dt-paging .pagination')
+              .addClass('pagination-sm mb-0');
+          };
+
+          $(document).on('init.dt', function(e, settings) {
+            styleDataTableUi(settings);
+          });
+
+          $(document).on('draw.dt', function(e, settings) {
+            styleDataTableUi(settings);
+          });
         }
       } catch (e) {
         console.warn('Failed to set DataTables defaults:', e);
