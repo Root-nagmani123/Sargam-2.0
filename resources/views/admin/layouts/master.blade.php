@@ -281,13 +281,7 @@
         }
     }
 
-    .pagination .page-link {
-        border: none !important;
-        padding: 4px 10px;
-        font-size: 14px;
-        color: #3a3a3a;
-        background: transparent;
-    }
+ }
 
     .pagination .page-item.active .page-link.current-page {
         border: 2px solid #0d6efd !important;

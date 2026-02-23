@@ -27,6 +27,7 @@ class SellingVoucherDateRangeReport extends Model
         'issue_date',
         'created_by',
         'updated_by',
+        'bill_path',
     ];
 
     protected $casts = [
