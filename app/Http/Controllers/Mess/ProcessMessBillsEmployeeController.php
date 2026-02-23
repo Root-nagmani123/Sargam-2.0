@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\KitchenIssueMaster;
 use App\Exports\ProcessMessBillsExport;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
@@ -310,7 +312,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $invoiceDate = $model->issue_date
                 ? Carbon::parse($model->issue_date)->format('d-m-Y')
                 : (isset($model->date_from) && $model->date_from ? Carbon::parse($model->date_from)->format('d-m-Y') : '—');
-            $clientType = $model->client_type_label ?? ($model->clientTypeCategory ? ucfirst($model->clientTypeCategory->client_type ?? '') : ucfirst($model->client_type_slug ?? '—'));
+            $clientType = $model->client_type_display ?? ($model->client_type_label ?? ($model->clientTypeCategory ? ucfirst($model->clientTypeCategory->client_type ?? '') : ucfirst($model->client_type_slug ?? '—')));
             $total = $model->total_amount ?? $model->items->sum('amount');
             $status = $statusMap[$model->status ?? 0] ?? '—';
 
@@ -339,13 +341,13 @@ class ProcessMessBillsEmployeeController extends Controller
     public function printReceipt($id)
     {
         // Try to find in Selling Voucher with Date Range first
-        $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
+        $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($id);
 
         // If not found, try Kitchen Issue Master (Regular Selling Voucher)
         if (!$bill) {
-            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('pk', $id)
@@ -353,6 +355,67 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill'));
+    }
+
+    /**
+     * Return JSON for the Payment Details modal (bill receipt view).
+     * Used when user clicks "Payment" to show full bill and then Pay Now / Print / Cancel.
+     */
+    public function paymentDetails($id)
+    {
+        $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
+            ->find($id);
+
+        if (!$bill) {
+            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('pk', $id)
+                ->firstOrFail();
+        }
+
+        $storeName = $bill->resolved_store_name ?? '—';
+
+        $dateFrom = isset($bill->date_from) && $bill->date_from
+            ? Carbon::parse($bill->date_from)->format('d-m-Y')
+            : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
+        $dateTo = isset($bill->date_to) && $bill->date_to
+            ? Carbon::parse($bill->date_to)->format('d-m-Y')
+            : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
+
+        $purchaseDate = $bill->issue_date ? $bill->issue_date->format('d-m-Y') : $dateFrom;
+        $items = [];
+        foreach ($bill->items ?? [] as $item) {
+            $items[] = [
+                'store_name' => $storeName,
+                'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
+                'purchase_date' => $purchaseDate,
+                'price' => number_format($item->rate ?? 0, 1),
+                'quantity' => $item->quantity,
+                'amount' => number_format($item->amount ?? 0, 2),
+            ];
+        }
+
+        $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
+        $paidAmount = 0.0; // TODO: from payment tracking if added
+        $dueAmount = $totalAmount - $paidAmount;
+
+        $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—')));
+
+        return response()->json([
+            'bill_id' => $bill->id ?? $bill->pk,
+            'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
+            'client_type' => $clientTypeDisplay,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'store_name' => $storeName,
+            'items' => $items,
+            'total_amount' => number_format($totalAmount, 1),
+            'paid_amount' => number_format($paidAmount, 1),
+            'due_amount' => number_format($dueAmount, 1),
+            'due_amount_raw' => $dueAmount,
+        ]);
     }
 
     /**
@@ -442,26 +505,112 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($id);
 
-        // If not found, try Kitchen Issue Master (Regular Selling Voucher)
+        $isKitchenIssue = false;
         if (!$bill) {
             $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('pk', $id)
                 ->firstOrFail();
+            $isKitchenIssue = true;
         }
 
-        // TODO: Add your notification logic here
-        // Example: Send email or SMS to the user
-        // Notification::send($user, new InvoiceGeneratedNotification($bill));
-
         $billId = $bill->id ?? $bill->pk;
+        // Receiver = bill's buyer (employee): user_credentials.user_id = employee_master.pk of buyer
+        $receiverUserId = $this->getReceiverUserIdForBill($bill, $isKitchenIssue);
+        if ($receiverUserId !== null && $receiverUserId > 0) {
+            try {
+                // Sender = current logged-in user (Auth::user()->user_id = employee_master.pk of admin who clicked Invoice)
+                app(NotificationService::class)->create(
+                    $receiverUserId,
+                    'mess',
+                    'MessInvoice',
+                    (int) $billId,
+                    'Mess Payment Pending',
+                    'Your mess payment is pending. Please review your invoice.'
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Invoice generated and notification sent successfully!',
             'bill_id' => $billId,
             'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
         ]);
+    }
+
+    /**
+     * Resolve receiver user_id (user_credentials.user_id) for the bill's buyer for notifications.
+     *
+     * Employee: user_credentials.user_id = employee_master.pk (from client_id or by name lookup).
+     * OT/Course (Kitchen only): user_credentials.user_id = student_master.pk (client_id); students use user_category='S'.
+     * Returns null if the buyer cannot be mapped to a single user.
+     */
+    private function getReceiverUserIdForBill($bill, bool $isKitchenIssue): ?int
+    {
+        if ($isKitchenIssue) {
+            $clientType = (int) ($bill->client_type ?? 0);
+            $clientId = isset($bill->client_id) ? (int) $bill->client_id : null;
+
+            // Employee (1): client_id = employee_master.pk = user_credentials.user_id
+            if ($clientType === KitchenIssueMaster::CLIENT_EMPLOYEE) {
+                if ($clientId > 0) {
+                    return $clientId;
+                }
+                $clientName = trim($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? ''));
+                return $clientName !== '' ? $this->resolveReceiverUserIdByClientName($clientName) : null;
+            }
+
+            // OT (2) / Course (3): client_id = student_master.pk = user_credentials.user_id (user_category='S')
+            if (in_array($clientType, [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE], true) && $clientId > 0) {
+                return $clientId;
+            }
+
+            return null;
+        }
+
+        // Selling Voucher Date Range: only employee has single-user mapping (by client_name -> employee)
+        $clientName = trim($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? ''));
+        if (($bill->client_type_slug ?? '') !== 'employee' || $clientName === '') {
+            return null;
+        }
+        return $this->resolveReceiverUserIdByClientName($clientName);
+    }
+
+    /**
+     * Resolve user_credentials.user_id from buyer client name (employee full name).
+     * Tries exact match first, then LIKE match; returns null if no single match.
+     */
+    private function resolveReceiverUserIdByClientName(string $clientName): ?int
+    {
+        $escaped = str_replace(['%', '_', '\\'], ['\\%', '\\_', '\\\\'], $clientName);
+        $row = DB::table('user_credentials as uc')
+            ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
+            ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) = ?', [$clientName])
+            ->where('uc.user_category', '!=', 'S')
+            ->value('uc.user_id');
+        if ($row !== null) {
+            return (int) $row;
+        }
+        $row = DB::table('user_credentials as uc')
+            ->join('employee_master as e', 'uc.user_id', '=', 'e.pk')
+            ->whereRaw('TRIM(CONCAT(COALESCE(e.first_name, \'\'), \' \', COALESCE(e.middle_name, \'\'), \' \', COALESCE(e.last_name, \'\'))) LIKE ?', [$escaped . '%'])
+            ->where('uc.user_category', '!=', 'S')
+            ->value('uc.user_id');
+        if ($row !== null) {
+            return (int) $row;
+        }
+        if (Schema::hasColumn('user_credentials', 'name')) {
+            $row = DB::table('user_credentials')
+                ->where('name', $clientName)
+                ->where('user_category', '!=', 'S')
+                ->value('user_id');
+            return $row !== null ? (int) $row : null;
+        }
+        return null;
     }
 
     /**
@@ -494,9 +643,16 @@ class ProcessMessBillsEmployeeController extends Controller
             ], 400);
         }
 
+        // Optional payment detail from Pay Now modal
+        $amount = $request->input('amount');
+        $paymentMode = $request->input('payment_mode');
+        $paymentDate = $request->filled('payment_date') ? $this->parseDate($request->payment_date) : null;
+
         // Mark as paid
         $bill->status = 2; // STATUS_APPROVED = 2 (Paid)
         $bill->save();
+
+        // TODO: Store amount, payment_mode, payment_date in payment details table if needed
 
         // TODO: Add your notification logic here
         // Example: Send email or SMS to the user

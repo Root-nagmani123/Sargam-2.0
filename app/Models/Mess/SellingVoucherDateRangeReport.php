@@ -114,4 +114,19 @@ class SellingVoucherDateRangeReport extends Model
     {
         return self::statusLabels()[$this->status] ?? 'Unknown';
     }
+
+    /**
+     * Get client type with category name for display, e.g. "Employee(ACADEMY STAFF)"
+     */
+    public function getClientTypeDisplayAttribute(): string
+    {
+        $typeLabel = $this->clientTypeCategory
+            ? ucfirst($this->clientTypeCategory->client_type ?? '')
+            : ucfirst($this->client_type_slug ?? '—');
+        $categoryName = $this->clientTypeCategory?->client_name;
+        if ($categoryName !== null && $categoryName !== '') {
+            return $typeLabel . '(' . strtoupper($categoryName) . ')';
+        }
+        return $typeLabel ?: '—';
+    }
 }
