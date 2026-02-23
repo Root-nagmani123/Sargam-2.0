@@ -198,6 +198,7 @@
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="estateManagementCollapse">
+                                {{-- Main flow: Request → Put in HAC → HAC Forward → HAC Approved → Possession Details --}}
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-estate') }}">
@@ -217,6 +218,18 @@
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-hac-approved') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.change-request-hac-approved') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">HAC Approved</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.possession-for-others') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Possession Details</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item border-top mt-2 pt-2">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.estate-approval-setting') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.estate-approval-setting') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Approval Setting</span>
@@ -232,24 +245,6 @@
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
-                                    </a>
-                                </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.add-other-estate-request') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.add-other-estate-request') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Add Other Estate Request</span>
-                                    </a>
-                                </li> -->
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.possession-for-others') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Others</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-hac-approved') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.change-request-hac-approved') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Change Requests (HAC Approved)</span>
                                     </a>
                                 </li>
                                 <!-- <li class="sidebar-item">

@@ -17,15 +17,15 @@ class EstatePossessionOtherDataTable extends DataTable
             ->addIndexColumn()
             ->editColumn('request_id', fn($row) => $row->estateOtherRequest->request_no_oth ?? 'N/A')
             ->editColumn('name', fn($row) => $row->estateOtherRequest->emp_name ?? 'N/A')
-            ->editColumn('section_name', fn($row) => $row->estateOtherRequest->section ?? 'N/A')
+            ->editColumn('designation', fn($row) => $row->estateOtherRequest->designation ?? 'N/A')
             ->editColumn('estate_name', fn($row) => $row->campus_name ?? 'N/A')
             ->editColumn('unit_type', fn($row) => $row->unit_type_name ?? 'N/A')
             ->editColumn('building_name', fn($row) => $row->block_name ?? 'N/A')
             ->editColumn('unit_sub_type', fn($row) => $row->unit_sub_type_name ?? 'N/A')
             ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
-            ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('Y-m-d') : 'N/A')
-            ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('Y-m-d') : 'N/A')
-            ->editColumn('meter_reading_oth', fn($row) => $row->meter_reading_oth ?? 'N/A')
+            ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
+            ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
+            ->editColumn('meter_reading_oth', fn($row) => ($row->meter_reading_oth ?? '---') . '/' . ($row->meter_reading_oth1 ?? '---'))
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (!empty($searchValue)) {
@@ -33,7 +33,8 @@ class EstatePossessionOtherDataTable extends DataTable
                         $q->whereHas('estateOtherRequest', function ($sq) use ($searchValue) {
                             $sq->where('emp_name', 'like', "%{$searchValue}%")
                                 ->orWhere('request_no_oth', 'like', "%{$searchValue}%")
-                                ->orWhere('section', 'like', "%{$searchValue}%");
+                                ->orWhere('section', 'like', "%{$searchValue}%")
+                                ->orWhere('designation', 'like', "%{$searchValue}%");
                         })
                         ->orWhere('estate_possession_other.house_no', 'like', "%{$searchValue}%");
                     });
@@ -117,7 +118,7 @@ class EstatePossessionOtherDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(false)->searchable(false),
             Column::make('name')->title('NAME')->orderable(false)->searchable(false),
-            Column::make('section_name')->title('SECTION NAME')->orderable(false)->searchable(false),
+            Column::make('designation')->title('DESIGNATION')->orderable(false)->searchable(false),
             Column::make('estate_name')->title('ESTATE NAME')->orderable(false)->searchable(false),
             Column::make('unit_type')->title('UNIT TYPE')->orderable(false)->searchable(false),
             Column::make('building_name')->title('BUILDING NAME')->orderable(false)->searchable(false),
