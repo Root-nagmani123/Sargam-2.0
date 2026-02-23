@@ -578,6 +578,8 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
         var allotFormError = document.getElementById('allotFormError');
         var allotCampuses = [];
         var allotUnitTypesByCampus = {};
+        var allotEligibilityTypePk = null;
+        var allotEmployeePk = null; // for House No. filter by employee's salary-grade eligibility (DB admin query)
         var blocksUrlAllot = '{{ route("admin.estate.possession.blocks") }}';
         var unitSubTypesUrlAllot = '{{ route("admin.estate.possession.unit-sub-types") }}';
         var vacantHousesUrlAllot = '{{ route("admin.estate.change-request.vacant-houses") }}';
@@ -626,12 +628,14 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             var unitTypeId = $('#allot_unit_type').val();
             $('#allot_estate_house_master_pk').html('<option value="">---select---</option>');
             if (!campusId || !blockId || !unitSubId) return;
-            $.get(vacantHousesUrlAllot, {
+            var params = {
                 campus_id: campusId,
                 block_id: blockId,
                 unit_sub_type_id: unitSubId,
                 unit_type_id: unitTypeId || ''
-            }, function(res) {
+            };
+            if (allotEmployeePk) params.employee_pk = allotEmployeePk;
+            $.get(vacantHousesUrlAllot, params, function(res) {
                 if (res.status && res.data) {
                     res.data.forEach(function(h) {
                         $('#allot_estate_house_master_pk').append('<option value="' + h.pk + '">' + (h.house_no || h.pk) + '</option>');
@@ -664,14 +668,23 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                     var emp = data.employee || {};
                     $('#allotRequesterName').val(emp.emp_name || '');
                     $('#allotDesignation').val(emp.emp_designation || '');
+                    allotEligibilityTypePk = (emp.eligibility_type_pk != null && emp.eligibility_type_pk !== '') ? parseInt(emp.eligibility_type_pk, 10) : null;
+                    allotEmployeePk = (emp.employee_pk != null && emp.employee_pk !== '') ? parseInt(emp.employee_pk, 10) : null;
                     allotCampuses = data.campuses || [];
                     allotUnitTypesByCampus = data.unit_types_by_campus || {};
                     $('#allot_estate_campus').html('<option value="">---select---</option>');
                     allotCampuses.forEach(function(c) {
                         $('#allot_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
                     });
-                    $('#allot_unit_type, #allot_building, #allot_unit_sub_type, #allot_estate_house_master_pk').html('<option value="">---select---</option>');
-                    $('#allotNoHouses').addClass('d-none');
+                    $('#allot_unit_type, #allot_building, #allot_unit_sub_type').html('<option value="">---select---</option>');
+                    // Pre-fill House No. from vacant_houses (already filtered by eligibility + occupied) so user can allot without cascade
+                    var vacantList = data.vacant_houses || [];
+                    $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
+                    vacantList.forEach(function(h) {
+                        var label = (h.block_name ? h.block_name + ' - ' : '') + (h.house_no || h.pk);
+                        $('#allot_estate_house_master_pk').append('<option value="' + h.pk + '">' + label + '</option>');
+                    });
+                    $('#allotNoHouses').toggleClass('d-none', vacantList.length > 0);
                 })
                 .catch(function() {
                     allotLoading.classList.add('d-none');
