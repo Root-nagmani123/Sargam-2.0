@@ -46,7 +46,7 @@
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                        <select name="payment_type" class="form-select" required>
+                        <select name="payment_type" class="form-select select2" required>
                             <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                             <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
                             <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
@@ -55,7 +55,7 @@
                     </div>
                     <div class="col-md-4" id="clientNameWrap">
                         <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                        <select name="client_type_pk" class="form-select" id="clientNameSelect">
+                        <select name="client_type_pk" class="form-select select2" id="clientNameSelect">
                             <option value="">Select Client Name</option>
                             @foreach($clientNamesByType as $type => $list)
                                 @foreach($list as $c)
@@ -74,7 +74,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                        <select name="inve_store_master_pk" class="form-select" required>
+                        <select name="inve_store_master_pk" class="form-select select2" required>
                             <option value="">Select Store</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ old('inve_store_master_pk') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -113,7 +113,7 @@
                         <tbody id="itemsBody">
                             <tr class="sv-item-row">
                                 <td>
-                                    <select name="items[0][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required>
+                                    <select name="items[0][item_subcategory_id]" class="form-select form-select-sm select2 sv-item-select" required>
                                         <option value="">Select Item</option>
                                         @foreach($itemSubcategories as $s)
                                             <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}">{{ e($s['item_name'] ?? '—') }}</option>
@@ -185,7 +185,7 @@
             '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
         ).join('');
         return '<tr class="sv-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm select2 sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +

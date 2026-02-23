@@ -12,7 +12,7 @@
         <form method="GET" class="mb-3">
             <div class="row g-2">
                 <div class="col-md-2">
-                    <select name="status" class="form-select form-select-sm">
+                    <select name="status" class="form-select form-select-sm select2">
                         <option value="">All Status</option>
                         <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
                         <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>

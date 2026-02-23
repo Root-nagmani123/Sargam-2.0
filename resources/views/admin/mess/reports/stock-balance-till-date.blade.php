@@ -18,7 +18,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Select Store Name</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select select2">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id ? 'selected' : '' }}>

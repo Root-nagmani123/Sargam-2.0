@@ -43,7 +43,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="store_id" class="form-label">Store <span class="text-danger">*</span></label>
-                        <select class="form-select @error('store_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('store_id') is-invalid @enderror" 
                                 id="store_id" name="store_id" required>
                             <option value="">-- Select Store --</option>
                             @foreach($stores as $store)

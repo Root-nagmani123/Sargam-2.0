@@ -13,7 +13,7 @@
 <div class="row">
     <div class="col-md-12 mb-3">
         <label class="form-label">Category <span class="text-danger">*</span></label>
-        <select name="category_id" class="form-select" required>
+        <select name="category_id" class="form-select select2" required>
             <option value="">Select Category</option>
             @foreach($categories as $cat)
                 <option value="{{ $cat->id }}" {{ (string)$oldCategoryId === (string)$cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -55,7 +55,7 @@
 
     <div class="col-md-6 mb-3">
         <label class="form-label">Status</label>
-        <select name="status" class="form-control">
+        <select name="status" class="form-select select2">
             <option value="active" {{ $oldStatus === 'active' ? 'selected' : '' }}>Active</option>
             <option value="inactive" {{ $oldStatus === 'inactive' ? 'selected' : '' }}>Inactive</option>
         </select>

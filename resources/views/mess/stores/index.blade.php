@@ -95,7 +95,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Store Type <span class="text-danger">*</span></label>
-                            <select name="store_type" class="form-select" required>
+                            <select name="store_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($storeTypes as $value => $label)
                                     <option value="{{ $value }}" {{ old('store_type', 'mess') === $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -110,7 +110,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
+                            <select name="status" class="form-select select2">
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
@@ -147,7 +147,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Store Type <span class="text-danger">*</span></label>
-                            <select name="store_type" id="edit_store_type" class="form-select" required>
+                            <select name="store_type" id="edit_store_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($storeTypes as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -160,7 +160,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" id="edit_status" class="form-select">
+                            <select name="status" id="edit_status" class="form-select select2">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>

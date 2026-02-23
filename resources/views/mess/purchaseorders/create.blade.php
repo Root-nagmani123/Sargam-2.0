@@ -20,7 +20,7 @@
             </div>
             <div class="col-md-3 mb-3">
                 <label>Vendor *</label>
-                <select name="vendor_id" class="form-control" required>
+                <select name="vendor_id" class="form-select select2" required>
                     <option value="">Select Vendor</option>
                     @foreach($vendors as $vendor)
                         <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -31,7 +31,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label>Store</label>
-                <select name="store_id" class="form-control">
+                <select name="store_id" class="form-select select2">
                     <option value="">Select Store</option>
                     @foreach($stores as $store)
                         <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -50,7 +50,7 @@
                 @foreach($materialRequest->items as $index => $mrItem)
                     <div class="row mb-2 item-row">
                         <div class="col-md-4">
-                            <select name="items[{{ $index }}][inventory_id]" class="form-control" required>
+                            <select name="items[{{ $index }}][inventory_id]" class="form-select select2" required>
                                 <option value="{{ $mrItem->inventory_id }}">{{ $mrItem->inventory->item_name }}</option>
                             </select>
                         </div>
@@ -74,7 +74,7 @@
             @else
                 <div class="row mb-2 item-row">
                     <div class="col-md-4">
-                        <select name="items[0][inventory_id]" class="form-control" required>
+                        <select name="items[0][inventory_id]" class="form-select select2" required>
                             <option value="">Select Item</option>
                             @foreach($inventories as $inv)
                                 <option value="{{ $inv->id }}">{{ $inv->item_name }}</option>
@@ -125,7 +125,7 @@ document.getElementById('addItem').addEventListener('click', function() {
     const template = `
         <div class="row mb-2 item-row">
             <div class="col-md-4">
-                <select name="items[${itemIndex}][inventory_id]" class="form-control" required>
+                <select name="items[${itemIndex}][inventory_id]" class="form-select select2" required>
                     <option value="">Select Item</option>
                     ${inventories.map(inv => `<option value="${inv.id}">${inv.item_name}</option>`).join('')}
                 </select>
