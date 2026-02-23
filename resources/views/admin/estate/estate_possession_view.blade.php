@@ -142,11 +142,11 @@ $(document).ready(function() {
     const recordUnitSub = @json(isset($record) ? $record->estate_unit_sub_type_master_pk : null);
     const recordHouse = @json(isset($record) ? $record->estate_house_master_pk : null);
 
-    // Requester change -> fill request_id and section
+    // Requester change -> fill request_id, designation (use .attr() to read from DOM reliably; fallback to section if designation empty)
     $('#estate_other_req_pk').change(function() {
         var opt = $(this).find('option:selected');
         $('#request_id_display').val(opt.attr('data-request-no') || '');
-        $('#section_display').val(opt.attr('data-section') || opt.attr('data-designation') || '');
+        $('#designation_display').val(opt.attr('data-designation') || opt.attr('data-section') || '');
     }).trigger('change');
 
     // Campus change -> fill unit types from pre-loaded data (campus + house_master + unit_type_master join), then blocks

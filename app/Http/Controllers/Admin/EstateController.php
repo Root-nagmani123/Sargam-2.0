@@ -1055,45 +1055,13 @@ class EstateController extends Controller
 
     /**
      * Houses eligible for an employee by salary grade – DB admin query (house no laane ke liye).
-     * Uses two sources:
-     * 1) Requested salary-grade query via payroll_salary_master.salary_grade_pk
-     * 2) Existing running query (dynamic salary-grade column fallback)
+     * Exact query: select f.* from employee_master a inner join payroll_salary_master b ... where a.pk=? and f.used_home_status=0
      * Distinct f.pk so saari eligible houses aayein (data mapping / duplicate rows issue fix).
      *
      * @return \Illuminate\Support\Collection<int, int> house PKs (f.pk)
      */
     private function getEligibleHousePksByEmployeePk(int $employeePk): \Illuminate\Support\Collection
     {
-        $housePks = collect();
-
-        // Source 1 (requested): salary grades using payroll_salary_master.salary_grade_pk
-        if (\Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')) {
-            $gradeSql = "
-                SELECT DISTINCT c.pk
-                FROM employee_master a
-                INNER JOIN payroll_salary_master b ON a.pk = b.employee_master_pk
-                INNER JOIN salary_grade_master c ON b.salary_grade_pk = c.pk
-                WHERE a.pk = ?
-            ";
-
-            $gradeRows = DB::select($gradeSql, [$employeePk]);
-            $salaryGradePks = collect($gradeRows)->pluck('pk')->map(fn ($v) => (int) $v)->filter()->unique()->values();
-
-            if ($salaryGradePks->isNotEmpty()) {
-                $source1HousePks = DB::table('estate_eligibility_mapping as d')
-                    ->join('estate_house_master as f', 'd.estate_unit_sub_type_master_pk', '=', 'f.estate_unit_sub_type_master_pk')
-                    ->whereIn('d.salary_grade_master_pk', $salaryGradePks->all())
-                    ->where('f.used_home_status', 0)
-                    ->distinct()
-                    ->pluck('f.pk')
-                    ->map(fn ($v) => (int) $v)
-                    ->values();
-
-                $housePks = $housePks->merge($source1HousePks);
-            }
-        }
-
-        // Source 2 (existing): current query (dynamic salary grade column fallback)
         $salaryGradeCol = \Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')
             ? 'salary_grade_pk'
             : 'salary_grade_master_pk';
@@ -1101,27 +1069,22 @@ class EstateController extends Controller
         $sql = "
             SELECT DISTINCT f.pk
             FROM employee_master a
-            INNER JOIN payroll_salary_master b ON a.{$empPkCol} = b.employee_master_pk
+            INNER JOIN payroll_salary_master b ON a.pk = b.employee_master_pk
             INNER JOIN salary_grade_master c ON b.{$salaryGradeCol} = c.pk
             INNER JOIN estate_eligibility_mapping d ON c.pk = d.salary_grade_master_pk
             INNER JOIN estate_unit_sub_type_master e ON d.estate_unit_sub_type_master_pk = e.pk
             INNER JOIN estate_house_master f ON e.pk = f.estate_unit_sub_type_master_pk
-            WHERE a.{$empPkCol} = ?
+            WHERE a.pk = ?
             AND f.used_home_status = 0
         ";
 
         $rows = DB::select($sql, [$employeePk]);
-        $source2HousePks = collect($rows)->pluck('pk')->map(fn ($v) => (int) $v)->values();
 
-        return $housePks
-            ->merge($source2HousePks)
-            ->filter()
-            ->unique()
-            ->values();
+        return collect($rows)->pluck('pk')->map(fn ($v) => (int) $v)->values();
     }
 
     /**
-     * Get new request details for allotment modal - employee info, campuses, unit types, vacant houses.
+     * Get new request (forwarded to allotment) details for allotment modal - employee info, campuses, unit types, vacant houses.
      * House list uses DB admin query: eligible by employee's salary grade (employee → payroll_salary → salary_grade → estate_eligibility_mapping → unit_sub_type → estate_house_master).
      */
     public function getNewRequestAllotDetails($id)
@@ -1137,14 +1100,13 @@ class EstateController extends Controller
             return response()->json(['error' => 'This request already has a house allotted.'], 404);
         }
 
-        $empPkCol = $this->estateEmployeePkColumn();
         $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
         if (! $employeePk && $homeReq->employee_id) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id')) {
-                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value('pk');
             }
             if (! $employeePk && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id')) {
-                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value('pk');
             }
             $employeePk = $employeePk ? (int) $employeePk : null;
         }
@@ -1169,24 +1131,15 @@ class EstateController extends Controller
 
         $housesQuery = DB::table('estate_house_master as h')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
-            ->join('estate_campus_master as a', 'h.estate_campus_master_pk', '=', 'a.pk')
-            ->join('estate_unit_type_master as c', 'h.estate_unit_master_pk', '=', 'c.pk')
             ->where('h.used_home_status', 0)
-            ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
-            ->select(
-                'h.pk',
-                'h.house_no',
-                'b.block_name',
-                'h.estate_campus_master_pk as campus_pk',
-                'a.campus_name',
-                'h.estate_unit_master_pk as unit_type_pk',
-                'c.unit_type'
-            )
+            ->select('h.pk', 'h.house_no', 'b.block_name')
             ->orderBy('b.block_name')
             ->orderBy('h.house_no');
 
         if ($eligibleHousePks->isNotEmpty()) {
             $housesQuery->whereIn('h.pk', $eligibleHousePks->toArray());
+        } else {
+            $housesQuery->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk);
         }
 
         if ($occupiedHousePks->isNotEmpty()) {
@@ -1379,13 +1332,12 @@ class EstateController extends Controller
         $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
 
         // If employee_pk is missing, try to resolve from employee_id via employee_master
-        $empPkCol = $this->estateEmployeePkColumn();
         if (! $employeePk && $homeReq->employee_id) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id')) {
-                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value('pk');
             }
             if (! $employeePk && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id')) {
-                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value('pk');
             }
             if ($employeePk) {
                 $employeePk = (int) $employeePk;
@@ -2169,7 +2121,6 @@ class EstateController extends Controller
         $unitSubTypeId = $request->get('unit_sub_type_id');
         $unitTypeId = $request->get('unit_type_id');
         $employeePk = $request->get('employee_pk') ? (int) $request->get('employee_pk') : null;
-        $includeHousePk = $request->get('include_house_pk') ? (int) $request->get('include_house_pk') : null;
         if (! $blockId || ! $unitSubTypeId) {
             return response()->json(['status' => true, 'data' => []]);
         }
@@ -2399,11 +2350,33 @@ class EstateController extends Controller
             ->unique()
             ->values();
 
-        if ($occupiedHousePks->contains((int) $house->pk) && (! $existingPossession || (int) $existingPossession->estate_house_master_pk !== (int) $house->pk)) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Selected house is already occupied.');
+        $query = DB::table('estate_house_master')
+            ->where('estate_block_master_pk', $blockId)
+            ->where('estate_unit_sub_type_master_pk', $unitSubTypeId)
+            ->where('used_home_status', 0)
+            ->where(function ($q) {
+                $q->whereNotNull('house_no')
+                    ->where('house_no', '!=', '')
+                    ->where('house_no', '!=', '0');
+            })
+            ->when($campusId, function ($q) use ($campusId) {
+                $q->where('estate_campus_master_pk', $campusId);
+            })
+            ->when($unitTypeId, function ($q) use ($unitTypeId) {
+                $q->where('estate_unit_master_pk', $unitTypeId);
+            });
+
+        if ($employeePk) {
+            $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
+            if ($eligibleHousePks->isNotEmpty()) {
+                $query->whereIn('pk', $eligibleHousePks->toArray());
+            } else {
+                return response()->json(['status' => true, 'data' => []]);
+            }
+        }
+
+        if ($occupiedHousePks->isNotEmpty()) {
+            $query->whereNotIn('pk', $occupiedHousePks->toArray());
         }
 
         $payload = [
@@ -3909,7 +3882,7 @@ class EstateController extends Controller
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
             ->leftJoin('estate_block_master as b', 'ehm.estate_block_master_pk', '=', 'b.pk')
-            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
+            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.pk')
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
             ->leftJoin('department_master as dm', 'em.department_master_pk', '=', 'dm.pk')
             ->where('emrd.bill_month', $billMonthStr)
@@ -4035,151 +4008,6 @@ class EstateController extends Controller
         })->all();
 
         return response()->json(['status' => true, 'data' => $data]);
-    }
-
-    /**
-     * Generate Estate Bill for Other – page for contract employees.
-     * Lists bills from estate_month_reading_details_other for selected bill month.
-     */
-    public function generateEstateBillForOther()
-    {
-        return view('admin.estate.generate_estate_bill_for_other');
-    }
-
-    /**
-     * API: Get bill list for "Generate Estate Bill for Other" (contract employees only).
-     * Data mapping: estate_month_reading_details_other + estate_possession_other + estate_other_req + estate_block_master.
-     * Shows all readings for the selected month (return_home_status = 0); notify_employee_status not required for listing.
-     */
-    public function getGenerateEstateBillForOtherData(Request $request)
-    {
-        $billMonth = $request->get('bill_month');
-        if (! $billMonth || ! is_string($billMonth)) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Please select Bill Month.']);
-        }
-        $parts = explode('-', trim($billMonth));
-        $billYearStr = (count($parts) >= 1 && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
-        $monthNum = (count($parts) >= 2 && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
-        if ($monthNum < 1 || $monthNum > 12) {
-            return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
-        }
-        $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
-
-        $other = DB::table('estate_month_reading_details_other as emro')
-            ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
-            ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
-            ->leftJoin('estate_block_master as b', 'epo.estate_block_master_pk', '=', 'b.pk')
-            ->where('emro.bill_month', $billMonthStr)
-            ->where('emro.bill_year', $billYearStr)
-            ->where('epo.return_home_status', 0)
-            ->whereNotNull('epo.estate_house_master_pk')
-            ->select([
-                'emro.pk',
-                'emro.from_date',
-                'emro.to_date',
-                'emro.house_no',
-                'emro.meter_one',
-                'emro.meter_two',
-                'emro.last_month_elec_red',
-                'emro.curr_month_elec_red',
-                'emro.last_month_elec_red2',
-                'emro.curr_month_elec_red2',
-                'emro.electricty_charges',
-                'emro.water_charges',
-                'emro.licence_fees',
-                'eor.emp_name',
-                'eor.section',
-                'b.block_name as building_name',
-            ])
-            ->orderBy('b.block_name')
-            ->orderBy('emro.house_no')
-            ->get();
-
-        $rows = [];
-        foreach ($other as $r) {
-            $prev = (int) ($r->last_month_elec_red ?? 0);
-            $curr = (int) ($r->curr_month_elec_red ?? 0);
-            $prev2 = (int) ($r->last_month_elec_red2 ?? 0);
-            $curr2 = (int) ($r->curr_month_elec_red2 ?? 0);
-            $units = (($curr >= $prev) ? $curr - $prev : 0) + (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
-            $totalCharge = (float) ($r->electricty_charges ?? 0);
-            $licence = (float) ($r->licence_fees ?? 0);
-            $water = (float) ($r->water_charges ?? 0);
-            $grandTotal = $totalCharge + $licence + $water;
-            $rows[] = [
-                'pk' => $r->pk,
-                'name' => $r->emp_name ?? 'N/A',
-                'section' => $r->section ?? '—',
-                'house_no' => $r->house_no ?? '—',
-                'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
-                'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
-                'meter_no' => trim(($r->meter_one ?? '') . (isset($r->meter_two) && (string) $r->meter_two !== '' ? "\n" . $r->meter_two : '')),
-                'prev_reading' => (string) $prev . (($prev2 > 0 || $curr2 > 0) ? "\n" . $prev2 : ''),
-                'curr_reading' => (string) $curr . (($prev2 > 0 || $curr2 > 0) ? "\n" . $curr2 : ''),
-                'unit_consumed' => (string) $units,
-                'total_charge' => $totalCharge,
-                'licence_fee' => $licence,
-                'water_charges' => $water,
-                'grand_total' => $grandTotal,
-                'building_name' => $r->building_name ?? '—',
-            ];
-        }
-
-        $data = collect($rows)->map(function ($row, $index) {
-            $row['sno'] = $index + 1;
-            return $row;
-        })->values()->all();
-
-        return response()->json(['status' => true, 'data' => $data]);
-    }
-
-    /**
-     * Verify Selected Bills (Other): set notify_employee_status = 1 for selected estate_month_reading_details_other rows.
-     * Verified bills then appear in "List Bill" / Bill Report Grid (notify_employee_status = 1).
-     */
-    public function verifySelectedBillsForOther(Request $request)
-    {
-        $validated = $request->validate([
-            'pks' => 'required|array',
-            'pks.*' => 'integer|exists:estate_month_reading_details_other,pk',
-        ]);
-        $pks = array_map('intval', $validated['pks']);
-        $updated = EstateMonthReadingDetailsOther::whereIn('pk', $pks)->update(['notify_employee_status' => 1]);
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'status' => true,
-                'message' => count($pks) . ' bill(s) verified successfully. They will now appear in the notified bill list.',
-                'updated' => $updated,
-            ]);
-        }
-        return redirect()->route('admin.estate.generate-estate-bill-for-other')
-            ->with('success', count($pks) . ' bill(s) verified successfully.');
-    }
-
-    /**
-     * Save As Draft (Other): set process_status = 0 and notify_employee_status = 0 for selected rows.
-     * Draft bills stay out of the "notified" list until verified.
-     */
-    public function saveAsDraftBillsForOther(Request $request)
-    {
-        $validated = $request->validate([
-            'pks' => 'required|array',
-            'pks.*' => 'integer|exists:estate_month_reading_details_other,pk',
-        ]);
-        $pks = array_map('intval', $validated['pks']);
-        $updated = EstateMonthReadingDetailsOther::whereIn('pk', $pks)->update([
-            'process_status' => 0,
-            'notify_employee_status' => 0,
-        ]);
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'status' => true,
-                'message' => count($pks) . ' bill(s) saved as draft.',
-                'updated' => $updated,
-            ]);
-        }
-        return redirect()->route('admin.estate.generate-estate-bill-for-other')
-            ->with('success', count($pks) . ' bill(s) saved as draft.');
     }
 
     /**
