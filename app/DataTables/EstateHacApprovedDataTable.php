@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\EstateHomeRequestDetails;
+use App\Models\EstateHacApprovedRow;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\EloquentDataTable;
@@ -86,7 +86,7 @@ class EstateHacApprovedDataTable extends DataTable
             ->setRowId('pk');
     }
 
-    public function query(EstateHomeRequestDetails $model): EloquentBuilder
+    public function query(EstateHacApprovedRow $model): EloquentBuilder
     {
         $part1 = DB::table('estate_change_home_req_details as ec')
             ->join('estate_home_request_details as eh', 'ec.estate_home_req_details_pk', '=', 'eh.pk')
