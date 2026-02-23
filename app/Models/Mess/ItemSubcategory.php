@@ -21,6 +21,7 @@ class ItemSubcategory extends Model
         'subcategory_code', // Alternative name (may exist)
         'unit_measurement',
         'standard_cost',
+        'alert_quantity',
         'description',
         'status',
         'is_active', // Old status column
