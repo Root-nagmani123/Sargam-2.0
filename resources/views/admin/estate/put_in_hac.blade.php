@@ -38,7 +38,7 @@
             </div>
 
             <div id="put-in-hac-card-body">
-                <div class="table-responsive put-in-hac-table-wrap">
+                <div class="table-responsive text-nowrap put-in-hac-table-wrap">
                     {!! $dataTable->table([
                         'class' => 'table table-bordered table-striped table-hover align-middle mb-0',
                         'aria-describedby' => 'put-in-hac-caption'

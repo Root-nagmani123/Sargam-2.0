@@ -29,6 +29,7 @@ class EstateOtherRequestDataTable extends DataTable
                     });
                 }
             }, true)
+            ->orderColumn('DT_RowIndex', 'estate_other_req.pk $1')
             ->addColumn('actions', function ($row) {
                 $viewUrl = route('admin.estate.possession-view', ['requester_id' => $row->pk]);
                 $deleteUrl = route('admin.estate.other-estate-request.destroy', ['id' => $row->pk]);
@@ -53,7 +54,7 @@ class EstateOtherRequestDataTable extends DataTable
 
     public function query(EstateOtherRequest $model): QueryBuilder
     {
-        return $model->newQuery()->orderBy('pk', 'desc');
+        return $model->newQuery();
     }
 
     public function html(): HtmlBuilder
@@ -70,7 +71,7 @@ class EstateOtherRequestDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[1, 'desc']],
+                'order' => [[0, 'asc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',
@@ -92,9 +93,9 @@ class EstateOtherRequestDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('80px'),
-            Column::make('request_no_oth')->title('Request ID')->orderable(true)->searchable(true),
-            Column::make('emp_name')->title('Employee Name')->orderable(true)->searchable(true),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('80px'),
+            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true),
+            Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }

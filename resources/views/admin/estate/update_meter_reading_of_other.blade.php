@@ -16,12 +16,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                        <select class="form-select" id="bill_month" name="bill_month">
-                            <option value="">Select</option>
-                            @foreach($billMonths as $bm)
-                                <option value="{{ $bm->bill_month }}" data-year="{{ $bm->bill_year }}">{{ $bm->bill_month }} {{ $bm->bill_year }}</option>
-                            @endforeach
-                        </select>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month">
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Bill Month
                         </small>
@@ -42,12 +37,9 @@
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
                             <option value="">Select</option>
-                            @foreach($unitTypes as $ut)
-                                <option value="{{ $ut->pk }}" {{ ($ut->unit_type ?? '') == 'Residential' ? 'selected' : '' }}>{{ $ut->unit_type }}</option>
-                            @endforeach
                         </select>
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Unit
+                            <i class="bi bi-info-circle"></i> Select Estate first, then Unit Name
                         </small>
                     </div>
                     <div class="col-md-4">
@@ -132,15 +124,24 @@ $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.update-meter-reading-of-other.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
     const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
+    const unitTypesByCampus = @json($unitTypesByCampus ?? []);
 
     let dataTable = null;
 
+    function parseBillMonthInput(val) {
+        if (!val || val.length < 7) return { bill_month: null, bill_year: null };
+        const parts = val.split('-');
+        const year = parts[0] ? parseInt(parts[0], 10) : null;
+        const month = parts[1] ? parseInt(parts[1], 10) : null;
+        return { bill_month: (month >= 1 && month <= 12) ? month : null, bill_year: year };
+    }
+
     $('#bill_month').on('change', function() {
-        const billMonth = $(this).val();
-        const billYear = $(this).find('option:selected').data('year');
+        const val = $(this).val();
+        const { bill_month, bill_year } = parseBillMonthInput(val);
         $('#meter_reading_date').html('<option value="">Select</option>');
-        if (!billMonth || !billYear) return;
-        $.get(meterReadingDatesUrl, { bill_month: billMonth, bill_year: billYear }, function(res) {
+        if (!bill_month || !bill_year) return;
+        $.get(meterReadingDatesUrl, { bill_month: bill_month, bill_year: bill_year }, function(res) {
             if (res.status && res.data && res.data.length) {
                 res.data.forEach(function(d) {
                     $('#meter_reading_date').append('<option value="'+d.value+'">'+d.label+'</option>');
@@ -152,11 +153,18 @@ $(document).ready(function() {
 
     $('#estate_name').on('change', function() {
         const campusId = $(this).val();
+        $('#unit_name').html('<option value="">Select</option>');
         $('#building').html('<option value="">All</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
         if (!campusId) return;
+        var unitList = unitTypesByCampus[campusId] || [];
+        unitList.forEach(function(ut) {
+            var sel = (ut.unit_type === 'Residential') ? ' selected' : '';
+            $('#unit_name').append('<option value="'+ut.pk+'"'+sel+'>'+ut.unit_type+'</option>');
+        });
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
+                $('#building').html('<option value="">All</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
@@ -183,8 +191,8 @@ $(document).ready(function() {
             dataTable.destroy();
             dataTable = null;
         }
-        const billMonth = $('#bill_month').val();
-        const billYear = $('#bill_month option:selected').data('year');
+        const billMonthVal = $('#bill_month').val();
+        const { bill_month: billMonth, bill_year: billYear } = parseBillMonthInput(billMonthVal);
         if (!billMonth || !billYear) {
             alert('Please select Bill Month.');
             return;
