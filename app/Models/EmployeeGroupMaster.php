@@ -24,5 +24,5 @@ class EmployeeGroupMaster extends Model
         return $employeeGroupList->toArray();
     }
 
-    
+
 }
