@@ -28,7 +28,6 @@
                             <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Item Name</th>
                             <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Item Code</th>
                             <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Unit Measurement</th>
-                            <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Standard Cost</th>
                             <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Alert Qty</th>
                             <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
                             <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
@@ -42,13 +41,6 @@
                                 <td><div class="fw-semibold">{{ $itemsubcategory->item_name }}</div></td>
                                 <td>{{ $itemsubcategory->item_code ?? '-' }}</td>
                                 <td>{{ $itemsubcategory->unit_measurement ?? '-' }}</td>
-                                <td>
-                                    @if($itemsubcategory->standard_cost)
-                                        ₹{{ number_format($itemsubcategory->standard_cost, 2) }}
-                                    @else
-                                        -
-                                    @endif
-                                </td>
                                 <td>{{ isset($itemsubcategory->alert_quantity) && $itemsubcategory->alert_quantity !== null && $itemsubcategory->alert_quantity !== '' ? number_format($itemsubcategory->alert_quantity, 2) : '-' }}</td>
                                 <td>
                                     <span class="badge bg-{{ $itemsubcategory->status_badge_class }}">
@@ -63,7 +55,6 @@
                                                 data-item-name="{{ e($itemsubcategory->item_name) }}"
                                                 data-item-code="{{ e($itemsubcategory->item_code ?? '') }}"
                                                 data-unit-measurement="{{ e($itemsubcategory->unit_measurement ?? '') }}"
-                                                data-standard-cost="{{ $itemsubcategory->standard_cost ?? '' }}"
                                                 data-alert-quantity="{{ $itemsubcategory->alert_quantity ?? '' }}"
                                                 data-description="{{ e($itemsubcategory->description ?? '') }}"
                                                 data-status="{{ e($itemsubcategory->status ?? 'active') }}"
@@ -122,11 +113,6 @@
                             <label class="form-label">Unit Measurement <span class="text-danger">*</span></label>
                             <input type="text" name="unit_measurement" class="form-control" value="{{ old('unit_measurement') }}" placeholder="e.g., kg, liter, piece" required>
                             @error('unit_measurement')<div class="text-danger small">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Standard Cost <span class="text-danger">*</span></label>
-                            <input type="number" name="standard_cost" class="form-control" step="0.01" min="0" value="{{ old('standard_cost') }}" placeholder="0.00" required>
-                            @error('standard_cost')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Alert Quantity (min. stock)</label>
@@ -194,10 +180,6 @@
                             <input type="text" name="unit_measurement" id="edit_unit_measurement" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Standard Cost <span class="text-danger">*</span></label>
-                            <input type="number" name="standard_cost" id="edit_standard_cost" class="form-control" step="0.01" min="0" placeholder="0.00" required>
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label">Alert Quantity (min. stock)</label>
                             <input type="number" name="alert_quantity" id="edit_alert_quantity" class="form-control" step="0.0001" min="0" placeholder="Optional">
                             <small class="text-muted">Low stock alert when remaining &le; this</small>
@@ -224,7 +206,7 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search subcategory items...', 'orderColumn' => 2, 'actionColumnIndex' => 8, 'infoLabel' => 'subcategory items'])
+@include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search subcategory items...', 'orderColumn' => 2, 'actionColumnIndex' => 7, 'infoLabel' => 'subcategory items'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -238,7 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('edit_item_name').value = btn.getAttribute('data-item-name') || '';
         document.getElementById('edit_item_code_display').value = btn.getAttribute('data-item-code') || '-';
         document.getElementById('edit_unit_measurement').value = btn.getAttribute('data-unit-measurement') || '';
-        document.getElementById('edit_standard_cost').value = btn.getAttribute('data-standard-cost') || '';
         document.getElementById('edit_alert_quantity').value = btn.getAttribute('data-alert-quantity') || '';
         document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';

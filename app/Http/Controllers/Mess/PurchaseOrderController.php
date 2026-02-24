@@ -271,34 +271,11 @@ class PurchaseOrderController extends Controller
 
     public function getVendorItems($vendorId)
     {
-        $vendor = Vendor::findOrFail($vendorId);
-        
-        // Get vendor item mappings
-        $mappings = VendorItemMapping::where('vendor_id', $vendorId)->get();
-        
-        // Get all mapped item subcategories
-        $itemSubcategoryIds = [];
-        
-        foreach ($mappings as $mapping) {
-            if ($mapping->mapping_type === VendorItemMapping::MAPPING_TYPE_ITEM_SUB_CATEGORY && $mapping->item_subcategory_id) {
-                // Direct subcategory mapping
-                $itemSubcategoryIds[] = $mapping->item_subcategory_id;
-            } elseif ($mapping->mapping_type === VendorItemMapping::MAPPING_TYPE_ITEM_CATEGORY && $mapping->item_category_id) {
-                // Category mapping - get all subcategories in this category
-                $categorySubcategories = ItemSubcategory::where('category_id', $mapping->item_category_id)
-                    ->active()
-                    ->pluck('id')
-                    ->toArray();
-                $itemSubcategoryIds = array_merge($itemSubcategoryIds, $categorySubcategories);
-            }
-        }
-        
-        // Remove duplicates
-        $itemSubcategoryIds = array_unique($itemSubcategoryIds);
-        
-        // Get the actual item subcategories
-        $items = ItemSubcategory::whereIn('id', $itemSubcategoryIds)
-            ->active()
+        // Vendor-wise filtering is currently disabled.
+        // Always return the full active item list so that
+        // the item dropdown shows all items regardless of vendor.
+
+        $items = ItemSubcategory::active()
             ->orderBy('name')
             ->get()
             ->map(fn ($s) => [
@@ -307,7 +284,7 @@ class PurchaseOrderController extends Controller
                 'item_code' => $s->item_code ?? '—',
                 'unit_measurement' => $s->unit_measurement ?? '—',
             ]);
-        
+
         return response()->json($items);
     }
 

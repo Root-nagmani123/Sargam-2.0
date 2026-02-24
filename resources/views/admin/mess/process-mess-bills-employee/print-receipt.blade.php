@@ -10,8 +10,9 @@
         $dateTo = isset($bill->date_to) && $bill->date_to ? $bill->date_to->format('d-m-Y') : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
         $purchaseDate = $bill->issue_date ? $bill->issue_date->format('d-m-Y') : $dateFrom;
         $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
-        $paidAmount = 0.0;
-        $dueAmount = $totalAmount - $paidAmount;
+        $paidAmount = (float) ($paidAmount ?? 0);
+        $dueAmount = (float) ($dueAmount ?? max(0, $totalAmount - $paidAmount));
+        $paymentStatusLabel = $paymentStatusLabel ?? ($paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid'));
     @endphp
     <title>Bill Receipt #{{ $receiptId }}</title>
     <style>
@@ -105,15 +106,16 @@
     <div class="receipt-bottom">
         <div></div>
         <div class="payment-summary">
-            <div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">{{ number_format($paidAmount, 1) }}</span></div>
-            <div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">{{ number_format($totalAmount, 1) }}</span></div>
-            <div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">{{ number_format($dueAmount, 1) }}</span></div>
+            <div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">{{ number_format($paidAmount, 2) }}</span></div>
+            <div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">{{ number_format($totalAmount, 2) }}</span></div>
+            <div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">{{ number_format($dueAmount, 2) }}</span></div>
+            <div class="summary-row"><span class="summary-label">Payment Status</span><span class="summary-value">{{ $paymentStatusLabel }}</span></div>
         </div>
     </div>
 
     <div class="action-bar no-print">
         <button type="button" class="btn-print" onclick="window.print()">Print</button>
-        <button type="button" class="btn-close" onclick="window.close()">Close</button>
+        <button type="button" class="btn-close" onclick="closeReceipt()">Close</button>
     </div>
 
     <script>
@@ -122,6 +124,12 @@
             style.textContent = '@media print { .no-print { display: none !important; } }';
             document.head.appendChild(style);
         });
+        function closeReceipt() {
+            window.close();
+            setTimeout(function() {
+                window.location.href = '{{ route("admin.dashboard") }}';
+            }, 150);
+        }
     </script>
 </body>
 </html>
