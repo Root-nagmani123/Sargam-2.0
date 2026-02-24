@@ -3,14 +3,12 @@
 @section('setup_content')
 <div class="container-fluid idcard-index-page">
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
-    <x-breadcrum title="Request Employee ID Card" variant="minimal"></x-breadcrum>
-    <x-session_message />
+    <x-breadcrum title="Request Employee ID Card"></x-breadcrum>
 
-    <!-- Tabs + Generate Button Row - Bootstrap 5.3 enhanced -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <ul class="nav nav-pills nav-fill gap-2 idcard-index-tabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-1 px-4 py-2" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
+                <button class="nav-link active rounded-pill px-4 py-2" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
                     Active
                     @if($activeRequests->total() > 0)
                         <span class="badge text-bg-light text-primary ms-1">{{ $activeRequests->total() }}</span>
@@ -18,7 +16,7 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-1 px-4 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
+                <button class="nav-link rounded-pill px-4 py-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
                     Archive
                     @if($archivedRequests->total() > 0)
                         <span class="badge text-bg-secondary ms-1">{{ $archivedRequests->total() }}</span>
@@ -101,7 +99,6 @@
         </div>
     </div>
 
-    <!-- Table Card - Bootstrap 5.3 enhanced -->
     <div class="card border-0 shadow idcard-index-card overflow-hidden">
         <div class="card-body p-0">
             <div class="tab-content">
@@ -111,17 +108,17 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th class="text-nowrap">S.No.</th>
-                                    <th class="col">ID Card</th>
-                                    <th class="col">Request date</th>
-                                    <th class="col">Employee Name</th>
-                                    <th class="col">Designation</th>
-                                    <th class="col">Card Type</th>
-                                    <th class="col">Request For</th>
-                                    <th class="col">Duplication</th>
-                                    <th class="col">Extension</th>
-                                    <th class="col">Valid Upto</th>
-                                    <th class="col">Status</th>
-                                    <th class="col">Actions</th>
+                                    <th>ID Card</th>
+                                    <th>Request date</th>
+                                    <th>Employee Name</th>
+                                    <th>Designation</th>
+                                    <th>Card Type</th>
+                                    <th>Request For</th>
+                                    <th>Duplication</th>
+                                    <th>Extension</th>
+                                    <th>Valid Upto</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -131,7 +128,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -171,38 +168,34 @@
                                                     'Issued' => 'primary',
                                                     default => 'secondary'
                                                 };
-                                                $statusLabel = $request->status ?? '--';
-                                                if ($request->status === 'Pending') {
-                                                    $statusLabel = $request->approved_by_a1 ? 'Pending (A2)' : 'Pending (A1)';
-                                                }
                                             @endphp
-                                            <span class="badge text-{{ $statusClass }} fw-bold">{{ $statusLabel }}</span>
+                                            <span class="badge bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
                                         </td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2" role="group">
+                                        <td class="text-end">
+                                            <div class="d-flex align-items-center justify-content-end gap-1" role="group">
                                                 <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
-                                                   class="text-primary d-inline-flex align-items-center" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded">visibility</i>
+                                                   class="btn btn-sm btn-outline-primary rounded-2 view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                                 </a>
                                                 <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
-                                                   class="d-inline-flex align-items-center text-primary" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
-                                                    <i class="material-icons material-symbols-rounded">edit</i>
+                                                   class="btn btn-sm btn-outline-secondary rounded-2 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                                                 </a>
                                                 <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" 
                                                       method="POST" class="d-inline" 
                                                       onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <a href="javascript:void(0)" class="text-primary d-inline-flex align-items-center" title="Archive">
-                                                    <i class="material-icons material-symbols-rounded">delete</i>
-                                                    </a>
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1" title="Archive">
+                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                                    </button>
                                                 </form>
                                             </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="12" class=" text-center py-5 table-empty-state">
+                                        <td colspan="12" class="text-center py-5 table-empty-state">
                                             <div class="d-inline-flex flex-column align-items-center p-4 bg-light rounded-3">
                                                 <i class="material-icons material-symbols-rounded mb-3 text-muted" style="font-size:56px;">inbox</i>
                                                 <p class="mb-1 fw-medium">No active ID card requests found.</p>
@@ -219,14 +212,9 @@
                         </table>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light flex-wrap gap-2">
-                        <div class="small text-muted">
-                            Showing <strong>{{ $activeRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $activeRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $activeRequests->total() }}</strong> active requests
-                        </div>
-                        <nav aria-label="Active requests pagination">
-                            {{ $activeRequests->links('pagination::bootstrap-5') }}
-                        </nav>
-                    </div>
+            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light flex-wrap gap-2">
+                <div class="small text-muted">
+                    Showing <strong>{{ $requests->firstItem() ?? 0 }}</strong> to <strong>{{ $requests->lastItem() ?? 0 }}</strong> of <strong>{{ $requests->total() }}</strong> requests
                 </div>
 
                 <div class="tab-pane fade" id="duplication-panel" role="tabpanel" aria-labelledby="duplication-tab">
@@ -253,7 +241,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -306,8 +294,8 @@
                                             <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">content_copy</i>
                                             <p class="mb-1">No ID card duplication requests found.</p>
                                             <small>Duplication requests (Lost/Damage) will appear here when request for is "Replacement" or "Duplication".</small>
-                                                <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-warning btn-sm mt-2 rounded-pill px-3 d-inline-block">
-                                                <i class="material-icons material-symbols-rounded align-middle me-1 fs-6">add</i>
+                                            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-warning btn-sm mt-2 rounded-pill px-3 d-inline-block">
+                                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
                                                 Request Duplication
                                             </a>
                                         </td>
@@ -351,7 +339,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -402,7 +390,7 @@
                                             <p class="mb-1">No ID card extension requests found.</p>
                                             <small>Extension requests will appear here when request for is "Extension".</small>
                                             <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-info btn-sm mt-2 rounded-pill px-3 d-inline-block">
-                                                <i class="material-icons material-symbols-rounded align-middle me-1 fs-6">add</i>
+                                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
                                                 Request Extension
                                             </a>
                                         </td>
@@ -443,7 +431,7 @@
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded img-thumbnail">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded" style="width:40px;height:50px;object-fit:cover;">
                                                 </a>
                                             @else
                                                 <span class="text-muted">--</span>
@@ -498,7 +486,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="material-icons material-symbols-rounded d-block mb-2 fs-1" style="opacity:0.4;">archive</i>
+                                            <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">archive</i>
                                             <p class="mb-1">No archived ID card requests found.</p>
                                             <small>Deleted records will appear here.</small>
                                         </td>
@@ -671,24 +659,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Ensure Active tab is active by default on page load
-    const activeTab = document.getElementById('active-tab');
-    const archiveTab = document.getElementById('archive-tab');
-    const activePanel = document.getElementById('active-panel');
-    const archivePanel = document.getElementById('archive-panel');
-    if (activeTab && archiveTab && activePanel && archivePanel) {
-        activeTab.classList.add('active');
-        activeTab.setAttribute('aria-selected', 'true');
-        archiveTab.classList.remove('active');
-        archiveTab.setAttribute('aria-selected', 'false');
-        activePanel.classList.add('show', 'active');
-        archivePanel.classList.remove('show', 'active');
-        // Clear URL hash that might switch to Archive
-        if (window.location.hash === '#archive-panel') {
-            history.replaceState(null, null, window.location.pathname + window.location.search);
-        }
-    }
-
     function openViewAmendModal(btn) {
         const modal = document.getElementById('viewDetailsModal');
         document.getElementById('modalName').textContent = btn.dataset.name || '--';
@@ -704,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modalViewFullLink').href = btn.dataset.showUrl || '#';
         const amendForm = document.getElementById('amendDupExtForm');
         const requestId = btn.dataset.requestId;
-        amendForm.action = '{{ route("admin.employee_idcard.amendDuplicationExtension", ["employeeIDCardRequest" => "__ID__"]) }}'.replace('__ID__', requestId);
+        amendForm.action = '{{ route("admin.employee_idcard.amendDuplicationExtension", ["id" => "__ID__"]) }}'.replace('__ID__', requestId);
         document.getElementById('amend_duplication_reason').value = btn.dataset.duplication || '';
         document.getElementById('amend_id_card_number').value = btn.dataset.idNumber || '';
         document.getElementById('amend_id_card_valid_from').value = btn.dataset.validFrom || '';

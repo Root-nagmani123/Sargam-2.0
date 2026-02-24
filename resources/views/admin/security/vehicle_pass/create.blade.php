@@ -16,6 +16,12 @@
             $oldVehicleNo = old('vehicle_no', '');
             $oldValidFrom = old('veh_card_valid_from', '2026-01-01');
             $oldValidTo = old('vech_card_valid_to', '2027-01-01');
+            if (in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee) {
+                if ($oldIdCard === '') $oldIdCard = $currentUserEmployee->emp_id ?? '';
+                if ($oldName === '') $oldName = $currentUserEmployee->name ?? '';
+                if ($oldDesignation === '') $oldDesignation = $currentUserEmployee->designation ?? '';
+                if ($oldDepartment === '') $oldDepartment = $currentUserEmployee->department ?? '';
+            }
         @endphp
 
         {{-- 3 Radio buttons: Employee, Others, Government Vehicle --}}
@@ -43,19 +49,8 @@
             <div class="card-body p-4">
                 <h6 class="fw-semibold mb-4">Please enter new configuration for vehicle</h6>
 
-                <div class="row g-3 mb-4" id="employeeSelectRow" style="display:{{ $oldApplicantType === 'employee' ? '' : 'none' }};">
-                    <div class="col-12">
-                        <label for="emp_master_pk" class="form-label">Select Employee</label>
-                        <select name="emp_master_pk" id="emp_master_pk" class="form-select">
-                            <option value="">Select Employee (optional - or fill below manually)</option>
-                            @foreach($employees as $emp)
-                                <option value="{{ $emp->pk }}" {{ old('emp_master_pk') == $emp->pk ? 'selected' : '' }}>
-                                    {{ $emp->first_name }} {{ $emp->last_name }} ({{ $emp->emp_id ?? $emp->pk }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
+                {{-- Employee / Government Vehicle: logged-in user's details auto-fill; no employee selection. Others: user fills manually. --}}
+                <input type="hidden" name="emp_master_pk" id="emp_master_pk" value="{{ in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee ? $currentUserEmployee->pk : old('emp_master_pk', '') }}">
 
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
@@ -347,34 +342,53 @@
         });
     }
 
-    // When applicant_type = employee, show employee dropdown and auto-fill name/designation/department
+    // Employee / Government Vehicle: auto-fill from logged-in user only (no employee dropdown). Others: user fills manually.
     var applicantTypeEmployee = document.getElementById('applicant_type_employee');
     var applicantTypeOthers = document.getElementById('applicant_type_others');
     var applicantTypeGovernment = document.getElementById('applicant_type_government');
-    var empSelect = document.getElementById('emp_master_pk');
-    var employeeSelectRow = document.getElementById('employeeSelectRow');
-    if (applicantTypeEmployee) {
-        function toggleEmployeeRow() {
-            if (employeeSelectRow) employeeSelectRow.style.display = applicantTypeEmployee.checked ? '' : 'none';
-        }
-        applicantTypeEmployee.addEventListener('change', toggleEmployeeRow);
-        if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', toggleEmployeeRow);
-        if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', toggleEmployeeRow);
-        toggleEmployeeRow();
+    var empMasterPkInput = document.getElementById('emp_master_pk');
+    var currentUserEmployee = @json($currentUserEmployee ?? null);
+
+    function isEmployeeOrGovVehicle() {
+        return (applicantTypeEmployee && applicantTypeEmployee.checked) || (applicantTypeGovernment && applicantTypeGovernment.checked);
     }
-    if (empSelect && applicantTypeEmployee) {
-        var empData = @json($empDataForJs);
-        empSelect.addEventListener('change', function() {
-            if (!applicantTypeEmployee || !applicantTypeEmployee.checked) return;
-            var pk = this.value;
-            if (empData[pk]) {
-                document.getElementById('applicant_name').value = empData[pk].name || '';
-                document.getElementById('designation').value = empData[pk].designation || '';
-                document.getElementById('department').value = empData[pk].department || '';
-                document.getElementById('employee_id_card').value = empData[pk].emp_id || '';
+
+    function setApplicantFields(idCard, name, designation, department, readonly) {
+        var idCardEl = document.getElementById('employee_id_card');
+        var nameEl = document.getElementById('applicant_name');
+        var desEl = document.getElementById('designation');
+        var deptEl = document.getElementById('department');
+        if (idCardEl) { idCardEl.value = idCard || ''; idCardEl.readOnly = !!readonly; }
+        if (nameEl) { nameEl.value = name || ''; nameEl.readOnly = !!readonly; }
+        if (desEl) { desEl.value = designation || ''; desEl.readOnly = !!readonly; }
+        if (deptEl) { deptEl.value = department || ''; deptEl.readOnly = !!readonly; }
+    }
+
+    function updateApplicantTypeFields() {
+        if (isEmployeeOrGovVehicle()) {
+            if (currentUserEmployee && empMasterPkInput) {
+                empMasterPkInput.value = currentUserEmployee.pk;
+                setApplicantFields(
+                    currentUserEmployee.emp_id,
+                    currentUserEmployee.name,
+                    currentUserEmployee.designation,
+                    currentUserEmployee.department,
+                    true
+                );
+            } else if (empMasterPkInput) {
+                empMasterPkInput.value = '';
+                setApplicantFields('', '', '', '', false);
             }
-        });
+        } else {
+            if (empMasterPkInput) empMasterPkInput.value = '';
+            setApplicantFields('', '', '', '', false);
+        }
     }
+
+    if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateApplicantTypeFields);
+    if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', updateApplicantTypeFields);
+    if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', updateApplicantTypeFields);
+    updateApplicantTypeFields();
 
     // Add new vehicle type (modal + AJAX)
     var addVehicleTypeBtn = document.getElementById('addVehicleTypeBtn');

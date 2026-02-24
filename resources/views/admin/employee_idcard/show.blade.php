@@ -104,7 +104,7 @@
                                 <small class="text-muted d-block mb-1">Date of Birth</small>
                                 <strong class="text-dark d-block fs-6">
                                     @if($request->date_of_birth)
-                                        {{ $request->date_of_birth->format('d M, Y') }}
+                                        {{ \Carbon\Carbon::parse($request->date_of_birth)->format('d M, Y') }}
                                     @else
                                         --
                                     @endif
@@ -122,7 +122,7 @@
                                 <small class="text-muted d-block mb-1">Academy Joining Date</small>
                                 <strong class="text-dark d-block fs-6">
                                     @if($request->academy_joining)
-                                        {{ $request->academy_joining->format('d M, Y') }}
+                                        {{ \Carbon\Carbon::parse($request->academy_joining)->format('d M, Y') }}
                                     @else
                                         --
                                     @endif
@@ -355,6 +355,17 @@
                                     <a href="{{ asset('storage/' . $request->documents) }}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
                                         <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">download</i>
                                         Download
+                                    </a>
+                                </div>
+                            </div>
+                        @elseif($request->joining_letter)
+                            <div class="col-12">
+                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
+                                    <i class="material-icons material-symbols-rounded text-success" style="font-size:48px;">description</i>
+                                    <small class="d-block mt-2 text-muted">Joining Letter / Document</small>
+                                    <a href="{{ asset('storage/' . $request->joining_letter) }}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
+                                        <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">download</i>
+                                        View / Download
                                     </a>
                                 </div>
                             </div>
