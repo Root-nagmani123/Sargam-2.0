@@ -3,73 +3,72 @@
 @section('title', 'Update Meter Reading of Other - Sargam')
 
 @section('setup_content')
-<div class="container-fluid">
-<x-breadcrum title="Update Meter Reading of Other"></x-breadcrum>
-<x-session_message />
+<div class="container-fluid py-4">
+    <x-breadcrum title="Update Meter Reading of Other"></x-breadcrum>
+    <x-session_message />
 
-    <div class="card">
+    <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
         <div class="card-body p-4 p-lg-5">
-<h4 class="h5 mb-4">Please Update Meter Reading</h4>
-<hr class="my-2">
-            <form id="meterReadingFilterForm">
+            <h2 class="h5 fw-semibold mb-1">Update Meter Reading of Other</h2>
+            <p class="text-muted small mb-4">Please Update Meter Reading</p>
+            <hr class="my-4">
+
+            <form id="meterReadingFilterForm" class="needs-validation" novalidate>
                 @csrf
-                <div class="row mb-3">
-                    <div class="col-md-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                        <select class="form-select" id="bill_month" name="bill_month" required>
-                            <option value="">Select</option>
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Bill Month
-                        </small>
+                        <div class="input-group">
+                            <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select Bill Month" required>
+                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                        </div>
+                        <div class="form-text">Select Bill Month</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name">
-                            <option value="">Select</option>
+                            <option value="">---Select---</option>
                             @foreach($campuses as $c)
                                 <option value="{{ $c->pk }}">{{ $c->campus_name }}</option>
                             @endforeach
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Estate Name
-                        </small>
+                        <div class="form-text">Select Estate Name</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
-                        <select class="form-select" id="unit_name" name="unit_name" required>
-                            <option value="residential" selected>Residential</option>
+                        <select class="form-select" id="unit_name" name="unit_type_id">
+                            <option value="">---Select---</option>
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Unit
-                        </small>
+                        <div class="form-text">Select Unit</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
                         <select class="form-select" id="building" name="building">
-                            <option value="">Select</option>
+                            <option value="">---Select---</option>
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Building
-                        </small>
+                        <div class="form-text">Select Building</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="unit_sub_type" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="unit_sub_type" name="unit_sub_type" value="9356753250" required>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Unit Sub Type
-                        </small>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="meter_reading_date" class="form-label">Meter Reading Date <span class="text-danger">*</span></label>
-                        <select class="form-select" id="meter_reading_date" name="meter_reading_date" required>
-                            <option value="01/01/2026" selected>01/01/2026</option>
+                        <select class="form-select" id="unit_sub_type" name="unit_sub_type">
+                            <option value="">---Select---</option>
+                            @foreach($unitSubTypes ?? [] as $ust)
+                                <option value="{{ $ust->pk }}">{{ $ust->unit_sub_type }}</option>
+                            @endforeach
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Meter Reading Date
-                        </small>
+                        <div class="form-text">Select Unit Sub Type</div>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <label for="meter_reading_date" class="form-label">Meter Reading Date <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select class="form-select" id="meter_reading_date" name="meter_reading_date">
+                                <option value="">---Select---</option>
+                            </select>
+                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                        </div>
+                        <div class="form-text">Meter Reading Date</div>
+                    </div>
+                    <div class="col-12">
                         <button type="button" class="btn btn-primary" id="loadMeterReadingsBtn">
                             <i class="bi bi-search me-2"></i>Load Data
                         </button>
@@ -79,13 +78,11 @@
 
             <form id="meterReadingSaveForm" method="POST" action="{{ route('admin.estate.update-meter-reading-of-other.store') }}" style="display:none;">
                 @csrf
-                <div class="table-responsive mt-4">
-                    <table class="table" id="updateMeterReadingOtherTable">
-                        <thead>
+                <div class="table-responsive mt-4 rounded-3 overflow-hidden border">
+                    <table class="table table-striped table-hover align-middle mb-0" id="updateMeterReadingOtherTable">
+                        <thead class="table-primary">
                             <tr>
-                                <th>
-                                    <input type="checkbox" class="form-check-input" id="select_all">
-                                </th>
+                                <th><input type="checkbox" class="form-check-input" id="select_all" aria-label="Select all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
                                 <th>Last Month Electric Reading Date</th>
@@ -108,11 +105,13 @@
                     </table>
                 </div>
 
-                <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-save me-2"></i>Save
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-save"></i> Save
                     </button>
-                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-secondary d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </a>
                 </div>
             </form>
         </div>

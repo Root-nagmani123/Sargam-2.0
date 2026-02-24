@@ -140,6 +140,9 @@
                                 </a></li>
 
                             {{-- ESTATE MANAGEMENT --}}
+                            @php
+                                $estateManagementOpen = request()->routeIs('admin.estate.*');
+                            @endphp
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -147,14 +150,19 @@
                                 min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#estateManagementCollapse" role="button"
-                                    aria-expanded="false" aria-controls="estateManagementCollapse">
+                                    aria-expanded="{{ $estateManagementOpen ? 'true' : 'false' }}" aria-controls="estateManagementCollapse">
                                     <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Estate Management</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
+<<<<<<< HEAD
                             <ul class="collapse list-unstyled ps-3" id="estateManagementCollapse">
+                                {{-- Main flow: Request → Put in HAC → HAC Approved → Possession Details --}}
+=======
+                            <ul class="collapse list-unstyled ps-3 {{ $estateManagementOpen ? 'show' : '' }}" id="estateManagementCollapse">
                                 {{-- Main flow: Request → Put in HAC → HAC Forward → HAC Approved → Possession Details --}}
+>>>>>>> 05ede78a (possession for other)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-estate') }}">
@@ -179,10 +187,29 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">HAC Approved</span>
                                     </a>
                                 </li>
+                                {{-- Possession Details (LBSNAA) and Estate Possession for Other (Others) - two different pages --}}
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-details') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.possession-details') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Possession Details</span>
+                                    </a>
+                                </li>
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.possession-for-others') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Possession Details</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Other</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.possession-view') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Possession View (Add)</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading-of-other') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.update-meter-reading-of-other') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item border-top mt-2 pt-2">
@@ -203,12 +230,6 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.possession-view') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession View</span>
-                                    </a>
-                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.list-meter-reading') }}">
@@ -221,12 +242,6 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading-of-other') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.update-meter-reading-of-other') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
-                                    </a>
-                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.update-meter-no') }}">

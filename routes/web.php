@@ -939,7 +939,8 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
-        // Estate Possession
+        // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
+        Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
 
