@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
 use App\Models\Mess\SellingVoucherDateRangeReport;
+use App\Models\Mess\SvDateRangePaymentDetail;
 use App\Models\KitchenIssueMaster;
+use App\Models\KitchenIssuePaymentDetail;
 use App\Exports\ProcessMessBillsExport;
 use App\Services\NotificationService;
 use Carbon\Carbon;
@@ -345,7 +347,8 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($id);
 
-        // If not found, try Kitchen Issue Master (Regular Selling Voucher)
+        $isDateRange = (bool) $bill;
+
         if (!$bill) {
             $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
@@ -354,7 +357,12 @@ class ProcessMessBillsEmployeeController extends Controller
                 ->firstOrFail();
         }
 
-        return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill'));
+        $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
+        $paidAmount = $this->getBillPaidAmount($bill, $isDateRange);
+        $dueAmount = max(0, $totalAmount - $paidAmount);
+        $paymentStatusLabel = $paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
+
+        return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill', 'paidAmount', 'dueAmount', 'paymentStatusLabel'));
     }
 
     /**
@@ -398,8 +406,8 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
-        $paidAmount = 0.0; // TODO: from payment tracking if added
-        $dueAmount = $totalAmount - $paidAmount;
+        $paidAmount = $this->getBillPaidAmount($bill, isset($bill->id));
+        $dueAmount = max(0, $totalAmount - $paidAmount);
 
         $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—')));
 
@@ -614,20 +622,39 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Generate payment - mark bill as paid and send notification to user
+     * Get paid amount for a bill (date range or kitchen issue).
+     */
+    private function getBillPaidAmount($bill, bool $isDateRange): float
+    {
+        if ($isDateRange) {
+            return (float) ($bill->paid_amount ?? 0);
+        }
+        $bill->load('paymentDetails');
+        return (float) $bill->paymentDetails->sum('paid_amount');
+    }
+
+    /**
+     * Map frontend payment_mode string to kitchen_issue_payment_details payment_mode (0=Cash, 1=Online, 2=Cheque).
+     */
+    private function kitchenPaymentModeValue(?string $mode): int
+    {
+        $map = ['cash' => 0, 'online' => 1, 'cheque' => 2, 'deduct_from_salary' => 0];
+        return $map[strtolower((string) $mode)] ?? 0;
+    }
+
+    /**
+     * Generate payment - supports partial and full payment; sends notifications and updates status when fully paid.
      */
     public function generatePayment(Request $request, $id)
     {
-        // Try to find in Selling Voucher with Date Range first
         $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
             ->find($id);
 
         $isKitchenIssue = false;
 
-        // If not found, try Kitchen Issue Master (Regular Selling Voucher)
         if (!$bill) {
-            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items', 'paymentDetails'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('pk', $id)
@@ -635,36 +662,115 @@ class ProcessMessBillsEmployeeController extends Controller
             $isKitchenIssue = true;
         }
 
-        // Check if already paid
-        if ($bill->status == 2) {
+        $amount = $request->input('amount');
+        if ($amount === null || $amount === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'This bill is already paid!',
+                'message' => 'Please enter the payment amount.',
+            ], 400);
+        }
+        $amount = (float) $amount;
+        if ($amount <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment amount must be greater than zero.',
             ], 400);
         }
 
-        // Optional payment detail from Pay Now modal
-        $amount = $request->input('amount');
-        $paymentMode = $request->input('payment_mode');
-        $paymentDate = $request->filled('payment_date') ? $this->parseDate($request->payment_date) : null;
+        $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
+        $paidBefore = $this->getBillPaidAmount($bill, !$isKitchenIssue);
+        $dueBefore = max(0, $totalAmount - $paidBefore);
 
-        // Mark as paid
-        $bill->status = 2; // STATUS_APPROVED = 2 (Paid)
-        $bill->save();
+        if ($dueBefore <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This bill is already fully paid!',
+            ], 400);
+        }
 
-        // TODO: Store amount, payment_mode, payment_date in payment details table if needed
+        $paymentMode = $request->input('payment_mode', 'cash');
+        $paymentDate = $request->filled('payment_date') ? $this->parseDate($request->payment_date) : now()->format('Y-m-d');
 
-        // TODO: Add your notification logic here
-        // Example: Send email or SMS to the user
-        // Mail::to($bill->client_email)->send(new PaymentCompletedMail($bill));
-        // Notification::send($user, new PaymentCompletedNotification($bill));
+        if ($isKitchenIssue) {
+            KitchenIssuePaymentDetail::create([
+                'kitchen_issue_master_pk' => $bill->pk,
+                'paid_amount' => $amount,
+                'payment_date' => $paymentDate,
+                'payment_mode' => $this->kitchenPaymentModeValue($paymentMode),
+                'transaction_ref' => $request->input('cheque_number'),
+                'remarks' => $request->input('remarks'),
+            ]);
+            $paidAfter = $paidBefore + $amount;
+            $isFullPayment = $paidAfter >= $totalAmount;
+            if ($isFullPayment) {
+                $bill->status = 2;
+            } else {
+                $bill->status = 1; // Partial
+            }
+            $bill->save();
+        } else {
+            SvDateRangePaymentDetail::create([
+                'sv_date_range_report_id' => $bill->id,
+                'paid_amount' => $amount,
+                'payment_date' => $paymentDate,
+                'payment_mode' => $paymentMode,
+                'bank_name' => $request->input('bank_name'),
+                'cheque_number' => $request->input('cheque_number'),
+                'cheque_date' => $request->filled('cheque_date') ? $this->parseDate($request->cheque_date) : null,
+                'remarks' => $request->input('remarks'),
+            ]);
+            $bill->paid_amount = ($bill->paid_amount ?? 0) + $amount;
+            $paidAfter = (float) $bill->paid_amount;
+            $isFullPayment = $paidAfter >= $totalAmount;
+            if ($isFullPayment) {
+                $bill->status = 2;
+            } else {
+                $bill->status = 1; // Partial
+            }
+            $bill->save();
+        }
 
+        $remainingDue = max(0, $totalAmount - $paidAfter);
+        $receiverUserId = $this->getReceiverUserIdForBill($bill, $isKitchenIssue);
         $billId = $isKitchenIssue ? $bill->pk : $bill->id;
+        $clientName = $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—');
+
+        if ($receiverUserId !== null && $receiverUserId > 0) {
+            try {
+                if ($isFullPayment) {
+                    app(NotificationService::class)->create(
+                        $receiverUserId,
+                        'mess',
+                        'MessPayment',
+                        (int) $billId,
+                        'Payment Successfully Done',
+                        'Your payment of ₹' . number_format($paidAfter, 2) . ' has been successfully completed.'
+                    );
+                } else {
+                    app(NotificationService::class)->create(
+                        $receiverUserId,
+                        'mess',
+                        'MessPayment',
+                        (int) $billId,
+                        'Partial Payment Received',
+                        '₹' . number_format($amount, 2) . ' payment received. ₹' . number_format($remainingDue, 2) . ' is still pending.'
+                    );
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Payment completed successfully! Notification sent to user.',
+            'full_payment' => $isFullPayment,
+            'message' => $isFullPayment
+                ? 'Payment completed successfully. Confirmation sent to user. Report status: Payment Successfully Done.'
+                : 'Partial payment recorded. Notification sent. Remaining due: ₹ ' . number_format($remainingDue, 2),
+            'remaining_due' => $remainingDue,
+            'paid_amount' => $paidAfter,
             'bill_id' => $billId,
-            'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
+            'client_name' => $clientName,
         ]);
     }
 

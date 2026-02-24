@@ -38,7 +38,7 @@ class StockBalanceTillDateExport implements FromCollection, WithHeadings
             'Item Name',
             'Unit',
             'Remaining Quantity',
-            'Rate',
+            'Avg Rate',
             'Amount',
         ];
     }
