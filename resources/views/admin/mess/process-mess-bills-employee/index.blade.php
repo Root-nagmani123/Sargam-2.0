@@ -205,7 +205,7 @@
                                     @if(($bill->status ?? 0) == 2)
                                         <span class="badge bg-success">Paid</span>
                                     @elseif(($bill->status ?? 0) == 1)
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        <span class="badge bg-warning text-dark">Partial</span>
                                     @else
                                         <span class="badge bg-secondary">Unpaid</span>
                                     @endif
