@@ -28,6 +28,8 @@ class SellingVoucherDateRangeReport extends Model
         'created_by',
         'updated_by',
         'bill_path',
+        'reference_number',
+        'order_by',
     ];
 
     protected $casts = [
@@ -113,5 +115,20 @@ class SellingVoucherDateRangeReport extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::statusLabels()[$this->status] ?? 'Unknown';
+    }
+
+    /**
+     * Get client type with category name for display, e.g. "Employee(ACADEMY STAFF)"
+     */
+    public function getClientTypeDisplayAttribute(): string
+    {
+        $typeLabel = $this->clientTypeCategory
+            ? ucfirst($this->clientTypeCategory->client_type ?? '')
+            : ucfirst($this->client_type_slug ?? '—');
+        $categoryName = $this->clientTypeCategory?->client_name;
+        if ($categoryName !== null && $categoryName !== '') {
+            return $typeLabel . '(' . strtoupper($categoryName) . ')';
+        }
+        return $typeLabel ?: '—';
     }
 }

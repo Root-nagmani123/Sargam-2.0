@@ -555,10 +555,16 @@ class ReportController extends Controller
             
             // Only include items with remaining stock
             if ($remainingQty > 0) {
+                $alertQty = null;
+                if (Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
+                    $alertQty = $item->alert_quantity;
+                }
                 $reportData[] = [
                     'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
                     'unit' => $item->unit_measurement ?? 'Unit',
                     'remaining_qty' => $remainingQty,
+                    'remaining_quantity' => $remainingQty,
+                    'alert_quantity' => $alertQty,
                     'rate' => $rate,
                     'amount' => $amount,
                 ];
@@ -582,6 +588,66 @@ class ReportController extends Controller
             'storeId',
             'selectedStoreName'
         ));
+    }
+
+    /**
+     * Get items where remaining_quantity <= alert_quantity (for login alert).
+     * Uses same calculation as Stock Balance till date. Default: till_date = today, store_id = null.
+     *
+     * @return array<int, array{item_name: string, unit: string, remaining_quantity: float, alert_quantity: float}>
+     */
+    public static function getLowStockAlertItems(?string $tillDate = null, $storeId = null): array
+    {
+        if (!Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
+            return [];
+        }
+        $tillDate = $tillDate ?? now()->format('Y-m-d');
+        $items = ItemSubcategory::where('status', 'active')
+            ->whereNotNull('alert_quantity')
+            ->orderBy('name')
+            ->get();
+        $out = [];
+        foreach ($items as $item) {
+            $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
+                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
+                    $q->where('status', 'approved')->whereDate('po_date', '<=', $tillDate);
+                    if ($storeId) {
+                        $q->where('store_id', $storeId);
+                    }
+                })
+                ->sum('quantity');
+            $totalIssuedKi = \DB::table('kitchen_issue_items as kii')
+                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                ->where('kii.item_subcategory_id', $item->id)
+                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('kim.store_type', 'store')
+                ->whereDate('kim.issue_date', '<=', $tillDate)
+                ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
+                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+            $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->where('svi.item_subcategory_id', $item->id)
+                ->where('svr.store_type', 'store')
+                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
+                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
+            $alertQty = (float) $item->alert_quantity;
+            if ($alertQty <= 0) {
+                continue;
+            }
+            if ($remainingQty <= $alertQty) {
+                $out[] = [
+                    'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
+                    'unit' => $item->unit_measurement ?? 'Unit',
+                    'remaining_quantity' => $remainingQty,
+                    'alert_quantity' => $alertQty,
+                ];
+            }
+        }
+        return $out;
     }
 
     /**
@@ -652,6 +718,167 @@ class ReportController extends Controller
             'vouchers',
             'clientTypes',
             'clientTypeCategories'
+        ));
+    }
+
+    /**
+     * Minimum Stock Alert
+     * Lists inventory items where current_stock < minimum_stock (low stock).
+     */
+    public function minimumStockAlert(Request $request)
+    {
+        $with = ['category', 'subcategory'];
+        if (Schema::hasColumn('mess_inventories', 'store_id')) {
+            $with[] = 'store';
+        }
+        $query = Inventory::with($with)->whereColumn('current_stock', '<', 'minimum_stock');
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if (Schema::hasColumn('mess_inventories', 'store_id') && $request->filled('store_id')) {
+            $query->where('store_id', $request->store_id);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('item_name', 'like', '%' . $search . '%')
+                    ->orWhere('item_code', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (Schema::hasColumn('mess_inventories', 'is_active')) {
+            $query->where('is_active', true);
+        }
+
+        $items = $query->orderBy('item_name')->paginate(20)->withQueryString();
+        $categories = ItemCategory::orderBy('category_name')->get();
+        $stores = Store::where('status', 'active')->get();
+
+        return view('admin.mess.reports.minimum-stock-alert', compact(
+            'items',
+            'categories',
+            'stores'
+        ));
+    }
+
+    /**
+     * Item Report
+     * Item-wise total Purchase quantity and total Sale quantity with date range.
+     * Views: item-wise, subcategory-wise (grouped by category), category-wise (one category selected).
+     */
+    public function purchaseSaleQuantityReport(Request $request)
+    {
+        $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
+        $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $viewType = $request->filled('view_type') ? $request->view_type : 'item_wise';
+        if (!in_array($viewType, ['item_wise', 'subcategory_wise', 'category_wise'], true)) {
+            $viewType = 'item_wise';
+        }
+        $categoryId = $request->filled('category_id') ? $request->category_id : null;
+        $itemId = $request->filled('item_id') ? $request->item_id : null;
+
+        $itemsQuery = ItemSubcategory::where('status', 'active')->with('category')->orderBy('name');
+        if ($viewType === 'category_wise') {
+            if ($categoryId) {
+                $itemsQuery->where('category_id', $categoryId);
+            } else {
+                $itemsQuery->whereRaw('1 = 0');
+            }
+        }
+        if ($itemId) {
+            $itemsQuery->where('id', $itemId);
+        }
+        $items = $itemsQuery->get();
+
+        $reportData = [];
+        foreach ($items as $item) {
+            $purchaseAgg = PurchaseOrderItem::where('item_subcategory_id', $item->id)
+                ->whereHas('purchaseOrder', function ($q) use ($fromDate, $toDate) {
+                    $q->where('status', 'approved')
+                        ->whereDate('po_date', '>=', $fromDate)
+                        ->whereDate('po_date', '<=', $toDate);
+                })
+                ->selectRaw('COALESCE(SUM(quantity), 0) as total_qty, COALESCE(SUM(quantity * unit_price), 0) as total_amount')
+                ->first();
+            $purchaseQty = (float) ($purchaseAgg->total_qty ?? 0);
+            $purchaseAmount = (float) ($purchaseAgg->total_amount ?? 0);
+            $avgPurchasePrice = $purchaseQty > 0 ? $purchaseAmount / $purchaseQty : null;
+
+            $saleKi = \DB::table('kitchen_issue_items as kii')
+                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                ->where('kii.item_subcategory_id', $item->id)
+                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('kim.store_type', 'store')
+                ->whereDate('kim.issue_date', '>=', $fromDate)
+                ->whereDate('kim.issue_date', '<=', $toDate)
+                ->selectRaw('COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, 0)), 0) as net_amount')
+                ->first();
+            $saleQtyKi = (float) ($saleKi->net_qty ?? 0);
+            $saleAmountKi = (float) ($saleKi->net_amount ?? 0);
+
+            $saleSv = \DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->where('svi.item_subcategory_id', $item->id)
+                ->where('svr.store_type', 'store')
+                ->whereDate('svr.issue_date', '>=', $fromDate)
+                ->whereDate('svr.issue_date', '<=', $toDate)
+                ->selectRaw('COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, 0)), 0) as net_amount')
+                ->first();
+            $saleQtySv = (float) ($saleSv->net_qty ?? 0);
+            $saleAmountSv = (float) ($saleSv->net_amount ?? 0);
+
+            $saleQty = $saleQtyKi + $saleQtySv;
+            $saleAmount = $saleAmountKi + $saleAmountSv;
+            $avgSalePrice = $saleQty > 0 ? $saleAmount / $saleQty : null;
+
+            $row = [
+                'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name ?? '—',
+                'unit' => $item->unit_measurement ?? 'Unit',
+                'purchase_qty' => $purchaseQty,
+                'sale_qty' => $saleQty,
+                'avg_purchase_price' => $avgPurchasePrice,
+                'avg_sale_price' => $avgSalePrice,
+                'category_id' => $item->category_id,
+                'category_name' => $item->category ? $item->category->category_name : null,
+            ];
+            $reportData[] = $row;
+        }
+
+        if ($viewType === 'item_wise') {
+            $groupedData = null;
+        } elseif ($viewType === 'subcategory_wise') {
+            $groupedData = collect($reportData)
+                ->groupBy(function ($r) {
+                    return $r['category_name'] ?? 'Uncategorized';
+                })
+                ->map(function ($rows, $catName) {
+                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
+                })
+                ->values()
+                ->all();
+        } else {
+            if ($items->isEmpty()) {
+                $groupedData = [];
+            } else {
+                $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
+                $groupedData = [['category_name' => $catName, 'items' => $reportData]];
+            }
+        }
+
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
+
+        return view('admin.mess.reports.purchase-sale-quantity', compact(
+            'reportData',
+            'groupedData',
+            'fromDate',
+            'toDate',
+            'viewType',
+            'categoryId',
+            'itemId',
+            'categories',
+            'allItems'
         ));
     }
 }
