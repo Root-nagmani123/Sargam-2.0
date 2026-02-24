@@ -19,30 +19,116 @@ class EmployeeIDCardRequestController extends Controller
      */
     public function index()
     {
-        // Get active requests (not deleted)
-        $activeRequests = EmployeeIDCardRequest::latest()
-            ->paginate(15);
-        
-        // Get archived requests (soft deleted)
-        $archivedRequests = EmployeeIDCardRequest::onlyTrashed()
-            ->latest()
-            ->paginate(15, ['*'], 'archive_page');
-        
-        // Get duplication requests (Replacement or Duplication - Lost/Damage)
-        $duplicationRequests = EmployeeIDCardRequest::whereIn('request_for', ['Replacement', 'Duplication'])
-            ->latest()
-            ->paginate(15, ['*'], 'duplication_page');
-        
-        // Get extension requests
-        $extensionRequests = EmployeeIDCardRequest::where('request_for', 'Extension')
-            ->latest()
-            ->paginate(15, ['*'], 'extension_page');
-        
+        $with = [
+            'employee:pk,first_name,last_name,designation_master_pk',
+            'employee.designation:pk,designation_name',
+            'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
+            'approvals.approver:pk,first_name,last_name',
+        ];
+        $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
+        $perPage = 25;
+        $filter = $request->get('filter', 'active');
+        if (! in_array($filter, ['active', 'archive', 'all'], true)) {
+            $filter = 'active';
+        }
+
+        // Permanent
+        $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
+        if ($filter === 'active') {
+            $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING);
+        } elseif ($filter === 'archive') {
+            $permQuery->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED]);
+        }
+        $permRows = $permQuery->get();
+
+        // Contractual
+        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
+        $contQuery = DB::table('security_con_oth_id_apply')->select($contCols)->orderBy('created_date', 'desc');
+        if ($filter === 'active') {
+            $contQuery->where('id_status', 1);
+        } elseif ($filter === 'archive') {
+            $contQuery->whereIn('id_status', [2, 3]);
+        }
+        $contRows = $contQuery->get();
+
+        $permDto = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $contDto = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
+        $merged = $permDto->concat($contDto)->sortByDesc('created_at')->values();
+
+        // Date range filter (created_date)
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        if ($dateFrom) {
+            try {
+                $from = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+                $merged = $merged->filter(fn ($r) => $r->created_at && $r->created_at->gte($from))->values();
+            } catch (\Exception $e) {
+            }
+        }
+        if ($dateTo) {
+            try {
+                $to = \Carbon\Carbon::parse($dateTo)->endOfDay();
+                $merged = $merged->filter(fn ($r) => $r->created_at && $r->created_at->lte($to))->values();
+            } catch (\Exception $e) {
+            }
+        }
+
+        // Name search (case-insensitive)
+        $search = trim($request->get('search', ''));
+        if ($search !== '') {
+            $searchLower = mb_strtolower($search);
+            $merged = $merged->filter(function ($r) use ($searchLower) {
+                $name = mb_strtolower($r->name ?? '');
+                return str_contains($name, $searchLower);
+            })->values();
+        }
+
+        $allRequests = $merged->values();
+        $activeCollection = $allRequests
+            ->filter(fn ($r) => ($r->status ?? '') === 'Pending')
+            ->values();
+        $archivedCollection = $allRequests
+            ->filter(fn ($r) => in_array(($r->status ?? ''), ['Approved', 'Rejected'], true))
+            ->values();
+        $duplicationCollection = $allRequests
+            ->filter(fn ($r) => in_array(($r->request_for ?? ''), ['Replacement', 'Duplication'], true))
+            ->values();
+        $extensionCollection = $allRequests
+            ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension')
+            ->values();
+
+        $paginate = function ($items, int $page, string $pageName) use ($perPage) {
+            $paginator = new LengthAwarePaginator(
+                $items->forPage($page, $perPage)->values(),
+                $items->count(),
+                $perPage,
+                $page,
+                ['path' => request()->url(), 'pageName' => $pageName]
+            );
+            $paginator->withQueryString();
+            return $paginator;
+        };
+
+        $activeRequests = $paginate($activeCollection, (int) $request->get('active_page', $request->get('page', 1)), 'active_page');
+        $archivedRequests = $paginate($archivedCollection, (int) $request->get('archive_page', 1), 'archive_page');
+        $duplicationRequests = $paginate($duplicationCollection, (int) $request->get('duplication_page', 1), 'duplication_page');
+        $extensionRequests = $paginate($extensionCollection, (int) $request->get('extension_page', 1), 'extension_page');
+        $requests = match ($filter) {
+            'archive' => $archivedRequests,
+            'all' => $paginate($allRequests, (int) $request->get('page', 1), 'page'),
+            default => $activeRequests,
+        };
+
         return view('admin.employee_idcard.index', [
+            'requests' => $requests,
             'activeRequests' => $activeRequests,
             'archivedRequests' => $archivedRequests,
             'duplicationRequests' => $duplicationRequests,
-            'extensionRequests' => $extensionRequests
+            'extensionRequests' => $extensionRequests,
+            'filter' => $filter,
+            'dateFrom' => $dateFrom ?? '',
+            'dateTo' => $dateTo ?? '',
+            'search' => $search ?? '',
         ]);
     }
 
