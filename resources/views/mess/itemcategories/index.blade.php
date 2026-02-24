@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('title', 'Item Category Master')
+@section('title', 'Category Item Master')
 @section('setup_content')
 @php
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
@@ -9,9 +9,9 @@
         <div class="card">
             <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Item Category Master</h4>
+                <h4 class="mb-0">Category Item Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
-                    Add Item Category
+                    Add Category Item
                 </button>
             </div>
 
@@ -58,7 +58,7 @@
                                                 data-status="{{ e($itemcategory->status ?? 'active') }}"
                                                 title="Edit">Edit</button>
                                         <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this item category?');">
+                                              onsubmit="return confirm('Are you sure you want to delete this category item?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
@@ -75,14 +75,14 @@
     </div>
 </div>
 
-{{-- Create Item Category Modal --}}
+{{-- Create Category Item Modal --}}
 <div class="modal fade" id="createItemCategoryModal" tabindex="-1" aria-labelledby="createItemCategoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.itemcategories.store') }}">
                 @csrf
                 <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="createItemCategoryModalLabel">Add Item Category</h5>
+                    <h5 class="modal-title fw-semibold" id="createItemCategoryModalLabel">Add Category Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -94,7 +94,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Category Type <span class="text-danger">*</span></label>
-                            <select name="category_type" class="form-select" required>
+                            <select name="category_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($categoryTypes as $value => $label)
                                     <option value="{{ $value }}" {{ old('category_type') === $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -109,7 +109,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
+                            <select name="status" class="form-select select2">
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
@@ -127,7 +127,7 @@
     </div>
 </div>
 
-{{-- Edit Item Category Modal --}}
+{{-- Edit Category Item Modal --}}
 <div class="modal fade" id="editItemCategoryModal" tabindex="-1" aria-labelledby="editItemCategoryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -135,7 +135,7 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="editItemCategoryModalLabel">Edit Item Category</h5>
+                    <h5 class="modal-title fw-semibold" id="editItemCategoryModalLabel">Edit Category Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -146,7 +146,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Category Type <span class="text-danger">*</span></label>
-                            <select name="category_type" id="edit_category_type" class="form-select" required>
+                            <select name="category_type" id="edit_category_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($categoryTypes as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -159,7 +159,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" id="edit_status" class="form-select">
+                            <select name="status" id="edit_status" class="form-select select2">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
@@ -175,20 +175,22 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'itemCategoriesTable', 'searchPlaceholder' => 'Search item categories...', 'orderColumn' => 1, 'actionColumnIndex' => 5, 'infoLabel' => 'item categories'])
+@include('components.mess-master-datatables', ['tableId' => 'itemCategoriesTable', 'searchPlaceholder' => 'Search category items...', 'orderColumn' => 1, 'actionColumnIndex' => 5, 'infoLabel' => 'category items'])
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemcategory');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editItemCategoryForm').action = '{{ url("admin/mess/itemcategories") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_category_name').value = btn.getAttribute('data-category-name') || '';
         document.getElementById('edit_category_type').value = btn.getAttribute('data-category-type') || '';
         document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editItemCategoryModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush

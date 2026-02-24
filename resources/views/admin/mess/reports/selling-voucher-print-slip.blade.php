@@ -22,7 +22,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Employee / OT</label>
-                        <select name="employee_ot_filter" id="employeeOtFilter" class="form-select">
+                        <select name="employee_ot_filter" id="employeeOtFilter" class="form-select select2">
                             <option value="">All</option>
                             <option value="employee_ot" {{ request('employee_ot_filter') == 'employee_ot' ? 'selected' : '' }}>Employee / OT</option>
                             <option value="employee" {{ request('employee_ot_filter') == 'employee' ? 'selected' : '' }}>Employee Only</option>
@@ -31,7 +31,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Client Type</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select select2">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -42,7 +42,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Select Buyer Name (Selling Voucher)</label>
-                        <select name="client_type_pk" id="clientTypePk" class="form-select">
+                        <select name="client_type_pk" id="clientTypePk" class="form-select select2">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') && isset($clientTypeCategories[request('client_type_slug')]))
                                 @foreach($clientTypeCategories[request('client_type_slug')] as $category)
@@ -54,16 +54,19 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
                     <button type="submit" class="btn btn-primary">
                         <i class="ti ti-filter"></i> Apply Filters
                     </button>
                     <a href="{{ route('admin.mess.reports.selling-voucher-print-slip') }}" class="btn btn-secondary">
                         <i class="ti ti-refresh"></i> Reset
                     </a>
-                    <button type="button" class="btn btn-success" onclick="window.print()">
+                    <button type="button" class="btn btn-outline-primary" onclick="window.print()" title="Print or Save as PDF">
                         <i class="ti ti-printer"></i> Print
                     </button>
+                    <a href="{{ route('admin.mess.reports.selling-voucher-print-slip.excel', request()->query()) }}" class="btn btn-success" title="Export to Excel">
+                        <i class="ti ti-file-spreadsheet"></i> Export Excel
+                    </a>
                 </div>
             </form>
         </div>
@@ -129,6 +132,7 @@
                 <tr>
                     <th style="color: #fff; border-color: #af2910; width: 60px;">S. No.</th>
                     <th style="color: #fff; border-color: #af2910;">Buyer Name</th>
+                    <th style="color: #fff; border-color: #af2910; width: 90px;">Status</th>
                     <th style="color: #fff; border-color: #af2910;">Item Name</th>
                     <th style="color: #fff; border-color: #af2910; width: 120px;">Request No.</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right; width: 100px;">Quantity</th>
@@ -167,6 +171,7 @@
                                     <br>
                                     <small class="text-muted">Type: {{ $clientType }}</small>
                                 </td>
+                                <td class="text-center align-middle" rowspan="{{ $voucher->items->count() }}">{{ $voucher->status_label ?? 'N/A' }}</td>
                             @endif
                             <td>{{ $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A') }}</td>
                             @if($itemIndex === 0)
@@ -183,13 +188,13 @@
                     @endforeach
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">No selling vouchers found</td>
+                        <td colspan="8" class="text-center text-muted py-4">No selling vouchers found</td>
                     </tr>
                 @endforelse
                 
                 @if($vouchers->count() > 0)
                     <tr style="background-color: #f8f9fa; font-weight: bold;">
-                        <td colspan="6" class="text-end">Grand Total:</td>
+                        <td colspan="7" class="text-end">Grand Total:</td>
                         <td class="text-end">₹{{ number_format($totalAmount, 2) }}</td>
                     </tr>
                 @endif

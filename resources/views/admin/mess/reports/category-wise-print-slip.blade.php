@@ -23,7 +23,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Employee / OT/Course</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select select2">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Client Type</label>
-                        <select id="clientTypePk" class="form-select" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
+                        <select id="clientTypePk" class="form-select select2" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -57,7 +57,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
+                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select select2">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php
@@ -95,16 +95,19 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
                     <button type="submit" class="btn btn-primary">
                         <i class="ti ti-filter"></i> Apply Filters
                     </button>
                     <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-secondary">
                         <i class="ti ti-refresh"></i> Reset
                     </a>
-                    <button type="button" class="btn btn-success" id="btnPrintAll">
+                    <button type="button" class="btn btn-outline-primary" id="btnPrintAll" title="Print or Save as PDF">
                         <i class="ti ti-printer"></i> Print
                     </button>
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel', request()->query()) }}" class="btn btn-success" title="Export to Excel">
+                        <i class="ti ti-file-spreadsheet"></i> Export Excel
+                    </a>
                 </div>
             </form>
         </div>
@@ -156,6 +159,7 @@
                         <tr>
                             <th class="th-slip-no">SLIP NO.</th>
                             <th class="th-buyer">BUYER NAME</th>
+                            <th class="th-status">STATUS</th>
                             <th class="th-item">ITEM NAME</th>
                             <th class="th-date">REQUEST DATE</th>
                             <th class="th-qty">QTY.</th>
@@ -176,11 +180,13 @@
                                     $itemAmount = ($item->quantity ?? 0) * ($item->rate ?? 0);
                                     $sectionTotal += $itemAmount;
                                     $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                                    $statusLabel = $voucher->status_label ?? 'N/A';
                                 @endphp
                                 <tr>
                                     @if($itemIndex === 0)
                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
                                         <td class="align-middle" rowspan="{{ $rowCount }}">{{ $buyerName }}</td>
+                                        <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $statusLabel }}</td>
                                     @endif
                                     <td>{{ $itemName }}</td>
                                     <td class="text-center">{{ $requestDate }}</td>
@@ -191,7 +197,7 @@
                             @endforeach
                         @endforeach
                         <tr class="total-row">
-                            <td colspan="5"></td>
+                            <td colspan="6"></td>
                             <td class="text-end"><strong>TOTAL</strong></td>
                             <td class="text-end"><strong>{{ number_format($sectionTotal, 2) }}</strong></td>
                         </tr>
@@ -276,7 +282,7 @@
         font-weight: 600;
         padding: 8px 6px;
     }
-    .print-slip-table .th-slip-no, .print-slip-table .th-date { text-align: center; }
+    .print-slip-table .th-slip-no, .print-slip-table .th-date, .print-slip-table .th-status { text-align: center; }
     .print-slip-table .th-qty, .print-slip-table .th-price, .print-slip-table .th-amount { text-align: right; }
     .print-slip-table tbody td { padding: 6px 8px; vertical-align: middle; }
     .print-slip-table .total-row { background-color: #f0f0f0; font-weight: bold; }

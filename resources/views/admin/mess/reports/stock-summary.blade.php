@@ -23,14 +23,14 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select">
+                        <select name="store_type" id="store_type" class="form-select select2">
                             <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
                             <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
                         </select>
                     </div>
                     <div class="col-md-4" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
                         <label class="form-label">Main Store</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select select2">
                             <option value="">All Main Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
@@ -41,7 +41,7 @@
                     </div>
                     <div class="col-md-4" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
                         <label class="form-label">Sub Store</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select select2">
                             <option value="">All Sub Stores</option>
                             @foreach($subStores as $subStore)
                                 <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>
@@ -69,7 +69,7 @@
         </div>
     </div>
 
-    <!-- Report Header (Print Only) -->
+    <!-- Report Header -->
     <div class="report-header text-center mb-4">
         <h4 class="fw-bold">Stock Summary Report</h4>
         <p class="mb-1">Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}</p>
@@ -85,6 +85,8 @@
                 <tr style="background-color: #cbd5e0;">
                     <th rowspan="2" class="text-center align-middle" style="width: 60px;">SR.<br>No</th>
                     <th rowspan="2" class="text-center align-middle" style="min-width: 150px;">Item Name</th>
+                    <th rowspan="2" class="text-center align-middle" style="min-width: 100px;">Item Code</th>
+                    <th rowspan="2" class="text-center align-middle" style="min-width: 80px;">Unit</th>
                     <th colspan="3" class="text-center" style="background-color: #bfdbfe;">Opening</th>
                     <th colspan="3" class="text-center" style="background-color: #fde68a;">Purchase</th>
                     <th colspan="3" class="text-center" style="background-color: #fed7aa;">Sale</th>
@@ -114,30 +116,57 @@
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>{{ $item['item_name'] }}</td>
+                        <td>{{ $item['item_code'] ?? '—' }}</td>
+                        <td>{{ $item['unit'] ?? '—' }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['opening_rate'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['opening_amount'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['opening_amount'], 2) }}</td>
                         <!-- Purchase -->
                         <td class="text-end">{{ number_format($item['purchase_qty'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['purchase_rate'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['purchase_amount'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['purchase_rate'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['purchase_amount'], 2) }}</td>
                         <!-- Sale -->
                         <td class="text-end">{{ number_format($item['sale_qty'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['sale_rate'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['sale_amount'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['sale_rate'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['sale_amount'], 2) }}</td>
                         <!-- Closing -->
                         <td class="text-end">{{ number_format($item['closing_qty'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['closing_rate'], 2) }}</td>
-                        <td class="text-end">{{ number_format($item['closing_amount'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['closing_rate'], 2) }}</td>
+                        <td class="text-end">₹{{ number_format($item['closing_amount'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="14" class="text-center text-muted py-4">
+                        <td colspan="16" class="text-center text-muted py-4">
                             No stock movement found for the selected period
                         </td>
                     </tr>
                 @endforelse
+                @if(count($reportData) > 0)
+                    @php
+                        $totals = [
+                            'opening_amount' => collect($reportData)->sum('opening_amount'),
+                            'purchase_amount' => collect($reportData)->sum('purchase_amount'),
+                            'sale_amount' => collect($reportData)->sum('sale_amount'),
+                            'closing_amount' => collect($reportData)->sum('closing_amount'),
+                        ];
+                    @endphp
+                    <tr class="table-secondary fw-bold">
+                        <td colspan="4" class="text-end">Total</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">₹{{ number_format($totals['opening_amount'], 2) }}</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">₹{{ number_format($totals['purchase_amount'], 2) }}</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">₹{{ number_format($totals['sale_amount'], 2) }}</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">₹{{ number_format($totals['closing_amount'], 2) }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
     </div>
@@ -173,12 +202,6 @@
         @page {
             margin: 1cm;
             size: A4 landscape;
-        }
-    }
-    
-    @media screen {
-        .report-header {
-            display: none;
         }
     }
     

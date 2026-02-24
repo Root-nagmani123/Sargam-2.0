@@ -134,50 +134,6 @@
                                 <span class="hide-menu">Permissions</span>
                                 </a></li> --}}
                             </ul>
-                            {{-- ID CARD MANAGEMENT --}}
-                            <!-- <li class="sidebar-item" style="background: #4077ad;
-                            border-radius: 30px 0px 0px 30px;
-                            width: 100%;
-                            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                            min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#idCardManagementCollapse" role="button"
-                                    aria-expanded="false" aria-controls="idCardManagementCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">ID Card Management</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3" id="idCardManagementCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.employee_idcard.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">ID Card List</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.employee_idcard.create') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Generate New ID Card</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.family_idcard.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.security.vehicle_pass.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
-                                        href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval I</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
-                                        href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval II</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.security.employee_idcard_approval.all') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">All ID Card Requests</span>
-                                    </a></li>
-                            </ul> -->
                             <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
@@ -199,6 +155,24 @@
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="estateManagementCollapse">
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.request-for-estate') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Request For Estate</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.estate-approval-setting') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.estate-approval-setting') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Approval Setting</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.add-approved-request-house') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.add-approved-request-house') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Add Approved Request House</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
@@ -208,6 +182,24 @@
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.possession-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Others</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-hac-approved') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.change-request-hac-approved') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Change Requests (HAC Approved)</span>
+                                    </a>
+                                </li>
+                                <!-- <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.possession-view') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession View</span>
+                                    </a>
+                                </li> -->
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.list-meter-reading') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
@@ -240,7 +232,13 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define House</span>
                                     </a>
                                 </li>
-                            </ul> -->
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-electric-slab.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.define-electric-slab.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
+                                    </a>
+                                </li>
+                            </ul>
 
                             {{-- ESTATE MASTER --}}
                             <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -279,12 +277,6 @@
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.define-block-building.*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.define-block-building.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Block/Building</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.define-electric-slab.*') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.define-electric-slab.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
@@ -340,7 +332,13 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
                                     </a>
                                 </li>
-                            </ul> -->
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.migration-report') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.reports.migration-report') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Migration Report (1998–2026)</span>
+                                    </a>
+                                </li>
+                            </ul>
                             
                             @endif
 

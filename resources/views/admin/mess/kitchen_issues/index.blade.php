@@ -32,7 +32,7 @@
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label class="form-label">Store/Mess</label>
-                            <select name="store_id" class="form-select">
+                            <select name="store_id" class="form-select select2">
                                 <option value="">All Stores</option>
                                 @foreach($stores as $store)
                                 <option value="{{ $store->pk }}" {{ request('store_id') == $store->pk ? 'selected' : '' }}>
@@ -43,7 +43,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
+                            <select name="status" class="form-select select2">
                                 <option value="">All Status</option>
                                 <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                                 <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Processing</option>
@@ -54,7 +54,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Approval Status</label>
-                            <select name="approve_status" class="form-select">
+                            <select name="approve_status" class="form-select select2">
                                 <option value="">All</option>
                                 <option value="0" {{ request('approve_status') === '0' ? 'selected' : '' }}>Pending</option>
                                 <option value="1" {{ request('approve_status') === '1' ? 'selected' : '' }}>Approved</option>

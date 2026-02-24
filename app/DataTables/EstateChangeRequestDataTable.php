@@ -77,16 +77,42 @@ class EstateChangeRequestDataTable extends DataTable
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (!empty($searchValue)) {
-                    $query->whereHas('estateHomeRequestDetails', function ($q) use ($searchValue) {
-                        $q->where('estate_home_request_details.emp_name', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.employee_id', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.emp_designation', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.pay_scale', 'like', "%{$searchValue}%");
-                    })->orWhere('estate_change_home_req_details.estate_change_req_ID', 'like', "%{$searchValue}%")
-                      ->orWhere('estate_change_home_req_details.change_house_no', 'like', "%{$searchValue}%")
-                      ->orWhere('estate_change_home_req_details.remarks', 'like', "%{$searchValue}%");
+                    $query->where(function ($q) use ($searchValue) {
+                        $q->whereHas('estateHomeRequestDetails', function ($sub) use ($searchValue) {
+                            $sub->where('estate_home_request_details.emp_name', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.employee_id', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.emp_designation', 'like', "%{$searchValue}%")
+                                ->orWhere('estate_home_request_details.pay_scale', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhere('estate_change_home_req_details.estate_change_req_ID', 'like', "%{$searchValue}%")
+                        ->orWhere('estate_change_home_req_details.change_house_no', 'like', "%{$searchValue}%")
+                        ->orWhere('estate_change_home_req_details.remarks', 'like', "%{$searchValue}%");
+                    });
                 }
             }, true)
+            ->filterColumn('emp_name', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.emp_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('employee_id', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.employee_id', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('emp_designation', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.emp_designation', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('pay_scale', function ($query, $keyword) {
+                $query->whereHas('estateHomeRequestDetails', function ($q) use ($keyword) {
+                    $q->where('estate_home_request_details.pay_scale', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('availability_as_per_request', function ($query, $keyword) {
+                $query->where('estate_change_home_req_details.change_house_no', 'like', "%{$keyword}%");
+            })
             ->setRowId('pk');
     }
 
@@ -102,12 +128,13 @@ class EstateChangeRequestDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('estateChangeRequestTable')
-            ->addTableClass('table text-nowrap w-100')
+            ->addTableClass('table table-bordered table-striped table-hover align-middle mb-0')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
+                'scrollX' => true,
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
@@ -127,29 +154,30 @@ class EstateChangeRequestDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
+                'initComplete' => "function() { var tbl = document.getElementById('estateChangeRequestTable'); if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) { var wrap = document.createElement('div'); wrap.className = 'table-responsive'; wrap.style.overflowX = 'auto'; wrap.style.webkitOverflowScrolling = 'touch'; tbl.parentNode.insertBefore(wrap, tbl); wrap.appendChild(tbl); } }",
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('estate_change_req_ID')->title('Request ID')->orderable(true)->searchable(true),
-            Column::make('change_req_date')->title('Request Date')->orderable(true)->searchable(false),
-            Column::make('emp_name')->title('Name')->orderable(false)->searchable(true),
-            Column::make('employee_id')->title('Emp.ID')->orderable(false)->searchable(true),
-            Column::make('emp_designation')->title('Designation')->orderable(false)->searchable(true),
-            Column::make('pay_scale')->title('Current Pay Scale')->orderable(false)->searchable(true),
-            Column::make('doj_pay_scale')->title('Date of Joining in Current Pay Scale')->orderable(false)->searchable(false),
-            Column::make('doj_service')->title('Date of Joining in Service')->orderable(false)->searchable(false),
-            Column::make('doj_academic')->title('Date of Joining in Academy')->orderable(false)->searchable(false),
-            Column::computed('retirement_deputation')->title('Retirement Date / Deputation End Date')->orderable(false)->searchable(false),
-            Column::make('eligibility_type_pk')->title('Eligibility Type')->orderable(false)->searchable(false),
-            Column::computed('request_type')->title('Request Type')->orderable(false)->searchable(false),
-            Column::make('availability_as_per_request')->title('Availability as per Request')->orderable(true)->searchable(true),
-            Column::make('remarks')->title('Remarks')->orderable(false)->searchable(true),
-            Column::computed('approve_disapprove')->title('Approve/Disapprove')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
+            Column::make('estate_change_req_ID')->title('REQUEST ID')->orderable(true)->searchable(true),
+            Column::make('change_req_date')->title('REQUEST DATE')->orderable(true)->searchable(false),
+            Column::make('emp_name')->title('NAME')->orderable(false)->searchable(true),
+            Column::make('employee_id')->title('EMP.ID')->orderable(false)->searchable(true),
+            Column::make('emp_designation')->title('DESIGNATION')->orderable(false)->searchable(true),
+            Column::make('pay_scale')->title('CURRENT PAY SCALE')->orderable(false)->searchable(true),
+            Column::make('doj_pay_scale')->title('DATE OF JOINING IN CURRENT PAY SCALE')->orderable(false)->searchable(false),
+            Column::make('doj_service')->title('DATE OF JOINING IN SERVICE')->orderable(false)->searchable(false),
+            Column::make('doj_academic')->title('DATE OF JOINING IN ACADEMY')->orderable(false)->searchable(false),
+            Column::computed('retirement_deputation')->title('RETIREMENT DATE / DEPUTATION END DATE')->orderable(false)->searchable(false),
+            Column::make('eligibility_type_pk')->title('ELIGIBILITY TYPE')->orderable(false)->searchable(false),
+            Column::computed('request_type')->title('REQUEST TYPE')->orderable(false)->searchable(false),
+            Column::make('availability_as_per_request')->title('AVAILABILITY AS PER REQUEST')->orderable(true)->searchable(true),
+            Column::make('remarks')->title('REMARKS')->orderable(false)->searchable(true),
+            Column::computed('approve_disapprove')->title('APPROVE/DISAPPROVE')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
 

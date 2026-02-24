@@ -175,51 +175,75 @@ HTML;
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
     {
-        $statusFilter = request('status_filter');
+        $statusFilter = request('status_filter', 'active');
         $courseFilter = request('course_filter');
         $groupTypeFilter = request('group_type_filter');
-        $currentDate = Carbon::now()->format('Y-m-d');
+        $currentDate      = now()->toDateString();
 
         // Check if any filter is explicitly set
-        $hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter);
+        /*$hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter);
 
         // If no filters are applied, show active courses by default
         if (!$hasAnyFilter) {
             $statusFilter = 'active'; // Set default to active
         }
+            */
 
         $data_course_id =  get_Role_by_course();
 
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
                 ->with(['courseGroup', 'courseGroupType', 'Faculty'])
-                ->when($statusFilter === 'active', function ($query) use ($currentDate) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->where(function ($q) use ($currentDate) {
-                            $q->whereNull('end_date')              // end date NULL ho (kabhi khatam nahi)
-                              ->orWhereDate('end_date', '>=', $currentDate); // ya abhi ya future me active
-                        });
-                    });
-                })
 
-                ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->whereNotNull('end_date')
-                            ->whereDate('end_date', '<', $currentDate);
-                    });
-                })
-                ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($data_course_id) {
-                        $courseQuery->whereIn('pk', $data_course_id);
-                    });
-                })
-                ->when(!empty($courseFilter), function ($query) use ($courseFilter) {
-                    $query->where('course_name', $courseFilter);
-                })
-                ->when(!empty($groupTypeFilter), function ($query) use ($groupTypeFilter) {
-                    $query->where('type_name', $groupTypeFilter);
-                })
-                ->orderBy('pk', 'desc');
+         /*
+        |--------------------------------------------------------------------------
+        | Always exclude inactive master courses
+        |--------------------------------------------------------------------------
+        */
+        ->whereHas('courseGroup', function ($q) {
+            $q->where('active_inactive', 1);
+        })
+
+        ->when($statusFilter === 'active', function ($query) use ($currentDate) {
+            $query->whereHas('courseGroup', function ($q) use ($currentDate) {
+                $q->where(function ($sub) use ($currentDate) {
+                    $sub->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $currentDate);
+                });
+            });
+            })
+
+            //By Dhananjay
+
+            ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
+            $query->whereHas('courseGroup', function ($q) use ($currentDate) {
+                $q->whereNotNull('end_date')
+                  ->whereDate('end_date', '<', $currentDate);
+            });
+             })
+
+              /*
+        |--------------------------------------------------------------------------
+        | Course Dropdown Filter
+        |--------------------------------------------------------------------------
+        */
+
+        ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+            $query->whereHas('courseGroup', function ($courseQuery) use ($data_course_id) {
+                $courseQuery->whereIn('pk', $data_course_id);
+            });
+        })
+            //By Dhananjay
+        ->when(!empty($courseFilter), function ($query) use ($courseFilter) {
+                $query->whereHas('courseGroup', function ($q) use ($courseFilter) {
+                    $q->where('pk', $courseFilter);
+                });
+            })
+
+           ->when(!empty($groupTypeFilter), function ($query) use ($groupTypeFilter) {
+            $query->where('type_name', $groupTypeFilter);
+        })
+        ->orderBy('pk', 'desc');
 
         return $query;
     }

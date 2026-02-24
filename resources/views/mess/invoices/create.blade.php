@@ -11,7 +11,7 @@
         </div>
         <div class="mb-3">
             <label>Vendor</label>
-            <select name="vendor_id" class="form-control" required>
+            <select name="vendor_id" class="form-select select2" required>
                 @foreach($vendors as $vendor)
                     <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
                 @endforeach

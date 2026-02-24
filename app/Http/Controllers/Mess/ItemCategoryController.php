@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mess;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use App\Models\Mess\ItemCategory;
 
 class ItemCategoryController extends Controller
@@ -55,12 +56,21 @@ class ItemCategoryController extends Controller
      */
     protected function validatedData(Request $request, ?ItemCategory $itemcategory = null): array
     {
-        $validated = $request->validate([
-            'category_name' => ['required', 'string', 'max:255'],
+        $rules = [
+            'category_name' => [
+                'required',
+                'string',
+                'max:255',
+                $itemcategory
+                    ? Rule::unique('mess_item_categories', 'category_name')->ignore($itemcategory->id)
+                    : Rule::unique('mess_item_categories', 'category_name'),
+            ],
             'category_type' => ['nullable', 'string', 'in:raw_material,finished_good,consumable,equipment'],
             'description'   => ['nullable', 'string'],
             'status'        => ['nullable', 'in:active,inactive'],
-        ]);
+        ];
+
+        $validated = $request->validate($rules);
 
         $status = $validated['status'] ?? ItemCategory::STATUS_ACTIVE;
         $categoryType = $validated['category_type'] ?? ItemCategory::TYPE_RAW_MATERIAL;

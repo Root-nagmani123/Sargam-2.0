@@ -18,7 +18,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Select Store Name</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select select2">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id ? 'selected' : '' }}>
@@ -28,16 +28,19 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
                     <button type="submit" class="btn btn-primary">
                         <i class="ti ti-filter"></i> Apply Filters
                     </button>
                     <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-secondary">
                         <i class="ti ti-refresh"></i> Reset
                     </a>
-                    <button type="button" class="btn btn-success" onclick="window.print()">
+                    <button type="button" class="btn btn-outline-primary" onclick="window.print()" title="Print or Save as PDF">
                         <i class="ti ti-printer"></i> Print
                     </button>
+                    <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel', request()->query()) }}" class="btn btn-success" title="Export to Excel">
+                        <i class="ti ti-file-spreadsheet"></i> Export Excel
+                    </a>
                 </div>
             </form>
         </div>
@@ -60,7 +63,7 @@
                     <th style="color: #fff; border-color: #af2910; width: 80px;">S. No.</th>
                     <th style="color: #fff; border-color: #af2910;">Item Name</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right;">Remaining Quantity</th>
-                    <th style="color: #fff; border-color: #af2910; text-align: right;">Rate</th>
+                    <th style="color: #fff; border-color: #af2910; text-align: right;">Avg rate</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right;">Amount</th>
                 </tr>
             </thead>

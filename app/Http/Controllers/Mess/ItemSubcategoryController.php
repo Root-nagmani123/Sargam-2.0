@@ -5,18 +5,21 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Mess\ItemSubcategory;
+use App\Models\Mess\ItemCategory;
 
 class ItemSubcategoryController extends Controller
 {
     public function index()
     {
-        $itemsubcategories = ItemSubcategory::orderByDesc('id')->get();
-        return view('mess.itemsubcategories.index', compact('itemsubcategories'));
+        $itemsubcategories = ItemSubcategory::with('category')->orderByDesc('id')->get();
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        return view('mess.itemsubcategories.index', compact('itemsubcategories', 'categories'));
     }
 
     public function create()
     {
-        return view('mess.itemsubcategories.create');
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        return view('mess.itemsubcategories.create', compact('categories'));
     }
 
     public function store(Request $request)
@@ -39,7 +42,8 @@ class ItemSubcategoryController extends Controller
     public function edit($id)
     {
         $itemsubcategory = ItemSubcategory::findOrFail($id);
-        return view('mess.itemsubcategories.edit', compact('itemsubcategory'));
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        return view('mess.itemsubcategories.edit', compact('itemsubcategory', 'categories'));
     }
 
     public function update(Request $request, $id)
@@ -69,10 +73,10 @@ class ItemSubcategoryController extends Controller
     protected function validatedData(Request $request, ?ItemSubcategory $itemsubcategory = null): array
     {
         $validated = $request->validate([
-            'category_id'      => ['nullable', 'exists:mess_item_categories,id'],
+            'category_id'      => ['required', 'exists:mess_item_categories,id'],
             'item_name'        => ['required', 'string', 'max:255'],
-            'unit_measurement' => ['nullable', 'string', 'max:50'],
-            'standard_cost'   => ['nullable', 'numeric', 'min:0'],
+            'unit_measurement' => ['required', 'string', 'max:50'],
+            'alert_quantity'  => ['nullable', 'numeric', 'min:0'],
             'description'     => ['nullable', 'string'],
             'status'          => ['nullable', 'in:active,inactive'],
         ]);
@@ -80,7 +84,7 @@ class ItemSubcategoryController extends Controller
         $status = $validated['status'] ?? ItemSubcategory::STATUS_ACTIVE;
 
         $data = [
-            'category_id' => $validated['category_id'] ?? null,
+            'category_id' => $validated['category_id'],
             'description' => $validated['description'] ?? null,
         ];
 
@@ -95,12 +99,13 @@ class ItemSubcategoryController extends Controller
 
         // Only add unit_measurement if the column exists
         if (Schema::hasColumn('mess_item_subcategories', 'unit_measurement')) {
-            $data['unit_measurement'] = $validated['unit_measurement'] ?? null;
+            $data['unit_measurement'] = $validated['unit_measurement'];
         }
 
-        // Only add standard_cost if the column exists
-        if (Schema::hasColumn('mess_item_subcategories', 'standard_cost')) {
-            $data['standard_cost'] = $validated['standard_cost'] ?? null;
+        // Only add alert_quantity if the column exists
+        if (Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
+            $data['alert_quantity'] = isset($validated['alert_quantity']) && $validated['alert_quantity'] !== '' && $validated['alert_quantity'] !== null
+                ? $validated['alert_quantity'] : null;
         }
 
         // Only add status if the column exists
@@ -122,18 +127,18 @@ class ItemSubcategoryController extends Controller
         $hasItemCode = Schema::hasColumn('mess_item_subcategories', 'item_code');
         $hasSubcategoryCode = Schema::hasColumn('mess_item_subcategories', 'subcategory_code');
         
-        $code = 'ITM' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+        $code = 'ITEM/' . $next . '/CODE';
 
         // Check for uniqueness based on which column exists
         if ($hasItemCode) {
             while (ItemSubcategory::where('item_code', $code)->exists()) {
                 $next++;
-                $code = 'ITM' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+                $code = 'ITEM/' . $next . '/CODE';
             }
         } elseif ($hasSubcategoryCode) {
             while (ItemSubcategory::where('subcategory_code', $code)->exists()) {
                 $next++;
-                $code = 'ITM' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+                $code = 'ITEM/' . $next . '/CODE';
             }
         }
 

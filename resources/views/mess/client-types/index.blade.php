@@ -84,7 +84,7 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Client Types <span class="text-danger">*</span></label>
-                            <select name="client_type" class="form-select" required>
+                            <select name="client_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($clientTypeOptions as $value => $label)
                                     <option value="{{ $value }}" {{ old('client_type') === $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -99,7 +99,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
+                            <select name="status" class="form-select select2">
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
@@ -132,7 +132,7 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Client Types <span class="text-danger">*</span></label>
-                            <select name="client_type" id="edit_client_type" class="form-select" required>
+                            <select name="client_type" id="edit_client_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($clientTypeOptions as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -145,7 +145,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" id="edit_status" class="form-select">
+                            <select name="status" id="edit_status" class="form-select select2">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
@@ -168,15 +168,17 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($errors->isNotEmpty())
     new bootstrap.Modal(document.getElementById('createClientTypeModal')).show();
     @endif
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-clienttype');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editClientTypeForm').action = '{{ url("admin/mess/client-types") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_client_type').value = btn.getAttribute('data-client-type') || '';
         document.getElementById('edit_client_name').value = btn.getAttribute('data-client-name') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editClientTypeModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush

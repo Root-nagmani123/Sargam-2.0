@@ -14,7 +14,7 @@
                 <div class="row">
                     <div class="col-md-3">
                         <label>Store</label>
-                        <select name="store" class="form-select">
+                        <select name="store" class="form-select select2">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>
@@ -33,7 +33,7 @@
                     </div>
                     <div class="col-md-2">
                         <label>Payment Status</label>
-                        <select name="payment_status" class="form-select">
+                        <select name="payment_status" class="form-select select2">
                             <option value="">All</option>
                             <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Paid</option>
                             <option value="unpaid" {{ request('payment_status') == 'unpaid' ? 'selected' : '' }}>Unpaid</option>

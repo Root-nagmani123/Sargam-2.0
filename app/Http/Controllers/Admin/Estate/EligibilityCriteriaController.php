@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin\Estate;
 
-use App\DataTables\EligibilityCriteriaDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EligibilityCriterion;
 use App\Models\SalaryGrade;
@@ -12,9 +11,12 @@ use Illuminate\Http\Request;
 
 class EligibilityCriteriaController extends Controller
 {
-    public function index(EligibilityCriteriaDataTable $dataTable)
+    public function index()
     {
-        return $dataTable->render('admin.estate.eligibility_criteria.index');
+        $items = EligibilityCriterion::with(['salaryGrade', 'unitType', 'unitSubType'])
+            ->orderBy('pk')
+            ->paginate(request('per_page', 10));
+        return view('admin.estate.eligibility_criteria.index', compact('items'));
     }
 
     public function create()
@@ -40,6 +42,8 @@ class EligibilityCriteriaController extends Controller
     public function edit(string $id)
     {
         $item = EligibilityCriterion::findOrFail($id);
+        $payScales = SalaryGrade::orderBy('salary_grade')->get()
+            ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
         $salaryGrades = SalaryGrade::orderBy('salary_grade')->get()->mapWithKeys(fn ($s) => [$s->pk => $s->display_label_text]);
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');

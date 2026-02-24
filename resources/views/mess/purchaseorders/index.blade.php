@@ -93,7 +93,7 @@
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm">
+            <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="createPurchaseOrderModalLabel">Create Purchase Order</h5>
@@ -120,7 +120,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Store Name</label>
-                                    <select name="store_id" class="form-select">
+                                    <select name="store_id" class="form-select select2">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -129,7 +129,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" class="form-select" required>
+                                    <select name="vendor_id" class="form-select select2" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
                                             <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -138,7 +138,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Mode</label>
-                                    <select name="payment_code" class="form-select">
+                                    <select name="payment_code" class="form-select select2">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
                                             <option value="{{ $value }}">{{ $label }}</option>
@@ -147,11 +147,31 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" class="form-control" placeholder="Contact number">
+                                    <input type="text" name="contact_number" id="createContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" value="{{ old('contact_number') }}" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
+                                    @error('contact_number')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
                                     <textarea name="delivery_address" class="form-control" rows="2" placeholder="Delivery address"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
+                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
                         </div>
@@ -183,7 +203,7 @@
                                     <tbody id="poItemsBody">
                                         <tr class="po-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm select2 po-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
@@ -223,7 +243,7 @@
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" id="editPOForm" action="">
+            <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
@@ -247,7 +267,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Store Name</label>
-                                    <select name="store_id" id="editStoreId" class="form-select">
+                                    <select name="store_id" id="editStoreId" class="form-select select2">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -256,7 +276,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" id="editVendorId" class="form-select" required>
+                                    <select name="vendor_id" id="editVendorId" class="form-select select2" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
                                             <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -265,7 +285,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Mode</label>
-                                    <select name="payment_code" id="editPaymentCode" class="form-select">
+                                    <select name="payment_code" id="editPaymentCode" class="form-select select2">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
                                             <option value="{{ $value }}">{{ $label }}</option>
@@ -274,11 +294,37 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" id="editContactNumber" class="form-control">
+                                    <input type="text" name="contact_number" id="editContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
+                                    @error('contact_number')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
                                     <textarea name="delivery_address" id="editDeliveryAddress" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
+                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
+                                        <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
+                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                            Choose file
+                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
+                                        </label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
+                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
                                 </div>
                             </div>
                         </div>
@@ -369,6 +415,10 @@
                                 <label class="form-label text-muted small">Delivery Address</label>
                                 <p class="mb-0 fw-medium" id="viewDeliveryAddress">—</p>
                             </div>
+                            <div class="col-md-12">
+                                <label class="form-label text-muted small">Bill</label>
+                                <p class="mb-0" id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -433,7 +483,7 @@
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
             <td>
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select" required>
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm select2 po-item-select" required>
                     <option value="">Select Item</option>
                     ${options}
                 </select>
@@ -614,10 +664,13 @@
         });
     }
 
-    // View button: fetch PO and open view modal (read-only)
-    document.querySelectorAll('.btn-view-po').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const poId = this.getAttribute('data-po-id');
+    // View button: fetch PO and open view modal (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
+        const btn = e.target.closest('.btn-view-po');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(data => {
@@ -630,6 +683,17 @@
                     document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
                     document.getElementById('viewContactNumber').textContent = po.contact_number || '—';
                     document.getElementById('viewDeliveryAddress').textContent = po.delivery_address || '—';
+                    const billLink = document.getElementById('viewBillLink');
+                    const billNone = document.getElementById('viewBillNone');
+                    if (po.bill_url) {
+                        billLink.href = po.bill_url;
+                        billLink.style.display = '';
+                        if (billNone) billNone.style.display = 'none';
+                    } else {
+                        billLink.href = '#';
+                        billLink.style.display = 'none';
+                        if (billNone) billNone.style.display = '';
+                    }
                     const statusEl = document.getElementById('viewStatus');
                     statusEl.textContent = (po.status || '—').charAt(0).toUpperCase() + (po.status || '').slice(1);
                     statusEl.className = 'badge bg-' + (po.status === 'approved' ? 'success' : po.status === 'rejected' ? 'danger' : po.status === 'completed' ? 'primary' : 'warning');
@@ -653,8 +717,7 @@
                     new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-        });
-    });
+    }, true);
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -695,10 +758,13 @@
         });
     }
 
-    // Edit button: fetch PO and open modal; use vendor-mapped items for dropdowns
-    document.querySelectorAll('.btn-edit-po').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const poId = this.getAttribute('data-po-id');
+    // Edit button: fetch PO and open modal (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
+        const btn = e.target.closest('.btn-edit-po');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const poId = btn.getAttribute('data-po-id');
             fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(data => {
@@ -712,6 +778,22 @@
                     document.getElementById('editPaymentCode').value = po.payment_code || '';
                     document.getElementById('editContactNumber').value = po.contact_number || '';
                     document.getElementById('editDeliveryAddress').value = po.delivery_address || '';
+                    var editBillPathEl = document.getElementById('editCurrentBillPath');
+                    if (editBillPathEl) {
+                        editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po.bill_path) : 'No file chosen';
+                    }
+                    var editBillFileInput = document.getElementById('editBillFileInput');
+                    if (editBillFileInput) {
+                        editBillFileInput.value = '';
+                    }
+                    var editBillLinkEl = document.getElementById('editCurrentBillLink');
+                    if (editBillLinkEl) {
+                        if (po.bill_url) {
+                            editBillLinkEl.innerHTML = 'Current bill: <a href="' + escapeHtml(po.bill_url) + '" target="_blank" rel="noopener" class="text-primary">View Bill</a>';
+                        } else {
+                            editBillLinkEl.innerHTML = '';
+                        }
+                    }
                     editCurrentVendorId = po.vendor_id;
 
                     function buildEditRows(vendorItemList) {
@@ -751,8 +833,7 @@
                     }
                 })
                 .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
-        });
-    });
+    }, true);
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('editPoItemsBody');
@@ -760,6 +841,14 @@
         editItemRowIndex++;
         updateEditRemoveButtons();
     });
+
+    var editBillFileInputEl = document.getElementById('editBillFileInput');
+    if (editBillFileInputEl) {
+        editBillFileInputEl.addEventListener('change', function() {
+            var pathEl = document.getElementById('editCurrentBillPath');
+            if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+        });
+    }
 
     document.getElementById('editPoItemsBody').addEventListener('change', function(e) {
         if (
@@ -806,6 +895,88 @@
             }
         });
     }
+
+    // Contact number: restrict to digits only, max 10
+    function initContactNumberValidation(inputEl) {
+        if (!inputEl) return;
+        inputEl.addEventListener('keydown', function(e) {
+            const key = e.key;
+            if (key === 'Backspace' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Delete') return;
+            if (key.length === 1 && !/^[0-9]$/.test(key)) {
+                e.preventDefault();
+            }
+        });
+        inputEl.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+            if (validateContactNumber(this.value)) {
+                this.classList.remove('is-invalid');
+                const fb = this.parentNode.querySelector('.invalid-feedback.d-block');
+                if (fb) fb.textContent = '';
+            }
+        });
+        inputEl.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const digits = text.replace(/[^0-9]/g, '').slice(0, 10);
+            const start = this.selectionStart, end = this.selectionEnd;
+            this.value = this.value.slice(0, start) + digits + this.value.slice(end);
+            this.setSelectionRange(start + digits.length, start + digits.length);
+        });
+    }
+    initContactNumberValidation(document.getElementById('createContactNumber'));
+    document.getElementById('editPurchaseOrderModal').addEventListener('shown.bs.modal', function() {
+        initContactNumberValidation(document.getElementById('editContactNumber'));
+    }, { once: false });
+
+    // Validate contact number before form submit (optional field: if provided, must be exactly 10 digits)
+    function validateContactNumber(val) {
+        if (!val || val.trim() === '') return true;
+        return /^[0-9]{10}$/.test(val.replace(/\s/g, ''));
+    }
+    document.getElementById('createPOForm').addEventListener('submit', function(e) {
+        const input = document.getElementById('createContactNumber');
+        if (input && !validateContactNumber(input.value)) {
+            e.preventDefault();
+            input.classList.add('is-invalid');
+            const msg = input.parentNode.querySelector('.invalid-feedback.d-block') || document.createElement('div');
+            if (!msg.classList || !msg.classList.contains('invalid-feedback')) {
+                const m = document.createElement('div');
+                m.className = 'invalid-feedback d-block';
+                m.textContent = 'Contact number must be exactly 10 digits (numbers only).';
+                input.parentNode.appendChild(m);
+            } else {
+                msg.textContent = 'Contact number must be exactly 10 digits (numbers only).';
+            }
+            input.focus();
+            return false;
+        }
+    });
+    document.getElementById('editPOForm').addEventListener('submit', function(e) {
+        const input = document.getElementById('editContactNumber');
+        if (input && !validateContactNumber(input.value)) {
+            e.preventDefault();
+            input.classList.add('is-invalid');
+            let msg = input.parentNode.querySelector('.invalid-feedback.d-block');
+            if (!msg) {
+                msg = document.createElement('div');
+                msg.className = 'invalid-feedback d-block';
+                input.parentNode.appendChild(msg);
+            }
+            msg.textContent = 'Contact number must be exactly 10 digits (numbers only).';
+            input.focus();
+            return false;
+        }
+    });
+
+    // Auto-open create modal when validation errors exist (e.g. after failed submit)
+    @if($errors->any())
+    document.addEventListener('DOMContentLoaded', function() {
+        const createModal = document.getElementById('createPurchaseOrderModal');
+        if (createModal && (document.getElementById('createPOForm') || document.querySelector('[name="po_number"]'))) {
+            new bootstrap.Modal(createModal).show();
+        }
+    });
+    @endif
 
     // Reset create modal when opened
     if (createPOModal) {

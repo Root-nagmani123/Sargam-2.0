@@ -24,7 +24,7 @@
                 <div class="row g-2">
                     <div class="col-md-2">
                         <label class="form-label small">Status</label>
-                        <select name="status" class="form-select form-select-sm">
+                        <select name="status" class="form-select form-select-sm select2">
                             <option value="">All</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Draft</option>
                             <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Final</option>
@@ -33,7 +33,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">Store</label>
-                        <select name="store" class="form-select form-select-sm">
+                        <select name="store" class="form-select form-select-sm select2">
                             <option value="">All</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -48,8 +48,9 @@
                         <label class="form-label small">End Date</label>
                         <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end gap-1">
                         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                        <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
                     </div>
                 </div>
             </form>
@@ -180,7 +181,7 @@
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm">
+            <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="addReportModalLabel">ADD Selling Voucher with Date Range</h5>
@@ -218,7 +219,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select" required>
+                                    <select name="payment_type" class="form-select select2" required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                                         <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
                                         <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
@@ -227,57 +228,75 @@
                                 </div>
                                 <div class="col-md-4" id="drClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="drClientNameSelect">
-                                        <option value="">Select Client Name</option>
-                                        @foreach($clientNamesByType as $type => $list)
-                                            @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                    <div id="wrapDrClientNameSelect" class="dr-dependent-wrap">
+                                        <select name="client_type_pk" class="form-select select2" id="drClientNameSelect">
+                                            <option value="">Select Client Name</option>
+                                            @foreach($clientNamesByType as $type => $list)
+                                                @foreach($list as $c)
+                                                    <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                                @endforeach
                                             @endforeach
-                                        @endforeach
-                                    </select>
-                                    <select id="drOtCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
+                                        </select>
+                                    </div>
+                                    <div id="wrapDrOtCourseSelect" class="dr-dependent-wrap d-none">
+                                        <select id="drOtCourseSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($otCourses ?? [] as $course)
+                                                <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapDrCourseSelect" class="dr-dependent-wrap d-none">
+                                        <select id="drCourseSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($otCourses ?? [] as $course)
+                                                <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="col-md-4" id="drNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" id="drClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
-                                    <select id="drFacultySelect" class="form-select" style="display:none;">
-                                        <option value="">Select Faculty</option>
-                                        @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drAcademyStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Academy Staff</option>
-                                        @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drMessStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Mess Staff</option>
-                                        @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="drOtStudentSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Student</option>
-                                    </select>
-                                    <select id="drCourseNameSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
+                                    <div id="wrapDrClientNameInput" class="dr-dependent-wrap">
+                                        <input type="text" name="client_name" id="drClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    </div>
+                                    <div id="wrapDrFacultySelect" class="dr-dependent-wrap d-none">
+                                        <select id="drFacultySelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Faculty</option>
+                                            @foreach($faculties ?? [] as $f)
+                                                <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapDrAcademyStaffSelect" class="dr-dependent-wrap d-none">
+                                        <select id="drAcademyStaffSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Academy Staff</option>
+                                            @foreach($employees ?? [] as $e)
+                                                <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapDrMessStaffSelect" class="dr-dependent-wrap d-none">
+                                        <select id="drMessStaffSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Mess Staff</option>
+                                            @foreach($messStaff ?? [] as $e)
+                                                <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapDrOtStudentSelect" class="dr-dependent-wrap d-none">
+                                        <select id="drOtStudentSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Student</option>
+                                        </select>
+                                    </div>
+                                    <div id="wrapDrCourseNameSelect" class="dr-dependent-wrap d-none">
+                                        <select id="drCourseNameSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($otCourses ?? [] as $course)
+                                                <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Issue Date <span class="text-danger">*</span></label>
@@ -285,7 +304,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select" required>
+                                    <select name="inve_store_master_pk" class="form-select select2" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store['id'] }}" {{ old('inve_store_master_pk') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -295,6 +314,30 @@
                                 <div class="col-md-4">
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
+                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
                         </div>
@@ -325,7 +368,7 @@
                                     <tbody id="addModalItemsBody">
                                         <tr class="dr-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm select2 dr-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $s)
                                                         <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
@@ -411,6 +454,8 @@
                                     <tr><th width="40%" style="color: #495057;">Request Date:</th><td id="viewRequestDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Issue Date:</th><td id="viewIssueDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Transfer From Store:</th><td id="viewStoreName" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Reference Number:</th><td id="viewReferenceNumber" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Order By:</th><td id="viewOrderBy" style="color: #212529;">—</td></tr>
                                 </table>
                             </div>
                             <div class="col-md-6">
@@ -423,6 +468,7 @@
                             </div>
                         </div>
                         <p class="mb-0 mt-2" id="viewRemarksWrap" style="display:none; color: #212529;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
+                        <p class="mb-0 mt-2" style="color: #212529;"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
                 {{-- Item Details (same as Selling Voucher view modal + one extra column Issue Date) --}}
@@ -520,7 +566,7 @@
 <div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form id="editReportForm" method="POST" action="">
+            <form id="editReportForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
@@ -548,7 +594,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select edit-payment-type" required>
+                                    <select name="payment_type" class="form-select select2 edit-payment-type" required>
                                         <option value="1">Credit</option>
                                         <option value="0">Cash</option>
                                         <option value="2">Online</option>
@@ -556,7 +602,7 @@
                                 </div>
                                 <div class="col-md-4" id="editDrClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select edit-client-type-pk" id="editDrClientNameSelect">
+                                    <select name="client_type_pk" class="form-select select2 edit-client-type-pk" id="editDrClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
@@ -564,13 +610,13 @@
                                             @endforeach
                                         @endforeach
                                     </select>
-                                    <select id="editDrOtCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editDrOtCourseSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editDrCourseSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
@@ -580,28 +626,28 @@
                                 <div class="col-md-4" id="editDrNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control edit-client-name" id="editDrClientNameInput" placeholder="Client / section / role name" required>
-                                    <select id="editDrFacultySelect" class="form-select" style="display:none;">
+                                    <select id="editDrFacultySelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
                                             <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrAcademyStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editDrAcademyStaffSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
                                             <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrMessStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editDrMessStaffSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
                                             <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrOtStudentSelect" class="form-select" style="display:none;">
+                                    <select id="editDrOtStudentSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Student</option>
                                     </select>
-                                    <select id="editDrCourseNameSelect" class="form-select" style="display:none;">
+                                    <select id="editDrCourseNameSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
@@ -614,7 +660,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select edit-store-id" required>
+                                    <select name="inve_store_master_pk" class="form-select select2 edit-store-id" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
@@ -624,6 +670,36 @@
                                 <div class="col-md-4">
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Bill / Attachment (Upload) --}}
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-light py-2">
+                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
+                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
+                                        <span id="editSvCurrentBillPath" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
+                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                            Choose file
+                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
+                                        </label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
+                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
                                 </div>
                             </div>
                         </div>
@@ -669,11 +745,14 @@
     </div>
 </div>
 
+<script type="application/json" id="svdr-config">@json(['items' => $itemSubcategories, 'baseUrl' => url('admin/mess/selling-voucher-date-range')])</script>
 <script>
 (function() {
-    let itemSubcategories = @json($itemSubcategories);
+    var configEl = document.getElementById('svdr-config');
+    var config = configEl ? (function(){ try { return JSON.parse(configEl.textContent); } catch(e) { return {}; } })() : {};
+    let itemSubcategories = config.items || [];
     let filteredItems = itemSubcategories;
-    const baseUrl = "{{ url('admin/mess/selling-voucher-date-range') }}";
+    const baseUrl = config.baseUrl || '';
     // Match Selling Voucher behavior: only "Other" can choose Cash/Online (and Credit if enabled),
     // Employee/OT/Course should be Credit-only in the UI.
     const creditOnly = ['employee', 'ot', 'course'];
@@ -747,6 +826,9 @@
                 option.setAttribute('data-unit', item.unit_measurement || '');
                 option.setAttribute('data-rate', item.standard_cost || 0);
                 option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.price_tiers && item.price_tiers.length > 0) {
+                    option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+                }
                 if (item.id == currentValue) {
                     option.selected = true;
                 }
@@ -758,11 +840,15 @@
     }
 
     function getAddRowHtml(index) {
-        const options = filteredItems.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
-        ).join('');
+        const options = filteredItems.map(s => {
+            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
+            if (s.price_tiers && s.price_tiers.length > 0) {
+                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
+            }
+            return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        }).join('');
         return '<tr class="dr-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm select2 dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -794,11 +880,41 @@
         if (leftInp) leftInp.value = Math.max(0, avail - qty).toFixed(2);
     }
 
+    function calcDrFifoAmount(tiers, qty) {
+        if (!tiers || tiers.length === 0 || qty <= 0) return null;
+        let remaining = qty;
+        let amount = 0;
+        for (let i = 0; i < tiers.length && remaining > 0; i++) {
+            const take = Math.min(remaining, parseFloat(tiers[i].quantity) || 0);
+            amount += take * (parseFloat(tiers[i].unit_price) || 0);
+            remaining -= take;
+        }
+        return remaining <= 0 ? amount : null;
+    }
+
     function updateAddRowTotal(row) {
         const qty = parseFloat(row.querySelector('.dr-qty').value) || 0;
-        const rate = parseFloat(row.querySelector('.dr-rate').value) || 0;
+        const rateInp = row.querySelector('.dr-rate');
+        let rate = parseFloat(rateInp.value) || 0;
         const totalInp = row.querySelector('.dr-total');
-        if (totalInp) totalInp.value = (qty * rate).toFixed(2);
+        const sel = row.querySelector('.dr-item-select');
+        const opt = sel && sel.options[sel.selectedIndex];
+        const tiersJson = opt && opt.getAttribute('data-price-tiers');
+        const tiers = tiersJson ? (function(){ try { return JSON.parse(tiersJson); } catch(e) { return null; } })() : null;
+        let total;
+        if (tiers && tiers.length > 0 && qty > 0) {
+            const fifoAmount = calcDrFifoAmount(tiers, qty);
+            if (fifoAmount !== null) {
+                total = fifoAmount;
+                rate = qty > 0 ? total / qty : 0;
+                rateInp.value = rate.toFixed(2);
+            } else {
+                total = qty * rate;
+            }
+        } else {
+            total = qty * rate;
+        }
+        if (totalInp) totalInp.value = (total || 0).toFixed(2);
         updateAddRowLeft(row);
         enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
     }
@@ -841,6 +957,9 @@
         const newTr = div.querySelector('tr');
         tbody.appendChild(newTr);
         addRowIndex++;
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $(newTr).find('.dr-item-select.select2').select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addReportModal') });
+        }
         updateAddRowUnit(newTr);
         newTr.querySelector('.dr-avail').addEventListener('input', function() { updateAddRowLeft(newTr); });
         newTr.querySelector('.dr-qty').addEventListener('input', function() { updateAddRowTotal(newTr); updateAddGrandTotal(); });
@@ -872,6 +991,21 @@
         }
     });
 
+    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    const addReportModalEl = document.getElementById('addReportModal');
+    const addReportItemsTable = document.getElementById('addReportItemsTable');
+    if (addReportModalEl && addReportItemsTable) {
+        addReportModalEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && addReportItemsTable.contains(document.activeElement)) {
+                const addBtn = document.getElementById('addModalAddItemRow');
+                if (addBtn) {
+                    e.preventDefault();
+                    addBtn.click();
+                }
+            }
+        });
+    }
+
     // Add modal: Client Type + Client Name -> Name field (Faculty / Academy Staff / Mess Staff dropdown when Employee)
     function updateDrNameField() {
         const clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
@@ -897,32 +1031,34 @@
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
         if (isOt) {
-            nameInput.style.display = 'none';
+            setDrModalWrap('wrapDrClientNameInput', false);
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'block'; }
-            if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.value = ''; drCourseSelect.removeAttribute('required'); }
-            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.value = ''; drCourseNameSelect.removeAttribute('required'); }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setDrModalWrap(sel.id === 'drFacultySelect' ? 'wrapDrFacultySelect' : (sel.id === 'drAcademyStaffSelect' ? 'wrapDrAcademyStaffSelect' : 'wrapDrMessStaffSelect'), false); sel.value = ''; sel.removeAttribute('required'); } });
+            setDrModalWrap('wrapDrOtStudentSelect', true);
+            if (drCourseSelect) { setDrModalWrap('wrapDrCourseSelect', false); drCourseSelect.value = ''; drCourseSelect.removeAttribute('required'); }
+            if (drCourseNameSelect) { setDrModalWrap('wrapDrCourseNameSelect', false); drCourseNameSelect.value = ''; drCourseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
-            nameInput.style.display = 'none';
+            setDrModalWrap('wrapDrClientNameInput', false);
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (drCourseSelect) { drCourseSelect.style.display = 'block'; }
-            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setDrModalWrap(sel.id === 'drFacultySelect' ? 'wrapDrFacultySelect' : (sel.id === 'drAcademyStaffSelect' ? 'wrapDrAcademyStaffSelect' : 'wrapDrMessStaffSelect'), false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { setDrModalWrap('wrapDrOtStudentSelect', false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            setDrModalWrap('wrapDrCourseSelect', true);
+            setDrModalWrap('wrapDrCourseNameSelect', true);
         } else {
-            nameInput.style.display = showAny ? 'none' : 'block';
+            setDrModalWrap('wrapDrClientNameInput', !showAny);
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
-                if (!sel) return;
-                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
-                sel.removeAttribute('required');
-                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
-            });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.value = ''; drCourseSelect.removeAttribute('required'); }
-            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.value = ''; drCourseNameSelect.removeAttribute('required'); }
+            setDrModalWrap('wrapDrFacultySelect', showFaculty);
+            if (facultySelect) { facultySelect.removeAttribute('required'); if (showFaculty) { facultySelect.setAttribute('required', 'required'); facultySelect.value = nameInput.value || ''; if (facultySelect.value) nameInput.value = facultySelect.value; } else facultySelect.value = ''; }
+            setDrModalWrap('wrapDrAcademyStaffSelect', showAcademyStaff);
+            if (academyStaffSelect) { academyStaffSelect.removeAttribute('required'); if (showAcademyStaff) { academyStaffSelect.setAttribute('required', 'required'); academyStaffSelect.value = nameInput.value || ''; if (academyStaffSelect.value) nameInput.value = academyStaffSelect.value; } else academyStaffSelect.value = ''; }
+            setDrModalWrap('wrapDrMessStaffSelect', showMessStaff);
+            if (messStaffSelect) { messStaffSelect.removeAttribute('required'); if (showMessStaff) { messStaffSelect.setAttribute('required', 'required'); messStaffSelect.value = nameInput.value || ''; if (messStaffSelect.value) nameInput.value = messStaffSelect.value; } else messStaffSelect.value = ''; }
+            setDrModalWrap('wrapDrOtStudentSelect', false);
+            if (otStudentSelect) { otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            setDrModalWrap('wrapDrCourseSelect', false);
+            if (drCourseSelect) { drCourseSelect.value = ''; drCourseSelect.removeAttribute('required'); }
+            setDrModalWrap('wrapDrCourseNameSelect', false);
+            if (drCourseNameSelect) { drCourseNameSelect.value = ''; drCourseNameSelect.removeAttribute('required'); }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
@@ -953,32 +1089,42 @@
             const drCourseNameSelect = document.getElementById('drCourseNameSelect');
             const nameInput = document.getElementById('drClientNameInput');
             if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.removeAttribute('name'); drCourseSelect.value = ''; }
-                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                setDrModalWrap('wrapDrClientNameSelect', false);
+                if (clientSelect) { clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                setDrModalWrap('wrapDrOtCourseSelect', true);
+                if (otCourseSelect) { otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
+                setDrModalWrap('wrapDrOtStudentSelect', true);
+                if (otStudentSelect) { otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
+                setDrModalWrap('wrapDrCourseSelect', false);
+                if (drCourseSelect) { drCourseSelect.removeAttribute('required'); drCourseSelect.removeAttribute('name'); drCourseSelect.value = ''; }
+                setDrModalWrap('wrapDrCourseNameSelect', false);
+                if (drCourseNameSelect) { drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
+                setDrModalWrap('wrapDrClientNameInput', false);
+                if (nameInput) { nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'block'; drCourseSelect.setAttribute('required', 'required'); drCourseSelect.setAttribute('name', 'client_type_pk'); drCourseSelect.value = ''; }
-                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; drCourseNameSelect.setAttribute('required', 'required'); drCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                setDrModalWrap('wrapDrClientNameSelect', false);
+                if (clientSelect) { clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                setDrModalWrap('wrapDrOtCourseSelect', false);
+                if (otCourseSelect) { otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                setDrModalWrap('wrapDrOtStudentSelect', false);
+                if (otStudentSelect) { otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                setDrModalWrap('wrapDrCourseSelect', true);
+                if (drCourseSelect) { drCourseSelect.setAttribute('required', 'required'); drCourseSelect.setAttribute('name', 'client_type_pk'); drCourseSelect.value = ''; }
+                setDrModalWrap('wrapDrCourseNameSelect', true);
+                if (drCourseNameSelect) { drCourseNameSelect.setAttribute('required', 'required'); drCourseNameSelect.value = ''; }
+                setDrModalWrap('wrapDrClientNameInput', false);
+                if (nameInput) { nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
-                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = (opt.dataset.type || '') !== (this.value || '');
-                    }.bind(this));
-                }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
+                setDrModalWrap('wrapDrClientNameSelect', true);
+                if (clientSelect) { clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); clientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (this.value || ''); }.bind(this)); }
+                setDrModalWrap('wrapDrOtCourseSelect', false);
+                if (otCourseSelect) { otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                setDrModalWrap('wrapDrOtStudentSelect', false);
+                if (otStudentSelect) { otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                setDrModalWrap('wrapDrCourseSelect', false);
+                if (drCourseSelect) { drCourseSelect.removeAttribute('required'); drCourseSelect.value = ''; }
+                setDrModalWrap('wrapDrCourseNameSelect', false);
+                if (drCourseNameSelect) { drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
             }
             updateDrNameField();
         });
@@ -1206,7 +1352,7 @@
         const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
         const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) : '';
         return '<tr class="edit-dr-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm select2 edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -1250,6 +1396,9 @@
         const newTr = div.querySelector('tr');
         tbody.appendChild(newTr);
         editRowIndex++;
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $(newTr).find('.edit-dr-item-select.select2').select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#editReportModal') });
+        }
         const sel = newTr.querySelector('.edit-dr-item-select');
         const opt = sel && sel.options[sel.selectedIndex];
         newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
@@ -1276,10 +1425,13 @@
         }
     });
 
-    // View report
-    document.querySelectorAll('.btn-view-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // View report (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
+        const btn = e.target.closest('.btn-view-report');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const reportId = btn.getAttribute('data-report-id');
             fetch(baseUrl + '/' + reportId, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(function(data) {
@@ -1288,6 +1440,8 @@
                     document.getElementById('viewRequestDate').textContent = v.request_date || '—';
                     document.getElementById('viewIssueDate').textContent = v.issue_date || '—';
                     document.getElementById('viewStoreName').textContent = v.store_name || '—';
+                    document.getElementById('viewReferenceNumber').textContent = v.reference_number || '—';
+                    document.getElementById('viewOrderBy').textContent = v.order_by || '—';
                     document.getElementById('viewClientType').textContent = v.client_type || '—';
                     document.getElementById('viewClientName').textContent = (v.client_name_text || v.client_name || '—');
                     document.getElementById('viewPaymentType').textContent = v.payment_type || '—';
@@ -1298,6 +1452,17 @@
                         document.getElementById('viewRemarks').textContent = v.remarks;
                     } else {
                         document.getElementById('viewRemarksWrap').style.display = 'none';
+                    }
+                    var viewBillLink = document.getElementById('viewBillLink');
+                    var viewBillNone = document.getElementById('viewBillNone');
+                    if (v.bill_url) {
+                        viewBillLink.href = v.bill_url;
+                        viewBillLink.style.display = '';
+                        if (viewBillNone) viewBillNone.style.display = 'none';
+                    } else {
+                        viewBillLink.href = '#';
+                        viewBillLink.style.display = 'none';
+                        if (viewBillNone) viewBillNone.style.display = '';
                     }
                     const tbody = document.getElementById('viewReportItemsBody');
                     tbody.innerHTML = '';
@@ -1320,13 +1485,15 @@
                     new bootstrap.Modal(document.getElementById('viewReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report.'); });
-        });
-    });
+    }, true);
 
-    // Return item modal
-    document.querySelectorAll('.btn-return-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // Return item modal (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
+        const btn = e.target.closest('.btn-return-report');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const reportId = btn.getAttribute('data-report-id');
             fetch(baseUrl + '/' + reportId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
                 .then(function(data) {
@@ -1351,8 +1518,7 @@
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load return data.'); });
-        });
-    });
+    }, true);
 
     function enforceReturnQtyWithinIssued(inputEl) {
         if (!inputEl) return;
@@ -1417,10 +1583,13 @@
         }, true);
     }
 
-    // Edit report
-    document.querySelectorAll('.btn-edit-report').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const reportId = this.getAttribute('data-report-id');
+    // Edit report (mousedown ensures single-tap works with DataTables)
+    document.addEventListener('mousedown', function(e) {
+        const btn = e.target.closest('.btn-edit-report');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const reportId = btn.getAttribute('data-report-id');
             document.getElementById('editReportForm').action = baseUrl + '/' + reportId;
             fetch(baseUrl + '/' + reportId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json())
@@ -1429,6 +1598,31 @@
                     document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' + (v.id || reportId);
                     document.querySelector('.edit-store-id').value = v.store_id || '';
                     document.querySelector('.edit-remarks').value = v.remarks || '';
+                    const editRefNumEl = document.querySelector('.edit-reference-number');
+                    if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
+                    const editOrderByEl = document.querySelector('.edit-order-by');
+                    if (editOrderByEl) editOrderByEl.value = v.order_by || '';
+                    var editSvBillPathEl = document.getElementById('editSvCurrentBillPath');
+                    if (editSvBillPathEl) {
+                        if (v.bill_path) {
+                            var billFileName = v.bill_path.split('/').pop() || v.bill_path;
+                            editSvBillPathEl.textContent = billFileName;
+                            editSvBillPathEl.setAttribute('title', billFileName);
+                        } else {
+                            editSvBillPathEl.textContent = 'No file chosen';
+                            editSvBillPathEl.removeAttribute('title');
+                        }
+                    }
+                    var editSvBillFileInputEl = document.getElementById('editSvBillFileInput');
+                    if (editSvBillFileInputEl) editSvBillFileInputEl.value = '';
+                    var editBillLinkEl = document.getElementById('editCurrentBillLink');
+                    if (editBillLinkEl) {
+                        if (v.bill_url) {
+                            editBillLinkEl.innerHTML = 'Current bill: <a href="' + v.bill_url + '" target="_blank" rel="noopener" class="text-primary">View Bill</a>';
+                        } else {
+                            editBillLinkEl.innerHTML = '';
+                        }
+                    }
                     document.getElementById('editDrClientNameInput').value = v.client_name || '';
                     document.getElementById('editDrFacultySelect').value = v.client_name || '';
                     const editAcademyEl = document.getElementById('editDrAcademyStaffSelect');
@@ -1503,8 +1697,7 @@
                     new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report for edit.'); });
-        });
-    });
+    }, true);
 
     // Reset add modal when opened
     const addReportModal = document.getElementById('addReportModal');
@@ -1526,6 +1719,28 @@
                 currentStoreId = null;
                 filteredItems = itemSubcategories;
                 if (storeSelect) storeSelect.value = '';
+            }
+        });
+        addReportModal.addEventListener('shown.bs.modal', function() {
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $('#addReportModal .select2').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
+                    $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addReportModal') });
+                });
+            }
+            var checked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
+            if (checked) checked.dispatchEvent(new Event('change'));
+        });
+    }
+
+    var editReportModalEl = document.getElementById('editReportModal');
+    if (editReportModalEl) {
+        editReportModalEl.addEventListener('shown.bs.modal', function() {
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $('#editReportModal .select2').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
+                    $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#editReportModal') });
+                });
             }
         });
     }
@@ -1553,6 +1768,15 @@
         });
     }
 
+    // Edit modal: show selected file name in same field when user picks a new bill
+    var editSvBillFileInputEl = document.getElementById('editSvBillFileInput');
+    if (editSvBillFileInputEl) {
+        editSvBillFileInputEl.addEventListener('change', function() {
+            var pathEl = document.getElementById('editSvCurrentBillPath');
+            if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+        });
+    }
+
     // Prevent double submit on Edit form
     var editReportFormEl = document.getElementById('editReportForm');
     if (editReportFormEl) {
@@ -1576,13 +1800,14 @@
         });
     }
 
-    // Open add modal on validation error
-    @if(session('open_add_modal'))
-    document.addEventListener('DOMContentLoaded', function() {
-        var modal = new bootstrap.Modal(document.getElementById('addReportModal'));
-        modal.show();
-    });
-    @endif
 })();
 </script>
+@if(session('open_add_modal'))
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modal = new bootstrap.Modal(document.getElementById('addReportModal'));
+    modal.show();
+});
+</script>
+@endif
 @endsection

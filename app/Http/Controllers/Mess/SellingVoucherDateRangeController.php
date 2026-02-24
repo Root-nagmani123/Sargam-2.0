@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mess;
 use App\Http\Controllers\Controller;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
+use App\Services\Mess\AvailableQuantityService;
 use App\Models\Mess\Store;
 use App\Models\Mess\SubStore;
 use App\Models\Mess\ItemSubcategory;
@@ -18,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\MessageBag;
 
@@ -158,11 +160,11 @@ class SellingVoucherDateRangeController extends Controller
                 }
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
             'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
                 if ($value === null || $value === '') return;
                 $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
                 }
                 if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
@@ -172,11 +174,17 @@ class SellingVoucherDateRangeController extends Controller
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:100',
+            'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ], [
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         // Enforce: Issue Qty cannot exceed available qty (server-side, cannot be bypassed)
@@ -187,7 +195,7 @@ class SellingVoucherDateRangeController extends Controller
             $storeType = 'sub_store';
         }
         $storeId = (int) $storeIdRaw;
-        $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+        $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
 
         $requestedByItem = [];
         foreach ((array) $request->items as $row) {
@@ -229,6 +237,8 @@ class SellingVoucherDateRangeController extends Controller
                 'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
                 'total_amount' => 0,
                 'remarks' => $request->remarks,
+                'reference_number' => $request->reference_number,
+                'order_by' => $request->order_by,
                 'client_type_slug' => $request->client_type_slug,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_name' => $request->client_name,
@@ -237,6 +247,11 @@ class SellingVoucherDateRangeController extends Controller
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                $report->update(['bill_path' => $path]);
+            }
 
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
             $grandTotal = 0;
@@ -297,22 +312,34 @@ class SellingVoucherDateRangeController extends Controller
                 'payment_type' => $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')),
                 'issue_date' => $issueDateFormatted,
                 'remarks' => $report->remarks ?? '',
+                'reference_number' => $report->reference_number ?? '',
+                'order_by' => $report->order_by ?? '',
                 'created_at' => $report->created_at ? $report->created_at->format('d/m/Y H:i') : '—',
                 'updated_at' => $report->updated_at ? $report->updated_at->format('d/m/Y H:i') : null,
+                'bill_path' => $report->bill_path,
+                'bill_url' => $report->bill_path ? asset('storage/' . $report->bill_path) : null,
             ];
             $items = $report->items->map(function ($item) use ($issueDateFormatted) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                $rate = (float) $item->rate;
+                $amount = max(0, $qty - $retQty) * $rate;
                 return [
                     'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                     'unit' => $item->unit ?? '—',
-                    'quantity' => (float) $item->quantity,
+                    'quantity' => $qty,
                     'available_quantity' => (float) ($item->available_quantity ?? 0),
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
+                    'return_quantity' => $retQty,
                     'issue_date' => $issueDateFormatted,
                     'rate' => number_format($item->rate, 2),
-                    'amount' => number_format($item->amount, 2),
+                    'amount' => number_format($amount, 2),
                 ];
             })->values()->toArray();
-            $grand_total = $report->items->sum('amount');
+            $grand_total = $report->items->sum(function ($item) {
+                $qty = (float) $item->quantity;
+                $retQty = (float) ($item->return_quantity ?? 0);
+                return max(0, $qty - $retQty) * (float) $item->rate;
+            });
             return response()->json([
                 'voucher' => $voucher,
                 'items' => $items,
@@ -330,27 +357,37 @@ class SellingVoucherDateRangeController extends Controller
 
         if ($request->wantsJson()) {
             $clientTypeSlug = $report->clientTypeCategory ? $report->clientTypeCategory->client_type : ($report->client_type_slug ?? 'employee');
+            $storeType = $report->store_type ?? 'store';
+            $storeId = (int) $report->store_id;
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
             $voucher = [
                 'id' => $report->id,
                 'date_from' => $report->date_from ? $report->date_from->format('Y-m-d') : '',
                 'date_to' => $report->date_to ? $report->date_to->format('Y-m-d') : '',
-                'store_id' => $report->store_id,
+                'store_id' => $storeType === 'sub_store' ? 'sub_' . $storeId : (string) $storeId,
                 'report_title' => $report->report_title,
                 'status' => (int) $report->status,
                 'remarks' => $report->remarks,
+                'reference_number' => $report->reference_number,
+                'order_by' => $report->order_by,
                 'client_type_slug' => $report->client_type_slug ?? $clientTypeSlug,
                 'client_type_pk' => $report->client_type_pk,
                 'client_name' => $report->client_name,
                 'payment_type' => (int) $report->payment_type,
                 'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
+                'bill_path' => $report->bill_path,
+                'bill_url' => $report->bill_path ? asset('storage/' . $report->bill_path) : null,
             ];
-            $items = $report->items->map(function ($item) {
+            $items = $report->items->map(function ($item) use ($availableMap) {
+                $itemId = (int) ($item->item_subcategory_id ?? 0);
+                $currentAvailable = $itemId > 0 ? (float) ($availableMap[$itemId] ?? 0) : (float) ($item->available_quantity ?? 0);
                 return [
                     'item_subcategory_id' => $item->item_subcategory_id,
                     'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                     'unit' => $item->unit ?? '',
                     'quantity' => (float) $item->quantity,
-                    'available_quantity' => (float) ($item->available_quantity ?? 0),
+                    'available_quantity' => $currentAvailable,
                     'return_quantity' => (float) ($item->return_quantity ?? 0),
                     'rate' => (float) $item->rate,
                     'amount' => (float) $item->amount,
@@ -380,11 +417,11 @@ class SellingVoucherDateRangeController extends Controller
                 }
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
             'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
                 if ($value === null || $value === '') return;
                 $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
                 }
                 if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
@@ -394,11 +431,17 @@ class SellingVoucherDateRangeController extends Controller
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:100',
+            'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
+            'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+        ], [
+            'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
+            'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
         try {
@@ -413,7 +456,7 @@ class SellingVoucherDateRangeController extends Controller
             $storeId = (int) $storeId;
 
             // Enforce: Issue Qty cannot exceed available qty (server-side)
-            $availableMap = $this->availableQuantitiesForStore($storeType, $storeId);
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
             $requestedByItem = [];
             foreach ((array) $request->items as $row) {
                 $itemId = (int) ($row['item_subcategory_id'] ?? 0);
@@ -442,6 +485,8 @@ class SellingVoucherDateRangeController extends Controller
                 'report_title' => null,
                 'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
                 'remarks' => $request->remarks,
+                'reference_number' => $request->reference_number,
+                'order_by' => $request->order_by,
                 'client_type_slug' => $request->client_type_slug,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_name' => $request->client_name,
@@ -449,6 +494,14 @@ class SellingVoucherDateRangeController extends Controller
                 'issue_date' => $issueDate,
                 'updated_by' => Auth::id(),
             ]);
+
+            if ($request->hasFile('bill_file')) {
+                if ($report->bill_path && Storage::disk('public')->exists($report->bill_path)) {
+                    Storage::disk('public')->delete($report->bill_path);
+                }
+                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                $report->update(['bill_path' => $path]);
+            }
 
             $report->items()->delete();
 
@@ -593,16 +646,35 @@ class SellingVoucherDateRangeController extends Controller
     public function getStoreItems($storeIdentifier)
     {
         $items = collect();
-        
+        $storeType = 'store';
+        $storeId = (int) $storeIdentifier;
+
         // Check if it's a sub-store (prefixed with 'sub_')
         if (strpos($storeIdentifier, 'sub_') === 0) {
-            // Sub-store: get items from store allocations
-            $subStoreId = (int) str_replace('sub_', '', $storeIdentifier);
-            
-            // Get items with their allocated quantities and store-specific rate (weighted avg unit_price)
+            $storeType = 'sub_store';
+            $storeId = (int) str_replace('sub_', '', $storeIdentifier);
+
+            // FIFO: get allocation items ordered by date (oldest first) for price tiers
+            $fifoRows = DB::table('mess_store_allocation_items as sai')
+                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                ->where('sa.sub_store_id', $storeId)
+                ->orderByRaw('COALESCE(sa.allocation_date, sa.created_at) ASC')
+                ->orderBy('sa.id')
+                ->orderBy('sai.id')
+                ->select('sai.item_subcategory_id', 'sai.quantity', 'sai.unit_price')
+                ->get();
+
+            $tiersByItem = [];
+            foreach ($fifoRows as $r) {
+                $id = (int) ($r->item_subcategory_id ?? 0);
+                if ($id <= 0) continue;
+                if (!isset($tiersByItem[$id])) $tiersByItem[$id] = [];
+                $tiersByItem[$id][] = ['quantity' => (float) $r->quantity, 'unit_price' => (float) $r->unit_price];
+            }
+
             $allocatedItems = DB::table('mess_store_allocation_items as sai')
                 ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
-                ->where('sa.sub_store_id', $subStoreId)
+                ->where('sa.sub_store_id', $storeId)
                 ->select(
                     'sai.item_subcategory_id',
                     DB::raw('SUM(sai.quantity) as total_quantity'),
@@ -611,29 +683,66 @@ class SellingVoucherDateRangeController extends Controller
                 ->groupBy('sai.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
-            
+
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
             if ($allocatedItems->isNotEmpty()) {
                 $itemIds = $allocatedItems->keys();
                 $items = ItemSubcategory::whereIn('id', $itemIds)
                     ->active()
                     ->get()
-                    ->map(function ($s) use ($allocatedItems) {
+                    ->map(function ($s) use ($allocatedItems, $availableMap, $tiersByItem) {
                         $allocated = $allocatedItems->get($s->id);
                         $storeRate = $allocated && isset($allocated->avg_unit_price) ? (float) $allocated->avg_unit_price : null;
+                        $rawTiers = $tiersByItem[$s->id] ?? [];
+                        $available = (float) ($availableMap[$s->id] ?? 0);
+                        $totalAllocated = array_sum(array_column($rawTiers, 'quantity'));
+                        $issued = max(0, $totalAllocated - $available);
+                        $adjustedTiers = [];
+                        $remainingIssued = $issued;
+                        foreach ($rawTiers as $t) {
+                            $qty = (float) ($t['quantity'] ?? 0);
+                            $take = min($remainingIssued, $qty);
+                            $remaining = $qty - $take;
+                            $remainingIssued -= $take;
+                            if ($remaining > 0) {
+                                $adjustedTiers[] = ['quantity' => $remaining, 'unit_price' => (float) ($t['unit_price'] ?? 0)];
+                            }
+                        }
+                        $tiers = $adjustedTiers;
+                        $firstPrice = !empty($tiers) ? $tiers[0]['unit_price'] : null;
                         return [
                             'id' => $s->id,
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
-                            'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
-                            'available_quantity' => $allocated ? (float) $allocated->total_quantity : 0,
+                            'standard_cost' => $firstPrice ?? ($storeRate !== null ? $storeRate : ($s->standard_cost ?? 0)),
+                            'available_quantity' => $available,
+                            'price_tiers' => $tiers,
                         ];
                     });
             }
         } else {
-            // Main store: get items from purchase orders
-            $storeId = (int) $storeIdentifier;
-            
-            // Get items with their purchased quantities and store-specific rate (weighted avg unit_price from POs)
+            // Main store: FIFO from purchase orders (oldest first by po_date = purchase date)
+            $fifoRows = DB::table('mess_purchase_order_items as poi')
+                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+                ->where('po.store_id', $storeId)
+                ->where('po.status', 'approved')
+                ->whereNotNull('poi.item_subcategory_id')
+                ->where('poi.item_subcategory_id', '>', 0)
+                ->orderBy('po.po_date', 'asc')
+                ->orderBy('po.id')
+                ->orderBy('poi.id')
+                ->select('poi.item_subcategory_id', 'poi.quantity', 'poi.unit_price')
+                ->get();
+
+            $tiersByItem = [];
+            foreach ($fifoRows as $r) {
+                $id = (int) ($r->item_subcategory_id ?? 0);
+                if ($id <= 0) continue;
+                if (!isset($tiersByItem[$id])) $tiersByItem[$id] = [];
+                $tiersByItem[$id][] = ['quantity' => (float) $r->quantity, 'unit_price' => (float) $r->unit_price];
+            }
+
             $purchasedItems = DB::table('mess_purchase_order_items as poi')
                 ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
                 ->where('po.store_id', $storeId)
@@ -646,59 +755,47 @@ class SellingVoucherDateRangeController extends Controller
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
                 ->keyBy('item_subcategory_id');
-            
+
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId);
+
             if ($purchasedItems->isNotEmpty()) {
                 $itemIds = $purchasedItems->keys();
                 $items = ItemSubcategory::whereIn('id', $itemIds)
                     ->active()
                     ->get()
-                    ->map(function ($s) use ($purchasedItems) {
+                    ->map(function ($s) use ($purchasedItems, $availableMap, $tiersByItem) {
                         $purchased = $purchasedItems->get($s->id);
                         $storeRate = $purchased && isset($purchased->avg_unit_price) ? (float) $purchased->avg_unit_price : null;
+                        $rawTiers = $tiersByItem[$s->id] ?? [];
+                        $available = (float) ($availableMap[$s->id] ?? 0);
+                        // Adjust tiers: subtract already-sold qty (FIFO) to get remaining per tier
+                        $totalPurchased = array_sum(array_column($rawTiers, 'quantity'));
+                        $issued = max(0, $totalPurchased - $available);
+                        $adjustedTiers = [];
+                        $remainingIssued = $issued;
+                        foreach ($rawTiers as $t) {
+                            $qty = (float) ($t['quantity'] ?? 0);
+                            $take = min($remainingIssued, $qty);
+                            $remaining = $qty - $take;
+                            $remainingIssued -= $take;
+                            if ($remaining > 0) {
+                                $adjustedTiers[] = ['quantity' => $remaining, 'unit_price' => (float) ($t['unit_price'] ?? 0)];
+                            }
+                        }
+                        $tiers = $adjustedTiers;
+                        $firstPrice = !empty($tiers) ? $tiers[0]['unit_price'] : null;
                         return [
                             'id' => $s->id,
                             'item_name' => $s->item_name ?? $s->name ?? '—',
                             'unit_measurement' => $s->unit_measurement ?? '—',
-                            'standard_cost' => $storeRate !== null ? $storeRate : ($s->standard_cost ?? 0),
-                            'available_quantity' => $purchased ? (float) $purchased->total_quantity : 0,
+                            'standard_cost' => $firstPrice ?? ($storeRate !== null ? $storeRate : ($s->standard_cost ?? 0)),
+                            'available_quantity' => $available,
+                            'price_tiers' => $tiers,
                         ];
                     });
             }
         }
-        
+
         return response()->json($items->values());
-    }
-
-    /**
-     * Get available quantities by item_subcategory_id for a store/sub-store.
-     * Mirrors the logic used by getStoreItems() (server-side authoritative check).
-     *
-     * @return array<int, float> [item_subcategory_id => available_quantity]
-     */
-    private function availableQuantitiesForStore(string $storeType, int $storeId): array
-    {
-        if ($storeType === 'sub_store') {
-            $rows = DB::table('mess_store_allocation_items as sai')
-                ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
-                ->where('sa.sub_store_id', $storeId)
-                ->select('sai.item_subcategory_id', DB::raw('SUM(sai.quantity) as total_quantity'))
-                ->groupBy('sai.item_subcategory_id')
-                ->get();
-        } else {
-            $rows = DB::table('mess_purchase_order_items as poi')
-                ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
-                ->where('po.store_id', $storeId)
-                ->where('po.status', 'approved')
-                ->select('poi.item_subcategory_id', DB::raw('SUM(poi.quantity) as total_quantity'))
-                ->groupBy('poi.item_subcategory_id')
-                ->get();
-        }
-
-        $map = [];
-        foreach ($rows as $r) {
-            $id = (int) ($r->item_subcategory_id ?? 0);
-            if ($id > 0) $map[$id] = (float) ($r->total_quantity ?? 0);
-        }
-        return $map;
     }
 }

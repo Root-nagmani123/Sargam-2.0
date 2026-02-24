@@ -54,7 +54,7 @@
                                         <button type="button" class="btn btn-sm btn-warning btn-edit-store"
                                                 data-id="{{ $store->id }}"
                                                 data-store-name="{{ e($store->store_name) }}"
-                                                data-store-type="{{ e($store->store_type ?? 'mess') }}"
+                                                data-store-type="{{ e(trim((string)($store->store_type ?? '')) ?: 'mess') }}"
                                                 data-location="{{ e($store->location ?? '') }}"
                                                 data-status="{{ e($store->status ?? 'active') }}"
                                                 title="Edit">Edit</button>
@@ -95,7 +95,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Store Type <span class="text-danger">*</span></label>
-                            <select name="store_type" class="form-select" required>
+                            <select name="store_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($storeTypes as $value => $label)
                                     <option value="{{ $value }}" {{ old('store_type', 'mess') === $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -110,7 +110,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
+                            <select name="status" class="form-select select2">
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
@@ -147,7 +147,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Store Type <span class="text-danger">*</span></label>
-                            <select name="store_type" id="edit_store_type" class="form-select" required>
+                            <select name="store_type" id="edit_store_type" class="form-select select2" required>
                                 <option value="">Select</option>
                                 @foreach($storeTypes as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
@@ -160,7 +160,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
-                            <select name="status" id="edit_status" class="form-select">
+                            <select name="status" id="edit_status" class="form-select select2">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
@@ -180,16 +180,21 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('click', function(e) {
+    document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-store');
         if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
         document.getElementById('editStoreForm').action = '{{ url("admin/mess/stores") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_store_name').value = btn.getAttribute('data-store-name') || '';
-        document.getElementById('edit_store_type').value = btn.getAttribute('data-store-type') || 'mess';
+        var storeType = (btn.getAttribute('data-store-type') || '').trim() || 'mess';
+        var typeSelect = document.getElementById('edit_store_type');
+        typeSelect.value = storeType;
+        if (typeSelect.value !== storeType) typeSelect.value = 'mess';
         document.getElementById('edit_location').value = btn.getAttribute('data-location') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editStoreModal')).show();
-    });
+    }, true);
 });
 </script>
 @endpush

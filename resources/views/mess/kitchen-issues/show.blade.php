@@ -65,13 +65,17 @@
                         </thead>
                         <tbody>
                             @foreach($kitchenIssue->items as $item)
+                                @php
+                                    $netQty = max(0, (float)$item->quantity - (float)($item->return_quantity ?? 0));
+                                    $itemTotal = $netQty * (float)$item->rate;
+                                @endphp
                                 <tr>
                                     <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
                                     <td>{{ $item->unit ?? '—' }}</td>
                                     <td>{{ $item->quantity }}</td>
                                     <td>{{ $item->return_quantity ?? 0 }}</td>
                                     <td>₹{{ number_format($item->rate, 2) }}</td>
-                                    <td>₹{{ number_format($item->amount, 2) }}</td>
+                                    <td>₹{{ number_format($itemTotal, 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -79,7 +83,7 @@
                 </div>
             </div>
             <div class="card-footer bg-light d-flex justify-content-end">
-                <strong>Grand Total: ₹{{ number_format($kitchenIssue->items->sum('amount'), 2) }}</strong>
+                <strong>Grand Total: ₹{{ number_format($kitchenIssue->items->sum(fn($i) => max(0, (float)$i->quantity - (float)($i->return_quantity ?? 0)) * (float)$i->rate), 2) }}</strong>
             </div>
         </div>
     @else

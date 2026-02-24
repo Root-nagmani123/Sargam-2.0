@@ -76,26 +76,62 @@
             return null;
         }
 
-        // Default options
+        // Default options (Bootstrap 5 theme + UX)
         const defaultOptions = {
+            theme: 'bootstrap-5',
             placeholder: 'Search and select...',
             allowClear: false,
             width: '100%',
-            dropdownParent: $select.closest('.card-body, .modal-body, body')
+            dropdownParent: $select.closest('.modal').length ? $select.closest('.modal') : undefined,
+            language: {
+                noResults: function() { return 'No results found'; },
+                searching: function() { return 'Searching...'; },
+                inputTooShort: function(args) { return 'Please enter ' + (args.minimum - args.input.length) + ' or more characters'; }
+            }
         };
 
         // Merge user options with defaults
         const config = Object.assign({}, defaultOptions, options);
 
-        // If already initialized, destroy first
+        // If already initialized, destroy first (and stop option observer)
         if ($select.hasClass('select2-hidden-accessible')) {
+            stopObservingSelectOptions($select[0]);
             $select.select2('destroy');
         }
 
         // Initialize Select2
         $select.select2(config);
+        $select.data('dropdownsearch-config', config);
+        startObservingSelectOptions($select[0], config);
 
         return $select;
+    }
+
+    var optionObserverTimeouts = {};
+    function startObservingSelectOptions(selectEl, config) {
+        if (!selectEl || selectEl.tagName !== 'SELECT') return;
+        var $el = $(selectEl);
+        var timeoutKey = 's2-' + (selectEl.id || selectEl.name || ('n' + Math.random().toString(36).slice(2)));
+        var observer = new MutationObserver(function() {
+            clearTimeout(optionObserverTimeouts[timeoutKey]);
+            optionObserverTimeouts[timeoutKey] = setTimeout(function() {
+                if (!selectEl.parentNode) return;
+                var $s = $(selectEl);
+                if (!$s.hasClass('select2-hidden-accessible')) return;
+                stopObservingSelectOptions(selectEl);
+                $s.select2('destroy');
+                var cfg = $s.data('dropdownsearch-config') || config;
+                if (cfg) init(selectEl, cfg);
+                else initSelectForGlobal(selectEl);
+            }, 80);
+        });
+        observer.observe(selectEl, { childList: true, subtree: false });
+        selectEl._dropdownsearch_option_observer = observer;
+    }
+    function stopObservingSelectOptions(selectEl) {
+        if (!selectEl || !selectEl._dropdownsearch_option_observer) return;
+        selectEl._dropdownsearch_option_observer.disconnect();
+        selectEl._dropdownsearch_option_observer = null;
     }
 
     /**
@@ -149,7 +185,9 @@
         }
 
         if ($select.hasClass('select2-hidden-accessible')) {
+            stopObservingSelectOptions($select[0]);
             $select.select2('destroy');
+            $select.removeData('dropdownsearch-config');
             return true;
         }
 
@@ -228,44 +266,104 @@
     }
 
     /**
-     * Auto-initialize all dropdowns with data-searchable="true" attribute or .select2 class
-     * This runs automatically on DOMContentLoaded
+     * Returns true if the select should be skipped (opt-out from Select2).
+     * Opt-out: class "no-select2" or data-no-select2="true" or data-select2="false"
      */
-    function autoInit() {
-        if (!isSelect2Available()) {
-            return;
-        }
+    function shouldSkipSelect2(element) {
+        if (!element || element.tagName !== 'SELECT') return true;
+        if (element.classList.contains('no-select2')) return true;
+        const noSelect2 = element.getAttribute('data-no-select2');
+        if (noSelect2 === 'true' || noSelect2 === '') return true;
+        if (element.getAttribute('data-select2') === 'false') return true;
+        return false;
+    }
 
-        // Initialize dropdowns with data-searchable attribute
-        const searchableDropdowns = document.querySelectorAll('[data-searchable="true"]');
-        searchableDropdowns.forEach(function(element) {
-            const placeholder = element.getAttribute('data-placeholder') || 'Search and select...';
-            const allowClear = element.getAttribute('data-allow-clear') === 'true';
-            
-            init(element, {
-                placeholder: placeholder,
-                allowClear: allowClear
-            });
-        });
-
-        // Initialize dropdowns with .select2 class (if not already initialized)
-        const select2Dropdowns = document.querySelectorAll('select.select2:not(.select2-hidden-accessible)');
-        select2Dropdowns.forEach(function(element) {
-            const placeholder = element.getAttribute('data-placeholder') || element.getAttribute('placeholder') || 'Search and select...';
-            const allowClear = element.getAttribute('data-allow-clear') === 'true';
-            
-            init(element, {
-                placeholder: placeholder,
-                allowClear: allowClear
-            });
+    /**
+     * Initialize a single select for global Select2 (used for "all dropdowns").
+     * Uses placeholder/allowClear from data attributes or sensible defaults.
+     */
+    function initSelectForGlobal(element) {
+        if (!element || element.tagName !== 'SELECT') return;
+        const $el = $(element);
+        if ($el.hasClass('select2-hidden-accessible') || $el.data('select2')) return;
+        const placeholder = element.getAttribute('data-placeholder') || element.getAttribute('placeholder') || 'Select...';
+        const allowClear = element.getAttribute('data-allow-clear') === 'true';
+        const dropdownParent = $el.closest('.modal').length ? $el.closest('.modal') : $('body');
+        init(element, {
+            placeholder: placeholder,
+            allowClear: allowClear,
+            width: '100%',
+            dropdownParent: dropdownParent
         });
     }
 
-    // Auto-initialize on DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', autoInit);
-    } else {
+    /**
+     * Auto-initialize Select2 on EVERY select in the document (wherever select is used).
+     * Opt-out: add class "no-select2" or data-no-select2="true" to keep native dropdown.
+     */
+    function autoInit() {
+        if (!isSelect2Available()) return;
+
+        var allSelects = document.querySelectorAll('select');
+        for (var i = 0; i < allSelects.length; i++) {
+            var el = allSelects[i];
+            if (shouldSkipSelect2(el)) continue;
+            if ($(el).hasClass('select2-hidden-accessible') || $(el).data('select2')) continue;
+
+            var placeholder = el.getAttribute('data-placeholder') || el.getAttribute('placeholder');
+            if (placeholder == null) placeholder = (el.classList.contains('select2') || el.getAttribute('data-searchable') === 'true') ? 'Search and select...' : 'Select...';
+            var allowClear = el.getAttribute('data-allow-clear') === 'true';
+            var $el = $(el);
+            var dropdownParent = $el.closest('.modal').length ? $el.closest('.modal') : $('body');
+
+            init(el, {
+                placeholder: placeholder,
+                allowClear: allowClear,
+                width: '100%',
+                dropdownParent: dropdownParent
+            });
+        }
+    }
+
+    // Auto-initialize on DOM ready; delay slightly so dropdowns populated by other scripts on load are ready
+    function runAutoInit() {
         autoInit();
+        startObservingNewSelects();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(runAutoInit, 80);
+        });
+    } else {
+        setTimeout(runAutoInit, 80);
+    }
+
+    /**
+     * Observe DOM for newly added select elements (e.g. modals, dynamic content) and init Select2 on them.
+     */
+    function startObservingNewSelects() {
+        if (!isSelect2Available() || !document.body) return;
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType !== 1) return;
+                    if (node.tagName === 'SELECT' && !shouldSkipSelect2(node)) {
+                        if (!$(node).hasClass('select2-hidden-accessible')) {
+                            initSelectForGlobal(node);
+                        }
+                        return;
+                    }
+                    var selects = node.querySelectorAll && node.querySelectorAll('select');
+                    if (selects) {
+                        selects.forEach(function(el) {
+                            if (shouldSkipSelect2(el) || $(el).hasClass('select2-hidden-accessible')) return;
+                            initSelectForGlobal(el);
+                        });
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     // Public API

@@ -26,8 +26,13 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.itemcategories.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Category Item Master</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.itemsubcategories.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Item Master</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Subcategory Item Master</span>
                 </a>
             </li>
             <li class="sidebar-item">
@@ -38,6 +43,11 @@
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.client-types.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Client Master</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.meal-rate-master.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Meal Rate Master</span>
                 </a>
             </li>
             <li class="sidebar-item">
@@ -153,6 +163,11 @@
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.reports.stock-balance-till-date') }}">
                     <span class="hide-menu small text-nowrap">Stock Balance as of Till Date</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link {{ request()->routeIs('admin.mess.reports.purchase-sale-quantity') ? 'active' : '' }}" href="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
+                    <span class="hide-menu small text-nowrap">Item Report</span>
                 </a>
             </li>
         </ul>
