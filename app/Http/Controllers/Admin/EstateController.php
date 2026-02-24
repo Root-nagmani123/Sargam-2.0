@@ -1026,7 +1026,16 @@ class EstateController extends Controller
     }
 
     /**
-     * Estate Possession for Others - Listing (dynamic from DB).
+     * Possession Details - Listing for LBSNAA employee possession (estate_possession_details).
+     * Different from Estate Possession for Other (estate_possession_other).
+     */
+    public function possessionDetails()
+    {
+        return view('admin.estate.possession_details');
+    }
+
+    /**
+     * Estate Possession for Others - Listing (dynamic from DB, estate_possession_other).
      */
     public function possessionForOthers(EstatePossessionOtherDataTable $dataTable)
     {
