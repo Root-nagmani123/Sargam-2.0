@@ -329,11 +329,11 @@
                                             href="{{ route('peer.user_groups') }}">
                                             <span class="hide-menu">Peer Evaluation</span>
                                         </a></li>
-                                        <li class="sidebar-item"><a class="sidebar-link"
+                                        <!-- <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.course-repository.user.index') }}">
                                 <span class="hide-menu">Course Repository - User</span>
                                 </a></li>
-                                </ul>
+                                </ul> -->
                             @endif
                         </ul>
                     </div>

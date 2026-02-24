@@ -33,7 +33,7 @@ class IssueManagementController extends Controller
      */
     public function index(Request $request)
     {
-<<<<<<<<< Temporary merge branch 1
+        // echo Auth::user()->user_id; exit;
         $query = IssueLogManagement::with([
             'category',
             'priority',
@@ -111,24 +111,10 @@ class IssueManagementController extends Controller
         $applyUserScope($query);
         $applyRaisedBy($query);
         $query->orderBy('created_date', 'desc');
->>>>>>> e684ec96 (memo notice bug solve)
 
-        // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
-        $tab = $request->get('tab', 'active');
-        if ($tab === 'archive') {
-            $query->where('issue_status', 2); // Completed only
-        } else {
-            $query->whereIn('issue_status', [0, 1, 3, 6]); // Reported, In Progress, Pending, Reopened
-        }
-
-        // Filter by status (further refines within the tab)
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('issue_status', $request->status);
-        }
-
-        // Filter by category
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('issue_category_master_pk', $request->category);
+        // Single list: all complaints. Status filter only when user selects from dropdown.
+        if ($request->filled('status') && $request->status !== '') {
+            $query->where('issue_status', (int) $request->status);
         }
 
         $applyFilters($query);
@@ -271,12 +257,6 @@ class IssueManagementController extends Controller
 
         // Category
         if ($request->has('category') && $request->category !== '') {
-<<<<<<<<< Temporary merge branch 1
-<<<<<<< HEAD
-            $query->where('issue_category_master_pk', $request->category);
-=======
-=========
->>>>>>>>> Temporary merge branch 2
             $query->where('issue_category_master_pk', (int) $request->category);
         }
 
@@ -323,7 +303,7 @@ class IssueManagementController extends Controller
                 $buildings = BuildingMaster::get();
             }
         } catch (\Exception $e) {
-            \Log::warning('Building master table not accessible: ' . $e->getMessage());
+            Log::warning('Building master table not accessible: ' . $e->getMessage());
         }
         
         try {
@@ -331,14 +311,14 @@ class IssueManagementController extends Controller
                 $hostels = HostelBuildingMaster::get();
             }
         } catch (\Exception $e) {
-            \Log::warning('Hostel building master table not accessible: ' . $e->getMessage());
+            Log::warning('Hostel building master table not accessible: ' . $e->getMessage());
         }
 
         try {
             // Complaint section: employees + faculty only (user_credentials.user_category != 'S'), user_id = employee_master.pk
             $employees = User::getEmployeesAndFacultyForComplaint();
         } catch (\Exception $e) {
-            \Log::warning('Employees/faculty for complaint not accessible: ' . $e->getMessage());
+            Log::warning('Employees/faculty for complaint not accessible: ' . $e->getMessage());
             $employees = collect([]);
         }
 
@@ -570,7 +550,7 @@ class IssueManagementController extends Controller
         } catch (ValidationException $e) {
             return back()->withInput()->withErrors($e->validator);
         } catch (\Exception $e) {
-            \Log::error('Store complaint error: ' . $e->getMessage());
+            Log::error('Store complaint error: ' . $e->getMessage());
             return back()->withInput()
                 ->with('error', 'Error submitting complaint: ' . $e->getMessage());
         }
@@ -748,7 +728,7 @@ class IssueManagementController extends Controller
                 $buildings = BuildingMaster::get();
             }
         } catch (\Exception $e) {
-            \Log::warning('Building master table not accessible: ' . $e->getMessage());
+            Log::warning('Building master table not accessible: ' . $e->getMessage());
         }
         
         try {
@@ -756,7 +736,7 @@ class IssueManagementController extends Controller
                 $hostels = HostelBuildingMaster::get();
             }
         } catch (\Exception $e) {
-            \Log::warning('Hostel building master table not accessible: ' . $e->getMessage());
+            Log::warning('Hostel building master table not accessible: ' . $e->getMessage());
         }
 
         return view('admin.issue_management.edit', compact(

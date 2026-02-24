@@ -134,10 +134,10 @@
                                 <span class="hide-menu">Permissions</span>
                                 </a></li> --}}
                             </ul>
-                            <li class="sidebar-item"><a class="sidebar-link"
+                            <!-- <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
-                                </a></li>
+                                </a></li> -->
 
                             {{-- ESTATE MANAGEMENT --}}
                             <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -190,13 +190,13 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Change Requests (HAC Approved)</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
+                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.possession-view') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession View</span>
                                     </a>
                                 </li> -->
-                                <li class="sidebar-item">
+                                <!-- <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.list-meter-reading') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
@@ -238,7 +238,7 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
                                     </a>
                                 </li>
-                            </ul>
+                            </ul> -->
 
                             {{-- ESTATE MASTER --}}
                             <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -294,7 +294,7 @@
                             </ul> -->
 
                             {{-- ESTATE REPORTS --}}
-                            <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
+                             <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -338,7 +338,7 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Migration Report (1998–2026)</span>
                                     </a>
                                 </li>
-                            </ul>
+                            </ul> -->
                             
                             @endif
 
