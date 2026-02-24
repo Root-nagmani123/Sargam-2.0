@@ -159,7 +159,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students/{id}/history', [ParticipantHistoryController::class, 'show'])->name('admin.dashboard.students.history');
 
 
-    Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
 

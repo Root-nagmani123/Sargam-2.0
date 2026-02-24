@@ -745,11 +745,14 @@
     </div>
 </div>
 
+<script type="application/json" id="svdr-config">@json(['items' => $itemSubcategories, 'baseUrl' => url('admin/mess/selling-voucher-date-range')])</script>
 <script>
 (function() {
-    let itemSubcategories = @json($itemSubcategories);
+    var configEl = document.getElementById('svdr-config');
+    var config = configEl ? (function(){ try { return JSON.parse(configEl.textContent); } catch(e) { return {}; } })() : {};
+    let itemSubcategories = config.items || [];
     let filteredItems = itemSubcategories;
-    const baseUrl = "{{ url('admin/mess/selling-voucher-date-range') }}";
+    const baseUrl = config.baseUrl || '';
     // Match Selling Voucher behavior: only "Other" can choose Cash/Online (and Credit if enabled),
     // Employee/OT/Course should be Credit-only in the UI.
     const creditOnly = ['employee', 'ot', 'course'];
@@ -1797,13 +1800,14 @@
         });
     }
 
-    // Open add modal on validation error
-    @if(session('open_add_modal'))
-    document.addEventListener('DOMContentLoaded', function() {
-        var modal = new bootstrap.Modal(document.getElementById('addReportModal'));
-        modal.show();
-    });
-    @endif
 })();
 </script>
+@if(session('open_add_modal'))
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modal = new bootstrap.Modal(document.getElementById('addReportModal'));
+    modal.show();
+});
+</script>
+@endif
 @endsection

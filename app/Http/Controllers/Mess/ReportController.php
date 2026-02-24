@@ -155,8 +155,15 @@ class ReportController extends Controller
 
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $vendorName = 'All Vendors';
+        if ($request->filled('vendor_id')) {
+            $v = Vendor::find($request->vendor_id);
+            if ($v) {
+                $vendorName = $v->name;
+            }
+        }
         $fileName = 'stock-purchase-details-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
-        return Excel::download(new StockPurchaseDetailsExport($purchaseOrders), $fileName);
+        return Excel::download(new StockPurchaseDetailsExport($purchaseOrders, $fromDate, $toDate, $vendorName), $fileName);
     }
 
     /**

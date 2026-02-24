@@ -48,7 +48,7 @@
                 <!-- ========== PERMANENT EMPLOYEE VIEW ========== -->
                 <div id="permanent-view" class="idcard-view-fields">
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="card_type_perm" class="form-label">Card Type <span class="text-danger">*</span></label>
                             <select name="card_type" id="card_type_perm" class="form-select idcard-perm-field idcard-step-field" data-field="card_type" required>
                                 <option value="">Select Card Type</option>
@@ -58,14 +58,14 @@
                             </select>
                             @error('card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="sub_type_perm" class="form-label">Sub Type <span class="text-danger">*</span></label>
                             <select name="sub_type" id="sub_type_perm" class="form-select idcard-perm-field idcard-step-field" data-field="sub_type" required>
                                 <option value="">Select Sub Type</option>
                             </select>
                             @error('sub_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="request_for_perm" class="form-label">Request For <span class="text-danger">*</span></label>
                             <select name="request_for" id="request_for_perm" class="form-select idcard-perm-field idcard-step-field" data-field="request_for" required>
                                 <option value="">Select Request</option>

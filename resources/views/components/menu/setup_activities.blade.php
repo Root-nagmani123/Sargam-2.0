@@ -134,69 +134,6 @@
                                 <span class="hide-menu">Permissions</span>
                                 </a></li> --}}
                             </ul>
-                            {{-- ID CARD MANAGEMENT --}}
-                            <li class="sidebar-item" style="background: #4077ad;
-                            border-radius: 30px 0px 0px 30px;
-                            width: 100%;
-                            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                            min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#idCardManagementCollapse" role="button"
-                                    aria-expanded="false" aria-controls="idCardManagementCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">ID Card Management</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3" id="idCardManagementCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.employee_idcard.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">ID Card List</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.employee_idcard.create') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Generate New ID Card</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.family_idcard.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
-                                    </a></li>
-                                    @if (hasRole('Admin'))
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.security.family_idcard_approval.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Family ID Card Approval</span>
-                                    </a></li>
-                                    @endif
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.duplicate_idcard.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.security.vehicle_pass.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.security.duplicate_vehicle_pass.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Duplicate Vehicle Pass Request</span>
-                                    </a></li>
-                                    @if (hasRole('Admin'))
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.security.vehicle_pass_approval.index') }}">
-                                            <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Approval</span>
-                                        </a></li>
-                                    @endif
-                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
-                                        href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval I</span>
-                                    </a></li>
-                                    @if (hasRole('Admin'))
-                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
-                                        href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval II</span>
-                                    </a></li>
-                                    @endif
-                                
-                            </ul>
                             <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
