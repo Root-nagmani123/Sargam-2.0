@@ -4,7 +4,7 @@
 <div class="container-fluid family-idcard-create-page">
     <x-breadcrum title="Edit Family ID Card Request"></x-breadcrum>
 
-    <form action="{{ route('admin.family_idcard.update', $request) }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
+    <form action="{{ route('admin.family_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
         @csrf
         @method('PUT')
 

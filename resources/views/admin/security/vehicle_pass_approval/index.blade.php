@@ -30,11 +30,10 @@
                 <table class="table table-striped mb-0">
                     <thead>
                         <tr>
-                            <th>Request ID</th>
-                            <th>Employee</th>
-                            <th>Vehicle Type</th>
                             <th>Vehicle Number</th>
-                            <th>Validity Period</th>
+                            <th>Request Type</th>
+                            <th>Employee ID</th>
+                            <th>Vehicle Type</th>
                             <th>Applied On</th>
                             <th>Actions</th>
                         </tr>
@@ -42,36 +41,35 @@
                     <tbody>
                         @forelse($pendingApplications as $app)
                             <tr>
-                                <td>{{ $app->vehicle_req_id ?? '--' }}</td>
+                                <td><strong>{{ $app->vehicle_number ?? '--' }}</strong></td>
                                 <td>
-                                    @if($app->employee)
-                                        {{ $app->employee->first_name }} {{ $app->employee->last_name }}<br>
-                                        <small class="text-muted">{{ $app->employee->emp_id }}</small>
+                                    @if(isset($app->request_type) && $app->request_type === 'duplicate')
+                                        <span class="badge bg-warning">Duplicate</span>
                                     @else
-                                        {{ $app->employee_id_card ?? '--' }}
+                                        <span class="badge bg-info">Regular</span>
                                     @endif
                                 </td>
-                                <td>{{ $app->vehicleType->vehicle_type ?? '--' }}</td>
-                                <td>{{ $app->vehicle_no }}</td>
+                                <td><code>{{ $app->employee_id ?? '--' }}</code></td>
+                                <td>{{ $app->vehicle_type ?? '--' }}</td>
+                                <td>{{ $app->created_date ? \Carbon\Carbon::parse($app->created_date)->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
-                                    {{ $app->veh_card_valid_from ? $app->veh_card_valid_from->format('d-m-Y') : '--' }} 
-                                    to 
-                                    {{ $app->vech_card_valid_to ? $app->vech_card_valid_to->format('d-m-Y') : '--' }}
-                                </td>
-                                <td>{{ $app->created_date ? $app->created_date->format('d-m-Y H:i') : '--' }}</td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.vehicle_pass_approval.show', encrypt($app->vehicle_tw_pk)) }}" 
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        @php
+                                            $encryptId = isset($app->request_type) && $app->request_type === 'duplicate' 
+                                                ? encrypt('dup-' . $app->id) 
+                                                : encrypt($app->id);
+                                        @endphp
+                                        <a href="{{ route('admin.security.vehicle_pass_approval.show', $encryptId) }}" 
                                            class="btn btn-sm btn-info" title="View Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i> View
                                         </a>
                                         <button type="button" class="btn btn-sm btn-success" 
-                                                onclick="approveApplication({{ $app->vehicle_tw_pk }})" title="Approve">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i>
+                                                onclick="approveApplication('{{ $encryptId }}')" title="Approve">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i> Approve
                                         </button>
                                         <button type="button" class="btn btn-sm btn-danger" 
-                                                onclick="rejectApplication({{ $app->vehicle_tw_pk }})" title="Reject">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i>
+                                                onclick="rejectApplication('{{ $encryptId }}')" title="Reject">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i> Reject
                                         </button>
                                     </div>
                                 </td>
@@ -107,9 +105,9 @@
                         <textarea class="form-control" id="approve_remarks" name="veh_approval_remarks" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="forward_status" class="form-label">Status <span class="text-danger">*</span></label>
-                        <select class="form-select" id="forward_status" name="forward_status" required>
-                            <option value="">Select Status</option>
+                        <label for="forward_status" class="form-label">Status</label>
+                        <select class="form-select" id="forward_status" name="forward_status">
+                            <option value="">Select Status (Optional)</option>
                             <option value="1">Forward for Card Printing</option>
                             <option value="2">Card Ready</option>
                         </select>
@@ -152,16 +150,14 @@
 
 @push('scripts')
 <script>
-function approveApplication(pk) {
-    const encryptedPk = btoa(pk);
-    const url = "{{ route('admin.security.vehicle_pass_approval.approve', ':id') }}".replace(':id', encryptedPk);
+function approveApplication(encryptedId) {
+    const url = "{{ route('admin.security.vehicle_pass_approval.approve', ':id') }}".replace(':id', encryptedId);
     $('#approveForm').attr('action', url);
     $('#approveModal').modal('show');
 }
 
-function rejectApplication(pk) {
-    const encryptedPk = btoa(pk);
-    const url = "{{ route('admin.security.vehicle_pass_approval.reject', ':id') }}".replace(':id', encryptedPk);
+function rejectApplication(encryptedId) {
+    const url = "{{ route('admin.security.vehicle_pass_approval.reject', ':id') }}".replace(':id', encryptedId);
     $('#rejectForm').attr('action', url);
     $('#rejectModal').modal('show');
 }
