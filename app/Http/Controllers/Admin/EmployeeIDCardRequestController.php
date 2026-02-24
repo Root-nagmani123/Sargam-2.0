@@ -89,19 +89,48 @@ class EmployeeIDCardRequestController extends Controller
             })->values();
         }
 
-        $total = $merged->count();
-        $page = (int) $request->get('page', 1);
-        $requests = new LengthAwarePaginator(
-            $merged->forPage($page, $perPage),
-            $total,
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'pageName' => 'page']
-        );
-        $requests->withQueryString();
+        $allRequests = $merged->values();
+        $activeCollection = $allRequests
+            ->filter(fn ($r) => ($r->status ?? '') === 'Pending')
+            ->values();
+        $archivedCollection = $allRequests
+            ->filter(fn ($r) => in_array(($r->status ?? ''), ['Approved', 'Rejected'], true))
+            ->values();
+        $duplicationCollection = $allRequests
+            ->filter(fn ($r) => in_array(($r->request_for ?? ''), ['Replacement', 'Duplication'], true))
+            ->values();
+        $extensionCollection = $allRequests
+            ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension')
+            ->values();
+
+        $paginate = function ($items, int $page, string $pageName) use ($perPage) {
+            $paginator = new LengthAwarePaginator(
+                $items->forPage($page, $perPage)->values(),
+                $items->count(),
+                $perPage,
+                $page,
+                ['path' => request()->url(), 'pageName' => $pageName]
+            );
+            $paginator->withQueryString();
+            return $paginator;
+        };
+
+        $activeRequests = $paginate($activeCollection, (int) $request->get('active_page', $request->get('page', 1)), 'active_page');
+        $archivedRequests = $paginate($archivedCollection, (int) $request->get('archive_page', 1), 'archive_page');
+        $duplicationRequests = $paginate($duplicationCollection, (int) $request->get('duplication_page', 1), 'duplication_page');
+        $extensionRequests = $paginate($extensionCollection, (int) $request->get('extension_page', 1), 'extension_page');
+        $requests = match ($filter) {
+            'archive' => $archivedRequests,
+            'all' => $paginate($allRequests, (int) $request->get('page', 1), 'page'),
+            default => $activeRequests,
+        };
 
         return view('admin.employee_idcard.index', [
             'requests' => $requests,
+            'activeRequests' => $activeRequests,
+            'archivedRequests' => $archivedRequests,
+            'duplicationRequests' => $duplicationRequests,
+            'extensionRequests' => $extensionRequests,
             'filter' => $filter,
             'dateFrom' => $dateFrom ?? '',
             'dateTo' => $dateTo ?? '',
