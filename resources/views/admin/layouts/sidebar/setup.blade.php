@@ -58,6 +58,51 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            
+                                            <li class="mini-nav-item" id="setup-mini-6">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="User Management">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">
+                                                            user_attributes
+                                                        </i>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
+                                            <li class="mini-nav-item" id="setup-mini-7">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Master">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">
+                                                            menu_open
+                                                        </i>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
+                                                id="mini-3">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="FC Forms">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">note_add</i>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @endif
+
                                             @endif
 
                                         </div>
