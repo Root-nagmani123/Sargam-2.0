@@ -160,7 +160,7 @@ $(document).on('mousedown', 'select[data-readonly]', function (e) {
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
-    
+
     let column = $checkbox.data('column');
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
@@ -181,7 +181,15 @@ $(document).on('change', '.status-toggle', function () {
         showCancelButton: true,
         confirmButtonText: `Yes, ${actionText}`,
         cancelButtonText: 'Cancel',
-        reverseButtons: true
+        reverseButtons: true,
+            didOpen: () => {
+        //Remove Select2 if auto attached
+        if ($('#swal2-select').hasClass('select2-hidden-accessible')) {
+            $('#swal2-select').select2('destroy');
+        }
+
+        $('.swal2-popup .select2-container').remove();
+    }
     }).then((result) => {
         if (result.isConfirmed) {
             // Proceed with AJAX call
@@ -1685,7 +1693,7 @@ $(document).on('change', '#from_date, #to_date', function () {
     // Only trigger if at least one date is selected
     let fromDate = $('#from_date').val();
     let toDate = $('#to_date').val();
-    
+
     if (fromDate || toDate) {
         performAttendanceSearch();
     }
@@ -1696,44 +1704,44 @@ $(document).on('click', '#resetAttendance', function () {
     // Clear date fields
     $('#from_date').val('');
     $('#to_date').val('');
-    
+
     // Reset course dropdown - if select2 is initialized, use select2 method
     if ($('#programme').hasClass('select2-hidden-accessible')) {
         $('#programme').val('').trigger('change.select2');
     } else {
         $('#programme').val('');
     }
-    
+
     // Reset attendance type to 'full_day'
     $('#full_day').prop('checked', true);
     $('input[name="attendance_type"]').trigger('change');
-    
+
     // Clear and hide session dropdowns
     if ($('#session').hasClass('select2-hidden-accessible')) {
         $('#session').val('').trigger('change.select2');
     } else {
         $('#session').val('');
     }
-    
+
     if ($('#manual_session').hasClass('select2-hidden-accessible')) {
         $('#manual_session').val('').trigger('change.select2');
     } else {
         $('#manual_session').val('');
     }
-    
+
     // Hide session containers (Bootstrap d-none)
     $('#normal_session_container').addClass('d-none');
     $('#manual_session_container').addClass('d-none');
-    
+
     // Destroy DataTable if it exists
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
         attendanceTable.destroy();
         attendanceTable = null;
     }
-    
+
     // Restore default message row - show all elements with this ID
     $('#defaultMessageRow').show();
-    
+
     // If no default message row exists, the table body should be empty after destroy
     // DataTable destroy should restore original HTML, but ensure default message is visible
     if ($('#attendanceTable tbody tr').length === 0) {
