@@ -46,6 +46,11 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.meal-rate-master.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Meal Rate Master</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.sub-stores.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Sub Store Master</span>
                 </a>
