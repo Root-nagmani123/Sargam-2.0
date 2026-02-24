@@ -22,7 +22,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Employee / OT</label>
-                        <select name="employee_ot_filter" id="employeeOtFilter" class="form-select">
+                        <select name="employee_ot_filter" id="employeeOtFilter" class="form-select select2">
                             <option value="">All</option>
                             <option value="employee_ot" {{ request('employee_ot_filter') == 'employee_ot' ? 'selected' : '' }}>Employee / OT</option>
                             <option value="employee" {{ request('employee_ot_filter') == 'employee' ? 'selected' : '' }}>Employee Only</option>
@@ -31,7 +31,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Select Client Type</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select select2">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -42,7 +42,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Select Buyer Name (Selling Voucher)</label>
-                        <select name="client_type_pk" id="clientTypePk" class="form-select">
+                        <select name="client_type_pk" id="clientTypePk" class="form-select select2">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') && isset($clientTypeCategories[request('client_type_slug')]))
                                 @foreach($clientTypeCategories[request('client_type_slug')] as $category)

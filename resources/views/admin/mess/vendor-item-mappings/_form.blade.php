@@ -9,7 +9,7 @@
 
     <div class="mb-3">
         <label for="vendor_id" class="form-label">Vendor Name <span class="text-danger">*</span></label>
-        <select class="form-select @error('vendor_id') is-invalid @enderror" id="vendor_id" name="vendor_id" required>
+        <select class="form-select select2 @error('vendor_id') is-invalid @enderror" id="vendor_id" name="vendor_id" required>
             <option value="">Please Select Vendor Name</option>
             @foreach($vendors as $vendor)
                 <option value="{{ $vendor->id }}" {{ old('vendor_id', $mapping->vendor_id ?? null) == $vendor->id ? 'selected' : '' }}>

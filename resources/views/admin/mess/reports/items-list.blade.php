@@ -13,7 +13,7 @@
         <form method="GET" action="{{ route('admin.mess.reports.items-list') }}" class="mb-3">
             <div class="row g-2">
                 <div class="col-md-4">
-                    <select name="category_id" class="form-select form-select-sm">
+                    <select name="category_id" class="form-select form-select-sm select2">
                         <option value="">All Categories</option>
                         @foreach($categories as $category)
                             <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>

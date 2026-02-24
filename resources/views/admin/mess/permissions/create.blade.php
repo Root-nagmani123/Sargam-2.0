@@ -24,7 +24,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="role_id" class="form-label">Select Role <span class="text-danger">*</span></label>
-                        <select class="form-select @error('role_id') is-invalid @enderror" 
+                        <select class="form-select select2 @error('role_id') is-invalid @enderror" 
                                 id="role_id" name="role_id" required>
                             <option value="">-- Select Role --</option>
                             @foreach($roles as $role)
@@ -43,7 +43,7 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="action_name" class="form-label">Permission Action <span class="text-danger">*</span></label>
-                        <select class="form-select @error('action_name') is-invalid @enderror" 
+                        <select class="form-select select2 @error('action_name') is-invalid @enderror" 
                                 id="action_name" name="action_name" required>
                             <option value="">-- Select Action --</option>
                             @foreach($actions as $key => $value)

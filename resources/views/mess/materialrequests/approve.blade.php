@@ -13,7 +13,7 @@
                 
                 <div class="mb-3">
                     <label>Decision *</label>
-                    <select name="status" class="form-control" required id="decision">
+                    <select name="status" class="form-select select2" required id="decision">
                         <option value="">Select Decision</option>
                         <option value="approved">Approve</option>
                         <option value="rejected">Reject</option>

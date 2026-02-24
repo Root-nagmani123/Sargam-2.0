@@ -12,7 +12,7 @@
         <form method="GET" class="mb-3">
             <div class="row g-2">
                 <div class="col-md-3">
-                    <select name="month" class="form-select form-select-sm">
+                    <select name="month" class="form-select form-select-sm select2">
                         <option value="">All Months</option>
                         @for($i = 1; $i <= 12; $i++)
                             <option value="{{ $i }}" {{ request('month') == $i ? 'selected' : '' }}>
@@ -22,7 +22,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select name="year" class="form-select form-select-sm">
+                    <select name="year" class="form-select form-select-sm select2">
                         <option value="">All Years</option>
                         @for($y = date('Y'); $y >= 2020; $y--)
                             <option value="{{ $y }}" {{ request('year') == $y ? 'selected' : '' }}>{{ $y }}</option>
