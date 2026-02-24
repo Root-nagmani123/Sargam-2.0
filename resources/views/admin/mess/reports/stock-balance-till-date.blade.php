@@ -63,7 +63,7 @@
                     <th style="color: #fff; border-color: #af2910; width: 80px;">S. No.</th>
                     <th style="color: #fff; border-color: #af2910;">Item Name</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right;">Remaining Quantity</th>
-                    <th style="color: #fff; border-color: #af2910; text-align: right;">Rate</th>
+                    <th style="color: #fff; border-color: #af2910; text-align: right;">Avg rate</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right;">Amount</th>
                 </tr>
             </thead>
