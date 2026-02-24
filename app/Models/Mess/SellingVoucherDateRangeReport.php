@@ -19,6 +19,7 @@ class SellingVoucherDateRangeReport extends Model
         'report_title',
         'status',
         'total_amount',
+        'paid_amount',
         'remarks',
         'client_type_slug',
         'client_type_pk',
@@ -37,6 +38,7 @@ class SellingVoucherDateRangeReport extends Model
         'date_to' => 'date',
         'issue_date' => 'date',
         'total_amount' => 'decimal:2',
+        'paid_amount' => 'decimal:2',
     ];
 
     const STATUS_DRAFT = 0;
@@ -93,6 +95,14 @@ class SellingVoucherDateRangeReport extends Model
     public function items()
     {
         return $this->hasMany(SellingVoucherDateRangeReportItem::class, 'sv_date_range_report_id', 'id');
+    }
+
+    /**
+     * Payment details for process mess bills (partial/full payment).
+     */
+    public function paymentDetails()
+    {
+        return $this->hasMany(SvDateRangePaymentDetail::class, 'sv_date_range_report_id', 'id');
     }
 
     public function getGrandTotalAttribute()
