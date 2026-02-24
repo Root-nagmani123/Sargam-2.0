@@ -26,7 +26,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                        <select name="inve_store_master_pk" class="form-select" required>
+                        <select name="inve_store_master_pk" class="form-select select2" required>
                             <option value="">Select Store</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ (old('inve_store_master_pk', $kitchenIssue->inve_store_master_pk) == $store['id']) ? 'selected' : '' }}>
@@ -38,7 +38,7 @@
                     
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Item <span class="text-danger">*</span></label>
-                        <select name="inve_item_master_pk" class="form-select" required>
+                        <select name="inve_item_master_pk" class="form-select select2" required>
                             <option value="">Select Item</option>
                             @foreach($items as $item)
                                 <option value="{{ $item->id }}" {{ (old('inve_item_master_pk', $kitchenIssue->inve_item_master_pk) == $item->id) ? 'selected' : '' }}>
@@ -69,7 +69,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Requested Store</label>
-                        <select name="requested_store_id" class="form-select">
+                        <select name="requested_store_id" class="form-select select2">
                             <option value="">Select Requested Store</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ (old('requested_store_id', $kitchenIssue->requested_store_id) == $store['id']) ? 'selected' : '' }}>
@@ -81,7 +81,7 @@
                     
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                        <select name="payment_type" class="form-select" required>
+                        <select name="payment_type" class="form-select select2" required>
                             <option value="0" {{ old('payment_type', $kitchenIssue->payment_type) == '0' ? 'selected' : '' }}>Unpaid</option>
                             <option value="1" {{ old('payment_type', $kitchenIssue->payment_type) == '1' ? 'selected' : '' }}>Paid</option>
                         </select>
@@ -91,7 +91,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Client Type</label>
-                        <select name="client_type" class="form-select">
+                        <select name="client_type" class="form-select select2">
                             <option value="">Select Client Type</option>
                             <option value="2" {{ old('client_type', $kitchenIssue->client_type) == '2' ? 'selected' : '' }}>Student</option>
                             <option value="5" {{ old('client_type', $kitchenIssue->client_type) == '5' ? 'selected' : '' }}>Employee</option>

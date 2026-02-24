@@ -24,7 +24,7 @@
                 <div class="row g-2">
                     <div class="col-md-2">
                         <label class="form-label small">Status</label>
-                        <select name="status" class="form-select form-select-sm">
+                        <select name="status" class="form-select form-select-sm select2">
                             <option value="">All</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                             <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
@@ -33,7 +33,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">Store</label>
-                        <select name="store" class="form-select form-select-sm">
+                        <select name="store" class="form-select form-select-sm select2">
                             <option value="">All</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -161,45 +161,55 @@
     ])
 </div>
 
-{{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
+{{-- Add Selling Voucher Modal --}}
 <style>
-#addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
+/* Select2 in Add/Edit modals: clean Bootstrap 5 look and correct stacking */
+#addSellingVoucherModal .select2-container--bootstrap-5,
+#editSellingVoucherModal .select2-container--bootstrap-5 { width: 100% !important; }
+#addSellingVoucherModal .select2-container--bootstrap-5 .select2-selection,
+#editSellingVoucherModal .select2-container--bootstrap-5 .select2-selection {
+  border: 1px solid #dee2e6; border-radius: 0.375rem; background-color: #fff;
+}
+#addSellingVoucherModal .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+#editSellingVoucherModal .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+#addSellingVoucherModal .select2-container--bootstrap-5.select2-container--open .select2-selection,
+#editSellingVoucherModal .select2-container--bootstrap-5.select2-container--open .select2-selection {
+  border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+#addSellingVoucherModal .select2-dropdown,
+#editSellingVoucherModal .select2-dropdown { z-index: 1060 !important; border-radius: 0.375rem; }
 </style>
-<div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
+<div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
+                <div class="modal-header border-0 pb-0 pt-3 px-4">
+                    <h5 class="modal-title fw-bold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body px-4 pt-2 pb-4">
                     @if($errors->any())
-                        <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
-                            <ul class="mb-0 small">
+                        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-start gap-2" role="alert">
+                            <ul class="mb-0 small flex-grow-1">
                                 @foreach($errors->all() as $error)
                                     <li>{{ $error }}</li>
                                 @endforeach
                             </ul>
-                            <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="btn-close btn-sm flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     @endif
 
-                    {{-- Voucher Details (same pattern as Order Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
-                        </div>
-                        <div class="card-body">
+                    {{-- Voucher Details --}}
+                    <div class="card mb-3 border-0 bg-light bg-opacity-50 rounded-3">
+                        <div class="card-body p-4">
+                            <h6 class="fw-semibold text-primary mb-3">Voucher Details</h6>
                             <div class="row g-3">
-                                <div class="col-md-12">
-                                    <label class="form-label">Client Type <span class="text-danger">*</span></label>
+                                <div class="col-12">
+                                    <label class="form-label fw-medium">Client Type <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3 pt-1">
                                         @foreach($clientTypes as $slug => $label)
-                                            <div class="form-check">
+                                            <div class="form-check form-check-inline">
                                                 <input class="form-check-input client-type-radio" type="radio" name="client_type_slug" id="modal_ct_{{ $slug }}" value="{{ $slug }}" {{ old('client_type_slug') === $slug ? 'checked' : '' }} required>
                                                 <label class="form-check-label" for="modal_ct_{{ $slug }}">{{ $label }}</label>
                                             </div>
@@ -207,75 +217,93 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select" required>
+                                    <label class="form-label fw-medium">Payment Type <span class="text-danger">*</span></label>
+                                    <select name="payment_type" class="form-select select2" required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                                         <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
                                         <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
                                     </select>
-                                    <small class="text-muted" id="modalPaymentTypeHint">Employee / OT / Course: Credit only</small>
+                                    <div class="form-text" id="modalPaymentTypeHint">Employee / OT / Course: Credit only</div>
                                 </div>
                                 <div class="col-md-4" id="modalClientNameWrap">
-                                    <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="modalClientNameSelect">
-                                        <option value="">Select Client Name</option>
-                                        @foreach($clientNamesByType as $type => $list)
-                                            @foreach($list as $c)
-                                                <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                    <label class="form-label fw-medium">Client Name <span class="text-danger">*</span></label>
+                                    <div id="wrapModalClientNameSelect" class="add-modal-dependent-wrap">
+                                        <select name="client_type_pk" class="form-select select2" id="modalClientNameSelect">
+                                            <option value="">Select Client Name</option>
+                                            @foreach($clientNamesByType as $type => $list)
+                                                @foreach($list as $c)
+                                                    <option value="{{ $c->id }}" data-type="{{ $c->client_type }}" data-client-name="{{ strtolower($c->client_name ?? '') }}">{{ $c->client_name }}</option>
+                                                @endforeach
                                             @endforeach
-                                        @endforeach
-                                    </select>
-                                    <select id="modalOtCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalCourseSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
+                                        </select>
+                                    </div>
+                                    <div id="wrapModalOtCourseSelect" class="add-modal-dependent-wrap d-none">
+                                        <select id="modalOtCourseSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($otCourses ?? [] as $course)
+                                                <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapModalCourseSelect" class="add-modal-dependent-wrap d-none">
+                                        <select id="modalCourseSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($otCourses ?? [] as $course)
+                                                <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="col-md-4" id="modalNameFieldWrap">
-                                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" id="modalClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
-                                    <select id="modalFacultySelect" class="form-select" style="display:none;">
-                                        <option value="">Select Faculty</option>
-                                        @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Academy Staff</option>
-                                        @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalMessStaffSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Mess Staff</option>
-                                        @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select id="modalOtStudentSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Student</option>
-                                    </select>
-                                    <select id="modalCourseNameSelect" class="form-select" style="display:none;">
-                                        <option value="">Select Course</option>
-                                        @foreach($otCourses ?? [] as $course)
-                                            <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
-                                        @endforeach
-                                    </select>
+                                    <label class="form-label fw-medium">Name <span class="text-danger">*</span></label>
+                                    <div id="wrapModalClientNameInput" class="add-modal-dependent-wrap">
+                                        <input type="text" name="client_name" id="modalClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    </div>
+                                    <div id="wrapModalFacultySelect" class="add-modal-dependent-wrap d-none">
+                                        <select id="modalFacultySelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Faculty</option>
+                                            @foreach($faculties ?? [] as $f)
+                                                <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapModalAcademyStaffSelect" class="add-modal-dependent-wrap d-none">
+                                        <select id="modalAcademyStaffSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Academy Staff</option>
+                                            @foreach($employees ?? [] as $e)
+                                                <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapModalMessStaffSelect" class="add-modal-dependent-wrap d-none">
+                                        <select id="modalMessStaffSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Mess Staff</option>
+                                            @foreach($messStaff ?? [] as $e)
+                                                <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div id="wrapModalOtStudentSelect" class="add-modal-dependent-wrap d-none">
+                                        <select id="modalOtStudentSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Student</option>
+                                        </select>
+                                    </div>
+                                    <div id="wrapModalCourseNameSelect" class="add-modal-dependent-wrap d-none">
+                                        <select id="modalCourseNameSelect" class="form-select select2" tabindex="-1" aria-hidden="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($otCourses ?? [] as $course)
+                                                <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Issue Date <span class="text-danger">*</span></label>
+                                    <label class="form-label fw-medium">Issue Date <span class="text-danger">*</span></label>
                                     <input type="date" name="issue_date" class="form-control" value="{{ old('issue_date', date('Y-m-d')) }}" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="store_id" class="form-select" required>
+                                    <label class="form-label fw-medium">Transfer From Store <span class="text-danger">*</span></label>
+                                    <select name="store_id" class="form-select select2" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store['id'] }}" {{ old('store_id') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -283,8 +311,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
+                                    <label class="form-label fw-medium">Remarks</label>
+                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Reference Number</label>
@@ -298,49 +326,43 @@
                         </div>
                     </div>
 
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                </div>
-                            </div>
+                    {{-- Bill / Attachment --}}
+                    <div class="card mb-3 border border-primary border-opacity-25 rounded-3">
+                        <div class="card-body p-4">
+                            <h6 class="fw-semibold text-primary mb-2">Upload Bill (PDF / Image)</h6>
+                            <label class="form-label">Bill / Attachment <span class="text-muted fw-normal">(Optional)</span></label>
+                            <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                            <div class="form-text">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</div>
                         </div>
                     </div>
 
-                    {{-- Item Details (same pattern as Purchase Order Item Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="modalAddItemRow">
-                                + Add Item
-                            </button>
-                        </div>
+                    {{-- Item Details --}}
+                    <div class="card border-0 bg-light bg-opacity-50 rounded-3 overflow-hidden">
                         <div class="card-body p-0">
+                            <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+                                <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
+                                <button type="button" class="btn btn-primary btn-sm" id="modalAddItemRow">
+                                    <span class="d-inline-block me-1">+</span> Add Item
+                                </button>
+                            </div>
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0" id="svItemsTable">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table table-hover table-bordered align-middle mb-0" id="svItemsTable">
+                                    <thead class="table-light">
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th class="text-nowrap py-2" style="min-width: 180px;">Item Name <span class="text-danger">*</span></th>
+                                            <th class="text-nowrap py-2" style="min-width: 80px;">Unit</th>
+                                            <th class="text-nowrap py-2" style="min-width: 100px;">Available Qty</th>
+                                            <th class="text-nowrap py-2" style="min-width: 90px;">Issue Qty <span class="text-danger">*</span></th>
+                                            <th class="text-nowrap py-2" style="min-width: 90px;">Left Qty</th>
+                                            <th class="text-nowrap py-2" style="min-width: 100px;">Rate <span class="text-danger">*</span></th>
+                                            <th class="text-nowrap py-2" style="min-width: 110px;">Total Amount</th>
+                                            <th class="py-2" style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="modalItemsBody">
                                         <tr class="sv-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm select2 sv-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $s)
                                                         <option value="{{ $s['id'] }}" data-unit="{{ e($s['unit_measurement'] ?? '') }}" data-rate="{{ e($s['standard_cost'] ?? 0) }}">{{ e($s['item_name'] ?? '—') }}</option>
@@ -348,29 +370,27 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm sv-avail bg-body-secondary" step="0.01" min="0" value="0" placeholder="0" readonly></td>
                                             <td>
                                                 <input type="number" name="items[0][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0"></td>
+                                            <td><input type="text" class="form-control form-control-sm sv-left bg-body-secondary" readonly placeholder="0"></td>
                                             <td><input type="number" name="items[0][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" class="form-control form-control-sm sv-total bg-body-secondary" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                        <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="fw-semibold">Grand Total:</span>
+                            <div class="p-3 border-top bg-white bg-opacity-75 d-flex justify-content-end align-items-center">
+                                <span class="fw-semibold me-2">Grand Total:</span>
                                 <span class="fs-5 text-primary fw-bold" id="modalGrandTotal">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
+                <div class="modal-footer border-0 pt-0 px-4 pb-4 gap-2">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Selling Voucher</button>
                 </div>
@@ -415,7 +435,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select edit-payment-type" required>
+                                    <select name="payment_type" class="form-select select2 edit-payment-type" required>
                                         <option value="1">Credit</option>
                                         <option value="0">Cash</option>
                                         <option value="2">Online</option>
@@ -423,7 +443,7 @@
                                 </div>
                                 <div class="col-md-4" id="editModalClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="editClientNameSelect">
+                                    <select name="client_type_pk" class="form-select select2" id="editClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
@@ -431,13 +451,13 @@
                                             @endforeach
                                         @endforeach
                                     </select>
-                                    <select id="editModalOtCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editModalOtCourseSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editModalCourseSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
@@ -447,25 +467,25 @@
                                 <div class="col-md-4" id="editModalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control edit-client-name" id="editModalClientNameInput" placeholder="Client / section / role name" required>
-                                    <select id="editModalFacultySelect" class="form-select" style="display:none;">
+                                    <select id="editModalFacultySelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
                                             <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editModalAcademyStaffSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
                                             <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editModalMessStaffSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
                                             <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
+                                    <select id="editModalCourseNameSelect" class="form-select select2" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
@@ -478,7 +498,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="store_id" class="form-select edit-store" required>
+                                    <select name="store_id" class="form-select select2 edit-store" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
@@ -848,7 +868,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
         }).join('');
         return '<tr class="sv-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm select2 sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -959,6 +979,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tbody) {
                 tbody.insertAdjacentHTML('beforeend', getRowHtml(rowIndex));
                 rowIndex++;
+                if (typeof $ !== 'undefined' && $.fn.select2) {
+                    $(tbody.querySelector('.sv-item-row:last-child')).find('.sv-item-select.select2').select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        dropdownParent: $('#addSellingVoucherModal')
+                    });
+                }
                 updateRemoveButtons();
             }
         });
@@ -1008,6 +1035,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const creditOnly = ['employee', 'ot', 'course'];
+    /** Show or hide a select and its Select2 container (sibling); used for edit modal */
+    function setSelect2Visibility(el, show) {
+        if (!el) return;
+        var display = show ? 'block' : 'none';
+        el.style.display = display;
+        var next = el.nextElementSibling;
+        if (next && (next.classList.contains('select2-container') || next.classList.contains('select2'))) {
+            next.style.display = display;
+        }
+    }
+    /** Show/hide Add modal dependent field by wrapper (hides Select2 container too) */
+    function setAddModalWrap(wrapId, show) {
+        var w = document.getElementById(wrapId);
+        if (!w) return;
+        if (show) w.classList.remove('d-none'); else w.classList.add('d-none');
+    }
+    /** Name column (input / Faculty / Academy Staff / Mess Staff) depends on Client Name dropdown when client type is Employee. */
     function updateModalNameField() {
         const clientTypeRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
         const clientNameSelect = document.getElementById('modalClientNameSelect');
@@ -1022,6 +1066,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const isEmployee = (clientTypeRadio.value || '').toLowerCase() === 'employee';
         const isOt = (clientTypeRadio.value || '').toLowerCase() === 'ot';
         const isCourse = (clientTypeRadio.value || '').toLowerCase() === 'course';
+        /* Name field visibility depends on Client Name selection when Employee */
         const opt = clientNameSelect.options[clientNameSelect.selectedIndex];
         const clientNameVal = (opt && opt.dataset.clientName) ? opt.dataset.clientName : '';
         const isFaculty = clientNameVal === 'faculty';
@@ -1032,32 +1077,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
         if (isOt) {
-            nameInput.style.display = 'none';
+            setAddModalWrap('wrapModalClientNameInput', false);
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'block'; }
-            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setAddModalWrap(sel.id === 'modalFacultySelect' ? 'wrapModalFacultySelect' : (sel.id === 'modalAcademyStaffSelect' ? 'wrapModalAcademyStaffSelect' : 'wrapModalMessStaffSelect'), false); sel.value = ''; sel.removeAttribute('required'); } });
+            setAddModalWrap('wrapModalOtStudentSelect', true);
+            if (courseSelect) { setAddModalWrap('wrapModalCourseSelect', false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            if (courseNameSelect) { setAddModalWrap('wrapModalCourseNameSelect', false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
-            nameInput.style.display = 'none';
+            setAddModalWrap('wrapModalClientNameInput', false);
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { courseSelect.style.display = 'block'; }
-            if (courseNameSelect) { courseNameSelect.style.display = 'block'; }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setAddModalWrap(sel.id === 'modalFacultySelect' ? 'wrapModalFacultySelect' : (sel.id === 'modalAcademyStaffSelect' ? 'wrapModalAcademyStaffSelect' : 'wrapModalMessStaffSelect'), false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { setAddModalWrap('wrapModalOtStudentSelect', false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            setAddModalWrap('wrapModalCourseSelect', true);
+            setAddModalWrap('wrapModalCourseNameSelect', true);
         } else {
-            nameInput.style.display = showAny ? 'none' : 'block';
+            setAddModalWrap('wrapModalClientNameInput', !showAny);
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
-                if (!sel) return;
-                const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
-                sel.removeAttribute('required');
-                if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
-            });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+            setAddModalWrap('wrapModalFacultySelect', showFaculty);
+            if (facultySelect) { facultySelect.removeAttribute('required'); if (showFaculty) { facultySelect.setAttribute('required', 'required'); facultySelect.value = nameInput.value || ''; if (facultySelect.value) nameInput.value = facultySelect.value; } else facultySelect.value = ''; }
+            setAddModalWrap('wrapModalAcademyStaffSelect', showAcademyStaff);
+            if (academyStaffSelect) { academyStaffSelect.removeAttribute('required'); if (showAcademyStaff) { academyStaffSelect.setAttribute('required', 'required'); academyStaffSelect.value = nameInput.value || ''; if (academyStaffSelect.value) nameInput.value = academyStaffSelect.value; } else academyStaffSelect.value = ''; }
+            setAddModalWrap('wrapModalMessStaffSelect', showMessStaff);
+            if (messStaffSelect) { messStaffSelect.removeAttribute('required'); if (showMessStaff) { messStaffSelect.setAttribute('required', 'required'); messStaffSelect.value = nameInput.value || ''; if (messStaffSelect.value) nameInput.value = messStaffSelect.value; } else messStaffSelect.value = ''; }
+            setAddModalWrap('wrapModalOtStudentSelect', false);
+            if (otStudentSelect) { otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            setAddModalWrap('wrapModalCourseSelect', false);
+            if (courseSelect) { courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            setAddModalWrap('wrapModalCourseNameSelect', false);
+            if (courseNameSelect) { courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
@@ -1084,33 +1131,45 @@ document.addEventListener('DOMContentLoaded', function() {
             const courseNameSelect = document.getElementById('modalCourseNameSelect');
             const nameInput = document.getElementById('modalClientNameInput');
             if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                setAddModalWrap('wrapModalClientNameSelect', false);
+                if (clientSelect) { clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                setAddModalWrap('wrapModalOtCourseSelect', true);
+                if (otCourseSelect) { otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
+                setAddModalWrap('wrapModalOtStudentSelect', true);
+                if (otStudentSelect) { otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
+                setAddModalWrap('wrapModalCourseSelect', false);
+                if (courseSelect) { courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
+                setAddModalWrap('wrapModalCourseNameSelect', false);
+                if (courseNameSelect) { courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                setAddModalWrap('wrapModalClientNameInput', false);
+                if (nameInput) { nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'block'; courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'block'; courseNameSelect.setAttribute('required', 'required'); courseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                setAddModalWrap('wrapModalClientNameSelect', false);
+                if (clientSelect) { clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                setAddModalWrap('wrapModalOtCourseSelect', false);
+                if (otCourseSelect) { otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                setAddModalWrap('wrapModalOtStudentSelect', false);
+                if (otStudentSelect) { otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                setAddModalWrap('wrapModalCourseSelect', true);
+                if (courseSelect) { courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
+                setAddModalWrap('wrapModalCourseNameSelect', true);
+                if (courseNameSelect) { courseNameSelect.setAttribute('required', 'required'); courseNameSelect.value = ''; }
+                setAddModalWrap('wrapModalClientNameInput', false);
+                if (nameInput) { nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
-                if (clientSelect) {
-                    clientSelect.querySelectorAll('option').forEach(function(opt) {
-                        if (opt.value === '') { opt.hidden = false; return; }
-                        opt.hidden = opt.dataset.type !== this.value;
-                    }.bind(this));
-                }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.placeholder = 'Client / section / role name'; nameInput.setAttribute('required', 'required'); }
+                /* Employee: show Client Name dropdown; Name column is set entirely by updateModalNameField() from Client Name selection */
+                setAddModalWrap('wrapModalClientNameSelect', true);
+                if (clientSelect) { clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); clientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = opt.dataset.type !== this.value; }.bind(this)); }
+                setAddModalWrap('wrapModalOtCourseSelect', false);
+                if (otCourseSelect) { otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                setAddModalWrap('wrapModalOtStudentSelect', false);
+                if (otStudentSelect) { otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                setAddModalWrap('wrapModalCourseSelect', false);
+                if (courseSelect) { courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                setAddModalWrap('wrapModalCourseNameSelect', false);
+                if (courseNameSelect) { courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
             }
+            /* Name column visibility depends on Client Name dropdown (and client type); always sync after client type change */
             updateModalNameField();
         });
     });
@@ -1228,21 +1287,21 @@ document.addEventListener('DOMContentLoaded', function() {
             nameInput.style.display = 'block';
             nameInput.readOnly = true;
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (isCourse && editCourseSelect) { editCourseSelect.style.display = 'block'; }
-            if (isCourse && editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelect2Visibility(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (editCourseSelect) { setSelect2Visibility(editCourseSelect, isCourse); if (!isCourse) editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); if (!isCourse) editCourseSelect.removeAttribute('name'); }
+            if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, isCourse); if (!isCourse) editCourseNameSelect.value = ''; editCourseNameSelect.removeAttribute('required'); }
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (!sel) return;
                 const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
+                setSelect2Visibility(sel, show);
                 sel.removeAttribute('required');
                 if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
             });
-            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
-            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.value = ''; editCourseNameSelect.removeAttribute('required'); }
+            if (editCourseSelect) { setSelect2Visibility(editCourseSelect, false); editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
+            if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, false); editCourseNameSelect.value = ''; editCourseNameSelect.removeAttribute('required'); }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
@@ -1256,22 +1315,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
             const nameInput = document.getElementById('editModalClientNameInput');
             if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
-                if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (clientSelect) { setSelect2Visibility(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { setSelect2Visibility(otCourseSelect, true); otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { setSelect2Visibility(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = true; nameInput.placeholder = 'Select course above'; nameInput.value = nameInput.value || ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
-                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = ''; }
+                if (clientSelect) { setSelect2Visibility(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { setSelect2Visibility(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { setSelect2Visibility(editCourseSelect, true); editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, true); editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = true; nameInput.value = nameInput.value || ''; nameInput.removeAttribute('required'); }
             } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (clientSelect) { setSelect2Visibility(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
+                if (otCourseSelect) { setSelect2Visibility(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { setSelect2Visibility(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                 if (clientSelect) {
                     clientSelect.querySelectorAll('option').forEach(function(opt) {
                         if (opt.value === '') { opt.hidden = false; return; }
@@ -1350,7 +1409,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const unit = item ? (item.unit || '') : '';
         const left = item && (avail - qty) >= 0 ? (avail - qty) : 0;
         return '<tr class="sv-item-row edit-sv-item-row">' +
-            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
+            '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm select2 sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" value="' + qty + '" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
@@ -1664,22 +1723,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
                     const editNameInp = document.getElementById('editModalClientNameInput');
                     if (isOt) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'block'; editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                        if (editClientSelect) { setSelect2Visibility(editClientSelect, false); editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                        if (editOtSelect) { setSelect2Visibility(editOtSelect, true); editOtSelect.setAttribute('required', 'required'); editOtSelect.setAttribute('name', 'client_type_pk'); editOtSelect.value = v.client_type_pk || ''; }
+                        if (editCourseSelect) { setSelect2Visibility(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                        if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.placeholder = 'Name (from course/student)'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else if (isCourse) {
-                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_type_pk || ''; }
+                        if (editClientSelect) { setSelect2Visibility(editClientSelect, false); editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                        if (editOtSelect) { setSelect2Visibility(editOtSelect, false); editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                        if (editCourseSelect) { setSelect2Visibility(editCourseSelect, true); editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
+                        if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, true); editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_type_pk || ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else {
-                        if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (v.client_type_slug || 'employee'); }); }
-                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                        if (editClientSelect) { setSelect2Visibility(editClientSelect, true); editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (v.client_type_slug || 'employee'); }); }
+                        if (editOtSelect) { setSelect2Visibility(editOtSelect, false); editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                        if (editCourseSelect) { setSelect2Visibility(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                        if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
                     }
                     updateEditModalNameField();
@@ -1750,14 +1809,9 @@ document.addEventListener('DOMContentLoaded', function() {
         addSellingVoucherModal.addEventListener('show.bs.modal', function() {
             const storeSelect = addSellingVoucherModal.querySelector('select[name="store_id"]');
             const preSelectedStore = storeSelect ? storeSelect.value : null;
-            
-            console.log('Modal opening, pre-selected store:', preSelectedStore); // Debug log
-            
-            // If there's a pre-selected store, fetch its items
             if (preSelectedStore) {
                 currentStoreId = preSelectedStore;
                 fetchStoreItems(preSelectedStore, function() {
-                    console.log('Pre-fetched items for store:', preSelectedStore, 'Count:', filteredItems.length);
                     updateAddItemDropdowns();
                 });
             } else {
@@ -1765,6 +1819,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 filteredItems = itemSubcategories;
                 if (storeSelect) storeSelect.value = '';
             }
+        });
+        addSellingVoucherModal.addEventListener('shown.bs.modal', function() {
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                $('#addSellingVoucherModal .select2').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
+                    $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addSellingVoucherModal') });
+                });
+            }
+            var checked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
+            if (checked) { checked.dispatchEvent(new Event('change')); }
         });
     }
 

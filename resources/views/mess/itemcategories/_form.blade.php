@@ -17,7 +17,7 @@
 
     <div class="col-md-6 mb-3">
         <label class="form-label">Category Type <span class="text-danger">*</span></label>
-        <select name="category_type" class="form-control" required>
+        <select name="category_type" class="form-select select2" required>
             <option value="">Select</option>
             @foreach($types as $value => $label)
                 <option value="{{ $value }}" {{ $oldType === $value ? 'selected' : '' }}>
@@ -38,7 +38,7 @@
 
     <div class="col-md-6 mb-3">
         <label class="form-label">Status</label>
-        <select name="status" class="form-control">
+        <select name="status" class="form-select select2">
             <option value="active" {{ $oldStatus === 'active' ? 'selected' : '' }}>Active</option>
             <option value="inactive" {{ $oldStatus === 'inactive' ? 'selected' : '' }}>Inactive</option>
         </select>
