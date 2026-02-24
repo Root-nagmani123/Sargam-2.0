@@ -5,7 +5,6 @@
     $oldCategoryId = old('category_id', $itemsubcategory ? $itemsubcategory->category_id : '');
     $oldItemName = old('item_name', $itemsubcategory ? $itemsubcategory->item_name : '');
     $oldUnitMeasurement = old('unit_measurement', $itemsubcategory ? $itemsubcategory->unit_measurement : '');
-    $oldStandardCost = old('standard_cost', $itemsubcategory ? $itemsubcategory->standard_cost : '');
     $oldDesc = old('description', $itemsubcategory ? $itemsubcategory->description : '');
     $oldStatus = old('status', $itemsubcategory ? ($itemsubcategory->status ?? 'active') : 'active');
 @endphp
@@ -47,12 +46,6 @@
 </div>
 
 <div class="row">
-    <div class="col-md-6 mb-3">
-        <label class="form-label">Standard Cost <span class="text-danger">*</span></label>
-        <input type="number" name="standard_cost" class="form-control" step="0.01" min="0" value="{{ $oldStandardCost }}" placeholder="0.00" required>
-        @error('standard_cost')<div class="text-danger small">{{ $message }}</div>@enderror
-    </div>
-
     <div class="col-md-6 mb-3">
         <label class="form-label">Status</label>
         <select name="status" class="form-control">
