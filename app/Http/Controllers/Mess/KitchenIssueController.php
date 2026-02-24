@@ -241,11 +241,11 @@ class KitchenIssueController extends Controller
                 }
             }],
             'payment_type' => 'required|integer|in:0,1,2',
-            'client_type_slug' => 'required|string|in:employee,ot,course,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
             'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
                 if ($value === null || $value === '') return;
                 $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
                 }
                 if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
@@ -257,6 +257,8 @@ class KitchenIssueController extends Controller
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:100',
+            'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -295,6 +297,7 @@ class KitchenIssueController extends Controller
                 'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'ot' => KitchenIssueMaster::CLIENT_OT,
                 'course' => KitchenIssueMaster::CLIENT_COURSE,
+                'section' => KitchenIssueMaster::CLIENT_SECTION,
                 'other' => KitchenIssueMaster::CLIENT_OTHER,
             ];
 
@@ -311,6 +314,8 @@ class KitchenIssueController extends Controller
                 'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
                 'status' => KitchenIssueMaster::STATUS_PENDING, // Unpaid by default; Process Mess Bills "Generate Payment" sets to APPROVED (Paid)
                 'remarks' => $request->remarks,
+                'reference_number' => $request->reference_number,
+                'order_by' => $request->order_by,
             ]);
 
             if ($request->hasFile('bill_file')) {
@@ -397,6 +402,8 @@ class KitchenIssueController extends Controller
                 'status' => $kitchenIssue->status,
                 'status_label' => $kitchenIssue->status_label ?? '-',
                 'remarks' => $kitchenIssue->remarks ?? '',
+                'reference_number' => $kitchenIssue->reference_number ?? '',
+                'order_by' => $kitchenIssue->order_by ?? '',
                 'created_at' => $kitchenIssue->created_at ? $kitchenIssue->created_at->format('d/m/Y H:i') : '-',
                 'updated_at' => $kitchenIssue->updated_at ? $kitchenIssue->updated_at->format('d/m/Y H:i') : null,
                 'bill_path' => $kitchenIssue->bill_path,
@@ -447,6 +454,7 @@ class KitchenIssueController extends Controller
                 KitchenIssueMaster::CLIENT_OT => 'ot',
                 KitchenIssueMaster::CLIENT_COURSE => 'course',
                 KitchenIssueMaster::CLIENT_OTHER => 'other',
+                KitchenIssueMaster::CLIENT_SECTION => 'section',
             ];
             $clientTypeSlug = $clientTypeSlugMap[$kitchenIssue->client_type] ?? 'employee';
 
@@ -468,6 +476,8 @@ class KitchenIssueController extends Controller
                 'store_id' => $storeIdentifier,
                 'inve_store_master_pk' => $storeIdentifier, // For backward compatibility with view
                 'remarks' => $kitchenIssue->remarks,
+                'reference_number' => $kitchenIssue->reference_number,
+                'order_by' => $kitchenIssue->order_by,
                 'bill_path' => $kitchenIssue->bill_path,
                 'bill_url' => $kitchenIssue->bill_path ? asset('storage/' . $kitchenIssue->bill_path) : null,
             ];
@@ -534,11 +544,11 @@ class KitchenIssueController extends Controller
                 }
             }],
             'payment_type' => 'required|integer|in:0,1,2',
-            'client_type_slug' => 'required|string|in:employee,ot,course,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
             'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
                 if ($value === null || $value === '') return;
                 $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
                 }
                 if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
@@ -550,6 +560,8 @@ class KitchenIssueController extends Controller
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:100',
+            'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -588,6 +600,7 @@ class KitchenIssueController extends Controller
                 'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'ot' => KitchenIssueMaster::CLIENT_OT,
                 'course' => KitchenIssueMaster::CLIENT_COURSE,
+                'section' => KitchenIssueMaster::CLIENT_SECTION,
                 'other' => KitchenIssueMaster::CLIENT_OTHER,
             ];
 
@@ -602,6 +615,8 @@ class KitchenIssueController extends Controller
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,
                 'remarks' => $request->remarks,
+                'reference_number' => $request->reference_number,
+                'order_by' => $request->order_by,
             ]);
 
             if ($request->hasFile('bill_file')) {
