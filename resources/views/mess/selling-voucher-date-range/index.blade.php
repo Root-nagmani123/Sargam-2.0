@@ -297,6 +297,14 @@
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -428,6 +436,8 @@
                                     <tr><th width="40%" style="color: #495057;">Request Date:</th><td id="viewRequestDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Issue Date:</th><td id="viewIssueDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Transfer From Store:</th><td id="viewStoreName" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Reference Number:</th><td id="viewReferenceNumber" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Order By:</th><td id="viewOrderBy" style="color: #212529;">—</td></tr>
                                 </table>
                             </div>
                             <div class="col-md-6">
@@ -642,6 +652,14 @@
                                 <div class="col-md-4">
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
                                 </div>
                             </div>
                         </div>
@@ -948,6 +966,21 @@
             }
         }
     });
+
+    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    const addReportModalEl = document.getElementById('addReportModal');
+    const addReportItemsTable = document.getElementById('addReportItemsTable');
+    if (addReportModalEl && addReportItemsTable) {
+        addReportModalEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && addReportItemsTable.contains(document.activeElement)) {
+                const addBtn = document.getElementById('addModalAddItemRow');
+                if (addBtn) {
+                    e.preventDefault();
+                    addBtn.click();
+                }
+            }
+        });
+    }
 
     // Add modal: Client Type + Client Name -> Name field (Faculty / Academy Staff / Mess Staff dropdown when Employee)
     function updateDrNameField() {
@@ -1368,6 +1401,8 @@
                     document.getElementById('viewRequestDate').textContent = v.request_date || '—';
                     document.getElementById('viewIssueDate').textContent = v.issue_date || '—';
                     document.getElementById('viewStoreName').textContent = v.store_name || '—';
+                    document.getElementById('viewReferenceNumber').textContent = v.reference_number || '—';
+                    document.getElementById('viewOrderBy').textContent = v.order_by || '—';
                     document.getElementById('viewClientType').textContent = v.client_type || '—';
                     document.getElementById('viewClientName').textContent = (v.client_name_text || v.client_name || '—');
                     document.getElementById('viewPaymentType').textContent = v.payment_type || '—';
@@ -1524,6 +1559,10 @@
                     document.getElementById('editReportModalLabel').textContent = 'Edit Selling Voucher #' + (v.id || reportId);
                     document.querySelector('.edit-store-id').value = v.store_id || '';
                     document.querySelector('.edit-remarks').value = v.remarks || '';
+                    const editRefNumEl = document.querySelector('.edit-reference-number');
+                    if (editRefNumEl) editRefNumEl.value = v.reference_number || '';
+                    const editOrderByEl = document.querySelector('.edit-order-by');
+                    if (editOrderByEl) editOrderByEl.value = v.order_by || '';
                     var editSvBillPathEl = document.getElementById('editSvCurrentBillPath');
                     if (editSvBillPathEl) {
                         if (v.bill_path) {
