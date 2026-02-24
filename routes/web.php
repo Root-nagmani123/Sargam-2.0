@@ -659,6 +659,7 @@ Route::middleware(['auth'])->group(function () {
         // NEW: Billing & Finance
         Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
         Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
+        Route::get('process-mess-bills-employee/{id}/payment-details', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');
         Route::post('process-mess-bills-employee/{id}/generate-invoice', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generateInvoice'])->name('process-mess-bills-employee.generate-invoice');
         Route::post('process-mess-bills-employee/{id}/generate-payment', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');
         Route::get('process-mess-bills-employee/{id}/print-receipt', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'printReceipt'])->name('process-mess-bills-employee.print-receipt');
@@ -683,6 +684,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
             Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
+            Route::get('minimum-stock-alert', [\App\Http\Controllers\Mess\ReportController::class, 'minimumStockAlert'])->name('minimum-stock-alert');
+            Route::get('purchase-sale-quantity', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityReport'])->name('purchase-sale-quantity');
         });
     });
 });

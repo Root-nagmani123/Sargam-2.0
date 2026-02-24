@@ -9,6 +9,7 @@ class ClientType extends Model
     public const TYPE_EMPLOYEE = 'employee';
     public const TYPE_OT = 'ot';
     public const TYPE_COURSE = 'course';
+    public const TYPE_SECTION = 'section';
     public const TYPE_OTHER = 'other';
 
     public const STATUS_ACTIVE   = 'active';
@@ -31,6 +32,7 @@ class ClientType extends Model
             self::TYPE_EMPLOYEE => 'Employee',
             self::TYPE_OT      => 'OT',
             self::TYPE_COURSE  => 'Course',
+            self::TYPE_SECTION => 'Section',
             self::TYPE_OTHER   => 'Other',
         ];
     }

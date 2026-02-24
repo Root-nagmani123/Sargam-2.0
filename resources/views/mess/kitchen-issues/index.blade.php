@@ -286,6 +286,14 @@
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -481,6 +489,14 @@
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -592,6 +608,8 @@
                                     <tr><th width="40%" style="color: #495057;">Request Date:</th><td id="viewRequestDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Issue Date:</th><td id="viewIssueDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Transfer From Store:</th><td id="viewStoreName" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Reference Number:</th><td id="viewReferenceNumber" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Order By:</th><td id="viewOrderBy" style="color: #212529;">—</td></tr>
                                 </table>
                             </div>
                             <div class="col-md-6">
@@ -969,6 +987,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.remove();
                     updateGrandTotal();
                     updateRemoveButtons();
+                }
+            }
+        });
+    }
+
+    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    const addSvModal = document.getElementById('addSellingVoucherModal');
+    const svItemsTable = document.getElementById('svItemsTable');
+    if (addSvModal && svItemsTable) {
+        addSvModal.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && svItemsTable.contains(document.activeElement)) {
+                const addBtn = document.getElementById('modalAddItemRow');
+                if (addBtn) {
+                    e.preventDefault();
+                    addBtn.click();
                 }
             }
         });
@@ -1371,6 +1404,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('viewRequestDate').textContent = v.request_date || '—';
                     document.getElementById('viewIssueDate').textContent = v.issue_date || '—';
                     document.getElementById('viewStoreName').textContent = v.store_name || '—';
+                    document.getElementById('viewReferenceNumber').textContent = v.reference_number || '—';
+                    document.getElementById('viewOrderBy').textContent = v.order_by || '—';
                     document.getElementById('viewClientType').textContent = v.client_type || '—';
                     document.getElementById('viewClientName').textContent = v.client_name || '—';
                     document.getElementById('viewPaymentType').textContent = v.payment_type || '—';
@@ -1585,6 +1620,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (storeSelect) storeSelect.value = v.inve_store_master_pk || v.store_id || '';
                     
                     document.querySelector('#editSellingVoucherModal input.edit-remarks').value = v.remarks || '';
+                    const editRefNum = document.querySelector('#editSellingVoucherModal input.edit-reference-number');
+                    if (editRefNum) editRefNum.value = v.reference_number || '';
+                    const editOrderBy = document.querySelector('#editSellingVoucherModal input.edit-order-by');
+                    if (editOrderBy) editOrderBy.value = v.order_by || '';
                     var editBillFileNameEl = document.getElementById('editBillCurrentFileName');
                     if (editBillFileNameEl) {
                         if (v.bill_path) {

@@ -135,7 +135,9 @@ class LoginController extends Controller
 
         Session::put('user_roles', $roles);
 
+        $lowStockAlert = \App\Http\Controllers\Mess\ReportController::getLowStockAlertItems();
         return redirect()->intended($this->redirectTo)
+            ->with('low_stock_alert', $lowStockAlert)
             ->cookie(cookie()->make('fresh_login', 'true', 0));
 
     } catch (\Throwable $e) {
