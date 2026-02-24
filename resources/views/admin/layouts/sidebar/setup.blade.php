@@ -190,15 +190,15 @@
 
                     <!-- Mess Management -->
                     <!-- ---------------------------------- -->
-                    <x-menu.setup_mess_management />
+                    <!-- <x-menu.setup_mess_management /> -->
 
                     <!-- Security Management (Vehicle & Visitor Pass) -->
                     <!-- ---------------------------------- -->
-                    <x-menu.setup_security_management />
+                    <!-- <x-menu.setup_security_management /> -->
 
                     <!-- Issue Management (CENTCOM) -->
                     <!-- ---------------------------------- -->
-                    <x-menu.setup_issue_management />
+                    <!-- <x-menu.setup_issue_management /> -->
 
                 </div>
             </div>
