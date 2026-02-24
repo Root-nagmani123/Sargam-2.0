@@ -30,6 +30,8 @@ class KitchenIssueMaster extends Model
         'client_type_pk',
         'client_name',
         'bill_path',
+        'reference_number',
+        'order_by',
     ];
 
     protected $casts = [
@@ -53,6 +55,7 @@ class KitchenIssueMaster extends Model
     const CLIENT_OT = 2;
     const CLIENT_COURSE = 3;
     const CLIENT_OTHER = 4;
+    const CLIENT_SECTION = 5;
 
     // Constants for kitchen issue types
     const TYPE_SELLING_VOUCHER = 1;
@@ -201,7 +204,7 @@ class KitchenIssueMaster extends Model
     }
 
     /**
-     * Get client type label
+     * Get client type label (e.g. Employee, OT, Course, Other)
      */
     public function getClientTypeLabelAttribute()
     {
@@ -210,9 +213,23 @@ class KitchenIssueMaster extends Model
             self::CLIENT_OT => 'OT',
             self::CLIENT_COURSE => 'Course',
             self::CLIENT_OTHER => 'Other',
+            self::CLIENT_SECTION => 'Section',
         ];
 
         return $labels[$this->client_type] ?? 'Unknown';
+    }
+
+    /**
+     * Get client type with category name for display, e.g. "Employee(ACADEMY STAFF)"
+     */
+    public function getClientTypeDisplayAttribute()
+    {
+        $typeLabel = $this->client_type_label ?? '—';
+        $categoryName = $this->clientTypeCategory?->client_name;
+        if ($categoryName !== null && $categoryName !== '') {
+            return $typeLabel . '(' . strtoupper($categoryName) . ')';
+        }
+        return $typeLabel;
     }
 
     /**

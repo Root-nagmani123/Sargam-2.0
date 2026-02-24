@@ -77,6 +77,7 @@ class ItemSubcategoryController extends Controller
             'item_name'        => ['required', 'string', 'max:255'],
             'unit_measurement' => ['required', 'string', 'max:50'],
             'standard_cost'   => ['required', 'numeric', 'min:0'],
+            'alert_quantity'  => ['nullable', 'numeric', 'min:0'],
             'description'     => ['nullable', 'string'],
             'status'          => ['nullable', 'in:active,inactive'],
         ]);
@@ -105,6 +106,12 @@ class ItemSubcategoryController extends Controller
         // Only add standard_cost if the column exists
         if (Schema::hasColumn('mess_item_subcategories', 'standard_cost')) {
             $data['standard_cost'] = $validated['standard_cost'];
+        }
+
+        // Only add alert_quantity if the column exists
+        if (Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
+            $data['alert_quantity'] = isset($validated['alert_quantity']) && $validated['alert_quantity'] !== '' && $validated['alert_quantity'] !== null
+                ? $validated['alert_quantity'] : null;
         }
 
         // Only add status if the column exists
