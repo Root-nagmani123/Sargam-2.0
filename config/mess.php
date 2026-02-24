@@ -36,6 +36,7 @@ return [
         'sale_counter.manage' => 'Manage Sale Counters',
         'credit_limit.manage' => 'Manage Credit Limits',
         'menu_rate.manage' => 'Manage Menu Rates',
+        'meal_rate.manage' => 'Manage Meal Rates',
         'reports.view' => 'View Reports',
         'reports.export' => 'Export Reports',
     ],
