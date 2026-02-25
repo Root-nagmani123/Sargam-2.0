@@ -217,7 +217,7 @@
 @endsection
 
 @push('scripts')
-{!! $dataTable->scripts(attributes: ['type' => 'module']) !!}
+{!! $dataTable->scripts() !!}
 <script>
 (function() {
     var unitTypesByCampus = @json($unitTypesByCampus ?? []);
@@ -230,6 +230,17 @@
     var campusesList = @json($campuses ?? []);
 
     $(document).ready(function() {
+        function setSelectValue($select, value, label) {
+            if (value === undefined || value === null || value === '') return;
+            var v = String(value);
+            if (!$select.find('option[value="' + v + '"]').length && label) {
+                $select.append('<option value="' + v + '">' + label + '</option>');
+            }
+            $select.val(v);
+            $select.find('option[value="' + v + '"]').prop('selected', true);
+            $select.trigger('change');
+        }
+
         // --- Employee Type change: load employee list (LBSNAA / Other), never hide Employee Name ---
         $('input[name="employee_type"]').on('change', function() {
             var type = $(this).val();
@@ -248,6 +259,10 @@
                 $('#request_section_name').val('');
                 clearRequestDetailsFields();
             });
+        });
+
+        $('#requestHouseModal').on('shown.bs.modal', function() {
+            $('input[name="employee_type"]:checked').trigger('change');
         });
 
         // --- Employee Name change: fetch full mapping and fill all fields (live behaviour) ---
@@ -279,8 +294,7 @@
                 var campusPk = String(d.estate_campus_master_pk);
                 var unitPk = d.estate_unit_type_master_pk ? String(d.estate_unit_type_master_pk) : '';
                 var $estate = $('#request_estate_name');
-                $estate.val(campusPk);
-                $('#request_estate_name option[value="' + campusPk + '"]').prop('selected', true);
+                setSelectValue($estate, campusPk, d.campus_name || ('Campus ' + campusPk));
                 var types = unitTypesByCampus[campusPk] || unitTypesByCampus[d.estate_campus_master_pk] || [];
                 var $unit = $('#request_unit_name');
                 $unit.html('<option value="">--Select--</option>');
@@ -292,8 +306,7 @@
                     $unit.append('<option value="' + unitPk + '">' + (d.unit_type_name || '') + '</option>');
                 }
                 if (unitPk) {
-                    $unit.val(unitPk);
-                    $('#request_unit_name option[value="' + unitPk + '"]').prop('selected', true);
+                    setSelectValue($unit, unitPk, d.unit_type_name || ('Unit ' + unitPk));
                 }
                 var campusId = d.estate_campus_master_pk;
                 var unitTypeId = d.estate_unit_type_master_pk;
@@ -339,6 +352,7 @@
 
         // On load: Other is default, so select name is estate_other_req_pk
         $('#request_employee_name').attr('name', 'estate_other_req_pk');
+        $('input[name="employee_type"]:checked').trigger('change');
 
         $('#request_estate_name').on('change', function() {
             var campusPk = $(this).val();

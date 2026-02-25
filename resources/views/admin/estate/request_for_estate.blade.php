@@ -106,12 +106,13 @@
                         </div>
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
+                            <select class="form-select" id="modal_eligibility_type_pk" disabled>
                                 <option value="">— Select eligibility type —</option>
                                 @foreach($eligibilityTypes ?? [] as $pk => $name)
                                     <option value="{{ (string) $pk }}">{{ $name }}</option>
                                 @endforeach
                             </select>
+                            <input type="hidden" id="modal_eligibility_type_pk_hidden" name="eligibility_type_pk" value="">
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -250,12 +251,18 @@
 
         function ensureEligibilityOptionAndSetVal(pk, label) {
             var $sel = $('#modal_eligibility_type_pk');
+            var $hidden = $('#modal_eligibility_type_pk_hidden');
             var val = (pk !== undefined && pk !== null && pk !== '') ? String(pk) : '';
-            if (val && $sel.find('option[value="' + val + '"]').length === 0) {
-                $sel.append($('<option></option>').attr('value', val).text(label || ('Type ' + val)));
+            if (!val) {
+                $sel.val('').trigger('change');
+                $hidden.val('');
+                return;
             }
-            $sel.find('option').prop('selected', false);
-            $sel.find('option[value="' + val + '"]').prop('selected', true);
+            if ($sel.find('option[value="' + val + '"]').length === 0) {
+                $sel.append(new Option(label || ('Type ' + val), val, false, false));
+            }
+            $sel.val(val).trigger('change');
+            $hidden.val(val);
         }
 
         function fillFromEmployeeDetails(data) {

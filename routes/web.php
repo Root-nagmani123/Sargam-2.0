@@ -1038,6 +1038,8 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 
         // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
         Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
+        Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
+        Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
 

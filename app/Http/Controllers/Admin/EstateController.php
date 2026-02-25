@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\DataTables\EstateApprovalSettingDataTable;
 use App\DataTables\EstateMigrationReportDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
+use App\DataTables\EstatePossessionDetailsDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\DataTables\EstateRequestForEstateDataTable;
 use App\DataTables\EstateReturnHouseDataTable;
@@ -25,6 +26,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 
 class EstateController extends Controller
@@ -283,25 +285,43 @@ class EstateController extends Controller
     {
         $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
         $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
+        $salaryGradeCol = \Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')
+            ? 'salary_grade_pk'
+            : 'salary_grade_master_pk';
+        $hasEligibilityUnitType = \Illuminate\Support\Facades\Schema::hasColumn('estate_eligibility_mapping', 'estate_unit_type_master_pk');
 
         $employeeIdSelect = $hasEmpId
             ? ($hasEmployeeId
-                ? "COALESCE(NULLIF(TRIM(e.emp_id), ''), NULLIF(TRIM(e.employee_id), ''), '')"
-                : "COALESCE(NULLIF(TRIM(e.emp_id), ''), '')")
-            : ($hasEmployeeId ? "COALESCE(NULLIF(TRIM(e.employee_id), ''), '')" : "''");
+                ? "COALESCE(NULLIF(TRIM(em.emp_id), ''), NULLIF(TRIM(em.employee_id), ''), '')"
+                : "COALESCE(NULLIF(TRIM(em.emp_id), ''), '')")
+            : ($hasEmployeeId ? "COALESCE(NULLIF(TRIM(em.employee_id), ''), '')" : "''");
 
-        $query = DB::table('employee_master as e')
-            ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
+        $query = DB::table('estate_house_master as h')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->join('estate_campus_master as a', 'h.estate_campus_master_pk', '=', 'a.pk')
+            ->join('estate_unit_type_master as c', 'h.estate_unit_master_pk', '=', 'c.pk')
+            ->join('estate_eligibility_mapping as e', function ($join) use ($hasEligibilityUnitType) {
+                if ($hasEligibilityUnitType) {
+                    $join->on('c.pk', '=', 'e.estate_unit_type_master_pk');
+                } else {
+                    $join->on('h.estate_unit_sub_type_master_pk', '=', 'e.estate_unit_sub_type_master_pk');
+                }
+            })
+            ->join('salary_grade_master as sg', 'e.salary_grade_master_pk', '=', 'sg.pk')
+            ->join('payroll_salary_master as ps', "sg.pk", '=', "ps.$salaryGradeCol")
+            ->join('employee_master as em', 'ps.employee_master_pk', '=', 'em.pk')
+            ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
             ->select(
-                'e.pk',
-                DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as emp_name"),
+                'em.pk',
+                DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                 DB::raw($employeeIdSelect . ' as employee_id'),
                 DB::raw("COALESCE(d.designation_name, '') as emp_designation")
             )
-            ->where('e.status', 1)
-            ->orderBy('e.first_name')
-            ->orderBy('e.middle_name')
-            ->orderBy('e.last_name');
+            ->where('em.status', 1)
+            ->where('em.payroll', 0)
+            ->distinct()
+            ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
+            ->orderBy('em.pk');
 
         $rows = $query->get();
 
@@ -311,15 +331,15 @@ class EstateController extends Controller
             if ($currentReq) {
                 $currentEmployeePk = (int) ($currentReq->employee_pk ?? 0);
                 if ($currentEmployeePk > 0 && ! $rows->contains(fn ($r) => (int) $r->pk === $currentEmployeePk)) {
-                    $extra = DB::table('employee_master as e')
-                        ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
+                    $extra = DB::table('employee_master as em')
+                        ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
                         ->select(
-                            'e.pk',
-                            DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as emp_name"),
+                            'em.pk',
+                            DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                             DB::raw($employeeIdSelect . ' as employee_id'),
                             DB::raw("COALESCE(d.designation_name, '') as emp_designation")
                         )
-                        ->where('e.pk', $currentEmployeePk)
+                        ->where('em.pk', $currentEmployeePk)
                         ->first();
                     if ($extra) {
                         $rows->prepend($extra);
@@ -1130,9 +1150,12 @@ class EstateController extends Controller
             'estate_house_master_pk' => 'required|integer',
             'possession_date_oth' => 'nullable|date',
             'allotment_date' => 'nullable|date',
+            'returning_date' => 'nullable|date',
             'meter_reading_oth' => 'nullable|integer',
             'meter_reading_oth1' => 'nullable|integer',
             'house_no' => 'nullable|string|max:100',
+            'remarks' => 'nullable|string|max:1000',
+            'noc_document' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
         ]);
 
         $house = DB::table('estate_house_master')
@@ -1160,7 +1183,60 @@ class EstateController extends Controller
             'created_by' => Auth::id(),
         ];
 
-        if ($request->filled('id')) {
+        $hasRemarksCol = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_other', 'remarks');
+        if ($hasRemarksCol) {
+            $data['remarks'] = $validated['remarks'] ?? null;
+        }
+
+        $docColumn = null;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_other', 'upload_document')) {
+            $docColumn = 'upload_document';
+        } elseif (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_other', 'noc_document')) {
+            $docColumn = 'noc_document';
+        }
+
+        $uploadedDocumentPath = null;
+        if ($request->hasFile('noc_document')) {
+            $uploadedDocumentPath = $request->file('noc_document')->store('estate/return-house-docs', 'public');
+            if ($docColumn) {
+                $data[$docColumn] = $uploadedDocumentPath;
+            }
+        }
+
+        $targetPk = null;
+        if ($request->get('redirect_to') === 'return-house') {
+            $data['return_home_status'] = 1;
+            $data['current_meter_reading_date'] = $validated['returning_date'] ?? now()->toDateString();
+            unset($data['create_date'], $data['created_by']);
+
+            $target = null;
+            if ($request->filled('id')) {
+                $target = EstatePossessionOther::where('pk', $request->id)->first();
+            }
+            if (! $target) {
+                $target = EstatePossessionOther::where('estate_other_req_pk', $validated['estate_other_req_pk'])
+                    ->where('return_home_status', 0)
+                    ->orderByDesc('pk')
+                    ->first();
+            }
+
+            if ($target) {
+                EstatePossessionOther::where('pk', $target->pk)->update($data);
+                $targetPk = (int) $target->pk;
+                $message = 'Return house request updated successfully.';
+            } else {
+                $created = EstatePossessionOther::create($data);
+                $targetPk = (int) $created->pk;
+                $message = 'Return house request created successfully.';
+            }
+
+            // Fallback storage when DB has no columns for remarks/upload_document.
+            $this->persistReturnHouseMeta(
+                $targetPk,
+                $validated['remarks'] ?? null,
+                $uploadedDocumentPath
+            );
+        } elseif ($request->filled('id')) {
             unset($data['create_date'], $data['created_by']);
             EstatePossessionOther::where('pk', $request->id)->update($data);
             $message = 'Possession updated successfully.';
@@ -1175,6 +1251,36 @@ class EstateController extends Controller
         return redirect()
             ->route('admin.estate.possession-for-others')
             ->with('success', $message);
+    }
+
+    private function persistReturnHouseMeta(?int $possessionPk, ?string $remarks, ?string $uploadedDocumentPath): void
+    {
+        if (!$possessionPk) {
+            return;
+        }
+
+        $file = 'estate/return-house-meta.json';
+        $raw = Storage::disk('local')->exists($file)
+            ? Storage::disk('local')->get($file)
+            : '{}';
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            $decoded = [];
+        }
+
+        $key = (string) $possessionPk;
+        $meta = $decoded[$key] ?? [];
+
+        $meta['remarks'] = $remarks !== null ? trim($remarks) : ($meta['remarks'] ?? null);
+        if ($uploadedDocumentPath) {
+            $meta['upload_document'] = $uploadedDocumentPath;
+        } elseif (!array_key_exists('upload_document', $meta)) {
+            $meta['upload_document'] = null;
+        }
+
+        $decoded[$key] = $meta;
+        Storage::disk('local')->put($file, json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
     /**
@@ -1553,6 +1659,7 @@ class EstateController extends Controller
         $unitSubTypeId = $request->get('unit_sub_type_id');
         $unitTypeId = $request->get('unit_type_id');
         $employeePk = $request->get('employee_pk') ? (int) $request->get('employee_pk') : null;
+        $includeHousePk = $request->get('include_house_pk') ? (int) $request->get('include_house_pk') : null;
         if (! $blockId || ! $unitSubTypeId) {
             return response()->json(['status' => true, 'data' => []]);
         }
@@ -1567,6 +1674,12 @@ class EstateController extends Controller
             )
             ->unique()
             ->values();
+
+        if ($includeHousePk) {
+            $occupiedHousePks = $occupiedHousePks
+                ->reject(fn ($pk) => (int) $pk === $includeHousePk)
+                ->values();
+        }
 
         $query = DB::table('estate_house_master')
             ->where('estate_block_master_pk', $blockId)
@@ -1608,9 +1721,184 @@ class EstateController extends Controller
      * Possession Details - Listing for LBSNAA employee possession (estate_possession_details).
      * Different from Estate Possession for Other (estate_possession_other).
      */
-    public function possessionDetails()
+    public function possessionDetails(EstatePossessionDetailsDataTable $dataTable)
     {
-        return view('admin.estate.possession_details');
+        return $dataTable->render('admin.estate.possession_details');
+    }
+
+    /**
+     * Possession Details (LBSNAA) - Add form.
+     * Requester dropdown shows HAC-approved requests that are not already in possession_details.
+     */
+    public function possessionDetailsCreate(Request $request)
+    {
+        $requesters = DB::table('estate_home_request_details as ehrd')
+            ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('ehrd.hac_status', 1)
+            ->where(function ($q) {
+                $q->whereNull('epd.estate_change_id')
+                    ->orWhere('epd.estate_change_id', '!=', -1);
+            })
+            ->whereRaw('epd.pk = (SELECT MAX(epd2.pk) FROM estate_possession_details epd2 WHERE epd2.estate_home_request_details = ehrd.pk AND (epd2.estate_change_id IS NULL OR epd2.estate_change_id != -1))')
+            ->select(
+                'ehrd.pk',
+                'ehrd.req_id',
+                'ehrd.emp_name',
+                'ehrd.emp_designation',
+                'ehrd.employee_pk',
+                'ehrd.employee_id',
+                DB::raw('DATE(epd.allotment_date) as allotment_date'),
+                DB::raw('DATE(epd.possession_date) as possession_date'),
+                'epd.electric_meter_reading',
+                'epd.estate_house_master_pk',
+                'ehm.estate_campus_master_pk',
+                'ehm.estate_block_master_pk',
+                'ehm.estate_unit_master_pk as estate_unit_type_master_pk',
+                'ehm.estate_unit_sub_type_master_pk'
+            )
+            ->orderBy('ehrd.emp_name')
+            ->get();
+
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+
+        $unitTypesByCampus = DB::table('estate_campus_master as a')
+            ->join('estate_house_master as b', 'a.pk', '=', 'b.estate_campus_master_pk')
+            ->join('estate_unit_type_master as c', 'b.estate_unit_master_pk', '=', 'c.pk')
+            ->select('a.pk as campus_pk', 'c.pk as unit_type_pk', 'c.unit_type')
+            ->distinct()
+            ->orderBy('a.pk')
+            ->orderBy('c.unit_type')
+            ->get()
+            ->groupBy('campus_pk')
+            ->map(fn ($rows) => $rows->map(fn ($r) => ['pk' => $r->unit_type_pk, 'unit_type' => $r->unit_type])->values()->all())
+            ->all();
+
+        $preselectedRequester = $request->query('requester_id');
+
+        return view('admin.estate.possession_details_form', compact(
+            'requesters',
+            'campuses',
+            'unitTypesByCampus',
+            'preselectedRequester'
+        ));
+    }
+
+    /**
+     * Possession Details (LBSNAA) - Store form into estate_possession_details.
+     */
+    public function storePossessionDetails(Request $request)
+    {
+        $validated = $request->validate([
+            'estate_home_request_details_pk' => 'required|integer|exists:estate_home_request_details,pk',
+            'estate_campus_master_pk' => 'required|integer',
+            'estate_block_master_pk' => 'required|integer',
+            'estate_unit_sub_type_master_pk' => 'required|integer',
+            'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
+            'allotment_date' => 'required|date',
+            'possession_date' => 'required|date',
+            'electric_meter_reading' => 'nullable|integer|min:0',
+        ]);
+
+        $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
+            ->findOrFail((int) $validated['estate_home_request_details_pk']);
+
+        $existingPossession = DB::table('estate_possession_details')
+            ->where('estate_home_request_details', (int) $homeReq->pk)
+            ->first();
+
+        if (! $existingPossession) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Requester is not allotted yet. Please allot first from HAC Approved.');
+        }
+
+        $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
+        if (! $employeePk && $homeReq->employee_id) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id')) {
+                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value('pk');
+            }
+            if (! $employeePk && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id')) {
+                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value('pk');
+            }
+            if ($employeePk) {
+                $employeePk = (int) $employeePk;
+                $homeReq->employee_pk = $employeePk;
+                $homeReq->save();
+            }
+        }
+
+        if (! $employeePk) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Employee could not be resolved for selected requester.');
+        }
+
+        $house = DB::table('estate_house_master')
+            ->where('pk', (int) $validated['estate_house_master_pk'])
+            ->where('estate_campus_master_pk', (int) $validated['estate_campus_master_pk'])
+            ->where('estate_block_master_pk', (int) $validated['estate_block_master_pk'])
+            ->where('estate_unit_sub_type_master_pk', (int) $validated['estate_unit_sub_type_master_pk'])
+            ->first();
+
+        if (! $house) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Selected house does not match selected Estate/Building/Unit Sub Type.');
+        }
+
+        $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
+        if ($eligibleHousePks->isNotEmpty() && ! $eligibleHousePks->contains((int) $house->pk)) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Selected house is not eligible for this requester.');
+        }
+
+        $occupiedHousePks = DB::table('estate_possession_details')
+            ->whereNotNull('estate_house_master_pk')
+            ->pluck('estate_house_master_pk')
+            ->merge(
+                DB::table('estate_possession_other')
+                    ->whereNotNull('estate_house_master_pk')
+                    ->pluck('estate_house_master_pk')
+            )
+            ->unique()
+            ->values();
+
+        if ($occupiedHousePks->contains((int) $house->pk) && (! $existingPossession || (int) $existingPossession->estate_house_master_pk !== (int) $house->pk)) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Selected house is already occupied.');
+        }
+
+        $payload = [
+            'estate_home_request_details' => (int) $homeReq->pk,
+            'emploee_master_pk' => $employeePk,
+            'allotment_date' => $validated['allotment_date'],
+            'possession_date' => $validated['possession_date'],
+            'electric_meter_reading' => (int) ($validated['electric_meter_reading'] ?? 0),
+            'estate_house_master_pk' => (int) $house->pk,
+            'estate_change_id' => -1,
+        ];
+
+        if ($existingPossession) {
+            DB::table('estate_possession_details')
+                ->where('pk', (int) $existingPossession->pk)
+                ->update($payload);
+            $message = 'Possession details updated successfully.';
+        } else {
+            DB::table('estate_possession_details')->insert($payload);
+            $message = 'Possession details added successfully.';
+        }
+
+        return redirect()->route('admin.estate.possession-details')->with('success', $message);
     }
 
     /**
@@ -1725,28 +2013,35 @@ class EstateController extends Controller
 
             $nameSelect = "COALESCE(NULLIF(TRIM(ehrd.emp_name), ''), NULLIF(TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.last_name, ''))), ''), NULLIF(TRIM(ehrd.employee_id), ''), CONCAT('Request #', ehrd.pk))";
 
-            $list = DB::table('estate_home_request_details as ehrd')
-                ->leftJoin('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            $list = DB::table('estate_possession_details as epd')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->leftJoin('employee_master as em', function ($join) use ($empIdJoinColumn) {
                     $join->on('em.pk', '=', 'ehrd.employee_pk');
                     if ($empIdJoinColumn) {
                         $join->orOn(DB::raw($empIdJoinColumn), '=', 'ehrd.employee_id');
                     }
                 })
+                ->where('epd.return_home_status', 0)
+                ->whereNotNull('epd.estate_house_master_pk')
+                ->where('epd.estate_change_id', -1)
                 ->select('ehrd.pk as id', DB::raw($nameSelect . ' as name'), 'ehrd.req_id as request_no')
                 ->distinct()
                 ->orderByRaw($nameSelect . ' asc')
                 ->get();
         } else {
-            $otherNameSelect = "COALESCE(NULLIF(TRIM(emp_name), ''), NULLIF(TRIM(request_no_oth), ''), CONCAT('Request #', pk))";
+            $otherNameSelect = "COALESCE(NULLIF(TRIM(eor.emp_name), ''), NULLIF(TRIM(eor.request_no_oth), ''), CONCAT('Request #', eor.pk))";
 
-            $list = DB::table('estate_other_req')
+            $list = DB::table('estate_other_req as eor')
+                ->join('estate_possession_other as epo', 'epo.estate_other_req_pk', '=', 'eor.pk')
+                ->where('epo.return_home_status', 0)
+                ->whereNotNull('epo.estate_house_master_pk')
                 ->select(
-                    'pk as id',
+                    'eor.pk as id',
                     DB::raw($otherNameSelect . ' as name'),
-                    'request_no_oth as request_no',
-                    'section'
+                    'eor.request_no_oth as request_no',
+                    'eor.section'
                 )
+                ->distinct()
                 ->orderByRaw($otherNameSelect . ' asc')
                 ->get();
         }
@@ -1766,7 +2061,7 @@ class EstateController extends Controller
         }
         if ($type === 'LBSNAA') {
             $row = DB::table('estate_home_request_details as ehrd')
-                ->leftJoin('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
                 ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
@@ -1774,6 +2069,9 @@ class EstateController extends Controller
                 ->leftJoin('estate_unit_master as eum', 'ehm.estate_unit_master_pk', '=', 'eum.pk')
                 ->leftJoin('estate_unit_type_master as eut', 'eum.estate_unit_type_master_pk', '=', 'eut.pk')
                 ->where('ehrd.pk', $id)
+                ->where('epd.return_home_status', 0)
+                ->whereNotNull('epd.estate_house_master_pk')
+                ->where('epd.estate_change_id', -1)
                 ->select(
                     'ec.pk as estate_campus_master_pk',
                     'ec.campus_name',
@@ -1813,6 +2111,8 @@ class EstateController extends Controller
             ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
             ->where('epo.estate_other_req_pk', $id)
+            ->where('epo.return_home_status', 0)
+            ->whereNotNull('epo.estate_house_master_pk')
             ->orderBy('epo.pk', 'desc')
             ->select(
                 'ec.pk as estate_campus_master_pk',
