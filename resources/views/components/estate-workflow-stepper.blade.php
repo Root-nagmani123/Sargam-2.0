@@ -1,13 +1,12 @@
 {{--
     Estate Workflow Stepper - All new entries follow this flow:
-    1. Request For Estate → 2. Put In HAC → 3. HAC Forward → 4. HAC Approved → 5. Possession Details
+    1. Request For Estate → 2. Put In HAC → 3. HAC Approved → 4. Possession Details
 --}}
 @props(['current' => 'request-for-estate'])
 @php
     $stages = [
         'request-for-estate' => ['label' => 'Request For Estate', 'route' => 'admin.estate.request-for-estate'],
         'put-in-hac'        => ['label' => 'Put In HAC', 'route' => 'admin.estate.put-in-hac'],
-        'hac-forward'       => ['label' => 'HAC Forward', 'route' => 'admin.estate.hac-forward'],
         'hac-approved'      => ['label' => 'HAC Approved', 'route' => 'admin.estate.change-request-hac-approved'],
         'possession-details'=> ['label' => 'Possession Details', 'route' => 'admin.estate.possession-for-others'],
     ];

@@ -198,7 +198,7 @@
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="estateManagementCollapse">
-                                {{-- Main flow: Request → Put in HAC → HAC Forward → HAC Approved → Possession Details --}}
+                                {{-- Main flow: Request → Put in HAC → HAC Approved → Possession Details --}}
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-estate') }}">
@@ -209,12 +209,6 @@
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.put-in-hac') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.put-in-hac') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Put In HAC</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.hac-forward') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.hac-forward') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">HAC Forward</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
