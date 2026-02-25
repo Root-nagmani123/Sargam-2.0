@@ -557,6 +557,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('sale-counter-mappings', \App\Http\Controllers\Mess\SaleCounterMappingController::class);
         Route::resource('credit-limits', \App\Http\Controllers\Mess\CreditLimitController::class);
         Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
+        Route::post('meal-rate-master/{id}/toggle-status', [\App\Http\Controllers\Mess\MealRateMasterController::class, 'toggleStatus'])->name('meal-rate-master.toggle-status');
+        Route::resource('meal-rate-master', \App\Http\Controllers\Mess\MealRateMasterController::class)->except(['show']);
         Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
         
         // Purchase Order Management
@@ -596,6 +598,7 @@ Route::middleware(['auth'])->group(function () {
         // NEW: Billing & Finance
         Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
         Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
+        Route::get('process-mess-bills-employee/{id}/payment-details', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'paymentDetails'])->name('process-mess-bills-employee.payment-details');
         Route::post('process-mess-bills-employee/{id}/generate-invoice', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generateInvoice'])->name('process-mess-bills-employee.generate-invoice');
         Route::post('process-mess-bills-employee/{id}/generate-payment', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');
         Route::get('process-mess-bills-employee/{id}/print-receipt', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'printReceipt'])->name('process-mess-bills-employee.print-receipt');
@@ -615,11 +618,17 @@ Route::middleware(['auth'])->group(function () {
         // Reports
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
+            Route::get('stock-purchase-details/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetailsExcel'])->name('stock-purchase-details.excel');
             Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
             Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
             Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
+            Route::get('category-wise-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlipExcel'])->name('category-wise-print-slip.excel');
             Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
+            Route::get('stock-balance-till-date/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDateExcel'])->name('stock-balance-till-date.excel');
             Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
+            Route::get('selling-voucher-print-slip/export', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlipExcel'])->name('selling-voucher-print-slip.excel');
+            Route::get('purchase-sale-quantity', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityReport'])->name('purchase-sale-quantity');
+            Route::get('purchase-sale-quantity/export', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityExcel'])->name('purchase-sale-quantity.excel');
         });
     });
 });

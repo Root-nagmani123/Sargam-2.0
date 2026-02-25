@@ -160,11 +160,11 @@ class SellingVoucherDateRangeController extends Controller
                 }
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
             'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
                 if ($value === null || $value === '') return;
                 $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
                 }
                 if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
@@ -174,6 +174,8 @@ class SellingVoucherDateRangeController extends Controller
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:100',
+            'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -235,6 +237,8 @@ class SellingVoucherDateRangeController extends Controller
                 'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
                 'total_amount' => 0,
                 'remarks' => $request->remarks,
+                'reference_number' => $request->reference_number,
+                'order_by' => $request->order_by,
                 'client_type_slug' => $request->client_type_slug,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_name' => $request->client_name,
@@ -308,6 +312,8 @@ class SellingVoucherDateRangeController extends Controller
                 'payment_type' => $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')),
                 'issue_date' => $issueDateFormatted,
                 'remarks' => $report->remarks ?? '',
+                'reference_number' => $report->reference_number ?? '',
+                'order_by' => $report->order_by ?? '',
                 'created_at' => $report->created_at ? $report->created_at->format('d/m/Y H:i') : '—',
                 'updated_at' => $report->updated_at ? $report->updated_at->format('d/m/Y H:i') : null,
                 'bill_path' => $report->bill_path,
@@ -363,6 +369,8 @@ class SellingVoucherDateRangeController extends Controller
                 'report_title' => $report->report_title,
                 'status' => (int) $report->status,
                 'remarks' => $report->remarks,
+                'reference_number' => $report->reference_number,
+                'order_by' => $report->order_by,
                 'client_type_slug' => $report->client_type_slug ?? $clientTypeSlug,
                 'client_type_pk' => $report->client_type_pk,
                 'client_name' => $report->client_name,
@@ -409,11 +417,11 @@ class SellingVoucherDateRangeController extends Controller
                 }
             }],
             'payment_type' => 'required|integer|in:0,1,2,5',
-            'client_type_slug' => 'required|string|in:employee,ot,course,other',
+            'client_type_slug' => 'required|string|in:employee,ot,course,section,other',
             'client_type_pk' => ['nullable', function ($attribute, $value, $fail) use ($request) {
                 if ($value === null || $value === '') return;
                 $slug = $request->client_type_slug ?? '';
-                if (in_array($slug, ['employee', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
+                if (in_array($slug, ['employee', 'section', 'other']) && !\App\Models\Mess\ClientType::where('id', $value)->exists()) {
                     $fail('The selected client is invalid.');
                 }
                 if (in_array($slug, ['ot', 'course']) && !CourseMaster::where('pk', $value)->exists()) {
@@ -423,6 +431,8 @@ class SellingVoucherDateRangeController extends Controller
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
+            'reference_number' => 'nullable|string|max:100',
+            'order_by' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -475,6 +485,8 @@ class SellingVoucherDateRangeController extends Controller
                 'report_title' => null,
                 'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
                 'remarks' => $request->remarks,
+                'reference_number' => $request->reference_number,
+                'order_by' => $request->order_by,
                 'client_type_slug' => $request->client_type_slug,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
                 'client_name' => $request->client_name,
@@ -633,6 +645,19 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function getStoreItems($storeIdentifier)
     {
+        try {
+            return response()->json($this->getStoreItemsData($storeIdentifier));
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array>
+     */
+    private function getStoreItemsData($storeIdentifier)
+    {
         $items = collect();
         $storeType = 'store';
         $storeId = (int) $storeIdentifier;
@@ -784,6 +809,6 @@ class SellingVoucherDateRangeController extends Controller
             }
         }
 
-        return response()->json($items->values());
+        return $items->values();
     }
 }

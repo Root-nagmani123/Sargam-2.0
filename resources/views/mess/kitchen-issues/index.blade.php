@@ -314,6 +314,14 @@
                                     <label class="form-label fw-medium">Remarks</label>
                                     <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Optional">
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -501,6 +509,14 @@
                                     <label class="form-label">Remarks</label>
                                     <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -612,6 +628,8 @@
                                     <tr><th width="40%" style="color: #495057;">Request Date:</th><td id="viewRequestDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Issue Date:</th><td id="viewIssueDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Transfer From Store:</th><td id="viewStoreName" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Reference Number:</th><td id="viewReferenceNumber" style="color: #212529;">—</td></tr>
+                                    <tr><th style="color: #495057;">Order By:</th><td id="viewOrderBy" style="color: #212529;">—</td></tr>
                                 </table>
                             </div>
                             <div class="col-md-6">
@@ -789,6 +807,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function getBaseAvailableForItem(itemId) {
+        if (!itemId) return 0;
+        const item = filteredItems.find(function(i) { return String(i.id) === String(itemId); });
+        return item ? (parseFloat(item.available_quantity) || 0) : 0;
+    }
+
+    function refreshAllAvailable() {
+        const rows = document.querySelectorAll('#modalItemsBody .sv-item-row');
+        const usedByItem = {};
+
+        rows.forEach(function(row) {
+            const select = row.querySelector('.sv-item-select');
+            const itemId = select ? select.value : '';
+            const availInp = row.querySelector('.sv-avail');
+            const leftInp = row.querySelector('.sv-left');
+            if (!itemId || !availInp) return;
+
+            const base = getBaseAvailableForItem(itemId);
+            const alreadyUsed = usedByItem[itemId] || 0;
+            const availableForRow = Math.max(0, base - alreadyUsed);
+
+            availInp.value = availableForRow.toFixed(2);
+
+            const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
+            if (leftInp) {
+                leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
+            }
+
+            usedByItem[itemId] = alreadyUsed + qty;
+            enforceQtyWithinAvailable(row);
+        });
+    }
+
     function fetchStoreItems(storeId, callback) {
         if (!storeId) {
             filteredItems = itemSubcategories;
@@ -871,6 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
+        refreshAllAvailable();
         enforceQtyWithinAvailable(row);
     }
 
@@ -974,6 +1026,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const modalItemsBody = document.getElementById('modalItemsBody');
+    const addSvModal = document.getElementById('addSellingVoucherModal');
     if (modalItemsBody) {
         modalItemsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sv-item-select')) {
@@ -985,7 +1038,12 @@ document.addEventListener('DOMContentLoaded', function() {
         modalItemsBody.addEventListener('input', function(e) {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateGrandTotal(); }
+                if (row) {
+                    refreshAllAvailable();
+                    enforceQtyWithinAvailable(row);
+                    calcRow(row);
+                    updateGrandTotal();
+                }
             }
         });
 
@@ -994,8 +1052,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 const row = e.target.closest('.sv-item-row');
                 if (row && document.querySelectorAll('#modalItemsBody .sv-item-row').length > 1) {
                     row.remove();
+                    refreshAllAvailable();
                     updateGrandTotal();
                     updateRemoveButtons();
+                }
+            }
+        });
+    }
+
+    // Delegate input/change from modal so qty/rate updates always run (Left Qty + Total)
+    if (addSvModal) {
+        function onAddModalQtyOrRateInput(e) {
+            if (!e.target.matches('.sv-avail, .sv-qty, .sv-rate')) return;
+            const row = e.target.closest('.sv-item-row');
+            if (!row) return;
+            refreshAllAvailable();
+    const addSvModal = document.getElementById('addSellingVoucherModal');
+            calcRow(row);
+            updateGrandTotal();
+        }
+        addSvModal.addEventListener('input', onAddModalQtyOrRateInput);
+        addSvModal.addEventListener('change', onAddModalQtyOrRateInput);
+    }
+
+    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    const svItemsTable = document.getElementById('svItemsTable');
+    if (addSvModal && svItemsTable) {
+        addSvModal.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && svItemsTable.contains(document.activeElement)) {
+                const addBtn = document.getElementById('modalAddItemRow');
+                if (addBtn) {
+                    e.preventDefault();
+                    addBtn.click();
                 }
             }
         });
@@ -1430,6 +1518,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('viewRequestDate').textContent = v.request_date || '—';
                     document.getElementById('viewIssueDate').textContent = v.issue_date || '—';
                     document.getElementById('viewStoreName').textContent = v.store_name || '—';
+                    document.getElementById('viewReferenceNumber').textContent = v.reference_number || '—';
+                    document.getElementById('viewOrderBy').textContent = v.order_by || '—';
                     document.getElementById('viewClientType').textContent = v.client_type || '—';
                     document.getElementById('viewClientName').textContent = v.client_name || '—';
                     document.getElementById('viewPaymentType').textContent = v.payment_type || '—';
@@ -1644,6 +1734,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (storeSelect) storeSelect.value = v.inve_store_master_pk || v.store_id || '';
                     
                     document.querySelector('#editSellingVoucherModal input.edit-remarks').value = v.remarks || '';
+                    const editRefNum = document.querySelector('#editSellingVoucherModal input.edit-reference-number');
+                    if (editRefNum) editRefNum.value = v.reference_number || '';
+                    const editOrderBy = document.querySelector('#editSellingVoucherModal input.edit-order-by');
+                    if (editOrderBy) editOrderBy.value = v.order_by || '';
                     var editBillFileNameEl = document.getElementById('editBillCurrentFileName');
                     if (editBillFileNameEl) {
                         if (v.bill_path) {
@@ -1774,6 +1868,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentStoreId = preSelectedStore;
                 fetchStoreItems(preSelectedStore, function() {
                     updateAddItemDropdowns();
+                    refreshAllAvailable();
+                    document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+                    updateGrandTotal();
                 });
             } else {
                 currentStoreId = null;
@@ -1782,14 +1879,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         addSellingVoucherModal.addEventListener('shown.bs.modal', function() {
-            if (typeof $ !== 'undefined' && $.fn.select2) {
-                $('#addSellingVoucherModal .select2').each(function() {
-                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
-                    $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addSellingVoucherModal') });
-                });
-            }
-            var checked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
-            if (checked) { checked.dispatchEvent(new Event('change')); }
+            refreshAllAvailable();
+            document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+            updateGrandTotal();
         });
     }
 

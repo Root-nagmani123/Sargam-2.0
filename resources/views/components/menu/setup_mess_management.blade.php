@@ -46,6 +46,11 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.meal-rate-master.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Meal Rate Master</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.sub-stores.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Sub Store Master</span>
                 </a>
@@ -158,6 +163,11 @@
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.reports.stock-balance-till-date') }}">
                     <span class="hide-menu small text-nowrap">Stock Balance as of Till Date</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link {{ request()->routeIs('admin.mess.reports.purchase-sale-quantity') ? 'active' : '' }}" href="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
+                    <span class="hide-menu small text-nowrap">Item Report</span>
                 </a>
             </li>
         </ul>

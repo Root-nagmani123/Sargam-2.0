@@ -19,6 +19,7 @@ class SellingVoucherDateRangeReport extends Model
         'report_title',
         'status',
         'total_amount',
+        'paid_amount',
         'remarks',
         'client_type_slug',
         'client_type_pk',
@@ -28,6 +29,8 @@ class SellingVoucherDateRangeReport extends Model
         'created_by',
         'updated_by',
         'bill_path',
+        'reference_number',
+        'order_by',
     ];
 
     protected $casts = [
@@ -35,6 +38,7 @@ class SellingVoucherDateRangeReport extends Model
         'date_to' => 'date',
         'issue_date' => 'date',
         'total_amount' => 'decimal:2',
+        'paid_amount' => 'decimal:2',
     ];
 
     const STATUS_DRAFT = 0;
@@ -93,6 +97,14 @@ class SellingVoucherDateRangeReport extends Model
         return $this->hasMany(SellingVoucherDateRangeReportItem::class, 'sv_date_range_report_id', 'id');
     }
 
+    /**
+     * Payment details for process mess bills (partial/full payment).
+     */
+    public function paymentDetails()
+    {
+        return $this->hasMany(SvDateRangePaymentDetail::class, 'sv_date_range_report_id', 'id');
+    }
+
     public function getGrandTotalAttribute()
     {
         return $this->items->sum('amount');
@@ -113,5 +125,20 @@ class SellingVoucherDateRangeReport extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::statusLabels()[$this->status] ?? 'Unknown';
+    }
+
+    /**
+     * Get client type with category name for display, e.g. "Employee(ACADEMY STAFF)"
+     */
+    public function getClientTypeDisplayAttribute(): string
+    {
+        $typeLabel = $this->clientTypeCategory
+            ? ucfirst($this->clientTypeCategory->client_type ?? '')
+            : ucfirst($this->client_type_slug ?? '—');
+        $categoryName = $this->clientTypeCategory?->client_name;
+        if ($categoryName !== null && $categoryName !== '') {
+            return $typeLabel . '(' . strtoupper($categoryName) . ')';
+        }
+        return $typeLabel ?: '—';
     }
 }

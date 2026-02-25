@@ -67,7 +67,7 @@ class ClientTypeController extends Controller
         }
 
         $validated = $request->validate([
-            'client_type' => ['required', 'string', 'in:employee,ot,course,other'],
+            'client_type' => ['required', 'string', 'in:employee,ot,course,section,other'],
             'client_name' => $clientNameRules,
             'status'      => ['nullable', 'in:active,inactive'],
         ]);

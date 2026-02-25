@@ -38,12 +38,18 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3">
+                <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
                     <button type="submit" class="btn btn-primary">
                         <i class="ti ti-filter"></i> Apply Filters
                     </button>
                     <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-secondary">
                         <i class="ti ti-refresh"></i> Reset
+                    </a>
+                    <button type="button" class="btn btn-outline-primary" onclick="window.print()" title="Print report or Save as PDF">
+                        <i class="ti ti-printer"></i> Print
+                    </button>
+                    <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success" title="Export to Excel">
+                        <i class="ti ti-file-spreadsheet"></i> Export Excel
                     </a>
                 </div>
             </form>
@@ -52,7 +58,7 @@
 
     <!-- Report Area (full width below filters) -->
     <div class="report-area">
-            <!-- Report toolbar: pagination + grand total + actions -->
+            <!-- Report toolbar: pagination only (Print & Export Excel are in filter section above) -->
             <div class="report-toolbar no-print d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                 <div class="d-flex align-items-center gap-2">
                     @if($purchaseOrders->hasPages())
@@ -66,11 +72,6 @@
                     @else
                         <span class="small text-muted">Page 1 of 1</span>
                     @endif
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="window.print()" title="Print as PDF - use Save as PDF in print dialog">
-                        <i class="ti ti-file-export"></i> Print as PDF
-                    </button>
                 </div>
             </div>
 

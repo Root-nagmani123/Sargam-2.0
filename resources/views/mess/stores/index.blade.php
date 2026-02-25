@@ -54,7 +54,7 @@
                                         <button type="button" class="btn btn-sm btn-warning btn-edit-store"
                                                 data-id="{{ $store->id }}"
                                                 data-store-name="{{ e($store->store_name) }}"
-                                                data-store-type="{{ e($store->store_type ?? 'mess') }}"
+                                                data-store-type="{{ e(trim((string)($store->store_type ?? '')) ?: 'mess') }}"
                                                 data-location="{{ e($store->location ?? '') }}"
                                                 data-status="{{ e($store->status ?? 'active') }}"
                                                 title="Edit">Edit</button>
@@ -187,7 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
         document.getElementById('editStoreForm').action = '{{ url("admin/mess/stores") }}/' + btn.getAttribute('data-id');
         document.getElementById('edit_store_name').value = btn.getAttribute('data-store-name') || '';
-        document.getElementById('edit_store_type').value = btn.getAttribute('data-store-type') || 'mess';
+        var storeType = (btn.getAttribute('data-store-type') || '').trim() || 'mess';
+        var typeSelect = document.getElementById('edit_store_type');
+        typeSelect.value = storeType;
+        if (typeSelect.value !== storeType) typeSelect.value = 'mess';
         document.getElementById('edit_location').value = btn.getAttribute('data-location') || '';
         document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
         new bootstrap.Modal(document.getElementById('editStoreModal')).show();
