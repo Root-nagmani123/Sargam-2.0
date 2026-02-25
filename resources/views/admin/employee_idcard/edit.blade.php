@@ -33,7 +33,7 @@
                 @php $isContractual = ($request->employee_type ?? '') === 'Contractual Employee'; @endphp
                 <div class="row g-3">
                     <!-- Row 1: Card Type, Sub Type, Request For -->
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="card_type" class="form-label">Card Type <span class="text-danger">*</span></label>
                         <select name="card_type" id="card_type" class="form-select @error('card_type') is-invalid @enderror" required>
                             <option value="">Select Card Type</option>
@@ -45,10 +45,11 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="sub_type" class="form-label">Sub Type <span class="text-danger">*</span></label>
                         <select name="sub_type" id="sub_type" class="form-select @error('sub_type') is-invalid @enderror" required>
                             <option value="">Select Sub Type</option>
+                            <?php print_r($request->sub_type); exit; ?>
                             @if(!empty($request->sub_type))
                                 <option value="{{ $request->sub_type }}" selected>{{ $request->sub_type }}</option>
                             @endif
@@ -57,7 +58,7 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="request_for" class="form-label">Request For <span class="text-danger">*</span></label>
                         <select name="request_for" id="request_for" class="form-select @error('request_for') is-invalid @enderror" required>
                             @if($isContractual)
