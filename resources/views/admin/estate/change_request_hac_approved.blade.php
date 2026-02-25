@@ -21,7 +21,7 @@
         </div>
         <div class="card-body p-4 p-lg-5">
             <p class="text-body-secondary small mb-4 lh-sm">
-                Change requests and new requests (forwarded from HAC) in one table. Use <strong class="text-success">Approve</strong> / <strong class="text-danger">Disapprove</strong> for change requests, or <strong class="text-primary">Allot</strong> for new requests to add to Possession Details.
+                Change requests and new requests in one table. Use <strong class="text-success">Approve</strong> / <strong class="text-danger">Disapprove</strong> for change requests, or <strong class="text-primary">Allot</strong> for new requests to add to Possession Details.
             </p>
 
             <div class="estate-hac-approved-table-wrapper table-responsive">
@@ -147,7 +147,7 @@
     </div>
 </div>
 
-{{-- Allot new request modal (forwarded from HAC → add to Possession Details) --}}
+{{-- Allot new request modal (add to Possession Details) --}}
 <div class="modal fade" id="allotNewRequestModal" tabindex="-1" aria-labelledby="allotNewRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content rounded-4 shadow-lg border-0">
@@ -569,7 +569,7 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             });
         }
 
-        // Allot new request (forwarded from HAC → Possession Details)
+        // Allot new request (to Possession Details)
         var allotModalEl = document.getElementById('allotNewRequestModal');
         var allotModal = allotModalEl ? new bootstrap.Modal(allotModalEl) : null;
         var allotForm = document.getElementById('formAllotNewRequest');

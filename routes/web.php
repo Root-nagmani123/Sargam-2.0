@@ -1004,11 +1004,9 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
         Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
 
-        // Put In HAC & HAC Forward workflow
+        // Put In HAC workflow
         Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
         Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
-        Route::get('hac-forward', [EstateController::class, 'hacForward'])->name('hac-forward');
-        Route::post('request-for-estate/forward/{id}', [EstateController::class, 'forwardToAllotment'])->name('request-for-estate.forward');
         Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
         Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
         Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
@@ -1025,7 +1023,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
-        // Change Requests (HAC Approved) + New requests (forwarded from HAC)
+        // Change Requests (HAC Approved) + New requests
         Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
         Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
         Route::get('change-request/vacant-houses', [EstateController::class, 'getChangeRequestVacantHouses'])->name('change-request.vacant-houses');

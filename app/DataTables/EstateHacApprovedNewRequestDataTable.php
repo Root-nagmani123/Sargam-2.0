@@ -72,7 +72,6 @@ class EstateHacApprovedNewRequestDataTable extends DataTable
                 'estate_home_request_details.remarks',
             ])
             ->where('estate_home_request_details.hac_status', 1)
-            ->where('estate_home_request_details.f_status', 1)
             ->where('estate_home_request_details.change_status', 0)
             ->when(!empty($hasPossessionPks), function ($q) use ($hasPossessionPks) {
                 $q->whereNotIn('estate_home_request_details.pk', $hasPossessionPks);
