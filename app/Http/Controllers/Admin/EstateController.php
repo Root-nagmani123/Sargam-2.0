@@ -294,64 +294,29 @@ class EstateController extends Controller
      */
     public function getRequestForEstateEmployees(Request $request)
     {
-        $empPkCol = $this->estateEmployeePkColumn();
         $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
         $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
-        $salaryGradeCol = \Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')
-            ? 'salary_grade_pk'
-            : 'salary_grade_master_pk';
-        $hasEligibilityUnitType = \Illuminate\Support\Facades\Schema::hasColumn('estate_eligibility_mapping', 'estate_unit_type_master_pk');
 
         $employeeIdSelect = $hasEmpId
             ? ($hasEmployeeId
-                ? "COALESCE(NULLIF(TRIM(em.emp_id), ''), NULLIF(TRIM(em.employee_id), ''), '')"
-                : "COALESCE(NULLIF(TRIM(em.emp_id), ''), '')")
-            : ($hasEmployeeId ? "COALESCE(NULLIF(TRIM(em.employee_id), ''), '')" : "''");
+                ? "COALESCE(NULLIF(TRIM(e.emp_id), ''), NULLIF(TRIM(e.employee_id), ''), '')"
+                : "COALESCE(NULLIF(TRIM(e.emp_id), ''), '')")
+            : ($hasEmployeeId ? "COALESCE(NULLIF(TRIM(e.employee_id), ''), '')" : "''");
 
-        $query = DB::table('estate_house_master as h')
-            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
-            ->join('estate_campus_master as a', 'h.estate_campus_master_pk', '=', 'a.pk')
-            ->join('estate_unit_type_master as c', 'h.estate_unit_master_pk', '=', 'c.pk')
-            ->join('estate_eligibility_mapping as e', function ($join) use ($hasEligibilityUnitType) {
-                if ($hasEligibilityUnitType) {
-                    $join->on('c.pk', '=', 'e.estate_unit_type_master_pk');
-                } else {
-                    $join->on('h.estate_unit_sub_type_master_pk', '=', 'e.estate_unit_sub_type_master_pk');
-                }
-            })
-            ->join('salary_grade_master as sg', 'e.salary_grade_master_pk', '=', 'sg.pk')
-            ->join('payroll_salary_master as ps', "sg.pk", '=', "ps.$salaryGradeCol")
-            ->join('employee_master as em', 'ps.employee_master_pk', '=', 'em.pk')
-            ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
+        $query = DB::table('employee_master as e')
+            ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
             ->select(
-                'em.pk',
-                DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
+                'e.pk',
+                DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as emp_name"),
                 DB::raw($employeeIdSelect . ' as employee_id'),
                 DB::raw("COALESCE(d.designation_name, '') as emp_designation")
             )
-            ->where('em.status', 1)
-            ->where('em.payroll', 0)
-            ->distinct()
-            ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
-            ->orderBy('em.pk');
+            ->where('e.status', 1)
+            ->orderBy('e.first_name')
+            ->orderBy('e.middle_name')
+            ->orderBy('e.last_name');
 
         $rows = $query->get();
-
-        // Fallback: if no employees from estate-eligibility chain (e.g. no houses/payroll/eligibility setup), load from employee_master so dropdown shows names
-        if ($rows->isEmpty()) {
-            $rows = DB::table('employee_master as em')
-                ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
-                ->select(
-                    'em.' . $empPkCol . ' as pk',
-                    DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
-                    DB::raw($employeeIdSelect . ' as employee_id'),
-                    DB::raw("COALESCE(d.designation_name, '') as emp_designation")
-                )
-                ->where('em.status', 1)
-                ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
-                ->orderBy('em.' . $empPkCol)
-                ->get();
-        }
 
         $includePk = (int) $request->query('include_pk', 0);
         if ($includePk > 0) {
@@ -359,15 +324,15 @@ class EstateController extends Controller
             if ($currentReq) {
                 $currentEmployeePk = (int) ($currentReq->employee_pk ?? 0);
                 if ($currentEmployeePk > 0 && ! $rows->contains(fn ($r) => (int) $r->pk === $currentEmployeePk)) {
-                    $extra = DB::table('employee_master as em')
-                        ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
+                    $extra = DB::table('employee_master as e')
+                        ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
                         ->select(
-                            'em.pk',
-                            DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
+                            'e.pk',
+                            DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as emp_name"),
                             DB::raw($employeeIdSelect . ' as employee_id'),
                             DB::raw("COALESCE(d.designation_name, '') as emp_designation")
                         )
-                        ->where('em.pk', $currentEmployeePk)
+                        ->where('e.pk', $currentEmployeePk)
                         ->first();
                     if ($extra) {
                         $rows->prepend($extra);
@@ -397,7 +362,6 @@ class EstateController extends Controller
     public function getRequestForEstateEmployeeDetails($pk)
     {
         $pk = (int) $pk;
-        $empPkCol = $this->estateEmployeePkColumn();
         $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
         $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
         $salaryGradeCol = \Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')
@@ -420,7 +384,7 @@ class EstateController extends Controller
                 'e.doj',
                 'e.payroll_date'
             )
-            ->where('e.' . $empPkCol, $pk)
+            ->where('e.pk', $pk)
             ->first();
 
         if ($employee) {
@@ -443,21 +407,15 @@ class EstateController extends Controller
                 : null;
 
             $doj = !empty($employee->doj) ? \Carbon\Carbon::parse($employee->doj)->format('Y-m-d') : '';
-            // DOJ (Pay Scale): prefer payroll_salary_master.modified_date, else employee_master.payroll_date, else employee_master.doj
-            $payScaleDoj = '';
-            if (!empty($salary?->modified_date)) {
-                $payScaleDoj = \Carbon\Carbon::parse($salary->modified_date)->format('Y-m-d');
-            } elseif (!empty($employee->payroll_date)) {
-                $payScaleDoj = \Carbon\Carbon::parse($employee->payroll_date)->format('Y-m-d');
-            } elseif (!empty($employee->doj)) {
-                $payScaleDoj = \Carbon\Carbon::parse($employee->doj)->format('Y-m-d');
-            }
+            $payScaleDoj = (!empty($salary?->modified_date))
+                ? \Carbon\Carbon::parse($salary->modified_date)->format('Y-m-d')
+                : '';
 
             return response()->json([
                 'emp_name' => (string) ($employee->emp_name ?? ''),
                 'employee_id' => (string) ($employee->employee_id ?? ''),
                 'emp_designation' => (string) ($employee->emp_designation ?? ''),
-                'pay_scale' => (string) ($salary?->salary_grade ?? ''),
+                'pay_scale' => (string) ($salary->salary_grade ?? ''),
                 'doj_pay_scale' => $payScaleDoj,
                 'doj_academic' => $doj,
                 'doj_service' => $doj,
@@ -551,118 +509,6 @@ class EstateController extends Controller
             return response()->json(['success' => true, 'message' => 'Estate request deleted successfully.']);
         }
         return redirect()->route('admin.estate.request-for-estate')->with('success', 'Estate request deleted successfully.');
-    }
-
-    /**
-     * Request for House & Change Request Details — Single page with two sections.
-     * Section 1: Request for House (estate_home_request_details).
-     * Section 2: Change Request Details (estate_change_home_req_details) when present.
-     * Used from Request For Estate list and HAC Approved list.
-     */
-    public function requestAndChangeRequestDetails($id)
-    {
-        $id = (int) $id;
-        $homeReq = DB::table('estate_home_request_details as ehrd')
-            ->where('ehrd.pk', $id)
-            ->select(
-                'ehrd.pk',
-                'ehrd.req_id',
-                'ehrd.req_date',
-                'ehrd.emp_name',
-                'ehrd.employee_id',
-                'ehrd.emp_designation',
-                'ehrd.pay_scale',
-                'ehrd.doj_pay_scale',
-                'ehrd.doj_academic',
-                'ehrd.doj_service',
-                'ehrd.current_alot',
-                'ehrd.status',
-                'ehrd.app_status',
-                'ehrd.hac_status',
-                'ehrd.f_status',
-                'ehrd.change_status',
-                'ehrd.eligibility_type_pk',
-                'ehrd.remarks',
-                'ehrd.employee_pk'
-            )
-            ->first();
-
-        if (! $homeReq) {
-            return redirect()->route('admin.estate.request-for-estate')->with('error', 'Request not found.');
-        }
-
-        $eligibilityMap = [61 => 'Type-I', 62 => 'Type-II', 63 => 'Type-III', 64 => 'Type-IV', 65 => 'Type-V', 66 => 'Type-VI', 69 => 'Type-IX', 70 => 'Type-X', 71 => 'Type-XI', 73 => 'Type-XIII'];
-        $statusMap = [0 => 'Pending', 1 => 'Approved/Allotted', 2 => 'Rejected'];
-        $hacStatusMap = [0 => 'HAC not done', 1 => 'HAC approved'];
-        $changeStatusMap = [0 => 'No change request', 1 => 'Change request raised'];
-
-        $requestForHouse = (object) [
-            'pk' => (int) $homeReq->pk,
-            'req_id' => $homeReq->req_id ?? '—',
-            'req_date' => $homeReq->req_date ? \Carbon\Carbon::parse($homeReq->req_date)->format('d-m-Y') : '—',
-            'emp_name' => $homeReq->emp_name ?? '—',
-            'employee_id' => $homeReq->employee_id ?? '—',
-            'emp_designation' => $homeReq->emp_designation ?? '—',
-            'pay_scale' => $homeReq->pay_scale ?? '—',
-            'doj_pay_scale' => $homeReq->doj_pay_scale ? \Carbon\Carbon::parse($homeReq->doj_pay_scale)->format('d-m-Y') : '—',
-            'doj_academic' => $homeReq->doj_academic ? \Carbon\Carbon::parse($homeReq->doj_academic)->format('d-m-Y') : '—',
-            'doj_service' => $homeReq->doj_service ? \Carbon\Carbon::parse($homeReq->doj_service)->format('d-m-Y') : '—',
-            'current_alot' => $homeReq->current_alot ?? '—',
-            'status' => $statusMap[(int) ($homeReq->status ?? 0)] ?? '—',
-            'app_status' => $statusMap[(int) ($homeReq->app_status ?? 0)] ?? '—',
-            'hac_status' => $hacStatusMap[(int) ($homeReq->hac_status ?? 0)] ?? '—',
-            'f_status' => (int) ($homeReq->f_status ?? 0) === 1 ? 'Forwarded' : 'Not forwarded',
-            'change_status' => $changeStatusMap[(int) ($homeReq->change_status ?? 0)] ?? '—',
-            'eligibility_label' => $eligibilityMap[(int) ($homeReq->eligibility_type_pk ?? 0)] ?? ('Type-' . ($homeReq->eligibility_type_pk ?? '')),
-            'remarks' => $homeReq->remarks ?? '—',
-        ];
-
-        $changeRows = DB::table('estate_change_home_req_details as ec')
-            ->leftJoin('estate_campus_master as cm', 'cm.pk', '=', 'ec.estate_campus_master_pk')
-            ->leftJoin('estate_block_master as bm', 'bm.pk', '=', 'ec.estate_block_master_pk')
-            ->leftJoin('estate_unit_type_master as ut', 'ut.pk', '=', 'ec.estate_unit_type_master_pk')
-            ->leftJoin('estate_unit_sub_type_master as ust', 'ust.pk', '=', 'ec.estate_unit_sub_type_master_pk')
-            ->where('ec.estate_home_req_details_pk', $id)
-            ->orderByDesc('ec.change_req_date')
-            ->select(
-                'ec.pk',
-                'ec.estate_change_req_ID',
-                'ec.change_house_no',
-                'ec.change_req_date',
-                'ec.remarks',
-                'ec.f_status',
-                'ec.change_ap_dis_status',
-                'cm.campus_name',
-                'bm.block_name',
-                'ut.unit_type',
-                'ust.unit_sub_type'
-            )
-            ->get();
-
-        $changeApDisMap = [0 => 'Pending', 1 => 'Approved', 2 => 'Disapproved'];
-        $changeRequestDetails = $changeRows->map(function ($row) use ($changeApDisMap) {
-            $changeApDis = (int) ($row->change_ap_dis_status ?? 0);
-            return (object) [
-                'pk' => (int) $row->pk,
-                'estate_change_req_ID' => $row->estate_change_req_ID ?? ('Chg-' . $row->pk),
-                'change_house_no' => $row->change_house_no ?? '—',
-                'change_req_date' => $row->change_req_date ? \Carbon\Carbon::parse($row->change_req_date)->format('d-m-Y H:i') : '—',
-                'remarks' => $row->remarks ?? '—',
-                'f_status_label' => (int) ($row->f_status ?? 0) === 1 ? 'Pending approval' : 'Decision made',
-                'change_ap_dis_status' => $changeApDis,
-                'change_ap_dis_status_label' => $changeApDisMap[$changeApDis] ?? '—',
-                'campus_name' => $row->campus_name ?? '—',
-                'block_name' => $row->block_name ?? '—',
-                'unit_type' => $row->unit_type ?? '—',
-                'unit_sub_type' => $row->unit_sub_type ?? '—',
-                'edit_url' => route('admin.estate.change-request-details', ['id' => $row->pk]),
-            ];
-        });
-
-        return view('admin.estate.request_and_change_request_details', [
-            'requestForHouse' => $requestForHouse,
-            'changeRequestDetails' => $changeRequestDetails,
-        ]);
     }
 
     /**
@@ -1219,16 +1065,15 @@ class EstateController extends Controller
     private function getEligibleHousePksByEmployeePk(int $employeePk): \Illuminate\Support\Collection
     {
         $housePks = collect();
-        $empPkCol = $this->estateEmployeePkColumn();
 
         // Source 1 (requested): salary grades using payroll_salary_master.salary_grade_pk
         if (\Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')) {
             $gradeSql = "
                 SELECT DISTINCT c.pk
                 FROM employee_master a
-                INNER JOIN payroll_salary_master b ON a.{$empPkCol} = b.employee_master_pk
+                INNER JOIN payroll_salary_master b ON a.pk = b.employee_master_pk
                 INNER JOIN salary_grade_master c ON b.salary_grade_pk = c.pk
-                WHERE a.{$empPkCol} = ?
+                WHERE a.pk = ?
             ";
 
             $gradeRows = DB::select($gradeSql, [$employeePk]);
@@ -2726,7 +2571,6 @@ class EstateController extends Controller
     {
         $type = $request->get('employee_type', 'Other Employee');
         if ($type === 'LBSNAA') {
-            $empPkCol = $this->estateEmployeePkColumn();
             $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
             $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
 
@@ -2736,35 +2580,28 @@ class EstateController extends Controller
 
             $nameSelect = "COALESCE(NULLIF(TRIM(ehrd.emp_name), ''), NULLIF(TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.last_name, ''))), ''), NULLIF(TRIM(ehrd.employee_id), ''), CONCAT('Request #', ehrd.pk))";
 
-            $list = DB::table('estate_possession_details as epd')
-                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            $list = DB::table('estate_home_request_details as ehrd')
+                ->leftJoin('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->leftJoin('employee_master as em', function ($join) use ($empIdJoinColumn) {
                     $join->on('em.pk', '=', 'ehrd.employee_pk');
                     if ($empIdJoinColumn) {
                         $join->orOn(DB::raw($empIdJoinColumn), '=', 'ehrd.employee_id');
                     }
                 })
-                ->where('epd.return_home_status', 0)
-                ->whereNotNull('epd.estate_house_master_pk')
-                ->where('epd.estate_change_id', -1)
                 ->select('ehrd.pk as id', DB::raw($nameSelect . ' as name'), 'ehrd.req_id as request_no')
                 ->distinct()
                 ->orderByRaw($nameSelect . ' asc')
                 ->get();
         } else {
-            $otherNameSelect = "COALESCE(NULLIF(TRIM(eor.emp_name), ''), NULLIF(TRIM(eor.request_no_oth), ''), CONCAT('Request #', eor.pk))";
+            $otherNameSelect = "COALESCE(NULLIF(TRIM(emp_name), ''), NULLIF(TRIM(request_no_oth), ''), CONCAT('Request #', pk))";
 
-            $list = DB::table('estate_other_req as eor')
-                ->join('estate_possession_other as epo', 'epo.estate_other_req_pk', '=', 'eor.pk')
-                ->where('epo.return_home_status', 0)
-                ->whereNotNull('epo.estate_house_master_pk')
+            $list = DB::table('estate_other_req')
                 ->select(
-                    'eor.pk as id',
+                    'pk as id',
                     DB::raw($otherNameSelect . ' as name'),
-                    'eor.request_no_oth as request_no',
-                    'eor.section'
+                    'request_no_oth as request_no',
+                    'section'
                 )
-                ->distinct()
                 ->orderByRaw($otherNameSelect . ' asc')
                 ->get();
         }
@@ -2784,7 +2621,7 @@ class EstateController extends Controller
         }
         if ($type === 'LBSNAA') {
             $row = DB::table('estate_home_request_details as ehrd')
-                ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->leftJoin('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
                 ->leftJoin('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
                 ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
@@ -2792,9 +2629,6 @@ class EstateController extends Controller
                 ->leftJoin('estate_unit_master as eum', 'ehm.estate_unit_master_pk', '=', 'eum.pk')
                 ->leftJoin('estate_unit_type_master as eut', 'eum.estate_unit_type_master_pk', '=', 'eut.pk')
                 ->where('ehrd.pk', $id)
-                ->where('epd.return_home_status', 0)
-                ->whereNotNull('epd.estate_house_master_pk')
-                ->where('epd.estate_change_id', -1)
                 ->select(
                     'ec.pk as estate_campus_master_pk',
                     'ec.campus_name',

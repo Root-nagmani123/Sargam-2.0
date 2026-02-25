@@ -113,7 +113,6 @@
                                     <option value="{{ (string) $pk }}">{{ $name }}</option>
                                 @endforeach
                             </select>
-                            <input type="hidden" id="modal_eligibility_type_pk_hidden" name="eligibility_type_pk" value="">
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -324,7 +323,7 @@
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
-            loadRequestEstateEmployees(rowPk, employeePk);
+            loadRequestEstateEmployees(rowPk, rowPk);
             if (addEditModal) addEditModal.show();
         });
 

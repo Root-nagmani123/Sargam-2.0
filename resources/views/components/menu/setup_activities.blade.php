@@ -152,8 +152,8 @@
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3 {{ $estateManagementOpen ? 'show' : '' }}" id="estateManagementCollapse">
-                                {{-- Main flow: Request → Put in HAC → HAC Forward → HAC Approved → Possession Details --}}
+                            <ul class="collapse list-unstyled ps-3" id="estateManagementCollapse">
+                                {{-- Main flow: Request → Put in HAC → HAC Approved → Possession Details --}}
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-estate') }}">
