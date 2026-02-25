@@ -2,344 +2,13 @@
 
 @section('title', 'Complaint Category - Sargam | Lal Bahadur')
 
-@section('css')
-<style>
-.modal-body {
-    background-color: #fff !important;
-    color: #212529 !important;
-}
-.modal-content {
-    background-color: #fff !important;
-}
-
-/* Enhanced Card Design */
-.issue-category-card {
-    border-radius: 0.75rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 74, 147, 0.1);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-}
-
-.issue-category-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
-}
-
-.issue-category-card .card-header-modern {
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    border-bottom: 2px solid rgba(0, 74, 147, 0.1);
-    padding: 1.5rem;
-}
-
-.issue-category-card .card-header-modern::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, #004a93 0%, #0066cc 100%);
-}
-
-/* Enhanced Table */
-.issue-category-table {
-    margin-bottom: 0;
-}
-
-.issue-category-table thead th {
-    background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
-    font-weight: 600;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-}
-
-.issue-category-table tbody tr {
-    transition: all 0.2s ease;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.issue-category-table tbody tr:hover {
-    background-color: rgba(0, 74, 147, 0.03);
-    transform: scale(1.001);
-}
-
-.issue-category-table tbody td {
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-    color: #212529;
-}
-
-/* Enhanced Badges */
-.badge-modern {
-    padding: 0.5em 0.75em;
-    font-weight: 600;
-    font-size: 0.75rem;
-    border-radius: 0.5rem;
-    letter-spacing: 0.02em;
-}
-
-/* Enhanced Buttons */
-.btn-action-group {
-    display: inline-flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.btn-modern {
-    border-radius: 0.5rem;
-    font-weight: 500;
-    padding: 0.5rem 1rem;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-modern:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.btn-modern:active {
-    transform: translateY(0);
-}
-
-/* Status Toggle Enhancement */
-.form-check-input.status-toggle {
-    width: 3rem;
-    height: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.form-check-input.status-toggle:checked {
-    background-color: #198754;
-    border-color: #198754;
-}
-
-.form-check-input.status-toggle:focus {
-    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
-}
-
-/* Empty State */
-.empty-state {
-    padding: 3rem 1rem;
-    text-align: center;
-    color: #6c757d;
-}
-
-.empty-state-icon {
-    font-size: 4rem;
-    opacity: 0.3;
-    margin-bottom: 1rem;
-}
-
-/* Enhanced Modal - Matching Design */
-.modal-content {
-    border-radius: 0.5rem;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
-    border-radius: 0.5rem 0.5rem 0 0;
-    padding: 1.5rem 1.5rem 0.5rem 1.5rem;
-    border-bottom: none;
-}
-
-.modal-header .modal-title {
-    font-size: 1.25rem;
-    color: #212529;
-}
-
-.modal-header .text-muted {
-    font-size: 0.875rem;
-    font-weight: 400;
-}
-
-.modal-body {
-    padding: 1rem 1.5rem;
-}
-
-.modal-footer {
-    border-top: none;
-    padding: 0.5rem 1.5rem 1.5rem 1.5rem;
-}
-
-/* Form Input Styling */
-#addCategoryModal .form-control {
-    border-radius: 0.375rem;
-    border: 1px solid #ced4da;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.9375rem;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-#addCategoryModal .form-control:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
-    outline: 0;
-}
-
-#addCategoryModal .form-label {
-    font-size: 0.9375rem;
-    color: #212529;
-    margin-bottom: 0.5rem;
-}
-
-#addCategoryModal .form-text {
-    font-size: 0.8125rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-#addCategoryModal .form-text iconify-icon {
-    color: #6c757d;
-}
-
-/* Required Fields Disclaimer */
-#addCategoryModal .text-muted.small {
-    font-size: 0.8125rem;
-    line-height: 1.5;
-}
-
-/* Button Styling */
-#addCategoryModal .btn-primary {
-    background-color: #004a93;
-    border-color: #004a93;
-    border-radius: 0.375rem;
-    padding: 0.5rem 1.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-#addCategoryModal .btn-primary:hover {
-    background-color: #003d7a;
-    border-color: #003d7a;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
-}
-
-#addCategoryModal .btn-outline-primary {
-    border-color: #004a93;
-    color: #004a93;
-    border-radius: 0.375rem;
-    padding: 0.5rem 1.5rem;
-    font-weight: 500;
-    background-color: transparent;
-    transition: all 0.2s ease;
-}
-
-#addCategoryModal .btn-outline-primary:hover {
-    background-color: #004a93;
-    border-color: #004a93;
-    color: #fff;
-    transform: translateY(-1px);
-}
-
-/* Sub-Category Buttons */
-#addCategoryModal .add-field-btn,
-#addCategoryModal .remove-field-btn {
-    border: 1.5px solid #004a93;
-    color: #004a93;
-    background-color: transparent;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-#addCategoryModal .add-field-btn:hover {
-    background-color: #004a93;
-    color: #fff;
-    border-color: #004a93;
-    transform: scale(1.1);
-}
-
-#addCategoryModal .remove-field-btn {
-    border-color: #dc3545;
-    color: #dc3545;
-}
-
-#addCategoryModal .remove-field-btn:hover {
-    background-color: #dc3545;
-    color: #fff;
-    border-color: #dc3545;
-    transform: scale(1.1);
-}
-
-#addCategoryModal .add-field-btn:active,
-#addCategoryModal .remove-field-btn:active {
-    transform: scale(0.95);
-}
-
-#addCategoryModal .add-field-btn iconify-icon,
-#addCategoryModal .remove-field-btn iconify-icon {
-    color: inherit;
-}
-
-/* Category Field Groups */
-#addCategoryModal .category-field-group {
-    transition: all 0.3s ease;
-}
-
-#addCategoryModal .category-field-group hr {
-    border-color: #e0e0e0;
-    opacity: 0.5;
-}
-
-/* Form Controls Enhancement */
-.form-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
-}
-
-/* Pagination Enhancement */
-.pagination {
-    margin-top: 1.5rem;
-}
-
-.page-link {
-    border-radius: 0.5rem;
-    margin: 0 0.25rem;
-    border: 1px solid #dee2e6;
-    color: #004a93;
-    transition: all 0.2s ease;
-}
-
-.page-link:hover {
-    background-color: rgba(0, 74, 147, 0.1);
-    border-color: #004a93;
-    transform: translateY(-1px);
-}
-
-.page-item.active .page-link {
-    background-color: #004a93;
-    border-color: #004a93;
-}
-</style>
-@endsection
-
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Complaint Category" />
     <div class="datatables">
         <div class="card issue-category-card">
-            <div class="card-header-modern position-relative">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                     <div>
                         <h4 class="mb-0 fw-bold d-flex align-items-center gap-2">
                             <iconify-icon icon="solar:folder-bold-duotone" style="font-size: 1.5rem; color: #004a93;"></iconify-icon>
@@ -352,8 +21,7 @@
                         <span>Add Category</span>
                     </button>
                 </div>
-            </div>
-            <div class="card-body p-4">
+                <hr class="my-4">
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
                         <iconify-icon icon="solar:check-circle-bold" style="font-size: 1.25rem;"></iconify-icon>
@@ -369,8 +37,8 @@
                     </div>
                 @endif
 
-                <div class="table-responsive rounded-3 border">
-                    <table class="table text-nowrap mb-0">
+                <div class="table-responsive">
+                    <table class="table issue-category-table text-nowrap mb-0" id="categoriesTable">
                         <thead>
                             <tr>
                                 <th class="text-nowrap">#</th>
@@ -429,12 +97,6 @@
                         </tbody>
                     </table>
                 </div>
-
-                @if($categories->hasPages())
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $categories->links() }}
-                </div>
-                @endif
             </div>
         </div>
     </div>
@@ -589,6 +251,41 @@
 
 @section('scripts')
 <script>
+(function() {
+    'use strict';
+    document.addEventListener('DOMContentLoaded', function() {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable) return;
+        var $table = $('#categoriesTable');
+        if (!$table.length) return;
+        var hasDataRows = $table.find('tbody tr').filter(function() { return $(this).find('td[colspan]').length === 0; }).length > 0;
+        if (!hasDataRows) return;
+        if ($.fn.DataTable.isDataTable($table)) return;
+        $table.DataTable({
+            order: [[1, 'asc']],
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            columnDefs: [
+                { orderable: false, targets: [0, 4, 5] }
+            ],
+            language: {
+                search: 'Search categories:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
+                infoEmpty: 'No categories',
+                infoFiltered: '(filtered from _MAX_ total)',
+                zeroRecords: 'No matching categories found',
+                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            },
+            drawCallback: function() {
+                if (typeof window.adjustAllDataTables === 'function') {
+                    try { window.adjustAllDataTables(); } catch (e) {}
+                }
+            }
+        });
+    });
+})();
+
 function editCategory(id, name, description, status) {
     document.getElementById('edit_issue_category').value = name;
     document.getElementById('edit_description').value = description || '';

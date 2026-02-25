@@ -32,6 +32,8 @@
     <div class="datatables">
         <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3 overflow-hidden">
             <div class="card-body p-4 p-md-5">
+                <h4 class="mb-4">Log New Issue</h4>
+                <hr>
                 <form action="{{ route('admin.issue-management.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
 

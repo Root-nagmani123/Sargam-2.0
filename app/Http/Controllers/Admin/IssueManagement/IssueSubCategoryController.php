@@ -23,7 +23,7 @@ class IssueSubCategoryController extends Controller
         if ($request->filled('category_id')) {
             $query->where('issue_category_master_pk', $request->category_id);
         }
-        $subCategories = $query->orderBy('pk','desc')->paginate(20)->withQueryString();
+        $subCategories = $query->orderBy('pk','desc')->get();
         $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
 
         return view('admin.issue_management.sub_categories.index', compact('subCategories', 'categories'));
