@@ -6,7 +6,7 @@
 <style>
     .student-info-table th { color: #1a1a1a !important; font-weight: 600; }
     .card table th { color: #1a1a1a !important; font-weight: 600; }
-    .student-hero { background: linear-gradient(135deg, #004a93 0%, #003366 100%); }
+    .student-hero { background: #004a93; }
     .metric-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .metric-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1); }
     .memo-card { border-left: 4px solid #fd7e14; }
@@ -45,7 +45,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-success fw-bold">{{ $attendanceSummary->present_count ?? 0 }}</h4>
-                    <small class="text-body-secondary">PRESENT</small>
+                    <small class="text-body-primary">PRESENT</small>
                 </div>
             </div>
         </div>
@@ -53,7 +53,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-warning fw-bold">{{ $attendanceSummary->late_count ?? 0 }}</h4>
-                    <small class="text-body-secondary">LATE</small>
+                    <small class="text-body-primary">LATE</small>
                 </div>
             </div>
         </div>
@@ -61,7 +61,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-danger fw-bold">{{ $attendanceSummary->absent_count ?? 0 }}</h4>
-                    <small class="text-body-secondary">ABSENT</small>
+                    <small class="text-body-primary">ABSENT</small>
                 </div>
             </div>
         </div>
@@ -70,7 +70,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('medicalExceptionsSection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-info fw-bold">{{ $medicalExemptions->count() }}</h4>
-                    <small class="text-body-secondary">MEDICAL</small>
+                    <small class="text-body-primary">MEDICAL</small>
                 </div>
             </div>
         </div>
@@ -78,7 +78,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('dutiesSection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-primary fw-bold">{{ $duties->count() }}</h4>
-                    <small class="text-body-secondary">DUTIES</small>
+                    <small class="text-body-primary">DUTIES</small>
                 </div>
             </div>
         </div>
@@ -86,7 +86,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('noticesSection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-info fw-bold">{{ $notices->count() }}</h4>
-                    <small class="text-body-secondary">NOTICES</small>
+                    <small class="text-body-primary">NOTICES</small>
                 </div>
             </div>
         </div>
@@ -94,7 +94,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('memosSection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-secondary fw-bold">{{ $memos->count() }}</h4>
-                    <small class="text-body-secondary">MEMOS</small>
+                    <small class="text-body-primary">MEMOS</small>
                 </div>
             </div>
         </div>
@@ -103,7 +103,7 @@
             <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
                 <div class="card-body py-3">
                     <h4 class="mb-0 text-body-tertiary fw-bold">{{ $attendanceSummary->not_marked_count ?? 0 }}</h4>
-                    <small class="text-body-secondary">NOT MARKED</small>
+                    <small class="text-body-primary">NOT MARKED</small>
                 </div>
             </div>
         </div>
@@ -385,37 +385,37 @@
                         <div class="col-6 col-md-4 col-lg-2">
                             <div class="text-center p-3 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25">
                                 <h4 class="text-success mb-0 fw-bold">{{ $attendanceSummary->present_count ?? 0 }}</h4>
-                                <small class="text-body-secondary">Present</small>
+                                <small class="text-body-primary">Present</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-4 col-lg-2">
                             <div class="text-center p-3 bg-warning bg-opacity-10 rounded-3 border border-warning border-opacity-25">
                                 <h4 class="text-warning mb-0 fw-bold">{{ $attendanceSummary->late_count ?? 0 }}</h4>
-                                <small class="text-body-secondary">Late</small>
+                                <small class="text-body-primary">Late</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-4 col-lg-2">
                             <div class="text-center p-3 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25">
                                 <h4 class="text-danger mb-0 fw-bold">{{ $attendanceSummary->absent_count ?? 0 }}</h4>
-                                <small class="text-body-secondary">Absent</small>
+                                <small class="text-body-primary">Absent</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-4 col-lg-2">
                             <div class="text-center p-3 bg-secondary bg-opacity-10 rounded-3 border border-secondary border-opacity-25">
                                 <h4 class="text-secondary mb-0 fw-bold">{{ $attendanceSummary->not_marked_count ?? 0 }}</h4>
-                                <small class="text-body-secondary">Not Marked</small>
+                                <small class="text-body-primary">Not Marked</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-4 col-lg-2">
                             <div class="text-center p-3 bg-info bg-opacity-10 rounded-3 border border-info border-opacity-25">
                                 <h4 class="text-info mb-0 fw-bold">{{ $attendanceSummary->total_sessions ?? 0 }}</h4>
-                                <small class="text-body-secondary">Marked Sessions</small>
+                                <small class="text-body-primary">Marked Sessions</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-4 col-lg-2">
                             <div class="text-center p-3 bg-primary bg-opacity-10 rounded-3 border border-primary border-opacity-25">
                                 <h4 class="text-primary mb-0 fw-bold">{{ $attendanceSummary->total_expected_sessions ?? 0 }}</h4>
-                                <small class="text-body-secondary">Total Sessions</small>
+                                <small class="text-body-primary">Total Sessions</small>
                             </div>
                         </div>
                     </div>
@@ -426,31 +426,31 @@
 
         <!-- Right Sidebar: Student Profile & Actions -->
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-3 mb-4 sticky-top" style="top: 1rem;">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
                     <h5 class="mb-0 fw-semibold"><i class="fas fa-user me-2 text-primary"></i>Student Profile</h5>
                 </div>
                 <div class="card-body px-4 pb-4">
                     <div class="d-flex flex-column gap-3">
                         <div>
-                            <small class="text-body-secondary text-uppercase small">Full Name</small>
+                            <small class="text-body-primary text-uppercase small">Full Name</small>
                             <p class="mb-0 fw-medium">{{ $student->display_name ?? ($student->first_name ?? '') . ' ' . ($student->last_name ?? '') }}</p>
                         </div>
                         <div>
-                            <small class="text-body-secondary text-uppercase small">Email Address</small>
+                            <small class="text-body-primary text-uppercase small">Email Address</small>
                             <p class="mb-0 fw-medium">{{ $student->email ?? 'N/A' }}</p>
                         </div>
                         <div>
-                            <small class="text-body-secondary text-uppercase small">OT Code</small>
+                            <small class="text-body-primary text-uppercase small">OT Code</small>
                             <p class="mb-0 fw-medium">{{ $student->generated_OT_code ?? 'N/A' }}</p>
                         </div>
                         <div>
-                            <small class="text-body-secondary text-uppercase small">Service</small>
+                            <small class="text-body-primary text-uppercase small">Service</small>
                             <p class="mb-0 fw-medium">{{ $student->service->service_name ?? 'N/A' }}</p>
                         </div>
                         @if(isset($student->cadre) && $student->cadre)
                         <div>
-                            <small class="text-body-secondary text-uppercase small">Cadre</small>
+                            <small class="text-body-primary text-uppercase small">Cadre</small>
                             <p class="mb-0 fw-medium">{{ $student->cadre->cadre_name ?? 'N/A' }}</p>
                         </div>
                         @endif
