@@ -507,6 +507,74 @@ class EstateController extends Controller
     }
 
     /**
+     * Change Request Details - Form to add/edit change details (Bootstrap 5 layout).
+     */
+    public function changeRequestDetails($id = null)
+    {
+        $detail = null;
+        if ($id) {
+            $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails.employee.designation', 'estateHomeRequestDetails.payScale')->find($id);
+            if ($record && $record->estateHomeRequestDetails) {
+                $hr = $record->estateHomeRequestDetails;
+                $emp = $hr->employee ?? null;
+                $detail = (object) [
+                    'request_id' => $record->estate_change_req_ID ?? 'Chg-Req-' . $id,
+                    'request_date' => $record->change_req_date ? \Carbon\Carbon::parse($record->change_req_date)->format('d-m-Y') : null,
+                    'name' => $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : '—',
+                    'emp_id' => $emp ? ($emp->employee_id ?? '—') : '—',
+                    'designation' => $emp && $emp->designation ? $emp->designation->designation_name : '—',
+                    'pay_scale' => $hr->payScale ? ($hr->payScale->pay_scale ?? '—') : '—',
+                    'doj_pay_scale' => $emp && $emp->date_of_joining ? \Carbon\Carbon::parse($emp->date_of_joining)->format('d-m-Y') : '—',
+                    'doj_academy' => $emp && $emp->date_of_joining ? \Carbon\Carbon::parse($emp->date_of_joining)->format('d-m-Y') : '—',
+                    'doj_service' => $emp && $emp->date_of_joining ? \Carbon\Carbon::parse($emp->date_of_joining)->format('d-m-Y') : '—',
+                    'current_allotment' => $record->change_house_no ?? '—',
+                ];
+            }
+        }
+        return view('admin.estate.change_request_details', ['detail' => $detail]);
+    }
+
+    /**
+     * Return Change Request Details form HTML for modal (AJAX).
+     */
+    public function changeRequestDetailsModal($id)
+    {
+        $detail = null;
+        $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails.employee.designation', 'estateHomeRequestDetails.payScale')->find($id);
+        if ($record && $record->estateHomeRequestDetails) {
+            $hr = $record->estateHomeRequestDetails;
+            $emp = $hr->employee ?? null;
+            $detail = (object) [
+                'request_id' => $record->estate_change_req_ID ?? 'Chg-Req-' . $id,
+                'request_date' => $record->change_req_date ? \Carbon\Carbon::parse($record->change_req_date)->format('d-m-Y') : null,
+                'name' => $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : '—',
+                'emp_id' => $emp ? ($emp->employee_id ?? '—') : '—',
+                'designation' => $emp && $emp->designation ? $emp->designation->designation_name : '—',
+                'pay_scale' => $hr->payScale ? ($hr->payScale->pay_scale ?? '—') : '—',
+                'doj_pay_scale' => $emp && $emp->date_of_joining ? \Carbon\Carbon::parse($emp->date_of_joining)->format('d-m-Y') : '—',
+                'doj_academy' => $emp && $emp->date_of_joining ? \Carbon\Carbon::parse($emp->date_of_joining)->format('d-m-Y') : '—',
+                'doj_service' => $emp && $emp->date_of_joining ? \Carbon\Carbon::parse($emp->date_of_joining)->format('d-m-Y') : '—',
+                'current_allotment' => $record->change_house_no ?? '—',
+            ];
+        }
+        $formAction = route('admin.estate.change-request-details', ['id' => $id]);
+        return view('admin.estate._change_request_details_form', [
+            'detail' => $detail,
+            'inModal' => true,
+            'formAction' => $formAction,
+        ]);
+    }
+
+    /**
+     * Request For House - List of house requests (Bootstrap 5 layout).
+     */
+    public function requestForHouse()
+    {
+        $requests = [];
+        return view('admin.estate.request_for_house', ['requests' => $requests]);
+    }
+
+    /**
      * Get change request approve details - employee full details, paygrade/eligibility type, available vacant residences.
      */
     public function getChangeRequestApproveDetails($id)
