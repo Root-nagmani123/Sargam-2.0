@@ -187,6 +187,18 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">HAC Approved</span>
                                     </a>
                                 </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-house') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.request-for-house') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Request For House</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-details') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.change-request-details') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Change Request Details</span>
+                                    </a>
+                                </li>
                                 {{-- Possession Details (LBSNAA) and Estate Possession for Other (Others) - two different pages --}}
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-details') ? 'active' : '' }}"
