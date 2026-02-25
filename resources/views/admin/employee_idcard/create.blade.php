@@ -70,6 +70,9 @@
                             <select name="request_for" id="request_for_perm" class="form-select idcard-perm-field idcard-step-field" data-field="request_for" required>
                                 <option value="">Select Request</option>
                                 <option value="Own ID Card" {{ $oldRequestFor == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
+                                <option value="Replacement" {{ $oldRequestFor == 'Replacement' ? 'selected' : '' }}>Replacement</option>
+                                <option value="Duplication" {{ $oldRequestFor == 'Duplication' ? 'selected' : '' }}>Duplication</option>
+                                <option value="Extension" {{ $oldRequestFor == 'Extension' ? 'selected' : '' }}>Extension</option>
                             </select>
                             @error('request_for')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
@@ -467,11 +470,13 @@
 <script>
 (function() {
     'use strict';
+    function initIdcardForm() {
     var form = document.getElementById('idcardForm');
     var permanentView = document.getElementById('permanent-view');
     var contractualView = document.getElementById('contractual-view');
     var permRad = document.getElementById('permanent');
     var contRad = document.getElementById('contractual');
+    if (!form || !permanentView || !contractualView || !permRad || !contRad) return;
 
     function showPermanent() {
         permanentView.style.display = 'block';
@@ -923,6 +928,12 @@
             this.classList.remove('idcard-upload-zone-active');
         });
     });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initIdcardForm);
+    } else {
+        initIdcardForm();
+    }
 })();
 
 (function() {

@@ -120,24 +120,24 @@
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
-                        <table class="table table-hover table-striped table-borderless mb-0 align-middle idcard-index-table">
-                            <thead class="table-light text-body-secondary border-bottom border-2">
+                        <table class="table text-nowrap align-middle idcard-index-table">
+                            <thead>
                                 <tr>
-                                    <th class="text-nowrap py-3 ps-4">S.No.</th>
-                                    <th class="py-3">ID Card</th>
-                                    <th class="py-3">Request date</th>
-                                    <th class="py-3">Employee Name</th>
-                                    <th class="py-3">Designation</th>
-                                    <th class="py-3">Card Type</th>
-                                    <th class="py-3">Request For</th>
-                                    <th class="py-3">Duplication</th>
-                                    <th class="py-3">Extension</th>
-                                    <th class="py-3">Valid Upto</th>
-                                    <th class="py-3">Status</th>
-                                    <th class="text-end py-3 pe-4">Actions</th>
+                                    <th>S.No.</th>
+                                    <th>ID Card</th>
+                                    <th>Request date</th>
+                                    <th>Employee Name</th>
+                                    <th>Designation</th>
+                                    <th>Card Type</th>
+                                    <th>Request For</th>
+                                    <th>Duplication</th>
+                                    <th>Extension</th>
+                                    <th>Valid Upto</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="table-group-divider">
+                            <tbody>
                                 @forelse($activeRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
                                         <td class="fw-medium ps-4">{{ $activeRequests->firstItem() + $index }}</td>
@@ -151,8 +151,8 @@
                                             @endif
                                         </td>
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td class="fw-medium text-body-emphasis">{{ $request->name }}</td>
-                                        <td class="text-body-secondary">{{ $request->designation ?? '--' }}</td>
+                                        <td>{{ $request->name }}</td>
+                                        <td>{{ $request->designation ?? '--' }}</td>
                                         <td>{{ $request->card_type ?? '--' }}</td>
                                         <td>{{ $request->request_for ?? '--' }}</td>
                                         <td>
@@ -190,21 +190,21 @@
                                         <td class="text-end pe-4">
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
-                                                   class="btn btn-outline-primary rounded-start-2 view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
+                                                   class="text-primary rounded-start-2 view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                    <i class="material-icons material-symbols-rounded">visibility</i>
                                                 </a>
                                                 <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
-                                                   class="btn btn-outline-secondary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+                                                   class="text-primary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
+                                                    <i class="material-icons material-symbols-rounded">edit</i>
                                                 </a>
                                                 <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" 
                                                       method="POST" class="d-inline" 
                                                       onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    </button>
+                                                    <a href="javascript:void(0)" class="text-primary rounded-end-2 px-2 py-1" title="Archive">
+                                                        <i class="material-icons material-symbols-rounded">delete</i>
+                                                    </a>
                                                 </form>
                                             </div>
                                         </td>
