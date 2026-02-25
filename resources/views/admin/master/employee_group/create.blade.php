@@ -16,24 +16,24 @@
             <hr>
             <form action="{{ route('master.employee.group.store') }}" method="POST" id="employeeGroupForm">
                 @csrf
-                @if(!empty($employeeGroupMaster)) 
+                @if(!empty($employeeGroupMaster))
                     <input type="hidden" name="pk" value="{{ encrypt($employeeGroupMaster->pk) }}">
                 @endif
                 <div class="row">
-                    
+
                     <div class="col-md-4">
                         <div class="mb-3">
                             <x-input
                                 name="group_name"
-                                label="Group Name :" 
-                                placeholder="Name" 
+                                label="Group Name :"
+                                placeholder="Name"
                                 formLabelClass="form-label"
                                 required="true"
-                                value="{{ old('group_name', $employeeGroupMaster->group_name ?? '') }}"
+                                value="{{ old('group_name', $employeeGroupMaster->emp_group_name  ?? '') }}"
                                 />
                         </div>
                     </div>
-                    
+
                 </div>
                 <hr>
                 <div class="mb-3">

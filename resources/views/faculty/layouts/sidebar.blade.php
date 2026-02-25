@@ -12,7 +12,7 @@
         <div class="tab-pane fade" id="tab-academics" role="tabpanel" aria-labelledby="academics-tab">
             @include('admin.layouts.sidebar.academics')
         </div>
-        <div class="tab-pane fade" id="tab-material-management" role="tabpanel" aria-labelledby="material-management-tab">
+        <div class="tab-pane fade" id="tab-purchase-order" role="tabpanel" aria-labelledby="purchase-order-tab">
             @include('admin.layouts.sidebar.material')
         </div>
     </div>

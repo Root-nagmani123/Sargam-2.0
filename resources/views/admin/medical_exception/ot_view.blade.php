@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Medical Exception OT View - Sargam | Lal Bahadur')
+@section('title', ' OT View - Sargam | Lal Bahadur')
 
 @section('setup_content')
 
@@ -79,6 +79,101 @@
     font-size: .9rem;
     font-weight: 500;
     color: #212529;
+}
+
+/* =======================
+   RESPONSIVE - Tablet & Below
+   Desktop (992px+) unchanged
+======================= */
+@media (max-width: 991.98px) {
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    /* Stack header on tablet */
+    .d-flex.justify-content-between.align-items-center.mb-4 {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    /* Exemption grid: fewer columns on tablet */
+    .exemption-details {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .container-fluid .card .card-body {
+        padding: 1rem !important;
+    }
+    /* Student header: stack name and badge */
+    .student-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .exemption-count-badge {
+        font-size: 0.8125rem;
+        padding: 0.4rem 0.75rem;
+    }
+    .exemption-details {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .exemption-item {
+        padding: 0.875rem;
+    }
+    .detail-label {
+        font-size: 0.65rem;
+    }
+    .detail-value {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    .container-fluid .card .card-body {
+        padding: 0.75rem !important;
+    }
+    .card.info-card .card-body h4 {
+        font-size: 1.1rem;
+    }
+    .card.info-card .card-body small {
+        font-size: 0.8rem;
+    }
+    /* Print button: full width on very small screens */
+    .d-flex.justify-content-between.align-items-center.mb-4 .btn-outline-primary.btn-sm {
+        width: 100%;
+        justify-content: center;
+    }
+    .section-divider {
+        margin: 1rem 0;
+    }
+    .info-card.mb-4 {
+        margin-bottom: 1rem !important;
+    }
+    .exemption-item h6 {
+        font-size: 0.95rem;
+    }
+    /* Prevent text overflow on narrow screens */
+    .detail-value,
+    .student-header h6 {
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    .exemption-item h6.text-primary {
+        word-break: break-word;
+    }
 }
 
 /* =======================

@@ -9,6 +9,8 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
+use Illuminate\Support\Facades\Auth;
+use App\Models\UserCredential;
 use App\Models\EmployeeMaster;
 use App\Models\StudentCourseGroupMap;
 use App\Models\GroupTypeMasterCourseMasterMap;
@@ -21,6 +23,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+
 
 
 class StudentMedicalExemptionController extends Controller
@@ -36,13 +39,25 @@ class StudentMedicalExemptionController extends Controller
             /* ===============================
              | 1. Build Cache Key
              =============================== */
-            $cacheKey = 'student_medical_exemption_ids_' . md5(json_encode([
+            /* $cacheKey = 'student_medical_exemption_ids_' . md5(json_encode([
                 'custom_search' => $request->custom_search,
                 'course_id'     => $request->course_id,
                 'from_date'     => $request->from_date,
                 'to_date'       => $request->to_date,
                 'status'        => $request->get('status', 'active'),
-            ]));
+            ])); */
+
+
+            $cacheKey = 'student_medical_exemption_ids_' . md5(json_encode([
+                        'custom_search' => $request->custom_search,
+                        'course_id'     => $request->course_id,
+                        'from_date'     => $request->from_date,
+                        'to_date'       => $request->to_date,
+                        'status'        => $request->get('status', 'active'),
+                        'start'         => $request->start,
+                        'length'        => $request->length,
+                    ]));
+
 
             /* ===============================
              | 2. Cache ONLY IDs (SAFE)
@@ -123,7 +138,7 @@ class StudentMedicalExemptionController extends Controller
             /* ===============================
              | 3. Rebuild Query for DataTable
              =============================== */
-            $query = StudentMedicalExemption::with([
+           /* $query = StudentMedicalExemption::with([
                 'student',
                 'category',
                 'speciality',
@@ -131,7 +146,26 @@ class StudentMedicalExemptionController extends Controller
                 'employee'
            ])
            ->whereIn('pk', $ids)
-                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");
+                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");*/
+
+                $query = StudentMedicalExemption::with([
+                            'student',
+                            'category',
+                            'speciality',
+                            'course',
+                            'employee'
+                        ]);
+
+                        if (!empty($ids)) {
+                            $query->whereIn('pk', $ids)
+                                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");
+                        } else {
+                            // IMPORTANT: return empty result without SQL error
+                            $query->whereRaw('1 = 0');
+                        }
+
+
+
             // // ->whereIn('pk', $ids);
 
             /* ===============================
@@ -195,15 +229,19 @@ class StudentMedicalExemptionController extends Controller
                     $disabled = $row->active_inactive == 1 ? 'disabled' : '';
 
                     return '
-                        <a href="' . $editUrl . '">
-                            <i class="material-icons material-symbols-rounded">edit</i>
-                        </a>
-
-                        <a href="javascript:void(0)"
-                           class="delete-btn ' . $disabled . '"
-                           data-url="' . $deleteUrl . '">
-                            <i class="material-icons material-symbols-rounded">delete</i>
-                        </a>';
+                        <div class="d-flex gap-1 flex-wrap">
+                            <a href="' . $editUrl . '"
+                               class="btn btn-sm btn-outline-primary action-btn-edit"
+                               title="Edit">
+                                <i class="bi bi-pencil-square me-1"></i>Edit
+                            </a>
+                            <a href="javascript:void(0)"
+                               class="btn btn-sm btn-outline-danger delete-btn action-btn-delete ' . $disabled . '"
+                               data-url="' . $deleteUrl . '"
+                               title="' . ($disabled ? 'Cannot delete active record' : 'Delete') . '">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </a>
+                        </div>';
                 })
 
                 ->addColumn('status', function ($row) {
@@ -239,6 +277,7 @@ class StudentMedicalExemptionController extends Controller
 
     	public function create()
 {
+
     $courses = CourseMaster::where('active_inactive', '1');
 
     $data_course_id = get_Role_by_course();
@@ -320,13 +359,14 @@ class StudentMedicalExemptionController extends Controller
         return null;
     }
 
-    public function store(Request $request)
+   public function store(Request $request)
     {
+
 
         $validated = $request->validate([
             'course_master_pk' => 'required|numeric',
             'student_master_pk' => 'required|numeric',
-            'employee_master_pk' => 'required|numeric',
+           // 'employee_master_pk' => 'required|numeric',
             'exemption_category_master_pk' => 'required|numeric',
             'from_date' => 'required|date',
             'to_date' => 'nullable|date|after_or_equal:from_date',
@@ -334,7 +374,41 @@ class StudentMedicalExemptionController extends Controller
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'nullable|boolean',
-        ]);
+            'Doc_upload' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:3072',
+        ], [
+		// Custom messages
+			'Doc_upload.required' => 'Please upload a document.',
+			'Doc_upload.mimes' => 'Only image files (jpg, png, webp) or PDF are allowed.',
+			'Doc_upload.max' => 'Document size must not exceed 3 MB.',
+			]
+        );
+
+//dd($validated);
+
+        $user = Auth::user();
+
+        // Get user credential
+        $userCredential = UserCredential::where('pk', $user->pk)
+          ->where('user_category', 'E')
+          ->first();
+
+        if (!$userCredential) {
+            return back()->withErrors(['employee_master_pk' => 'User credential not found']);
+        }
+
+        // Get employee using user_id mapping
+        $employee = EmployeeMaster::where('pk', $userCredential->user_id)->first();
+
+        if (!$employee) {
+            return back()->withErrors(['employee_master_pk' => 'Employee not mapped']);
+        }
+
+
+        $validated['employee_master_pk'] = $employee->pk;
+
+
+        $validated['created_date'] = now();
+        $validated['modified_date'] = now();
 
         // Check for overlapping time ranges for the same student
         $overlapError = $this->checkOverlap(
@@ -510,15 +584,25 @@ class StudentMedicalExemptionController extends Controller
         return redirect()->route('student.medical.exemption.index')->with('success', 'Record updated successfully.');
     }
 
-
-    public function delete($id)
+ public function delete($id)
     {
-        StudentMedicalExemption::destroy(decrypt($id));
-         return response()->json([
-        'message' => 'Medical exemption deleted successfully'
-        ]);
+        //StudentMedicalExemption::destroy(decrypt($id));
+        $record = StudentMedicalExemption::findOrFail(decrypt($id));
+
+        if ($record->active_inactive == 1) {
+            return response()->json([
+            'message' => 'Active medical exemption cannot be deleted.'
+            ], 403);
+            }
+
+            $record->delete();
+
+            return response()->json([
+            'message' => 'Medical exemption deleted successfully'
+            ]);
        // return redirect()->route('student.medical.exemption.index')->with('success', 'Deleted successfully.');
     }
+
     public function getStudentsByCourse(Request $request)
     {
         $courseId = $request->input('course_id');
