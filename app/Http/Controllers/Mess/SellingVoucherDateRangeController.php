@@ -645,6 +645,19 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function getStoreItems($storeIdentifier)
     {
+        try {
+            return response()->json($this->getStoreItemsData($storeIdentifier));
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array>
+     */
+    private function getStoreItemsData($storeIdentifier)
+    {
         $items = collect();
         $storeType = 'store';
         $storeId = (int) $storeIdentifier;
@@ -796,6 +809,6 @@ class SellingVoucherDateRangeController extends Controller
             }
         }
 
-        return response()->json($items->values());
+        return $items->values();
     }
 }

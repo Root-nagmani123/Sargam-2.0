@@ -787,6 +787,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function getBaseAvailableForItem(itemId) {
+        if (!itemId) return 0;
+        const item = filteredItems.find(function(i) { return String(i.id) === String(itemId); });
+        return item ? (parseFloat(item.available_quantity) || 0) : 0;
+    }
+
+    function refreshAllAvailable() {
+        const rows = document.querySelectorAll('#modalItemsBody .sv-item-row');
+        const usedByItem = {};
+
+        rows.forEach(function(row) {
+            const select = row.querySelector('.sv-item-select');
+            const itemId = select ? select.value : '';
+            const availInp = row.querySelector('.sv-avail');
+            const leftInp = row.querySelector('.sv-left');
+            if (!itemId || !availInp) return;
+
+            const base = getBaseAvailableForItem(itemId);
+            const alreadyUsed = usedByItem[itemId] || 0;
+            const availableForRow = Math.max(0, base - alreadyUsed);
+
+            availInp.value = availableForRow.toFixed(2);
+
+            const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
+            if (leftInp) {
+                leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
+            }
+
+            usedByItem[itemId] = alreadyUsed + qty;
+            enforceQtyWithinAvailable(row);
+        });
+    }
+
     function fetchStoreItems(storeId, callback) {
         if (!storeId) {
             filteredItems = itemSubcategories;
@@ -869,6 +902,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
+        refreshAllAvailable();
         enforceQtyWithinAvailable(row);
     }
 
@@ -965,6 +999,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const modalItemsBody = document.getElementById('modalItemsBody');
+    const addSvModal = document.getElementById('addSellingVoucherModal');
     if (modalItemsBody) {
         modalItemsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sv-item-select')) {
@@ -976,7 +1011,12 @@ document.addEventListener('DOMContentLoaded', function() {
         modalItemsBody.addEventListener('input', function(e) {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateGrandTotal(); }
+                if (row) {
+                    refreshAllAvailable();
+                    enforceQtyWithinAvailable(row);
+                    calcRow(row);
+                    updateGrandTotal();
+                }
             }
         });
 
@@ -985,6 +1025,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const row = e.target.closest('.sv-item-row');
                 if (row && document.querySelectorAll('#modalItemsBody .sv-item-row').length > 1) {
                     row.remove();
+                    refreshAllAvailable();
                     updateGrandTotal();
                     updateRemoveButtons();
                 }
@@ -992,8 +1033,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    // Delegate input/change from modal so qty/rate updates always run (Left Qty + Total)
+    if (addSvModal) {
+        function onAddModalQtyOrRateInput(e) {
+            if (!e.target.matches('.sv-avail, .sv-qty, .sv-rate')) return;
+            const row = e.target.closest('.sv-item-row');
+            if (!row) return;
+            refreshAllAvailable();
     const addSvModal = document.getElementById('addSellingVoucherModal');
+            calcRow(row);
+            updateGrandTotal();
+        }
+        addSvModal.addEventListener('input', onAddModalQtyOrRateInput);
+        addSvModal.addEventListener('change', onAddModalQtyOrRateInput);
+    }
+
+    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
     const svItemsTable = document.getElementById('svItemsTable');
     if (addSvModal && svItemsTable) {
         addSvModal.addEventListener('keydown', function(e) {
@@ -1759,12 +1814,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetchStoreItems(preSelectedStore, function() {
                     console.log('Pre-fetched items for store:', preSelectedStore, 'Count:', filteredItems.length);
                     updateAddItemDropdowns();
+                    refreshAllAvailable();
+                    document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+                    updateGrandTotal();
                 });
             } else {
                 currentStoreId = null;
                 filteredItems = itemSubcategories;
                 if (storeSelect) storeSelect.value = '';
             }
+        });
+        addSellingVoucherModal.addEventListener('shown.bs.modal', function() {
+            refreshAllAvailable();
+            document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+            updateGrandTotal();
         });
     }
 
