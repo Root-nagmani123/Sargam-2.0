@@ -11,7 +11,6 @@ use App\Support\IdCardSecurityMapper;
 use App\Support\IdCardSecurityLookup;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -32,7 +31,6 @@ class EmployeeIDCardRequestController extends Controller
             'approvals.approver:pk,first_name,last_name',
         ];
         $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
-        $perPage = 25;
         $filter = $request->get('filter', 'active');
         if (! in_array($filter, ['active', 'archive', 'all'], true)) {
             $filter = 'active';
@@ -103,34 +101,12 @@ class EmployeeIDCardRequestController extends Controller
             ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension')
             ->values();
 
-        $paginate = function ($items, int $page, string $pageName) use ($perPage) {
-            $paginator = new LengthAwarePaginator(
-                $items->forPage($page, $perPage)->values(),
-                $items->count(),
-                $perPage,
-                $page,
-                ['path' => request()->url(), 'pageName' => $pageName]
-            );
-            $paginator->withQueryString();
-            return $paginator;
-        };
-
-        $activeRequests = $paginate($activeCollection, (int) $request->get('active_page', $request->get('page', 1)), 'active_page');
-        $archivedRequests = $paginate($archivedCollection, (int) $request->get('archive_page', 1), 'archive_page');
-        $duplicationRequests = $paginate($duplicationCollection, (int) $request->get('duplication_page', 1), 'duplication_page');
-        $extensionRequests = $paginate($extensionCollection, (int) $request->get('extension_page', 1), 'extension_page');
-        $requests = match ($filter) {
-            'archive' => $archivedRequests,
-            'all' => $paginate($allRequests, (int) $request->get('page', 1), 'page'),
-            default => $activeRequests,
-        };
-
+        // Pass full collections for client-side DataTables (search, sort, pagination)
         return view('admin.employee_idcard.index', [
-            'requests' => $requests,
-            'activeRequests' => $activeRequests,
-            'archivedRequests' => $archivedRequests,
-            'duplicationRequests' => $duplicationRequests,
-            'extensionRequests' => $extensionRequests,
+            'activeRequests' => $activeCollection->values(),
+            'archivedRequests' => $archivedCollection->values(),
+            'duplicationRequests' => $duplicationCollection->values(),
+            'extensionRequests' => $extensionCollection->values(),
             'filter' => $filter,
             'dateFrom' => $dateFrom ?? '',
             'dateTo' => $dateTo ?? '',
