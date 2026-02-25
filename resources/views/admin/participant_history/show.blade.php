@@ -7,7 +7,7 @@
     .participant-info-table th { color: #1a1a1a !important; font-weight: 600; }
     .history-nav-tabs .nav-link { font-weight: 500; border-radius: 0.375rem 0.375rem 0 0; }
     .history-nav-tabs .nav-link.active { border-bottom: 3px solid #004a93; background: #f8f9fa; color: #004a93; }
-    .participant-hero { background: linear-gradient(135deg, #004a93 0%, #003366 100%); }
+    .participant-hero { background:  #004a93; }
     .metric-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .metric-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1); }
     .cursor-pointer { cursor: pointer; }
@@ -436,7 +436,7 @@
 
         {{-- Right Sidebar: Participant Profile & Actions --}}
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-3 mb-4 sticky-top" style="top: 1rem;">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
                     <h5 class="mb-0 fw-semibold"><i class="fas fa-user-graduate me-2 text-primary"></i>Participant Profile</h5>
                 </div>
