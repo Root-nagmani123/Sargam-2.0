@@ -767,25 +767,74 @@
         }
     }
 
+    function getBaseAvailableForItem(itemId) {
+        if (!itemId) return 0;
+        const item = filteredItems.find(function(i) { return String(i.id) === String(itemId); });
+        return item ? (parseFloat(item.available_quantity) || 0) : 0;
+    }
+
+    function refreshAllAvailable() {
+        const rows = document.querySelectorAll('#addModalItemsBody .dr-item-row');
+        const usedByItem = {};
+
+        rows.forEach(function(row) {
+            const select = row.querySelector('.dr-item-select');
+            const itemId = select ? select.value : '';
+            const availInp = row.querySelector('.dr-avail');
+            const leftInp = row.querySelector('.dr-left');
+            if (!itemId || !availInp) return;
+
+            const base = getBaseAvailableForItem(itemId);
+            const alreadyUsed = usedByItem[itemId] || 0;
+            const availableForRow = Math.max(0, base - alreadyUsed);
+
+            availInp.value = availableForRow.toFixed(2);
+
+            const qty = parseFloat(row.querySelector('.dr-qty').value) || 0;
+            if (leftInp) {
+                leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
+            }
+
+            usedByItem[itemId] = alreadyUsed + qty;
+            enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
+        });
+    }
+
     function fetchStoreItems(storeId, callback) {
         if (!storeId) {
             filteredItems = itemSubcategories;
             if (callback) callback();
             return;
         }
-        
-        fetch(baseUrl + '/store/' + storeId + '/items', {
+        // Reuse the same store-items endpoint as Selling Voucher (material-management)
+        const url = "{{ url('admin/mess/material-management') }}" + '/store/' + encodeURIComponent(storeId) + '/items';
+        fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(r => r.json())
-        .then(data => {
-            filteredItems = data;
+        .then(function(r) {
+            if (!r.ok) {
+                return r.text().then(function(t) {
+                    var msg = (r.status === 500 && t) ? t : ('Server returned ' + r.status);
+                    throw new Error(msg);
+                });
+            }
+            return r.json();
+        })
+        .then(function(data) {
+            if (Array.isArray(data)) {
+                filteredItems = data;
+            } else if (data && data.error) {
+                throw new Error(data.error);
+            } else {
+                filteredItems = [];
+            }
             if (callback) callback();
         })
-        .catch(err => {
-            console.error(err);
-            alert('Failed to load store items.');
-            filteredItems = [];
+        .catch(function(err) {
+            console.error('Store items fetch failed:', err);
+            filteredItems = itemSubcategories || [];
+            if (callback) callback();
+            alert('Could not load store-specific items. Showing all items; available quantity may not reflect this store.');
         });
     }
 
@@ -849,6 +898,7 @@
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
+        refreshAllAvailable();
         enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty');
     }
 
@@ -938,11 +988,12 @@
         addRowIndex++;
         updateAddRowUnit(newTr);
         newTr.querySelector('.dr-avail').addEventListener('input', function() { updateAddRowLeft(newTr); });
-        newTr.querySelector('.dr-qty').addEventListener('input', function() { updateAddRowTotal(newTr); updateAddGrandTotal(); });
+        newTr.querySelector('.dr-qty').addEventListener('input', function() { refreshAllAvailable(); updateAddRowTotal(newTr); updateAddGrandTotal(); });
         newTr.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(newTr); updateAddGrandTotal(); });
         newTr.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(newTr); });
         newTr.querySelector('.dr-remove-row').addEventListener('click', function() {
             newTr.remove();
+            refreshAllAvailable();
             updateAddGrandTotal();
             const rows = tbody.querySelectorAll('.dr-item-row');
             if (rows.length === 1) rows[0].querySelector('.dr-remove-row').disabled = true;
@@ -953,7 +1004,7 @@
     document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) {
         row.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(row); });
         row.querySelector('.dr-avail').addEventListener('input', function() { updateAddRowLeft(row); });
-        row.querySelector('.dr-qty').addEventListener('input', function() { enforceQtyWithinAvailable(row, '.dr-avail', '.dr-qty'); updateAddRowTotal(row); updateAddGrandTotal(); });
+        row.querySelector('.dr-qty').addEventListener('input', function() { refreshAllAvailable(); updateAddRowTotal(row); updateAddGrandTotal(); });
         row.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(row); updateAddGrandTotal(); });
     });
 
@@ -962,13 +1013,53 @@
             const row = e.target.closest('tr');
             if (row && document.getElementById('addModalItemsBody').querySelectorAll('.dr-item-row').length > 1) {
                 row.remove();
+                refreshAllAvailable();
                 updateAddGrandTotal();
             }
         }
     });
 
-    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    // Delegate input/change on items tbody so Available Qty updates in real time when qty/rate change in any row
+    const addModalItemsBodyEl = document.getElementById('addModalItemsBody');
+    if (addModalItemsBodyEl) {
+        addModalItemsBodyEl.addEventListener('input', function(e) {
+            if (e.target.classList.contains('dr-qty') || e.target.classList.contains('dr-rate')) {
+                const row = e.target.closest('.dr-item-row');
+                if (row) {
+                    refreshAllAvailable();
+                    updateAddRowTotal(row);
+                    updateAddGrandTotal();
+                }
+            }
+        });
+        addModalItemsBodyEl.addEventListener('change', function(e) {
+            if (e.target.classList.contains('dr-qty') || e.target.classList.contains('dr-rate')) {
+                const row = e.target.closest('.dr-item-row');
+                if (row) {
+                    refreshAllAvailable();
+                    updateAddRowTotal(row);
+                    updateAddGrandTotal();
+                }
+            }
+        });
+    }
+
+    // Delegate input/change from add modal so Left Qty + Total update when qty/rate change
     const addReportModalEl = document.getElementById('addReportModal');
+    if (addReportModalEl) {
+        function onAddModalQtyOrRateInput(e) {
+            if (!e.target.matches('.dr-avail, .dr-qty, .dr-rate')) return;
+            const row = e.target.closest('.dr-item-row');
+            if (!row) return;
+            refreshAllAvailable();
+            updateAddRowTotal(row);
+            updateAddGrandTotal();
+        }
+        addReportModalEl.addEventListener('input', onAddModalQtyOrRateInput);
+        addReportModalEl.addEventListener('change', onAddModalQtyOrRateInput);
+    }
+
+    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
     const addReportItemsTable = document.getElementById('addReportItemsTable');
     if (addReportModalEl && addReportItemsTable) {
         addReportModalEl.addEventListener('keydown', function(e) {
@@ -1675,12 +1766,20 @@
                 fetchStoreItems(preSelectedStore, function() {
                     console.log('Pre-fetched items for store:', preSelectedStore, 'Count:', filteredItems.length);
                     updateAddItemDropdowns();
+                    refreshAllAvailable();
+                    document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) { updateAddRowTotal(row); });
+                    updateAddGrandTotal();
                 });
             } else {
                 currentStoreId = null;
                 filteredItems = itemSubcategories;
                 if (storeSelect) storeSelect.value = '';
             }
+        });
+        addReportModal.addEventListener('shown.bs.modal', function() {
+            refreshAllAvailable();
+            document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(row) { updateAddRowTotal(row); });
+            updateAddGrandTotal();
         });
     }
 
