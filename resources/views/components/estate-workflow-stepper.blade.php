@@ -8,7 +8,7 @@
         'request-for-estate' => ['label' => 'Request For Estate', 'route' => 'admin.estate.request-for-estate'],
         'put-in-hac'        => ['label' => 'Put In HAC', 'route' => 'admin.estate.put-in-hac'],
         'hac-approved'      => ['label' => 'HAC Approved', 'route' => 'admin.estate.change-request-hac-approved'],
-        'possession-details'=> ['label' => 'Possession Details', 'route' => 'admin.estate.possession-for-others'],
+        'possession-details'=> ['label' => 'Possession Details', 'route' => 'admin.estate.possession-details'],
     ];
 @endphp
 <div class="estate-workflow-stepper mb-4" role="navigation" aria-label="Estate workflow flow">
