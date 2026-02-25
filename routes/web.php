@@ -831,7 +831,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
         Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
         Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
-        Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
 

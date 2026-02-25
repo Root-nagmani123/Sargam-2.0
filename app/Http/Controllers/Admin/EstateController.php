@@ -321,10 +321,10 @@ class EstateController extends Controller
             })
             ->join('salary_grade_master as sg', 'e.salary_grade_master_pk', '=', 'sg.pk')
             ->join('payroll_salary_master as ps', "sg.pk", '=', "ps.$salaryGradeCol")
-            ->join('employee_master as em', 'ps.employee_master_pk', '=', 'em.' . $empPkCol)
+            ->join('employee_master as em', 'ps.employee_master_pk', '=', 'em.pk')
             ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
             ->select(
-                'em.' . $empPkCol . ' as pk',
+                'em.pk',
                 DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                 DB::raw($employeeIdSelect . ' as employee_id'),
                 DB::raw("COALESCE(d.designation_name, '') as emp_designation")
@@ -333,7 +333,7 @@ class EstateController extends Controller
             ->where('em.payroll', 0)
             ->distinct()
             ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
-            ->orderBy('em.' . $empPkCol);
+            ->orderBy('em.pk');
 
         $rows = $query->get();
 
@@ -362,12 +362,12 @@ class EstateController extends Controller
                     $extra = DB::table('employee_master as em')
                         ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
                         ->select(
-                            'em.' . $empPkCol . ' as pk',
+                            'em.pk',
                             DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                             DB::raw($employeeIdSelect . ' as employee_id'),
                             DB::raw("COALESCE(d.designation_name, '') as emp_designation")
                         )
-                        ->where('em.' . $empPkCol, $currentEmployeePk)
+                        ->where('em.pk', $currentEmployeePk)
                         ->first();
                     if ($extra) {
                         $rows->prepend($extra);
@@ -1852,7 +1852,6 @@ class EstateController extends Controller
             $data['return_home_status'] = 1;
             $data['current_meter_reading_date'] = $validated['returning_date'] ?? now()->toDateString();
             unset($data['create_date'], $data['created_by']);
-            $previousHousePk = 0;
 
             $target = null;
             if ($request->filled('id')) {
@@ -1866,7 +1865,6 @@ class EstateController extends Controller
             }
 
             if ($target) {
-                $previousHousePk = (int) ($target->estate_house_master_pk ?? 0);
                 EstatePossessionOther::where('pk', $target->pk)->update($data);
                 $targetPk = (int) $target->pk;
                 $message = 'Return house request updated successfully.';
@@ -1882,13 +1880,7 @@ class EstateController extends Controller
                 $validated['remarks'] ?? null,
                 $uploadedDocumentPath
             );
-
-            foreach (array_unique(array_filter([$previousHousePk, (int) $validated['estate_house_master_pk']])) as $housePk) {
-                $this->refreshHouseUsedStatusFromPossession((int) $housePk);
-            }
         } elseif ($request->filled('id')) {
-            $existingRecord = EstatePossessionOther::find($request->id);
-            $previousHousePk = (int) ($existingRecord?->estate_house_master_pk ?? 0);
             unset($data['create_date'], $data['created_by']);
             EstatePossessionOther::where('pk', $request->id)->update($data);
             $this->upsertMonthReadingOtherOnPossession(
@@ -1954,143 +1946,6 @@ class EstateController extends Controller
 
         $decoded[$key] = $meta;
         Storage::disk('local')->put($file, json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-    }
-
-    private function setHouseUsedStatus(int $housePk, int $status): void
-    {
-        if ($housePk <= 0) {
-            return;
-        }
-
-        DB::table('estate_house_master')
-            ->where('pk', $housePk)
-            ->update(['used_home_status' => $status]);
-    }
-
-    private function refreshHouseUsedStatusFromPossession(int $housePk): void
-    {
-        if ($housePk <= 0) {
-            return;
-        }
-
-        $isUsed = DB::table('estate_possession_details')
-            ->where('estate_house_master_pk', $housePk)
-            ->where('return_home_status', 0)
-            ->exists()
-            || DB::table('estate_possession_other')
-                ->where('estate_house_master_pk', $housePk)
-                ->where('return_home_status', 0)
-                ->exists();
-
-        $this->setHouseUsedStatus($housePk, $isUsed ? 1 : 0);
-    }
-
-    private function upsertMonthReadingOtherOnPossession(
-        int $possessionPk,
-        $possessionDate,
-        $meterReading,
-        ?string $houseNo,
-        $meterOne,
-        $meterTwo
-    ): void {
-        if ($possessionPk <= 0) {
-            return;
-        }
-
-        $baseDate = $possessionDate ? \Carbon\Carbon::parse($possessionDate) : now();
-        $billMonth = $baseDate->format('F');
-        $billYear = $baseDate->format('Y');
-        $fromDate = $baseDate->copy()->startOfMonth()->toDateString();
-        $toDate = $baseDate->copy()->endOfMonth()->toDateString();
-
-        $reading = EstateMonthReadingDetailsOther::where('estate_possession_other_pk', $possessionPk)
-            ->where('bill_month', $billMonth)
-            ->where('bill_year', $billYear)
-            ->whereDate('to_date', $toDate)
-            ->first();
-
-        if ($reading) {
-            $update = [
-                'house_no' => $houseNo,
-                'meter_one' => $meterOne,
-                'meter_two' => $meterTwo,
-            ];
-            if ($reading->last_month_elec_red === null && $meterReading !== null && $meterReading !== '') {
-                $update['last_month_elec_red'] = (int) $meterReading;
-            }
-            $reading->update($update);
-            return;
-        }
-
-        EstateMonthReadingDetailsOther::create([
-            'estate_possession_other_pk' => $possessionPk,
-            'from_date' => $fromDate,
-            'to_date' => $toDate,
-            'last_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : null,
-            'curr_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : 0,
-            'bill_month' => $billMonth,
-            'bill_year' => $billYear,
-            'notify_employee_status' => 0,
-            'process_status' => 0,
-            'house_no' => $houseNo,
-            'meter_one' => $meterOne,
-            'meter_two' => $meterTwo,
-            'created_date' => now(),
-        ]);
-    }
-
-    private function upsertMonthReadingOnPossession(
-        int $possessionPk,
-        $possessionDate,
-        $meterReading,
-        ?string $houseNo,
-        $meterOne,
-        $meterTwo
-    ): void {
-        if ($possessionPk <= 0) {
-            return;
-        }
-
-        $baseDate = $possessionDate ? \Carbon\Carbon::parse($possessionDate) : now();
-        $billMonth = $baseDate->format('F');
-        $billYear = $baseDate->format('Y');
-        $fromDate = $baseDate->copy()->startOfMonth()->toDateString();
-        $toDate = $baseDate->copy()->endOfMonth()->toDateString();
-
-        $reading = EstateMonthReadingDetails::where('estate_possession_details_pk', $possessionPk)
-            ->where('bill_month', $billMonth)
-            ->where('bill_year', $billYear)
-            ->whereDate('to_date', $toDate)
-            ->first();
-
-        if ($reading) {
-            $update = [
-                'house_no' => $houseNo,
-                'meter_one' => $meterOne,
-                'meter_two' => $meterTwo,
-            ];
-            if ($reading->last_month_elec_red === null && $meterReading !== null && $meterReading !== '') {
-                $update['last_month_elec_red'] = (int) $meterReading;
-            }
-            $reading->update($update);
-            return;
-        }
-
-        DB::table('estate_month_reading_details')->insert([
-            'estate_possession_details_pk' => $possessionPk,
-            'from_date' => $fromDate,
-            'to_date' => $toDate,
-            'last_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : null,
-            'curr_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : 0,
-            'bill_month' => $billMonth,
-            'bill_year' => $billYear,
-            'notify_employee_status' => 0,
-            'process_status' => 0,
-            'house_no' => $houseNo,
-            'meter_one' => $meterOne,
-            'meter_two' => $meterTwo,
-            'created_date' => now(),
-        ]);
     }
 
     /**
@@ -2644,14 +2499,13 @@ class EstateController extends Controller
                 ->with('error', 'Requester is not allotted yet. Please allot first from HAC Approved.');
         }
 
-        $empPkCol = $this->estateEmployeePkColumn();
         $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
         if (! $employeePk && $homeReq->employee_id) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id')) {
-                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value('pk');
             }
             if (! $employeePk && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id')) {
-                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value('pk');
             }
             if ($employeePk) {
                 $employeePk = (int) $employeePk;
@@ -2681,17 +2535,12 @@ class EstateController extends Controller
                 ->with('error', 'Selected house does not match selected Estate/Building/Unit Sub Type.');
         }
 
-        // Skip eligibility check when selected house is the requester's existing allotted house
-        // (e.g. possession form pre-filled with current house; eligibility list only has vacant houses).
-        $isSameAsExistingPossession = $existingPossession && (int) $existingPossession->estate_house_master_pk === (int) $house->pk;
-        if (! $isSameAsExistingPossession) {
-            $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
-            if ($eligibleHousePks->isNotEmpty() && ! $eligibleHousePks->contains((int) $house->pk)) {
-                return redirect()
-                    ->back()
-                    ->withInput()
-                    ->with('error', 'Selected house is not eligible for this requester.');
-            }
+        $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
+        if ($eligibleHousePks->isNotEmpty() && ! $eligibleHousePks->contains((int) $house->pk)) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Selected house is not eligible for this requester.');
         }
 
         $occupiedHousePks = DB::table('estate_possession_details')
@@ -2723,34 +2572,12 @@ class EstateController extends Controller
         ];
 
         if ($existingPossession) {
-            $previousHousePk = (int) ($existingPossession->estate_house_master_pk ?? 0);
             DB::table('estate_possession_details')
                 ->where('pk', (int) $existingPossession->pk)
                 ->update($payload);
-            $this->upsertMonthReadingOnPossession(
-                (int) $existingPossession->pk,
-                $validated['possession_date'] ?? null,
-                $validated['electric_meter_reading'] ?? null,
-                $house->house_no ?? null,
-                $house->meter_one ?? null,
-                $house->meter_two ?? null
-            );
-            $this->setHouseUsedStatus((int) $house->pk, 1);
-            if ($previousHousePk > 0 && $previousHousePk !== (int) $house->pk) {
-                $this->refreshHouseUsedStatusFromPossession($previousHousePk);
-            }
             $message = 'Possession details updated successfully.';
         } else {
-            $createdPossessionPk = (int) DB::table('estate_possession_details')->insertGetId($payload);
-            $this->upsertMonthReadingOnPossession(
-                $createdPossessionPk,
-                $validated['possession_date'] ?? null,
-                $validated['electric_meter_reading'] ?? null,
-                $house->house_no ?? null,
-                $house->meter_one ?? null,
-                $house->meter_two ?? null
-            );
-            $this->setHouseUsedStatus((int) $house->pk, 1);
+            DB::table('estate_possession_details')->insert($payload);
             $message = 'Possession details added successfully.';
         }
 
@@ -2911,8 +2738,8 @@ class EstateController extends Controller
 
             $list = DB::table('estate_possession_details as epd')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-                ->leftJoin('employee_master as em', function ($join) use ($empPkCol, $empIdJoinColumn) {
-                    $join->on('em.' . $empPkCol, '=', 'ehrd.employee_pk');
+                ->leftJoin('employee_master as em', function ($join) use ($empIdJoinColumn) {
+                    $join->on('em.pk', '=', 'ehrd.employee_pk');
                     if ($empIdJoinColumn) {
                         $join->orOn(DB::raw($empIdJoinColumn), '=', 'ehrd.employee_id');
                     }
