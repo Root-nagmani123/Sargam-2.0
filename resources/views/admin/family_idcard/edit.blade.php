@@ -64,7 +64,7 @@
                     </div>
                     <div class="col-md-6">
                         <label for="valid_from" class="form-label">Valid From</label>
-                        <input type="date" name="valid_from" id="valid_from" class="form-control" value="{{ old('valid_from', $request->valid_from ? $request->valid_from->format('Y-m-d') : '') }}">
+                        <input type="date" name="valid_from" id="valid_from" class="form-control valid-from-field" value="{{ old('valid_from', $request->valid_from ? $request->valid_from->format('Y-m-d') : '') }}" min="{{ date('Y-m-d') }}">
                         @error('valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
@@ -214,6 +214,23 @@
     }
     if (input) input.addEventListener('change', function() { showPreview(this.files[0]); });
     if (removeBtn) removeBtn.addEventListener('click', function(e) { e.stopPropagation(); clearPreview(); });
+})();
+
+// Apply date restrictions to Valid From field
+(function() {
+    var today = new Date().toISOString().split('T')[0];
+    var validFromField = document.querySelector('.valid-from-field');
+    if (validFromField) {
+        validFromField.setAttribute('min', today);
+        validFromField.addEventListener('change', function() {
+            if (this.value && this.value < today) {
+                this.value = today;
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
 })();
 </script>
 @endsection
