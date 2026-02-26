@@ -50,6 +50,29 @@
 <script>
 $(document).ready(function() {
     $('#updateMeterNoTable').DataTable({
+        ajax: {
+            url: "{{ route('admin.estate.update-meter-no.list') }}",
+            dataSrc: function(json) {
+                return (json.status && json.data) ? json.data : [];
+            }
+        },
+        columns: [
+            { data: 'sn', title: 'S.No.' },
+            { data: 'name', title: 'Name' },
+            { data: 'employee_type', title: 'Employee Type' },
+            { data: 'unit_type', title: 'Unit Type' },
+            { data: 'unit_sub_type', title: 'Unit Sub Type' },
+            { data: 'building_name', title: 'Building Name' },
+            { data: 'house_no', title: 'House No.' },
+            { data: 'old_meter1_no', title: 'Old Meter1 No.', defaultContent: '—' },
+            { data: 'new_meter1_no', title: 'New Meter1 No.', defaultContent: '—' },
+            { data: 'old_meter2_no', title: 'Old Meter2 No.', defaultContent: '—' },
+            { data: 'new_meter2_no', title: 'New Meter2 No.', defaultContent: '—' },
+            { data: 'old_meter1_reading', title: 'Old Meter1 Reading', defaultContent: '—' },
+            { data: 'new_meter1_reading', title: 'New Meter1 Reading', defaultContent: '—' },
+            { data: 'old_meter2_reading', title: 'Old Meter2 Reading', defaultContent: '—' },
+            { data: 'new_meter2_reading', title: 'New Meter2 Reading', defaultContent: '—' }
+        ],
         order: [[0, 'asc']],
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
@@ -66,8 +89,9 @@ $(document).ready(function() {
                 previous: "Previous"
             }
         },
-        responsive: true,
-        autoWidth: false,
+        responsive: false,
+        autoWidth: true,
+        scrollX: true,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });
 });

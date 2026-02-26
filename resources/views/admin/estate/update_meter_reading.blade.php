@@ -18,7 +18,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label for="bill_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month">
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month" value="{{ isset($prefill['bill_month']) ? $prefill['bill_month'] : '' }}">
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Meter Change Month
                         </small>
@@ -26,7 +26,10 @@
                     <div class="col-md-4">
                         <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name" required>
-                            <option value="administrative_officer" selected>Administrative Officer</option>
+                            <option value="">Select</option>
+                            @foreach($campuses ?? [] as $c)
+                                <option value="{{ $c->pk }}" {{ isset($prefill['campus_id']) && (int)$prefill['campus_id'] === (int)$c->pk ? 'selected' : '' }}>{{ $c->campus_name }}</option>
+                            @endforeach
                         </select>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Estate Name
@@ -34,8 +37,8 @@
                     </div>
                     <div class="col-md-4">
                         <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
-                        <select class="form-select" id="building" name="building" required>
-                            <option value="bhagirathi_avas" selected>Bhagirathi Avas</option>
+                        <select class="form-select" id="building" name="building">
+                            <option value="">Select</option>
                         </select>
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Building
@@ -46,7 +49,7 @@
                         <select class="form-select" id="unit_name" name="unit_type_id">
                             <option value="">All</option>
                             @foreach($unitTypes ?? [] as $ut)
-                                <option value="{{ $ut->pk }}" {{ ($ut->unit_type ?? '') == 'Residential' ? 'selected' : '' }}>{{ $ut->unit_type }}</option>
+                                <option value="{{ $ut->pk }}" {{ (isset($prefill['unit_type_id']) && (int)$prefill['unit_type_id'] === (int)$ut->pk) ? 'selected' : (($ut->unit_type ?? '') == 'Residential' && !isset($prefill) ? 'selected' : '') }}>{{ $ut->unit_type }}</option>
                             @endforeach
                         </select>
                         <small class="text-muted">
@@ -65,33 +68,9 @@
                             <i class="bi bi-info-circle"></i> Select Unit Sub Type
                         </small>
                     </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
-                        <select class="form-select" id="estate_name" name="estate_name">
-                            <option value="">Select</option>
-                            @foreach($campuses ?? [] as $c)
-                                <option value="{{ $c->pk }}">{{ $c->campus_name }}</option>
-                            @endforeach
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Estate Name
-                        </small>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
-                        <select class="form-select" id="building" name="building">
-                            <option value="">Select</option>
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Building
-                        </small>
-                    </div>
                     <div class="col-md-4">
                         <label for="meter_reading_date" class="form-label">Meter Update Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date">
+                        <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" value="{{ isset($prefill['meter_reading_date']) ? $prefill['meter_reading_date'] : '' }}">
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select date
                         </small>
@@ -153,12 +132,45 @@ $(document).ready(function() {
     const listUrl = "{{ route('admin.estate.update-meter-reading.list') }}";
     const blocksUrl = "{{ route('admin.estate.update-meter-reading.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading.unit-sub-types') }}";
+    const prefill = @json($prefill ?? null);
 
     let dataTable = null;
 
+    function loadBuildingsThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
+        $('#building').html('<option value="">Select</option>');
+        if (!campusId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
+        $.get(blocksUrl, { campus_id: campusId }, function(res) {
+            if (res.status && res.data) {
+                $.each(res.data, function(i, b) {
+                    var sel = (blockId && b.pk == blockId) ? ' selected' : '';
+                    $('#building').append('<option value="'+b.pk+'"'+sel+'>'+b.block_name+'</option>');
+                });
+            }
+            if (blockId && unitSubTypeId != null) {
+                loadUnitSubTypesThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData);
+            } else if (thenLoadData) {
+                $('#loadMeterReadingsBtn').click();
+            }
+        });
+    }
+
+    function loadUnitSubTypesThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
+        $('#unit_sub_type').html('<option value="">All</option>');
+        if (!campusId || !blockId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
+        $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
+            if (res.status && res.data) {
+                $.each(res.data, function(i, u) {
+                    var sel = (unitSubTypeId && u.pk == unitSubTypeId) ? ' selected' : '';
+                    $('#unit_sub_type').append('<option value="'+u.pk+'"'+sel+'>'+u.unit_sub_type+'</option>');
+                });
+            }
+            if (thenLoadData) $('#loadMeterReadingsBtn').click();
+        });
+    }
+
     $('#estate_name').on('change', function() {
         const campusId = $(this).val();
-        $('#building').html('<option value="">All</option>');
+        $('#building').html('<option value="">Select</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
@@ -183,6 +195,16 @@ $(document).ready(function() {
             }
         });
     });
+
+    if (prefill && prefill.bill_month) {
+        $('#bill_month').val(prefill.bill_month);
+        if (prefill.campus_id) {
+            $('#estate_name').val(prefill.campus_id);
+            loadBuildingsThenPrefill(prefill.campus_id, prefill.block_id, prefill.unit_sub_type_id, true);
+        } else {
+            $('#loadMeterReadingsBtn').click();
+        }
+    }
 
     $('#loadMeterReadingsBtn').on('click', function() {
         if (dataTable) {
@@ -272,11 +294,11 @@ $(document).ready(function() {
     $('#meterReadingSaveForm').on('submit', function(e) {
         if (dataTable && dataTable.page.len() !== -1) {
             e.preventDefault();
+            const form = this;
+            dataTable.one('draw', function() {
+                form.submit();
+            });
             dataTable.page.len(-1).draw('page');
-            const $form = $(this);
-            setTimeout(function() {
-                $form.off('submit').submit();
-            }, 150);
         }
     });
 });

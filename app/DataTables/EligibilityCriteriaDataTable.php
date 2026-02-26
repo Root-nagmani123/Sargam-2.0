@@ -26,20 +26,23 @@ class EligibilityCriteriaDataTable extends DataTable
             })
             ->orderColumn('pay_scale', 'salary_grade_master_pk $1')
             ->filterColumn('pay_scale', function ($query, $keyword) {
-                $query->whereHas('salaryGrade', function ($q) use ($keyword) {
-                    $q->where('salary_grade', 'like', "%{$keyword}%");
+                $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
+                $query->whereHas('salaryGrade', function ($q) use ($like) {
+                    $q->where('salary_grade', 'like', $like);
                 });
             })
             ->orderColumn('unit_type', 'estate_unit_type_master_pk $1')
             ->filterColumn('unit_type', function ($query, $keyword) {
-                $query->whereHas('unitType', function ($q) use ($keyword) {
-                    $q->where('unit_type', 'like', "%{$keyword}%");
+                $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
+                $query->whereHas('unitType', function ($q) use ($like) {
+                    $q->where('unit_type', 'like', $like);
                 });
             })
             ->orderColumn('unit_sub_type', 'estate_unit_sub_type_master_pk $1')
             ->filterColumn('unit_sub_type', function ($query, $keyword) {
-                $query->whereHas('unitSubType', function ($q) use ($keyword) {
-                    $q->where('unit_sub_type', 'like', "%{$keyword}%");
+                $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
+                $query->whereHas('unitSubType', function ($q) use ($like) {
+                    $q->where('unit_sub_type', 'like', $like);
                 });
             })
             ->addColumn('actions', function ($row) {
@@ -54,9 +57,9 @@ class EligibilityCriteriaDataTable extends DataTable
                     <form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this eligibility mapping?\');">
                         <input type="hidden" name="_token" value="' . e($token) . '">
                         <input type="hidden" name="_method" value="DELETE">
-                        <a href="javascript:void(0)" class="text-primary" title="Delete">
+                        <button type="submit" class="btn btn-link p-0 text-primary border-0" title="Delete">
                             <i class="material-icons material-symbols-rounded">delete</i>
-                        </a>
+                        </button>
                     </form>
                 </div>';
             })
@@ -100,7 +103,7 @@ class EligibilityCriteriaDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
             ]);
     }
 
@@ -110,7 +113,7 @@ class EligibilityCriteriaDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('80px'),
             Column::computed('pay_scale')->title('PAY SCALE')->orderable(true)->searchable(true),
             Column::computed('unit_type')->title('UNIT TYPE')->orderable(true)->searchable(true),
-            Column::computed('unit_sub_type')->title('UNIT SUB TYPE')->orderable(true)->searchable(true),
+            Column::computed('unit_sub_type')->title('UNIT SUB TYPE')->name('unit_sub_type')->orderable(true)->searchable(true),
             Column::computed('actions')->title('Actions')->orderable(false)->searchable(false),
         ];
     }

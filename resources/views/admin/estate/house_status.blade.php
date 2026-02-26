@@ -14,19 +14,22 @@
                 <table class="table text-nowrap" id="houseStatusTable">
                     <thead>
                         <tr>
-                            <th>Types</th>
-                            <th>Grade Pay</th>
-                            <th>House Available</th>
-                            <th>House Under Construction</th>
-                            <th>Total Projected Availability</th>
-                            <th>Allotted to LBSNAA Employee</th>
-                            <th>Other</th>
-                            <th>Vacant</th>
+                            <th>Sno.</th>
+                            <th>Qtr No</th>
+                            <th>Building Name</th>
+                            <th>Type</th>
+                            <th>Allottee Name (Ms/Mr/Mrs.)</th>
+                            <th>Section/Designation</th>
+                            <th>Mobile Number</th>
+                            <th>Alloted Date</th>
+                            <th>Occupied Date</th>
+                            <th>Vacated Date</th>
+                            <th>Status (O - Occupied / V - Vacated)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr id="noDataRow">
-                            <td colspan="8" class="text-center text-muted">Loading...</td>
+                            <td colspan="11" class="text-center text-muted">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -49,9 +52,16 @@ $(document).ready(function() {
         }
     }
 
+    function escapeHtml(str) {
+        if (str == null || str === '') return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
     function loadHouseStatus() {
         $('#noDataRow').remove();
-        $('#houseStatusTable tbody').html('<tr><td colspan="8" class="text-center">Loading...</td></tr>');
+        $('#houseStatusTable tbody').html('<tr><td colspan="11" class="text-center">Loading...</td></tr>');
 
         $.ajax({
             url: '{{ route("admin.estate.reports.house-status.data") }}',
@@ -65,19 +75,22 @@ $(document).ready(function() {
                     $.each(res.data, function(i, row) {
                         tbody.append(
                             '<tr>' +
-                                '<td>' + (row.types || 'N/A') + '</td>' +
-                                '<td>' + (row.grade_pay || '-') + '</td>' +
-                                '<td>' + (row.house_available != null ? row.house_available : '0') + '</td>' +
-                                '<td>' + (row.house_under_construction != null ? row.house_under_construction : '0') + '</td>' +
-                                '<td>' + (row.total_projected != null ? row.total_projected : '0') + '</td>' +
-                                '<td>' + (row.allotted_lbsnaa != null ? row.allotted_lbsnaa : '0') + '</td>' +
-                                '<td>' + (row.other != null ? row.other : '0') + '</td>' +
-                                '<td>' + (row.vacant != null ? row.vacant : '0') + '</td>' +
+                                '<td>' + (row.sno != null ? row.sno : (i + 1)) + '</td>' +
+                                '<td>' + escapeHtml(row.qtr_no || '—') + '</td>' +
+                                '<td>' + escapeHtml(row.building_name || '—') + '</td>' +
+                                '<td>' + escapeHtml(row.type || '—') + '</td>' +
+                                '<td>' + escapeHtml(row.allottee_name || 'VACANT') + '</td>' +
+                                '<td>' + escapeHtml(row.section_designation || '') + '</td>' +
+                                '<td>' + escapeHtml(row.mobile_number || '') + '</td>' +
+                                '<td>' + escapeHtml(row.alloted_date || '') + '</td>' +
+                                '<td>' + escapeHtml(row.occupied_date || '') + '</td>' +
+                                '<td>' + escapeHtml(row.vacated_date || '') + '</td>' +
+                                '<td>' + escapeHtml(row.status || '') + '</td>' +
                             '</tr>'
                         );
                     });
                 } else {
-                    tbody.append('<tr id="noDataRow"><td colspan="8" class="text-center text-muted">No data available.</td></tr>');
+                    tbody.append('<tr id="noDataRow"><td colspan="11" class="text-center text-muted">No data available.</td></tr>');
                 }
                 dataTableInstance = $('#houseStatusTable').DataTable({
                     order: [[0, 'asc']],
@@ -104,7 +117,7 @@ $(document).ready(function() {
             error: function(xhr) {
                 destroyDataTable();
                 var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
-                $('#houseStatusTable tbody').empty().append('<tr><td colspan="8" class="text-center text-danger">' + msg + '</td></tr>');
+                $('#houseStatusTable tbody').empty().append('<tr><td colspan="11" class="text-center text-danger">' + msg + '</td></tr>');
             }
         });
     }

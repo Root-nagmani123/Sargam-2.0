@@ -63,13 +63,9 @@ class EstateChangeRequestDataTable extends DataTable
                 if ($status === 2) {
                     return '<span class="badge bg-danger">Disapproved</span>';
                 }
-                $approveUrl = route('admin.estate.change-request.approve', ['id' => $row->pk]);
                 $reqId = e($row->estate_change_req_ID ?? 'N/A');
                 return '<div class="d-flex flex-wrap gap-1 justify-content-center">
-                    <form method="POST" action="' . $approveUrl . '" class="d-inline" data-confirm="Approve this change request?">
-                        ' . csrf_field() . '
-                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                    </form>
+                    <button type="button" class="btn btn-sm btn-success btn-approve-change-request" data-id="' . (int) $row->pk . '" data-request-id="' . $reqId . '">Approve</button>
                     <button type="button" class="btn btn-sm btn-outline-danger btn-disapprove-change-request" data-id="' . (int) $row->pk . '" data-request-id="' . $reqId . '">Disapprove</button>
                 </div>';
             })
@@ -113,6 +109,9 @@ class EstateChangeRequestDataTable extends DataTable
             ->filterColumn('availability_as_per_request', function ($query, $keyword) {
                 $query->where('estate_change_home_req_details.change_house_no', 'like', "%{$keyword}%");
             })
+            ->orderColumn('estate_change_req_ID', fn ($query, $order) => $query->orderBy('estate_change_home_req_details.estate_change_req_ID', $order))
+            ->orderColumn('change_req_date', fn ($query, $order) => $query->orderBy('estate_change_home_req_details.change_req_date', $order))
+            ->orderColumn('availability_as_per_request', fn ($query, $order) => $query->orderBy('estate_change_home_req_details.change_house_no', $order))
             ->setRowId('pk');
     }
 
@@ -120,8 +119,7 @@ class EstateChangeRequestDataTable extends DataTable
     {
         return $model->newQuery()
             ->with('estateHomeRequestDetails')
-            ->where('estate_change_home_req_details.estate_change_hac_status', 1)
-            ->orderBy('estate_change_home_req_details.pk', 'desc');
+            ->where('estate_change_home_req_details.estate_change_hac_status', 1);
     }
 
     public function html(): HtmlBuilder
@@ -133,8 +131,8 @@ class EstateChangeRequestDataTable extends DataTable
             ->minifiedAjax()
             ->parameters([
                 'responsive' => false,
-                'autoWidth' => false,
-                'scrollX' => true,
+                'autoWidth' => true,
+                'scrollX' => false,
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
@@ -154,8 +152,7 @@ class EstateChangeRequestDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
-                'initComplete' => "function() { var tbl = document.getElementById('estateChangeRequestTable'); if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) { var wrap = document.createElement('div'); wrap.className = 'table-responsive'; wrap.style.overflowX = 'auto'; wrap.style.webkitOverflowScrolling = 'touch'; tbl.parentNode.insertBefore(wrap, tbl); wrap.appendChild(tbl); } }",
+                'dom' => '<"row flex-wrap align-items-center justify-content-between gap-2 mb-3"<"col-auto"l><"col-auto"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
             ]);
     }
 

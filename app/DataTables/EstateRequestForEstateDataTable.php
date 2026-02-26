@@ -44,25 +44,18 @@ class EstateRequestForEstateDataTable extends DataTable
                 $map = [61 => 'I', 62 => 'II', 63 => 'III', 64 => 'IV', 65 => 'V', 66 => 'VI', 69 => 'IX', 70 => 'X', 71 => 'XI', 73 => 'XIII'];
                 return $map[$pk] ?? '—';
             })
-            ->editColumn('pos_from', function ($row) {
-                $d = $row->pos_from ?? null;
-                return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
-            })
-            ->editColumn('pos_to', function ($row) {
-                $d = $row->pos_to ?? null;
-                return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
-            })
-            ->editColumn('extension', fn($row) => $row->extension !== null && $row->extension !== '' ? e($row->extension) : '—')
             ->addColumn('change', function ($row) {
                 $deleteUrl = route('admin.estate.request-for-estate.destroy', ['id' => $row->pk]);
+                $detailsUrl = route('admin.estate.request-details', ['id' => $row->pk]);
                 $reqDate = $row->req_date ? \Carbon\Carbon::parse($row->req_date)->format('Y-m-d') : '';
                 $dojPayScale = $row->doj_pay_scale ? \Carbon\Carbon::parse($row->doj_pay_scale)->format('Y-m-d') : '';
                 $dojAcademic = $row->doj_academic ? \Carbon\Carbon::parse($row->doj_academic)->format('Y-m-d') : '';
                 $dojService = $row->doj_service ? \Carbon\Carbon::parse($row->doj_service)->format('Y-m-d') : '';
-                $posFrom = $row->pos_from ? \Carbon\Carbon::parse($row->pos_from)->format('Y-m-d') : '';
-                $posTo = $row->pos_to ? \Carbon\Carbon::parse($row->pos_to)->format('Y-m-d') : '';
+                $eligPk = (int) ($row->eligibility_type_pk ?? 0);
+                $eligMap = [61 => 'I', 62 => 'II', 63 => 'III', 64 => 'IV', 65 => 'V', 66 => 'VI', 69 => 'IX', 70 => 'X', 71 => 'XI', 73 => 'XIII'];
                 $attrs = [
                     'data-id' => (int) $row->pk,
+                    'data-employee_pk' => (int) ($row->employee_pk ?? 0),
                     'data-req_id' => e($row->req_id ?? ''),
                     'data-req_date' => $reqDate,
                     'data-emp_name' => e($row->emp_name ?? ''),
@@ -72,32 +65,64 @@ class EstateRequestForEstateDataTable extends DataTable
                     'data-doj_pay_scale' => $dojPayScale,
                     'data-doj_academic' => $dojAcademic,
                     'data-doj_service' => $dojService,
-                    'data-eligibility_type_pk' => (int) ($row->eligibility_type_pk ?? 0),
+                    'data-eligibility_type_pk' => $eligPk,
+                    'data-eligibility_type_label' => e($eligMap[$eligPk] ?? 'Type ' . $eligPk),
                     'data-status' => (int) ($row->status ?? 0),
                     'data-current_alot' => e($row->current_alot ?? ''),
                     'data-remarks' => e($row->remarks ?? ''),
-                    'data-pos_from' => $posFrom,
-                    'data-pos_to' => $posTo,
-                    'data-extension' => e($row->extension ?? ''),
                 ];
                 $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
+                $currentAlot = trim((string) ($row->current_alot ?? ''));
+                $raiseChangeUrl = $currentAlot !== '' ? route('admin.estate.raise-change-request', ['id' => $row->pk]) : '';
+                $raiseChangeLink = $raiseChangeUrl !== '' ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>' : '';
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
+                    <a href="' . e($detailsUrl) . '" class="text-primary" title="Request &amp; Change Details"><i class="material-icons material-symbols-rounded">visibility</i></a>
+                    ' . $raiseChangeLink . '
                     <a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>
                     <a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>
                 </div>';
             })
             ->rawColumns(['status', 'change'])
             ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
-                if (!empty($searchValue)) {
-                    $query->where(function ($q) use ($searchValue) {
-                        $q->where('estate_home_request_details.req_id', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.emp_name', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.employee_id', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_home_request_details.current_alot', 'like', "%{$searchValue}%");
-                    });
+                $searchValue = trim((string) request()->input('search.value', ''));
+                if ($searchValue === '') {
+                    return;
                 }
+                $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
+                $query->where(function ($q) use ($searchValue, $searchLike) {
+                    $q->where('estate_home_request_details.req_id', 'like', $searchLike)
+                        ->orWhere('estate_home_request_details.emp_name', 'like', $searchLike)
+                        ->orWhere('estate_home_request_details.employee_id', 'like', $searchLike)
+                        ->orWhere('estate_home_request_details.current_alot', 'like', $searchLike)
+                        ->orWhereRaw('CONCAT(TRIM(COALESCE(estate_home_request_details.emp_name,"")), " / ", TRIM(COALESCE(estate_home_request_details.employee_id,""))) LIKE ?', [$searchLike]);
+                    $statusMap = ['pending' => 0, 'allotted' => 1, 'rejected' => 2];
+                    $searchLower = strtolower($searchValue);
+                    if (isset($statusMap[$searchLower])) {
+                        $q->orWhere('estate_home_request_details.status', $statusMap[$searchLower]);
+                    } elseif (is_numeric($searchValue) && in_array((int) $searchValue, [0, 1, 2], true)) {
+                        $q->orWhere('estate_home_request_details.status', (int) $searchValue);
+                    }
+                });
             }, true)
+            ->filterColumn('req_id', function ($query, $keyword) {
+                $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
+                $query->where('estate_home_request_details.req_id', 'like', $like);
+            })
+            ->filterColumn('current_alot', function ($query, $keyword) {
+                $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
+                $query->where('estate_home_request_details.current_alot', 'like', $like);
+            })
+            ->filterColumn('name_id', function ($query, $keyword) {
+                $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
+                $query->where(function ($q) use ($like) {
+                    $q->where('estate_home_request_details.emp_name', 'like', $like)
+                        ->orWhere('estate_home_request_details.employee_id', 'like', $like)
+                        ->orWhereRaw('CONCAT(TRIM(COALESCE(estate_home_request_details.emp_name,"")), " / ", TRIM(COALESCE(estate_home_request_details.employee_id,""))) LIKE ?', [$like]);
+                });
+            })
+            ->orderColumn('pk', fn ($query, $order) => $query->orderBy('estate_home_request_details.pk', $order))
+            ->orderColumn('req_id', fn ($query, $order) => $query->orderBy('estate_home_request_details.req_id', $order))
+            ->orderColumn('req_date', fn ($query, $order) => $query->orderBy('estate_home_request_details.req_date', $order))
             ->setRowId('pk');
     }
 
@@ -106,6 +131,7 @@ class EstateRequestForEstateDataTable extends DataTable
         return $model->newQuery()
             ->select([
                 'estate_home_request_details.pk',
+                'estate_home_request_details.employee_pk',
                 'estate_home_request_details.req_id',
                 'estate_home_request_details.req_date',
                 'estate_home_request_details.emp_name',
@@ -119,11 +145,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 'estate_home_request_details.current_alot',
                 'estate_home_request_details.eligibility_type_pk',
                 'estate_home_request_details.remarks',
-                'estate_home_request_details.pos_from',
-                'estate_home_request_details.pos_to',
-                'estate_home_request_details.extension',
-            ])
-            ->orderBy('estate_home_request_details.pk', 'desc');
+            ]);
     }
 
     public function html(): HtmlBuilder
@@ -141,7 +163,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[1, 'desc']],
+                'order' => [[8, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search within table:',
@@ -156,7 +178,8 @@ class EstateRequestForEstateDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
+                'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8 request-for-estate-search-col"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'columnDefs' => [['targets' => [8], 'visible' => false]],
             ]);
     }
 
@@ -171,9 +194,7 @@ class EstateRequestForEstateDataTable extends DataTable
             Column::make('status')->title('STATUS OF REQUEST')->orderable(false)->searchable(false),
             Column::make('current_alot')->title('ALLOTED HOUSE')->orderable(false)->searchable(true),
             Column::make('eligibility_type_pk')->title('ELIGIBILITY TYPE')->orderable(false)->searchable(false),
-            Column::make('pos_from')->title('POSSESSION FROM')->orderable(false)->searchable(false),
-            Column::make('pos_to')->title('POSSESSION TO')->orderable(false)->searchable(false),
-            Column::make('extension')->title('EXTENSION')->orderable(false)->searchable(false),
+            Column::make('pk')->title('')->orderable(true)->searchable(false)->exportable(false)->printable(false),
             Column::computed('change')->title('CHANGE')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
         ];
     }
