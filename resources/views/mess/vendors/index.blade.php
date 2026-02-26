@@ -90,9 +90,9 @@
 
 {{-- Create Vendor Modal --}}
 <div class="modal fade" id="createVendorModal" tabindex="-1" aria-labelledby="createVendorModalLabel" aria-hidden="true">
-<div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="POST" action="{{ route('admin.mess.vendors.store') }}" enctype="multipart/form-data">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <form method="POST" action="{{ route('admin.mess.vendors.store') }}">
                 @csrf
                 <div class="modal-header border-0 pb-0 pt-4 px-4">
                     <h5 class="modal-title fw-semibold" id="createVendorModalLabel">Add Vendor</h5>
@@ -106,9 +106,9 @@
                             @error('name')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" value="{{ old('email') }}" placeholder="Optional">
-                            @error('email')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <label class="form-label fw-medium small">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control form-control-sm rounded-2" required value="{{ old('email') }}" placeholder="email@example.com">
+                            @error('email')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Contact Person <span class="text-danger">*</span></label>
@@ -121,29 +121,32 @@
                             @error('phone')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" class="form-control" rows="3" required>{{ old('address') }}</textarea>
-                            @error('address')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <label class="form-label fw-medium small">Address <span class="text-danger">*</span></label>
+                            <textarea name="address" class="form-control form-control-sm rounded-2" rows="3" required placeholder="Full address">{{ old('address') }}</textarea>
+                            @error('address')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-12 pt-2">
+                            <span class="small text-muted fw-medium">Bank & tax (optional)</span>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">GST Number</label>
-                            <input type="text" name="gst_number" class="form-control" value="{{ old('gst_number') }}" placeholder="Optional">
-                            @error('gst_number')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <label class="form-label fw-medium small">GST Number</label>
+                            <input type="text" name="gst_number" class="form-control form-control-sm rounded-2" value="{{ old('gst_number') }}" placeholder="Optional">
+                            @error('gst_number')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Bank Name</label>
-                            <input type="text" name="bank_name" class="form-control" value="{{ old('bank_name') }}" placeholder="Optional">
-                            @error('bank_name')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <label class="form-label fw-medium small">Bank Name</label>
+                            <input type="text" name="bank_name" class="form-control form-control-sm rounded-2" value="{{ old('bank_name') }}" placeholder="Optional">
+                            @error('bank_name')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">IFSC Code</label>
-                            <input type="text" name="ifsc_code" class="form-control" value="{{ old('ifsc_code') }}" placeholder="Optional">
-                            @error('ifsc_code')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <label class="form-label fw-medium small">IFSC Code</label>
+                            <input type="text" name="ifsc_code" class="form-control form-control-sm rounded-2" value="{{ old('ifsc_code') }}" placeholder="Optional">
+                            @error('ifsc_code')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Account Number</label>
-                            <input type="text" name="account_number" class="form-control" value="{{ old('account_number') }}" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
-                            @error('account_number')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <label class="form-label fw-medium small">Account Number</label>
+                            <input type="text" name="account_number" class="form-control form-control-sm rounded-2" value="{{ old('account_number') }}" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
+                            @error('account_number')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Upload Licence</label>
@@ -221,9 +224,9 @@
 
 {{-- Edit Vendor Modal --}}
 <div class="modal fade" id="editVendorModal" tabindex="-1" aria-labelledby="editVendorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="editVendorForm" method="POST" action="" enctype="multipart/form-data">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <form id="editVendorForm" method="POST" action="">
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-0 pb-0 pt-4 px-4">
@@ -237,8 +240,8 @@
                             <input type="text" name="name" id="edit_vendor_name" class="form-control form-control-sm rounded-2" required placeholder="Enter vendor name">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" id="edit_vendor_email" class="form-control" placeholder="Optional">
+                            <label class="form-label fw-medium small">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" id="edit_vendor_email" class="form-control form-control-sm rounded-2" required placeholder="email@example.com">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Contact Person <span class="text-danger">*</span></label>
@@ -249,24 +252,27 @@
                             <input type="text" name="phone" id="edit_vendor_phone" class="form-control form-control-sm rounded-2" required inputmode="numeric" pattern="[0-9]*" maxlength="20" placeholder="Digits only">
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" id="edit_vendor_address" class="form-control" rows="3" required></textarea>
+                            <label class="form-label fw-medium small">Address <span class="text-danger">*</span></label>
+                            <textarea name="address" id="edit_vendor_address" class="form-control form-control-sm rounded-2" rows="3" required placeholder="Full address"></textarea>
+                        </div>
+                        <div class="col-12 pt-2">
+                            <span class="small text-muted fw-medium">Bank & tax (optional)</span>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">GST Number</label>
-                            <input type="text" name="gst_number" id="edit_vendor_gst_number" class="form-control" placeholder="Optional">
+                            <label class="form-label fw-medium small">GST Number</label>
+                            <input type="text" name="gst_number" id="edit_vendor_gst_number" class="form-control form-control-sm rounded-2" placeholder="Optional">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Bank Name</label>
-                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control" placeholder="Optional">
+                            <label class="form-label fw-medium small">Bank Name</label>
+                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control form-control-sm rounded-2" placeholder="Optional">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">IFSC Code</label>
-                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code" class="form-control" placeholder="Optional">
+                            <label class="form-label fw-medium small">IFSC Code</label>
+                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code" class="form-control form-control-sm rounded-2" placeholder="Optional">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Account Number</label>
-                            <input type="text" name="account_number" id="edit_vendor_account_number" class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
+                            <label class="form-label fw-medium small">Account Number</label>
+                            <input type="text" name="account_number" id="edit_vendor_account_number" class="form-control form-control-sm rounded-2" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Upload Licence</label>

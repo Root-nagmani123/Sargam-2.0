@@ -105,35 +105,6 @@
             </a>
         </div>
     </div>
-
-    <!-- Filter & Search -->
-    <div class="card border border-body-secondary rounded-4 shadow-sm mb-3">
-        <div class="card-body py-3">
-            <form method="GET" action="{{ route('admin.employee_idcard.index') }}" class="row g-3 align-items-end" id="idcardFilterForm">
-                <div class="col-12 col-md-3">
-                    <label for="idcardSearch" class="form-label small text-muted mb-0">Search by Name</label>
-                    <input type="search" name="search" id="idcardSearch" class="form-control form-control-sm" placeholder="Employee name..." value="{{ old('search', $search ?? '') }}">
-                </div>
-                <div class="col-12 col-md-2">
-                    <label for="dateFrom" class="form-label small text-muted mb-0">Date From</label>
-                    <input type="date" name="date_from" id="dateFrom" class="form-control form-control-sm" value="{{ old('date_from', $dateFrom ?? '') }}">
-                </div>
-                <div class="col-12 col-md-2">
-                    <label for="dateTo" class="form-label small text-muted mb-0">Date To</label>
-                    <input type="date" name="date_to" id="dateTo" class="form-control form-control-sm" value="{{ old('date_to', $dateTo ?? '') }}">
-                </div>
-                <div class="col-12 col-md-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">filter_list</i> Apply Filter
-                    </button>
-                    <a href="{{ route('admin.employee_idcard.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
-        <div class="card-body p-0">
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
@@ -728,14 +699,33 @@ document.addEventListener('DOMContentLoaded', function() {
         history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 
-    // If there are no Duplication/Extension records, redirect those tabs directly to Duplicate ID Card create page
-    var duplicationTab = document.getElementById('duplication-tab');
-    if (duplicationTab) {
-        duplicationTab.addEventListener('click', function(e) {
-@if($duplicationRequests->total() === 0)
-            e.preventDefault();
-            window.location.href = '{{ route('admin.duplicate_idcard.create') }}';
-@endif
+    // DataTables: init only when table has data rows (no empty-state colspan row)
+    var dtDefaults = {
+        order: [[0, 'asc']],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        language: {
+            search: 'Search:',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+            infoEmpty: 'Showing 0 to 0 of 0 entries',
+            infoFiltered: '(filtered from _MAX_ total entries)',
+            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' },
+            emptyTable: 'No data available'
+        },
+        columnDefs: [
+            { orderable: false, targets: [0, 1, -1] }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        autoWidth: false
+    };
+    if (typeof $ !== 'undefined' && $.fn.DataTable) {
+        ['#activeIdcardTable', '#duplicationIdcardTable', '#extensionIdcardTable', '#archiveIdcardTable'].forEach(function(id) {
+            var $t = $(id);
+            if ($t.length && $t.find('tbody tr td[colspan]').length === 0) {
+                if ($.fn.DataTable.isDataTable(id)) $t.DataTable().destroy();
+                $t.DataTable(dtDefaults);
+            }
         });
     }
     var extensionTab = document.getElementById('extension-tab');
