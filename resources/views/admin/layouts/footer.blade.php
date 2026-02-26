@@ -69,5 +69,32 @@
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
   <script src="https://bootstrapdemos.adminmart.com/matdash/dist/assets/js/datatable/datatable-advanced.init.js"></script>
 
+  <!-- Choices.js (global searchable selects) -->
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Apply Choices.js to ALL selects by default.
+      // Add class "no-search-select" on a <select> if you want to OPT OUT.
+      const elements = document.querySelectorAll('select:not(.no-search-select)');
+
+      elements.forEach(function (el) {
+        if (el.dataset.choicesInitialized === 'true') {
+          return;
+        }
+
+        new Choices(el, {
+          searchEnabled: true,
+          itemSelectText: '',
+          removeItemButton: false,
+          shouldSort: false,
+          placeholder: true,
+          placeholderValue: el.getAttribute('placeholder') || 'Select an option',
+        });
+
+        el.dataset.choicesInitialized = 'true';
+      });
+    });
+  </script>
+
 
   @yield('scripts')
