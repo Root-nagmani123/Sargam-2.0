@@ -1,10 +1,19 @@
 @extends('admin.layouts.master')
 @section('title', 'Duplicate Vehicle Pass Request - Sargam')
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Duplicate Vehicle Pass Request"></x-breadcrum>
+<div class="container-fluid duplicate-vehicle-pass-print-area">
+    {{-- Print-only header: visible only when printing --}}
+    <div class="print-only-header">
+        <h5 class="mb-0">Duplicate Vehicle Pass Request - List</h5>
+        <p class="text-muted small mb-0">Printed on: {{ now()->format('d-m-Y H:i') }}</p>
+        <p class="text-muted small mb-0">Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</p>
+    </div>
 
-    <p class="text-muted mb-4">
+    <div class="no-print">
+        <x-breadcrum title="Duplicate Vehicle Pass Request"></x-breadcrum>
+    </div>
+
+    <p class="text-muted mb-4 no-print">
         This page displays all vehicle pass request added in the system, and provides options to manage records such as edit, delete, excel upload, excel download, print etc.
     </p>
 
@@ -23,7 +32,7 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 no-print">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <form method="GET" class="d-flex align-items-center gap-2">
                         <label class="text-muted small">Show</label>
@@ -107,16 +116,25 @@
                                         <a href="{{ route('admin.security.duplicate_vehicle_pass.show', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-primary" title="View">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                         </a>
-                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-success" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                        </a>
-                                        <form action="{{ route('admin.security.duplicate_vehicle_pass.delete', encrypt($r->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this request?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                        @if((int)$r->vech_card_status === 1)
+                                            <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-success" title="Edit">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+                                            </a>
+                                            <form action="{{ route('admin.security.duplicate_vehicle_pass.delete', encrypt($r->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this request?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button class="btn btn-sm btn-outline-secondary" title="Edit Disabled" disabled>
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" title="Delete Disabled" disabled>
                                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
                                             </button>
-                                        </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -131,7 +149,7 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 no-print">
                 <div class="text-muted small">
                     Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries
                 </div>
@@ -142,6 +160,83 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Print-only header: hidden on screen */
+.print-only-header { display: none !important; }
+
+@media print {
+    /* Dedicated print layout: only this area, no sidebar/header */
+    body * { visibility: hidden !important; }
+    .duplicate-vehicle-pass-print-area,
+    .duplicate-vehicle-pass-print-area * { visibility: visible !important; }
+    .duplicate-vehicle-pass-print-area .no-print,
+    .duplicate-vehicle-pass-print-area .no-print * { visibility: hidden !important; display: none !important; }
+    .duplicate-vehicle-pass-print-area {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 12px !important;
+        background: #fff !important;
+    }
+    /* Show print-only header */
+    .print-only-header {
+        display: block !important;
+        visibility: visible !important;
+        margin-bottom: 12px !important;
+        padding-bottom: 8px !important;
+        border-bottom: 1px solid #333 !important;
+    }
+    .print-only-header h5 { font-size: 16px !important; }
+    .print-only-header p { font-size: 11px !important; margin: 2px 0 !important; }
+    /* Hide toolbar, buttons, forms, pagination, alerts */
+    .duplicate-vehicle-pass-print-area .d-flex.flex-wrap.gap-2.justify-content-between,
+    .duplicate-vehicle-pass-print-area .btn,
+    .duplicate-vehicle-pass-print-area form,
+    .duplicate-vehicle-pass-print-area nav[aria-label="Pagination"],
+    .duplicate-vehicle-pass-print-area .pagination,
+    .duplicate-vehicle-pass-print-area .alert { display: none !important; visibility: hidden !important; }
+    /* Hide Actions column in print */
+    .duplicate-vehicle-pass-print-area .col-action,
+    .duplicate-vehicle-pass-print-area th.col-action { display: none !important; }
+    /* Card and table: print-friendly */
+    .duplicate-vehicle-pass-print-area .card {
+        border: 1px solid #333 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+    }
+    .duplicate-vehicle-pass-print-area .table-responsive { overflow: visible !important; }
+    .duplicate-vehicle-pass-print-area #duplicateVehPassTable {
+        width: 100% !important;
+        font-size: 11px !important;
+        border-collapse: collapse !important;
+    }
+    .duplicate-vehicle-pass-print-area #duplicateVehPassTable thead {
+        display: table-header-group !important;
+    }
+    .duplicate-vehicle-pass-print-area #duplicateVehPassTable th,
+    .duplicate-vehicle-pass-print-area #duplicateVehPassTable td {
+        border: 1px solid #333 !important;
+        padding: 4px 6px !important;
+    }
+    .duplicate-vehicle-pass-print-area #duplicateVehPassTable tbody tr {
+        page-break-inside: avoid !important;
+    }
+    .duplicate-vehicle-pass-print-area #duplicateVehPassTable .table-primary {
+        background: #e9ecef !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    /* Links in table: show text only (e.g. Download) */
+    .duplicate-vehicle-pass-print-area #duplicateVehPassTable a {
+        color: #000 !important;
+        text-decoration: none !important;
+    }
+}
+</style>
 
 @push('scripts')
 <script>

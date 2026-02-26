@@ -147,7 +147,7 @@
                                     <span class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="photoRemovePerm" aria-label="Remove photo" role="button" tabindex="0">&times;</span>
                                 </div>
                             </label>
-                            <small class="text-muted">Photo should be in JPG/PNG format and should be less than 2MB</small>
+                            <small class="text-muted d-block">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
                             @error('photo')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-6">
@@ -169,6 +169,7 @@
                                     </div>
                                 </div>
                             </label>
+                            <small class="text-muted d-block">Allowed: PDF, DOC, DOCX. Max size: 5 MB</small>
                             @error('joining_letter')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -287,6 +288,7 @@
                                     <span class="idcard-preview-remove btn btn-sm btn-danger position-absolute top-0 end-0 m-1" id="photoRemoveCont" aria-label="Remove photo" role="button" tabindex="0">&times;</span>
                                 </div>
                             </label>
+                            <small class="text-muted d-block">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
                         </div>
                         
                     </div>
@@ -353,6 +355,7 @@
                                 <div class="idcard-upload-placeholder" id="firReceiptPlaceholder">
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                     <p class="mt-2 mb-0 small">Upload FIR filed against lost card</p>
+                                    <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                 </div>
                                 <div class="idcard-upload-preview idcard-doc-preview d-none" id="firReceiptPreview">
                                     <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
@@ -369,6 +372,7 @@
                                 <div class="idcard-upload-placeholder" id="paymentReceiptPlaceholder">
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                     <p class="mt-2 mb-0 small">Click to upload</p>
+                                    <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                 </div>
                                 <div class="idcard-upload-preview idcard-doc-preview d-none" id="paymentReceiptPreview">
                                     <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
