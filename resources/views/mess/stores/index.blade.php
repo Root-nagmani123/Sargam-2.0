@@ -5,6 +5,7 @@
     $storeTypes = \App\Models\Mess\Store::storeTypes();
 @endphp
 <div class="container-fluid">
+    <x-breadcrum title="Store Master"></x-breadcrum>
     <div class="datatables">
         <div class="card">
             <div class="card-body">
@@ -23,15 +24,15 @@
             @endif
 
             <div class="table-responsive">
-                <table id="storesTable" class="table table-bordered table-hover align-middle w-100">
+                <table id="storesTable" class="table text-nowrap align-middle w-100">
                     <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Store Type</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Location</th>
-                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
+                            <th>S.No.</th>
+                            <th>Store Name</th>
+                            <th>Store Type</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -42,7 +43,7 @@
                                     <div class="fw-semibold">{{ $store->store_name }}</div>
                                     <div class="text-muted small">Code: {{ $store->store_code }}</div>
                                 </td>
-                                <td class="text-capitalize">{{ $storeTypes[$store->store_type ?? 'mess'] ?? ($store->store_type ?? '-') }}</td>
+                                <td>{{ $storeTypes[$store->store_type ?? 'mess'] ?? ($store->store_type ?? '-') }}</td>
                                 <td>{{ $store->location ?? '-' }}</td>
                                 <td>
                                     <span class="badge bg-{{ $store->status_badge_class }}">
@@ -51,18 +52,18 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-store"
+                                        <a href="javascript:void(0)" class="btn-edit-store"
                                                 data-id="{{ $store->id }}"
                                                 data-store-name="{{ e($store->store_name) }}"
                                                 data-store-type="{{ e(trim((string)($store->store_type ?? '')) ?: 'mess') }}"
                                                 data-location="{{ e($store->location ?? '') }}"
                                                 data-status="{{ e($store->status ?? 'active') }}"
-                                                title="Edit">Edit</button>
+                                                title="Edit"><i class="material-icons material-icons-rounded">edit</i></a>
                                         <form method="POST" action="{{ route('admin.mess.stores.destroy', $store->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this store?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            <a class="text-primary" href="{{ route('admin.mess.stores.destroy', $store->id) }}" title="Delete"><i class="material-icons material-icons-rounded">delete</i></a>
                                         </form>
                                     </div>
                                 </td>
@@ -198,8 +199,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-
-<style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
-</style>
 @endsection

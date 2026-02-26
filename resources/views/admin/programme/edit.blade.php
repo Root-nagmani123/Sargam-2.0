@@ -3,7 +3,16 @@
 @section('title', 'Member - Sargam | Lal Bahadur')
 
 @section('setup_content')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
 <style>
+/* Choices.js + Bootstrap in programme-edit */
+.programme-edit .choices { width: 100%; }
+.programme-edit .choices__inner { min-height: 38px; padding: 0.375rem 2.25rem 0.375rem 0.75rem; background-color: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); font-size: 1rem; }
+.programme-edit .choices[data-type*="select-one"] .choices__inner { padding-bottom: 0.375rem; }
+.programme-edit .choices.is-focused .choices__inner { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+.programme-edit .choices__list--dropdown { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); z-index: 1050; }
+.programme-edit .choices__list--dropdown .choices__item--selectable.is-highlighted { background-color: var(--bs-primary-bg-subtle); color: var(--bs-primary); }
+.programme-edit .choices__input { background-color: var(--bs-body-bg); }
 /* Programme Edit - Responsive */
 @media (max-width: 991.98px) {
     .programme-edit .card-body { padding: 1.25rem; }
@@ -25,6 +34,7 @@
     .programme-edit .card-body { padding: 0.75rem; }
     .programme-edit .expertise-grid .col-6 { flex: 0 0 100%; max-width: 100%; }
     .programme-edit .btn.hstack { width: 100%; justify-content: center; }
+    .programme-edit .choices { width: 100% !important; }
 }
 </style>
 <div class="container-fluid px-2 px-sm-3 px-md-4 py-3 programme-edit">
@@ -40,7 +50,7 @@
                     <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label" for="facultytype">Faculty Type :</label>
-                            <select class="form-select" id="facultytype" name="facultytype">
+                            <select class="form-select choices-select" id="facultytype" name="facultytype">
                                 <option value="">Select</option>
                                 <option value="internal">Internal</option>
                                 <option value="guest">Guest</option>
@@ -69,7 +79,7 @@
                     <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label" for="gender">Gender :</label>
-                            <select class="form-select" id="gender" name="gender">
+                            <select class="form-select choices-select" id="gender" name="gender">
                                 <option value="">Select</option>
                                 <option value="male">Male</option>
                                 <option value="female">Female</option>
@@ -92,7 +102,7 @@
                     <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label" for="country">Country :</label>
-                            <select class="form-select" id="country" name="country">
+                            <select class="form-select choices-select" id="country" name="country">
                                 <option value="">Select</option>
                                 <option value="general">General</option>
                                 <option value="obc">OBC</option>
@@ -105,7 +115,7 @@
                     <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label" for="state">State :</label>
-                            <select class="form-select" id="state" name="state">
+                            <select class="form-select choices-select" id="state" name="state">
                                 <option value="">Select</option>
                                 <option value="general">General</option>
                                 <option value="obc">OBC</option>
@@ -118,7 +128,7 @@
                     <div class="col-12 col-md-6">
                         <div class="mb-3">
                             <label class="form-label" for="city">City :</label>
-                            <select class="form-select" id="city" name="city">
+                            <select class="form-select choices-select" id="city" name="city">
                                 <option value="">Select</option>
                                 <option value="general">General</option>
                                 <option value="obc">OBC</option>
@@ -180,11 +190,10 @@
                         <div class="col-12 col-sm-6 col-md-3">
                             <label for="Schoolname" class="form-label">School Name :</label>
                             <div class="mb-3">
-                                <select class="form-select" id="educationDate" name="educationDate">
-                                    <option>Date</option>
+                                <select class="form-select choices-select" id="educationDate" name="educationDate">
+                                    <option value="">Date</option>
                                     <option value="2015">2015</option>
                                     <option value="2016">2016</option>
-                                    <option value="2023">2023</option>
                                     <option value="2023">2023</option>
                                 </select>
                             </div>
@@ -224,11 +233,10 @@
                         <div class="col-12 col-sm-6 col-md-3">
                             <label for="Schoolname" class="form-label">School Name :</label>
                             <div class="mb-3">
-                                <select class="form-select" id="educationDate" name="educationDate">
-                                    <option>Date</option>
+                                <select class="form-select choices-select" id="educationDateExp" name="educationDateExp">
+                                    <option value="">Date</option>
                                     <option value="2015">2015</option>
                                     <option value="2016">2016</option>
-                                    <option value="2023">2023</option>
                                     <option value="2023">2023</option>
                                 </select>
                             </div>
@@ -396,3 +404,8 @@
 
 
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<script src="{{ asset('js/programme-edit.js') }}"></script>
+@endpush
