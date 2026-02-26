@@ -46,6 +46,7 @@ class EstateRequestForEstateDataTable extends DataTable
             })
             ->addColumn('change', function ($row) {
                 $deleteUrl = route('admin.estate.request-for-estate.destroy', ['id' => $row->pk]);
+                $detailsUrl = route('admin.estate.request-details', ['id' => $row->pk]);
                 $reqDate = $row->req_date ? \Carbon\Carbon::parse($row->req_date)->format('Y-m-d') : '';
                 $dojPayScale = $row->doj_pay_scale ? \Carbon\Carbon::parse($row->doj_pay_scale)->format('Y-m-d') : '';
                 $dojAcademic = $row->doj_academic ? \Carbon\Carbon::parse($row->doj_academic)->format('Y-m-d') : '';
@@ -54,6 +55,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 $eligMap = [61 => 'I', 62 => 'II', 63 => 'III', 64 => 'IV', 65 => 'V', 66 => 'VI', 69 => 'IX', 70 => 'X', 71 => 'XI', 73 => 'XIII'];
                 $attrs = [
                     'data-id' => (int) $row->pk,
+                    'data-employee_pk' => (int) ($row->employee_pk ?? 0),
                     'data-req_id' => e($row->req_id ?? ''),
                     'data-req_date' => $reqDate,
                     'data-emp_name' => e($row->emp_name ?? ''),
@@ -70,7 +72,12 @@ class EstateRequestForEstateDataTable extends DataTable
                     'data-remarks' => e($row->remarks ?? ''),
                 ];
                 $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
+                $currentAlot = trim((string) ($row->current_alot ?? ''));
+                $raiseChangeUrl = $currentAlot !== '' ? route('admin.estate.raise-change-request', ['id' => $row->pk]) : '';
+                $raiseChangeLink = $raiseChangeUrl !== '' ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>' : '';
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
+                    <a href="' . e($detailsUrl) . '" class="text-primary" title="Request &amp; Change Details"><i class="material-icons material-symbols-rounded">visibility</i></a>
+                    ' . $raiseChangeLink . '
                     <a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>
                     <a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>
                 </div>';
@@ -124,6 +131,7 @@ class EstateRequestForEstateDataTable extends DataTable
         return $model->newQuery()
             ->select([
                 'estate_home_request_details.pk',
+                'estate_home_request_details.employee_pk',
                 'estate_home_request_details.req_id',
                 'estate_home_request_details.req_date',
                 'estate_home_request_details.emp_name',

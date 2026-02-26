@@ -51,6 +51,7 @@
                 <form id="formAddEditRequestEstate" method="POST" action="{{ route('admin.estate.request-for-estate.store') }}">
                     @csrf
                     <input type="hidden" name="id" id="request_estate_id" value="">
+                    <input type="hidden" name="employee_pk" id="request_employee_pk" value="">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="modal_req_id" class="form-label">Request ID</label>
@@ -283,6 +284,7 @@
         $('#btn-open-add-request-estate').on('click', function() {
             $('#addEditRequestEstateModalLabel').text('Add Estate Request');
             $('#request_estate_id').val('');
+            $('#request_employee_pk').val('0');
             $('#formAddEditRequestEstate')[0].reset();
             $('#request_estate_id').val('');
             $('#modal_employee_pk').val('');
@@ -303,8 +305,10 @@
             e.preventDefault();
             var $btn = $(this);
             var rowPk = $btn.data('id');
+            var employeePk = $btn.data('employee_pk') || 0;
             $('#addEditRequestEstateModalLabel').text('Edit Estate Request');
             $('#request_estate_id').val(rowPk || '');
+            $('#request_employee_pk').val(employeePk);
             $('#modal_req_id').val($btn.data('req_id') || '');
             $('#modal_req_date').val($btn.data('req_date') || '');
             $('#modal_emp_name').val($btn.data('emp_name') || '');
@@ -320,7 +324,7 @@
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
-            loadRequestEstateEmployees(rowPk, rowPk);
+            loadRequestEstateEmployees(rowPk, employeePk);
             if (addEditModal) addEditModal.show();
         });
 
@@ -357,8 +361,12 @@
 
         $('#formAddEditRequestEstate').on('submit', function(e) {
             e.preventDefault();
-            if ($('#modal_employee_pk').val() === '__new__') {
+            var selVal = $('#modal_employee_pk').val();
+            if (selVal === '__new__') {
                 $('#modal_emp_name').val($('#modal_new_emp_name').val().trim());
+                $('#request_employee_pk').val('0');
+            } else {
+                $('#request_employee_pk').val(selVal || '0');
             }
             var $form = $(this);
             var $errors = $('#addEditRequestEstateFormErrors');

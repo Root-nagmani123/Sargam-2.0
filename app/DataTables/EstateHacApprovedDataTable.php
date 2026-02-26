@@ -48,22 +48,25 @@ class EstateHacApprovedDataTable extends DataTable
             ->editColumn('current_or_availability', fn ($row) => e($row->current_or_availability ?? '—'))
             ->editColumn('remarks', fn ($row) => \Illuminate\Support\Str::limit(e($row->remarks ?? ''), 60))
             ->addColumn('action', function ($row) {
+                $detailsPk = (int) ($row->estate_home_request_details_pk ?? $row->source_pk ?? 0);
+                $detailsUrl = $detailsPk ? route('admin.estate.request-details', ['id' => $detailsPk]) : '#';
+                $detailsLink = $detailsPk ? '<a href="' . e($detailsUrl) . '" class="btn btn-sm btn-outline-secondary me-1" title="Request &amp; Change Details"><i class="bi bi-eye"></i></a>' : '';
                 if ($row->request_type === 'change') {
                     $status = (int) ($row->change_ap_dis_status ?? 0);
                     if ($status === 1) {
-                        return '<span class="badge bg-success">Approved</span>';
+                        return $detailsLink . '<span class="badge bg-success">Approved</span>';
                     }
                     if ($status === 2) {
-                        return '<span class="badge bg-danger">Disapproved</span>';
+                        return $detailsLink . '<span class="badge bg-danger">Disapproved</span>';
                     }
                     $reqId = e($row->request_id ?? 'N/A');
-                    return '<div class="d-flex flex-wrap gap-1 justify-content-center">
+                    return $detailsLink . '<div class="d-inline-flex flex-wrap gap-1 justify-content-center">
                         <button type="button" class="btn btn-sm btn-success btn-approve-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '">Approve</button>
                         <button type="button" class="btn btn-sm btn-outline-danger btn-disapprove-change-request" data-id="' . (int) $row->source_pk . '" data-request-id="' . $reqId . '">Disapprove</button>
                     </div>';
                 }
                 $url = route('admin.estate.new-request.allot-details', ['id' => $row->source_pk]);
-                return '<button type="button" class="btn btn-sm btn-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)">
+                return $detailsLink . '<button type="button" class="btn btn-sm btn-success btn-allot-new-request" data-id="' . (int) $row->source_pk . '" data-req-id="' . e($row->request_id ?? '') . '" data-details-url="' . e($url) . '" title="Allot house (add to Possession Details)">
                     <i class="bi bi-house-add me-1"></i> Allot
                 </button>';
             })
@@ -95,6 +98,7 @@ class EstateHacApprovedDataTable extends DataTable
                 DB::raw("'change' as request_type"),
                 'ec.pk as source_pk',
                 'ec.pk as pk',
+                'eh.pk as estate_home_request_details_pk',
                 'ec.estate_change_req_ID as request_id',
                 'ec.change_req_date as request_date',
                 'eh.emp_name',
@@ -127,6 +131,7 @@ class EstateHacApprovedDataTable extends DataTable
                 DB::raw("'new' as request_type"),
                 'eh.pk as source_pk',
                 'eh.pk as pk',
+                'eh.pk as estate_home_request_details_pk',
                 'eh.req_id as request_id',
                 'eh.req_date as request_date',
                 'eh.emp_name',
@@ -159,7 +164,6 @@ class EstateHacApprovedDataTable extends DataTable
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
-                'scrollX' => true,
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
@@ -175,7 +179,6 @@ class EstateHacApprovedDataTable extends DataTable
                     'paginate' => ['first' => 'First', 'last' => 'Last', 'next' => 'Next', 'previous' => 'Previous'],
                 ],
                 'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
-                'initComplete' => "function() { var tbl = document.getElementById('estateHacApprovedTable'); if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) { var wrap = document.createElement('div'); wrap.className = 'table-responsive'; wrap.style.overflowX = 'auto'; wrap.style.webkitOverflowScrolling = 'touch'; tbl.parentNode.insertBefore(wrap, tbl); wrap.appendChild(tbl); } }",
             ]);
     }
 

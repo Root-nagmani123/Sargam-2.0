@@ -180,10 +180,10 @@
         </div>
     </div>
 
-    <!-- Data Table Card -->
+    <!-- Data Table Card (Other Employee) -->
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-header bg-body-secondary bg-opacity-10 border-0 py-3 px-4">
-            <h5 class="card-title fw-semibold mb-0">Return House List</h5>
+            <h5 class="card-title fw-semibold mb-0">Return House List (Other Employee)</h5>
         </div>
         <div class="card-body p-4">
             <div class="table-responsive return-house-table-wrap">
@@ -426,7 +426,7 @@
             }
         });
 
-        // --- Return House action ---
+        // --- Return House action (Other Employee) ---
         var returnHouseUrl = null;
         $(document).on('click', '.btn-return-house', function() {
             returnHouseUrl = $(this).data('url');
@@ -443,7 +443,9 @@
                 success: function(res) {
                     $('#confirmReturnHouseModal').modal('hide');
                     if (res.success) {
-                        $('#returnHouseTable').DataTable().ajax.reload(null, false);
+                        if ($.fn.DataTable && $('#returnHouseTable').length && $('#returnHouseTable').DataTable()) {
+                            $('#returnHouseTable').DataTable().ajax.reload(null, false);
+                        }
                         var alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2"></i><span class="flex-grow-1">' + (res.message || 'House marked as returned.') + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
                         $('#return-house-alerts').html(alertHtml);
                     }

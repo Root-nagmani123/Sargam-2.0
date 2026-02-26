@@ -22,6 +22,7 @@
             </button>
         </div>
     </div>
+    <div id="defineHouseAlerts"></div>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -198,6 +199,26 @@ $(document).ready(function() {
     const updateUrlBase = "{{ route('admin.estate.define-house.update', ['id' => '__ID__']) }}".replace('__ID__', '');
     const deleteUrlBase = "{{ route('admin.estate.define-house.destroy', ['id' => '__ID__']) }}".replace('__ID__', '');
 
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function showPageAlert(type, message) {
+        var icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+        var html = '<div class="alert alert-' + type + ' alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">' +
+            '<i class="bi ' + icon + ' me-2 flex-shrink-0" aria-hidden="true"></i>' +
+            '<span class="flex-grow-1">' + escapeHtml(message) + '</span>' +
+            '<button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>' +
+        '</div>';
+        $('#defineHouseAlerts').html(html);
+        $('html, body').animate({ scrollTop: 0 }, 150);
+    }
+
     // Load buildings when estate (campus) changes
     $('#estate_campus_master_pk').on('change', function() {
         var campusId = $(this).val();
@@ -266,7 +287,7 @@ $(document).ready(function() {
         });
         if (!valid || !$form[0].checkValidity()) {
             $form[0].reportValidity();
-            if (!valid) alert('Please enter House No. for all rows.');
+            if (!valid) showPageAlert('danger', 'Please enter House No. for all rows.');
             return;
         }
         var btn = $(this);
@@ -292,11 +313,11 @@ $(document).ready(function() {
                 $('#houseRowsContainer .house-row').first().find('.status-radio[value="1"]').prop('checked', true);
                 $('#addHouseRowBtn, #removeHouseRowBtn').show();
                 table.ajax.reload(null, false);
-                alert(res.message || (editPk ? 'Estate house updated.' : 'Estate house(s) added successfully.'));
+                showPageAlert('success', res.message || (editPk ? 'Estate house updated.' : 'Estate house(s) added successfully.'));
             }
         }).fail(function(xhr) {
             var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : (xhr.responseJSON && xhr.responseJSON.errors ? JSON.stringify(xhr.responseJSON.errors) : 'Failed to save.');
-            alert(msg);
+            showPageAlert('danger', msg);
         }).always(function() {
             btn.prop('disabled', false);
         });
@@ -392,7 +413,7 @@ $(document).ready(function() {
         var pk = $(this).data('pk');
         var url = (editUrlBase.slice(-1) === '/' ? editUrlBase : editUrlBase + '/') + pk;
         $.get(url, function(res) {
-            if (!res || !res.pk) { alert('Could not load house.'); return; }
+            if (!res || !res.pk) { showPageAlert('danger', 'Could not load house.'); return; }
             $('#edit_house_pk').val(res.pk);
             $('#addEstateHouseModalLabel').text('Edit Estate House');
             $('#estate_campus_master_pk').val(res.estate_campus_master_pk);
@@ -415,7 +436,7 @@ $(document).ready(function() {
             $('#addHouseRowBtn').hide();
             $('#removeHouseRowBtn').hide();
             $('#addEstateHouseModal').modal('show');
-        }).fail(function() { alert('Could not load house.'); });
+        }).fail(function() { showPageAlert('danger', 'Could not load house.'); });
     });
 
     // Delete Estate House
@@ -430,11 +451,13 @@ $(document).ready(function() {
         }).done(function(res) {
             if (res.success) {
                 table.ajax.reload(null, false);
-                alert(res.message || 'Estate house deleted.');
-            } else alert(res.message || 'Delete failed.');
+                showPageAlert('success', res.message || 'Estate house deleted.');
+            } else {
+                showPageAlert('danger', res.message || 'Delete failed.');
+            }
         }).fail(function(xhr) {
             var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Delete failed.';
-            alert(msg);
+            showPageAlert('danger', msg);
         });
     });
 
