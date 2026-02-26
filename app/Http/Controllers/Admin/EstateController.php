@@ -1897,9 +1897,7 @@ class EstateController extends Controller
                 $validated['meter_reading_oth'] ?? null,
                 $validated['house_no'] ?? ($house->house_no ?? null),
                 $house?->meter_one ?? null,
-                $house?->meter_two ?? null,
-                $house?->water_charge ?? null,
-                $house?->licence_fee ?? null
+                $house?->meter_two ?? null
             );
             $this->setHouseUsedStatus((int) $validated['estate_house_master_pk'], 1);
             if ($previousHousePk > 0 && $previousHousePk !== (int) $validated['estate_house_master_pk']) {
@@ -1914,9 +1912,7 @@ class EstateController extends Controller
                 $validated['meter_reading_oth'] ?? null,
                 $validated['house_no'] ?? ($house->house_no ?? null),
                 $house?->meter_one ?? null,
-                $house?->meter_two ?? null,
-                $house?->water_charge ?? null,
-                $house?->licence_fee ?? null
+                $house?->meter_two ?? null
             );
             $this->setHouseUsedStatus((int) $validated['estate_house_master_pk'], 1);
             $message = 'Possession added successfully.';
@@ -1995,9 +1991,7 @@ class EstateController extends Controller
         $meterReading,
         ?string $houseNo,
         $meterOne,
-        $meterTwo,
-        $waterCharge = null,
-        $licenceFee = null
+        $meterTwo
     ): void {
         if ($possessionPk <= 0) {
             return;
@@ -2021,12 +2015,6 @@ class EstateController extends Controller
                 'meter_one' => $meterOne,
                 'meter_two' => $meterTwo,
             ];
-            if ($reading->water_charges === null && $waterCharge !== null && $waterCharge !== '') {
-                $update['water_charges'] = (float) $waterCharge;
-            }
-            if ($reading->licence_fees === null && $licenceFee !== null && $licenceFee !== '') {
-                $update['licence_fees'] = (float) $licenceFee;
-            }
             if ($reading->last_month_elec_red === null && $meterReading !== null && $meterReading !== '') {
                 $update['last_month_elec_red'] = (int) $meterReading;
             }
@@ -2047,8 +2035,6 @@ class EstateController extends Controller
             'house_no' => $houseNo,
             'meter_one' => $meterOne,
             'meter_two' => $meterTwo,
-            'water_charges' => ($waterCharge !== null && $waterCharge !== '') ? (float) $waterCharge : null,
-            'licence_fees' => ($licenceFee !== null && $licenceFee !== '') ? (float) $licenceFee : null,
             'created_date' => now(),
         ]);
     }
