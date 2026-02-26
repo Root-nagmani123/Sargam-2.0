@@ -110,6 +110,20 @@ class SellingVoucherDateRangeReport extends Model
         return $this->items->sum('amount');
     }
 
+    /**
+     * Total after deducting returns: sum of (quantity - return_quantity) * rate per item.
+     * Used by Process Mess Bills so totals match the Selling Voucher view (returned amount removed).
+     */
+    public function getNetTotalAttribute(): float
+    {
+        return (float) $this->items->sum(function ($item) {
+            $qty = (float) ($item->quantity ?? 0);
+            $returnQty = (float) ($item->return_quantity ?? 0);
+            $rate = (float) ($item->rate ?? 0);
+            return max(0, $qty - $returnQty) * $rate;
+        });
+    }
+
     public static function statusLabels(): array
     {
         return [

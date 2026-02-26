@@ -61,8 +61,10 @@
             <thead style="background-color: #af2910;">
                 <tr>
                     <th style="color: #fff; border-color: #af2910; width: 80px;">S. No.</th>
+                    <th style="color: #fff; border-color: #af2910;">Item Code</th>
                     <th style="color: #fff; border-color: #af2910;">Item Name</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right;">Remaining Quantity</th>
+                    <th style="color: #fff; border-color: #af2910;">Unit</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right;">Avg rate</th>
                     <th style="color: #fff; border-color: #af2910; text-align: right;">Amount</th>
                 </tr>
@@ -77,19 +79,21 @@
                     @endphp
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
+                        <td>{{ $item['item_code'] ?? '—' }}</td>
                         <td>{{ $item['item_name'] }}</td>
-                        <td class="text-end">{{ number_format($item['remaining_qty'], 2) }} {{ $item['unit'] }}</td>
+                        <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>
+                        <td>{{ $item['unit'] ?? 'Unit' }}</td>
                         <td class="text-end">₹{{ number_format($item['rate'], 2) }}</td>
                         <td class="text-end">₹{{ number_format($item['amount'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-4">No stock balance found</td>
+                        <td colspan="7" class="text-center text-muted py-4">No stock balance found</td>
                     </tr>
                 @endforelse
                 @if(count($reportData) > 0)
                     <tr style="background-color: #f8f9fa; font-weight: bold;">
-                        <td colspan="4" class="text-end">Total Amount:</td>
+                        <td colspan="6" class="text-end">Total Amount:</td>
                         <td class="text-end">₹{{ number_format($totalAmount, 2) }}</td>
                     </tr>
                 @endif

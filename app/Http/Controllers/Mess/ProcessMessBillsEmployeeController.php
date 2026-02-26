@@ -123,22 +123,33 @@ class ProcessMessBillsEmployeeController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        // Load relationships for each bill
+        // Load relationships for each bill and keep source_type so slip numbers (DR- vs SV-) are unique
         $bills->getCollection()->transform(function ($bill) {
             if ($bill->source_type === 'date_range') {
-                return SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])->find($bill->id);
+                $model = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])->find($bill->id);
+                if ($model) {
+                    $model->setAttribute('source_type', 'date_range');
+                }
+                return $model;
             } else {
-                return KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
+                $model = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
+                if ($model) {
+                    $model->setAttribute('source_type', 'kitchen_issue');
+                }
+                return $model;
             }
         });
 
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
+        // Y-m-d for flatpickr defaultDate so the selected range is preserved after filter (avoids d-m-Y parse issues)
+        $effectiveDateFromYmd = $dateFrom;
+        $effectiveDateToYmd = $dateTo;
 
         // Summary stats for the same date range (for dashboard cards)
         $stats = $this->getSummaryStats($dateFrom, $dateTo, $search, $clientType, $buyerName);
 
-        return view('admin.mess.process-mess-bills-employee.index', compact('bills', 'effectiveDateFrom', 'effectiveDateTo', 'stats', 'clientType', 'buyerName'));
+        return view('admin.mess.process-mess-bills-employee.index', compact('bills', 'effectiveDateFrom', 'effectiveDateTo', 'effectiveDateFromYmd', 'effectiveDateToYmd', 'stats', 'clientType', 'buyerName'));
     }
 
     /**
@@ -197,11 +208,8 @@ class ProcessMessBillsEmployeeController extends Controller
         $paidCount = (clone $dateRangeBase)->where('status', 2)->count() + (clone $kitchenBase)->where('status', 2)->count();
         $unpaidCount = $totalBills - $paidCount;
 
-        $svAmount = (float) (clone $dateRangeBase)->sum('total_amount');
-        $kitchenPks = (clone $kitchenBase)->pluck('pk');
-        $kitchenAmount = $kitchenPks->isEmpty()
-            ? 0.0
-            : (float) DB::table('kitchen_issue_items')->whereIn('kitchen_issue_master_pk', $kitchenPks)->sum('amount');
+        $svAmount = (float) (clone $dateRangeBase)->with('items')->get()->sum(fn ($r) => $r->net_total);
+        $kitchenAmount = (float) (clone $kitchenBase)->with('items')->get()->sum(fn ($b) => $b->net_total);
         $totalAmount = $svAmount + $kitchenAmount;
 
         return [
@@ -310,18 +318,19 @@ class ProcessMessBillsEmployeeController extends Controller
                 continue;
             }
 
-            $billId = $model->id ?? $model->pk;
+            $isDateRange = ($bill->source_type ?? '') === 'date_range';
+            $slipNo = $isDateRange ? 'DR-' . str_pad($model->id, 6, '0', STR_PAD_LEFT) : 'SV-' . str_pad($model->pk ?? $model->id, 6, '0', STR_PAD_LEFT);
             $invoiceDate = $model->issue_date
                 ? Carbon::parse($model->issue_date)->format('d-m-Y')
                 : (isset($model->date_from) && $model->date_from ? Carbon::parse($model->date_from)->format('d-m-Y') : '—');
             $clientType = $model->client_type_display ?? ($model->client_type_label ?? ($model->clientTypeCategory ? ucfirst($model->clientTypeCategory->client_type ?? '') : ucfirst($model->client_type_slug ?? '—')));
-            $total = $model->total_amount ?? $model->items->sum('amount');
+            $total = $model->net_total;
             $status = $statusMap[$model->status ?? 0] ?? '—';
 
             $rows[] = [
                 $index + 1,
                 $model->client_name ?? ($model->clientTypeCategory->client_name ?? '—'),
-                $billId,
+                $slipNo,
                 $invoiceDate,
                 $clientType,
                 '₹ ' . number_format($total, 2),
@@ -342,22 +351,41 @@ class ProcessMessBillsEmployeeController extends Controller
 
     public function printReceipt($id)
     {
-        // Try to find in Selling Voucher with Date Range first
-        $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
-            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
-            ->find($id);
+        $isDateRange = null;
+        $numericId = $id;
+        if (is_string($id) && preg_match('/^(dr|ki)-(\d+)$/i', $id, $m)) {
+            $isDateRange = (strtolower($m[1]) === 'dr');
+            $numericId = (int) $m[2];
+        }
 
-        $isDateRange = (bool) $bill;
-
-        if (!$bill) {
+        if ($isDateRange === true) {
+            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
+                ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
+                ->findOrFail($numericId);
+            $isDateRange = true;
+        } elseif ($isDateRange === false) {
             $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('pk', $id)
+                ->where('pk', $numericId)
                 ->firstOrFail();
+            $isDateRange = false;
+        } else {
+            // Legacy: numeric id – try date range first, then kitchen
+            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
+                ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
+                ->find($id);
+            $isDateRange = (bool) $bill;
+            if (!$bill) {
+                $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
+                    ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
+                    ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                    ->where('pk', $id)
+                    ->firstOrFail();
+            }
         }
 
-        $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
+        $totalAmount = (float) $bill->net_total;
         $paidAmount = $this->getBillPaidAmount($bill, $isDateRange);
         $dueAmount = max(0, $totalAmount - $paidAmount);
         $paymentStatusLabel = $paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
@@ -371,17 +399,7 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function paymentDetails($id)
     {
-        $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items'])
-            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
-            ->find($id);
-
-        if (!$bill) {
-            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
-                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('pk', $id)
-                ->firstOrFail();
-        }
+        [$bill, $isDateRange] = $this->resolveBillById($id);
 
         $storeName = $bill->resolved_store_name ?? '—';
 
@@ -405,14 +423,14 @@ class ProcessMessBillsEmployeeController extends Controller
             ];
         }
 
-        $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
-        $paidAmount = $this->getBillPaidAmount($bill, isset($bill->id));
+        $totalAmount = (float) $bill->net_total;
+        $paidAmount = $this->getBillPaidAmount($bill, $isDateRange);
         $dueAmount = max(0, $totalAmount - $paidAmount);
 
         $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—')));
 
         return response()->json([
-            'bill_id' => $bill->id ?? $bill->pk,
+            'bill_id' => $isDateRange ? 'dr-' . $bill->id : 'ki-' . $bill->pk,
             'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
             'client_type' => $clientTypeDisplay,
             'date_from' => $dateFrom,
@@ -486,17 +504,22 @@ class ProcessMessBillsEmployeeController extends Controller
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
         $rows = $allBills->map(function ($bill, $index) use ($paymentTypeMap) {
+            $isDateRange = $bill instanceof SellingVoucherDateRangeReport;
             $id = $bill->id ?? $bill->pk;
-            $total = $bill->total_amount ?? $bill->items->sum('amount');
+            $slipNo = $isDateRange ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT) : 'SV-' . str_pad($bill->pk ?? $bill->id, 6, '0', STR_PAD_LEFT);
+            $receiptId = $isDateRange ? 'dr-' . $bill->id : 'ki-' . ($bill->pk ?? $bill->id);
+            $total = $bill->net_total;
             return [
-                'id' => $id,
+                'id' => $receiptId,
+                'bill_id' => $id,
+                'slip_no' => $slipNo,
                 'sno' => $index + 1,
                 'buyer_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
-                'invoice_no' => $id,
+                'invoice_no' => $slipNo,
                 'payment_type' => $paymentTypeMap[$bill->payment_type ?? 1] ?? '—',
                 'total' => number_format($total, 2),
                 'paid_amount' => '0',
-                'bill_no' => $id,
+                'bill_no' => $slipNo,
             ];
         })->values();
 
@@ -508,21 +531,8 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function generateInvoice(Request $request, $id)
     {
-        // Try to find in Selling Voucher with Date Range first
-        $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
-            ->find($id);
-
-        $isKitchenIssue = false;
-        if (!$bill) {
-            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
-                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('pk', $id)
-                ->firstOrFail();
-            $isKitchenIssue = true;
-        }
-
+        [$bill, $isDateRange] = $this->resolveBillById($id);
+        $isKitchenIssue = !$isDateRange;
         $billId = $bill->id ?? $bill->pk;
         // Receiver = bill's buyer (employee): user_credentials.user_id = employee_master.pk of buyer
         $receiverUserId = $this->getReceiverUserIdForBill($bill, $isKitchenIssue);
@@ -548,6 +558,48 @@ class ProcessMessBillsEmployeeController extends Controller
             'bill_id' => $billId,
             'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
         ]);
+    }
+
+    /**
+     * Resolve bill by id (numeric or composite 'dr-123' / 'ki-123').
+     * Returns [bill model, isDateRange].
+     */
+    private function resolveBillById($id): array
+    {
+        $numericId = $id;
+        $preferDateRange = null;
+        if (is_string($id) && preg_match('/^(dr|ki)-(\d+)$/i', $id, $m)) {
+            $preferDateRange = (strtolower($m[1]) === 'dr');
+            $numericId = (int) $m[2];
+        }
+
+        if ($preferDateRange === true) {
+            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+                ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
+                ->findOrFail($numericId);
+            return [$bill, true];
+        }
+        if ($preferDateRange === false) {
+            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('pk', $numericId)
+                ->firstOrFail();
+            return [$bill, false];
+        }
+
+        $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
+            ->find($numericId);
+        if ($bill) {
+            return [$bill, true];
+        }
+        $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items'])
+            ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('pk', $numericId)
+            ->firstOrFail();
+        return [$bill, false];
     }
 
     /**
@@ -647,19 +699,10 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     public function generatePayment(Request $request, $id)
     {
-        $bill = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
-            ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
-            ->find($id);
-
-        $isKitchenIssue = false;
-
-        if (!$bill) {
-            $bill = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items', 'paymentDetails'])
-                ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('pk', $id)
-                ->firstOrFail();
-            $isKitchenIssue = true;
+        [$bill, $isDateRange] = $this->resolveBillById($id);
+        $isKitchenIssue = !$isDateRange;
+        if ($isKitchenIssue) {
+            $bill->load('paymentDetails');
         }
 
         $amount = $request->input('amount');
@@ -677,7 +720,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ], 400);
         }
 
-        $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
+        $totalAmount = (float) $bill->net_total;
         $paidBefore = $this->getBillPaidAmount($bill, !$isKitchenIssue);
         $dueBefore = max(0, $totalAmount - $paidBefore);
 

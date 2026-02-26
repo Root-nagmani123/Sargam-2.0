@@ -21,6 +21,7 @@ class StockBalanceTillDateExport implements FromCollection, WithHeadings
         foreach ($this->reportData as $index => $item) {
             $rows[] = [
                 $index + 1,
+                $item['item_code'] ?? '—',
                 $item['item_name'] ?? '—',
                 $item['unit'] ?? '—',
                 number_format($item['remaining_qty'] ?? $item['remaining_quantity'] ?? 0, 2),
@@ -35,6 +36,7 @@ class StockBalanceTillDateExport implements FromCollection, WithHeadings
     {
         return [
             'S. No.',
+            'Item Code',
             'Item Name',
             'Unit',
             'Remaining Quantity',
