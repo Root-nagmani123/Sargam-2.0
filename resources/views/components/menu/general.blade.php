@@ -20,12 +20,12 @@
                             </li>
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <!-- Participant / Dashboard Statistics -->
-                            <li class="sidebar-item">
+                            <!-- <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"
                                     href="{{ route('admin.dashboard-statistics.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Batch Profile</span>
                                 </a>
-                            </li>
+                            </li> -->
                             <!-- Notice Notification Route -->
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.notice.index') }}">
