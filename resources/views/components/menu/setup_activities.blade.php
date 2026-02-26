@@ -134,10 +134,10 @@
                                 <span class="hide-menu">Permissions</span>
                                 </a></li> --}}
                             </ul>
-                            <!-- <li class="sidebar-item"><a class="sidebar-link"
+                            <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
-                                </a></li> -->
+                                </a></li>
 
                             {{-- ESTATE MANAGEMENT --}}
                             <!-- <li class="sidebar-item mt-2" style="background: #4077ad;
