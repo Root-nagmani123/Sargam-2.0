@@ -71,7 +71,6 @@
                     <th style="color: #fff;">Name</th>
                     <th style="color: #fff;">Payment Type</th>
                     <th style="color: #fff;">Request Date</th>
-                    <th style="color: #fff;">Issue Date</th>
                     <th style="color: #fff;">Status</th>
                     <th style="color: #fff;">Return Item</th>
                     <th style="color: #fff; min-width: 120px;">Action</th>
@@ -92,7 +91,6 @@
                             <td>{{ $report->client_name ?? '—' }}</td>
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
-                            <td>{{ $report->issue_date ? $report->issue_date->format('d/m/Y') : '—' }}</td>
                             <td>
                                 @if($report->status == 0)<span class="badge bg-warning">Draft</span>
                                 @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
@@ -131,7 +129,6 @@
                             <td>{{ $report->client_name ?? '—' }}</td>
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
-                            <td>{{ $report->issue_date ? $report->issue_date->format('d/m/Y') : '—' }}</td>
                             <td>
                                 @if($report->status == 0)<span class="badge bg-warning">Draft</span>
                                 @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
@@ -155,7 +152,7 @@
                     <tr>
                         <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                         <td class="text-center py-4">No reports found.</td>
-                        <td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td></td><td></td><td></td><td></td><td></td>
                     </tr>
                 @endforelse
             </tbody>
@@ -166,7 +163,7 @@
         'tableId' => 'sellingVoucherDateRangeTable',
         'searchPlaceholder' => 'Search selling vouchers...',
         'ordering' => false,
-        'actionColumnIndex' => 13,
+        'actionColumnIndex' => 12,
         'infoLabel' => 'selling vouchers',
         'searchDelay' => 0
     ])
@@ -279,10 +276,6 @@
                                             <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Issue Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="issue_date" class="form-control" value="{{ old('issue_date', date('Y-m-d')) }}" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
@@ -434,7 +427,6 @@
                             <div class="col-md-6">
                                 <table class="table table-borderless table-sm">
                                     <tr><th width="40%" style="color: #495057;">Request Date:</th><td id="viewRequestDate" style="color: #212529;">—</td></tr>
-                                    <tr><th style="color: #495057;">Issue Date:</th><td id="viewIssueDate" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Transfer From Store:</th><td id="viewStoreName" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Reference Number:</th><td id="viewReferenceNumber" style="color: #212529;">—</td></tr>
                                     <tr><th style="color: #495057;">Order By:</th><td id="viewOrderBy" style="color: #212529;">—</td></tr>
@@ -637,10 +629,6 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Issue Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="issue_date" class="form-control edit-issue-date" required>
-                                </div>
-                                <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
                                     <select name="inve_store_master_pk" class="form-select edit-store-id" required>
                                         <option value="">Select Store</option>
@@ -701,6 +689,7 @@
                                             <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
                                             <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
                                             <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
+                                            <th style="min-width: 120px; color: #fff; border-color: #af2910;">Issue Date</th>
                                             <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
                                             <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
                                             <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
@@ -1404,6 +1393,7 @@
         const avail = item.available_quantity != null ? item.available_quantity : '';
         const qty = item.quantity != null ? item.quantity : '';
         const rate = item.rate != null ? item.rate : '';
+        const issueDate = item.issue_date || '';
         const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
         const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) : '';
         return '<tr class="edit-dr-item-row">' +
@@ -1412,6 +1402,7 @@
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
             '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
             '<td><input type="text" class="form-control form-control-sm edit-dr-left bg-light" readonly value="' + left + '"></td>' +
+            '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control form-control-sm edit-dr-issue-date" value="' + issueDate + '"></td>' +
             '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
             '<td><input type="text" class="form-control form-control-sm edit-dr-total bg-light" readonly value="' + total + '"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row" title="Remove">×</button></td>' +
@@ -1490,7 +1481,6 @@
                     const v = data.voucher;
                     document.getElementById('viewReportModalLabel').textContent = 'View Selling Voucher with Date Range #' + (v.id || reportId);
                     document.getElementById('viewRequestDate').textContent = v.request_date || '—';
-                    document.getElementById('viewIssueDate').textContent = v.issue_date || '—';
                     document.getElementById('viewStoreName').textContent = v.store_name || '—';
                     document.getElementById('viewReferenceNumber').textContent = v.reference_number || '—';
                     document.getElementById('viewOrderBy').textContent = v.order_by || '—';
@@ -1688,7 +1678,6 @@
                     const editDrCourseNameEl = document.getElementById('editDrCourseNameSelect');
                     if (editDrCourseNameEl) editDrCourseNameEl.value = v.client_type_pk || '';
                     document.querySelector('.edit-payment-type').value = String(v.payment_type ?? 1);
-                    document.querySelector('.edit-issue-date').value = v.issue_date || '';
                     document.querySelector('.edit-client-type-pk').value = v.client_type_pk || '';
                     const slug = v.client_type_slug || 'employee';
                     document.querySelectorAll('.edit-dr-client-type-radio').forEach(function(radio) {
