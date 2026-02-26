@@ -3,22 +3,109 @@ document.addEventListener('DOMContentLoaded', function() {
     const addBtn = document.getElementById('add-coordinator');
     const coordinatorSelect = document.querySelector('select[name="coursecoordinator"]');
 
-    // Initialize Select2 for Course Coordinator dropdown with search functionality
-    if (coordinatorSelect && typeof DropdownSearch !== 'undefined') {
-        DropdownSearch.init(coordinatorSelect, {
-            placeholder: 'Search and select coordinator...',
-            allowClear: true
+    // Choices.js instance store (select element -> Choices instance)
+    const choicesInstances = new WeakMap();
+
+    function getChoicesInstance(selectEl) {
+        return choicesInstances.get(selectEl) || null;
+    }
+
+    function initChoices(selectEl, opts) {
+        if (!selectEl || typeof Choices === 'undefined') return null;
+        const existing = choicesInstances.get(selectEl);
+        if (existing) {
+            existing.destroy();
+            choicesInstances.delete(selectEl);
+        }
+        const options = Object.assign({
+            searchEnabled: true,
+            placeholderValue: opts && opts.placeholder ? opts.placeholder : 'Select...',
+            itemSelectText: '',
+            searchPlaceholderValue: 'Search...',
+            shouldSort: true,
+            classNames: {
+                containerOuter: 'choices',
+                containerInner: 'choices__inner',
+                input: 'choices__input',
+                inputCloned: 'choices__input--cloned',
+                list: 'choices__list',
+                listItems: 'choices__list--multiple',
+                listSingle: 'choices__list--single',
+                listDropdown: 'choices__list--dropdown',
+                item: 'choices__item',
+                itemSelectable: 'choices__item--selectable',
+                itemDisabled: 'choices__item--disabled',
+                itemChoice: 'choices__item--choice',
+                placeholder: 'choices__item--placeholder',
+                group: 'choices__group',
+                groupHeading: 'choices__heading',
+                button: 'choices__button'
+            }
+        }, opts || {});
+        const instance = new Choices(selectEl, options);
+        choicesInstances.set(selectEl, instance);
+        return instance;
+    }
+
+    function getChoiceValue(selectEl) {
+        const choice = choicesInstances.get(selectEl);
+        if (choice) {
+            const v = choice.getValue(true);
+            return Array.isArray(v) ? (v[0] !== undefined ? v[0] : '') : (v || '');
+        }
+        return selectEl ? selectEl.value : '';
+    }
+
+    function setChoiceValue(selectEl, value) {
+        const choice = choicesInstances.get(selectEl);
+        if (choice) {
+            choice.removeActiveItems();
+            if (value) choice.setChoiceByValue(String(value));
+            return;
+        }
+        if (selectEl) selectEl.value = value || '';
+    }
+
+    function destroyChoices(selectEl) {
+        const choice = choicesInstances.get(selectEl);
+        if (choice) {
+            choice.destroy();
+            choicesInstances.delete(selectEl);
+        }
+    }
+
+    function hasChoices(selectEl) {
+        return selectEl && choicesInstances.has(selectEl);
+    }
+
+    // Initialize Choices for Course Coordinator
+    if (coordinatorSelect && coordinatorSelect.classList.contains('choices-select')) {
+        initChoices(coordinatorSelect, {
+            placeholderValue: 'Search and select coordinator...',
+            searchPlaceholderValue: 'Search...'
         });
     }
 
-    // Initialize Select2 for existing Assistant Coordinator dropdowns
-    if (typeof DropdownSearch !== 'undefined') {
-        const existingAssistantSelects = document.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
-        existingAssistantSelects.forEach(function(select) {
-            DropdownSearch.init(select, {
-                placeholder: 'Search and select assistant coordinator...',
-                allowClear: false
-            });
+    // Initialize Choices for existing Assistant Coordinator and Role dropdowns
+    const programmeForm = document.querySelector('.programme-create form');
+    if (programmeForm && typeof Choices !== 'undefined') {
+        programmeForm.querySelectorAll('select.choices-select').forEach(function(select) {
+            if (select.name === 'assistantcoursecoordinator[]') {
+                initChoices(select, {
+                    placeholderValue: 'Search and select assistant coordinator...',
+                    searchPlaceholderValue: 'Search...'
+                });
+            } else if (select.name === 'assistant_coordinator_role[]') {
+                initChoices(select, {
+                    placeholderValue: 'Select Role',
+                    searchPlaceholderValue: 'Search...'
+                });
+            } else if (select.name === 'supportingsection') {
+                initChoices(select, {
+                    placeholderValue: 'Select Supporting Section',
+                    searchPlaceholderValue: 'Search...'
+                });
+            }
         });
     }
 
@@ -28,30 +115,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateAssistantOptions() {
         const assistantSelects = container.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
-        const $coordinatorSelect = $(coordinatorSelect);
-        const isCoordinatorSelect2 = typeof DropdownSearch !== 'undefined' && coordinatorSelect && $coordinatorSelect.hasClass('select2-hidden-accessible');
-        const coordinatorValue = coordinatorSelect ? (isCoordinatorSelect2 
-            ? DropdownSearch.getValue(coordinatorSelect) 
-            : coordinatorSelect.value) : '';
+        const coordinatorValue = coordinatorSelect ? getChoiceValue(coordinatorSelect) : '';
 
         const selectedAssistantValues = Array.from(assistantSelects)
-            .map(function(sel) { 
-                const $sel = $(sel);
-                if (typeof DropdownSearch !== 'undefined' && $sel.hasClass('select2-hidden-accessible')) {
-                    return DropdownSearch.getValue(sel);
-                }
-                return sel.value; 
-            })
+            .map(function(sel) { return getChoiceValue(sel); })
             .filter(function(v) { return v !== null && v !== ''; });
 
         assistantSelects.forEach(function(selectEl) {
-            const $select = $(selectEl);
-            const isSelect2 = typeof DropdownSearch !== 'undefined' && $select.hasClass('select2-hidden-accessible');
-            const selfValue = isSelect2 ? DropdownSearch.getValue(selectEl) : selectEl.value;
-            const toDisable = new Set(selectedAssistantValues.filter(function(v){ return v !== selfValue; }));
-            if (coordinatorValue) {
-                toDisable.add(coordinatorValue);
-            }
+            const selfValue = getChoiceValue(selectEl);
+            const toDisable = new Set(selectedAssistantValues.filter(function(v) { return v !== selfValue; }));
+            if (coordinatorValue) toDisable.add(coordinatorValue);
 
             Array.from(selectEl.options).forEach(function(opt) {
                 if (!opt.value) {
@@ -64,103 +137,67 @@ document.addEventListener('DOMContentLoaded', function() {
                 opt.hidden = shouldDisable;
             });
 
-            // If current selection becomes invalid due to coordinator change, reset
-            if (selfValue && (selectEl.options[selectEl.selectedIndex]?.disabled || selectEl.options[selectEl.selectedIndex]?.hidden)) {
-                if (isSelect2) {
-                    DropdownSearch.setValue(selectEl, '', true);
-                } else {
-                    selectEl.value = '';
-                }
-            }
-
-            // Trigger Select2 update if it's a Select2 instance
-            if (isSelect2) {
-                $select.trigger('change.select2');
+            if (selfValue && (selectEl.options[selectEl.selectedIndex] && (selectEl.options[selectEl.selectedIndex].disabled || selectEl.options[selectEl.selectedIndex].hidden))) {
+                setChoiceValue(selectEl, '');
             }
         });
     }
 
-    // Add coordinator functionality
     addBtn.addEventListener('click', function() {
         const prototypeRow = container.querySelector('.assistant-coordinator-row');
         if (!prototypeRow) return;
 
-        // Destroy Select2 instances on prototype row before cloning to avoid duplicating Select2 wrapper elements
         const prototypeAssistantSelect = prototypeRow.querySelector('select[name="assistantcoursecoordinator[]"]');
         const prototypeRoleSelect = prototypeRow.querySelector('select[name="assistant_coordinator_role[]"]');
-        
-        let prototypeAssistantSelect2Destroyed = false;
-        let prototypeRoleSelect2Destroyed = false;
-        
-        if (typeof DropdownSearch !== 'undefined') {
-            if (prototypeAssistantSelect && $(prototypeAssistantSelect).hasClass('select2-hidden-accessible')) {
-                DropdownSearch.destroy(prototypeAssistantSelect);
-                prototypeAssistantSelect2Destroyed = true;
-            }
-            if (prototypeRoleSelect && $(prototypeRoleSelect).hasClass('select2-hidden-accessible')) {
-                DropdownSearch.destroy(prototypeRoleSelect);
-                prototypeRoleSelect2Destroyed = true;
-            }
-        }
 
-        // Clone the row (now without Select2 wrappers)
+        destroyChoices(prototypeAssistantSelect);
+        destroyChoices(prototypeRoleSelect);
+
         const newRow = prototypeRow.cloneNode(true);
         newRow.setAttribute('data-index', coordinatorIndex);
 
-        // Remove any Select2 containers that might have been cloned (safety check)
-        if (typeof $ !== 'undefined') {
-            $(newRow).find('.select2-container').remove();
-            $(newRow).find('.select2-dropdown').remove();
-        }
+        newRow.querySelectorAll('.choices').forEach(function(el) { el.remove(); });
 
-        // Clear values in cloned inputs/selects
         const selects = newRow.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
         const roleSelects = newRow.querySelectorAll('select[name="assistant_coordinator_role[]"]');
-        selects.forEach(function(sel){ 
+        selects.forEach(function(sel) {
             sel.value = '';
-            // Remove any Select2 classes that might have been cloned
-            sel.classList.remove('select2-hidden-accessible');
+            sel.classList.add('choices-select');
         });
-        roleSelects.forEach(function(sel){ 
+        roleSelects.forEach(function(sel) {
             sel.value = '';
-            sel.classList.remove('select2-hidden-accessible');
+            sel.classList.add('choices-select');
         });
 
-        // Re-initialize Select2 on prototype row if it was destroyed
-        if (typeof DropdownSearch !== 'undefined') {
-            if (prototypeAssistantSelect2Destroyed && prototypeAssistantSelect) {
-                DropdownSearch.init(prototypeAssistantSelect, {
-                    placeholder: 'Search and select assistant coordinator...',
-                    allowClear: false
-                });
-            }
-            if (prototypeRoleSelect2Destroyed && prototypeRoleSelect) {
-                DropdownSearch.init(prototypeRoleSelect);
-            }
+        if (prototypeAssistantSelect) {
+            initChoices(prototypeAssistantSelect, {
+                placeholderValue: 'Search and select assistant coordinator...',
+                searchPlaceholderValue: 'Search...'
+            });
+        }
+        if (prototypeRoleSelect) {
+            initChoices(prototypeRoleSelect, { placeholderValue: 'Select Role', searchPlaceholderValue: 'Search...' });
         }
 
         container.appendChild(newRow);
         coordinatorIndex++;
 
-        // Initialize select2 for the new assistant coordinator dropdown using utility
         const newAssistantSelect = newRow.querySelector('select[name="assistantcoursecoordinator[]"]');
-        if (newAssistantSelect && typeof DropdownSearch !== 'undefined') {
-            DropdownSearch.init(newAssistantSelect, {
-                placeholder: 'Search and select assistant coordinator...',
-                allowClear: false
+        if (newAssistantSelect) {
+            initChoices(newAssistantSelect, {
+                placeholderValue: 'Search and select assistant coordinator...',
+                searchPlaceholderValue: 'Search...'
             });
         }
 
-        // Initialize select2 for the new role dropdown using utility
         const newRoleSelect = newRow.querySelector('select[name="assistant_coordinator_role[]"]');
-        if (newRoleSelect && typeof DropdownSearch !== 'undefined') {
-            DropdownSearch.init(newRoleSelect);
+        if (newRoleSelect) {
+            initChoices(newRoleSelect, { placeholderValue: 'Select Role', searchPlaceholderValue: 'Search...' });
         }
 
         updateAssistantOptions();
     });
 
-    // Remove coordinator functionality
     document.addEventListener('click', function(e) {
         const removeBtn = e.target.closest('.remove-coordinator');
         if (!removeBtn) return;
@@ -168,7 +205,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = removeBtn.closest('.assistant-coordinator-row');
         if (!row) return;
 
-        // Don't allow removing the last coordinator
         if (container.children.length > 1) {
             row.remove();
             updateAssistantOptions();
@@ -177,24 +213,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Keep assistant selects in sync on changes
     document.addEventListener('change', function(e) {
         if (e.target && e.target.matches('select[name="assistantcoursecoordinator[]"]')) {
             updateAssistantOptions();
         }
     });
 
-    // Handle change events for Course Coordinator (Select2 triggers native change event)
     if (coordinatorSelect) {
         coordinatorSelect.addEventListener('change', function() {
             updateAssistantOptions();
         });
     }
 
-    // Initial sync
     updateAssistantOptions();
 
-    // Date validation: End date must be greater than start date
+    // Date validation
     const startDateInput = document.querySelector('input[name="startdate"]');
     const endDateInput = document.querySelector('input[name="enddate"]');
     const form = document.querySelector('form[action*="programme.store"]');
@@ -203,13 +236,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (startDateInput && endDateInput) {
             const startDateValue = startDateInput.value;
             if (startDateValue) {
-                // Set min attribute to start date + 1 day
                 const startDate = new Date(startDateValue);
                 startDate.setDate(startDate.getDate() + 1);
                 const minDate = startDate.toISOString().split('T')[0];
                 endDateInput.setAttribute('min', minDate);
-                
-                // If end date is already set and is before or equal to start date, clear it
+
                 if (endDateInput.value && endDateInput.value <= startDateValue) {
                     endDateInput.value = '';
                     endDateInput.setCustomValidity('The end date must be greater than the start date.');
@@ -226,49 +257,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
             const startDate = new Date(startDateInput.value);
             const endDate = new Date(endDateInput.value);
-            
+
             if (endDate <= startDate) {
                 endDateInput.setCustomValidity('The end date must be greater than the start date.');
                 return false;
-            } else {
-                endDateInput.setCustomValidity('');
-                return true;
             }
+            endDateInput.setCustomValidity('');
+            return true;
         }
         return true;
     }
 
-    // Update end date min when start date changes
     if (startDateInput) {
-        startDateInput.addEventListener('change', function() {
-            updateEndDateMin();
-            validateDates();
-        });
-        
-        // Also trigger on input for real-time feedback
-        startDateInput.addEventListener('input', function() {
-            updateEndDateMin();
-        });
+        startDateInput.addEventListener('change', function() { updateEndDateMin(); validateDates(); });
+        startDateInput.addEventListener('input', function() { updateEndDateMin(); });
     }
 
-    // Validate when end date changes
     if (endDateInput) {
-        endDateInput.addEventListener('change', function() {
-            validateDates();
-        });
-        
-        endDateInput.addEventListener('input', function() {
-            validateDates();
-        });
+        endDateInput.addEventListener('change', function() { validateDates(); });
+        endDateInput.addEventListener('input', function() { validateDates(); });
     }
 
-    // Validate on form submission
     if (form) {
         form.addEventListener('submit', function(e) {
             if (!validateDates()) {
                 e.preventDefault();
                 endDateInput.focus();
-                // Show error message
                 if (!endDateInput.reportValidity) {
                     alert('The end date must be greater than the start date.');
                 }
@@ -277,8 +291,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize on page load
     updateEndDateMin();
 });
-
-
