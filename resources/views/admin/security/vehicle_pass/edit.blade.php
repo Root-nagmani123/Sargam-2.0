@@ -190,6 +190,7 @@
                                 <div class="vehicle-pass-upload-placeholder text-center" id="editDocPlaceholder">
                                     <i class="material-icons material-symbols-rounded text-muted">upload</i>
                                     <p class="small mb-0 mt-1">Click to upload or drag and drop (optional - replace current)</p>
+                                    <span class="small text-muted">Allowed: PDF, JPG, PNG. Max size: 2 MB</span>
                                 </div>
                                 <div class="vehicle-pass-upload-preview d-none" id="editDocPreview">
                                     <div class="vehicle-pass-preview-inner position-relative d-inline-block p-2 rounded border bg-white shadow-sm" style="min-width:200px; min-height:100px;">

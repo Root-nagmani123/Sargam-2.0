@@ -54,7 +54,12 @@ class IdCardSecurityMapper
         $dto->emp_id_apply = $row->emp_id_apply;
         $dto->name = $row->employee ? trim($row->employee->first_name . ' ' . ($row->employee->last_name ?? '')) : '--';
         $dto->designation = $row->employee && $row->employee->designation ? ($row->employee->designation->designation_name ?? '--') : '--';
-        $dto->photo = $row->id_photo_path;
+        // Normalize photo path: if it doesn't contain a slash, treat as filename under idcard/photos
+        $photoPath = $row->id_photo_path;
+        if ($photoPath && strpos($photoPath, '/') === false) {
+            $photoPath = 'idcard/photos/' . $photoPath;
+        }
+        $dto->photo = $photoPath;
         $dto->joining_letter = $row->joining_letter_path ?? null;
         $dto->created_at = $row->created_date;
         // Card type display name from sec_id_cardno_master (permanent_type = master pk)
@@ -77,6 +82,8 @@ class IdCardSecurityMapper
         $dto->blood_group = $row->blood_group;
         $dto->remarks = $row->remarks;
         $dto->created_by = $row->created_by;
+        $dto->extension_reason = $row->extension_reason ?? null;
+        $dto->extension_document_path = $row->extension_document_path ?? null;
 
         $dto->id_status = $row->id_status;
         $dto->status = $row->status_label;

@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
@@ -22,44 +23,94 @@ class FamilyIDCardRequestController extends Controller
 {
     /**
      * Group rows by (emp_id_apply, created_by, created_date) and return paginated group list.
-     * Filtered to show only requests created by current user (created_by = Auth::id())
+     * Supports search and filters
      */
     private function groupedFamilyRequests(int $idStatus, int $perPage, string $pageName = 'page'): LengthAwarePaginator
     {
         $query = SecurityFamilyIdApply::query();
         $query->where('created_by', Auth::user()->user_id);
+        
         if ($idStatus === 1) {
             $query->where('id_status', 1);
         } else {
             $query->whereIn('id_status', [2, 3]);
         }
+        
+        // Apply search filter
+        $search = request()->get('search', '');
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('emp_id_apply', 'LIKE', "%{$search}%")
+                  ->orWhere('family_name', 'LIKE', "%{$search}%")
+                  ->orWhere('family_relation', 'LIKE', "%{$search}%");
+            });
+        }
+        
+        // Apply card type filter
+        $cardType = request()->get('card_type', '');
+        if (!empty($cardType)) {
+            // This filter would be applied at grouping level
+        }
+        
         $all = $query->orderBy('created_date', 'desc')->get();
+        
         $groupKey = function ($r) {
             $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
             return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
         };
+        
         $groups = $all->groupBy($groupKey);
+        
         $groupList = $groups->map(function ($rows) {
             $first = $rows->sortBy('fml_id_apply')->first();
+            $empName = '--';
+            $designation = '--';
+            $section = '--';
+            
+            if ($first->created_by) {
+                $emp = EmployeeMaster::with(['designation', 'department'])
+                    ->where('pk', $first->created_by)
+                    ->orWhere('pk_old', $first->created_by)
+                    ->first();
+                if ($emp) {
+                    $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+                    $designation = $emp->designation->designation_name ?? '--';
+                    $section = $emp->department->department_name ?? '--';
+                }
+            }
+            if ($empName === '' || $empName === ' ') {
+                $empName = $first->emp_id_apply ?? '--';
+            }
+            
             return (object) [
                 'first_id' => $first->fml_id_apply,
                 'created_at' => $first->created_date,
                 'employee_id' => $first->emp_id_apply,
-                'employee_name' => $first->emp_id_apply,
-                'designation' => '--',
-                'section' => '--',
+                'employee_name' => $empName,
+                'designation' => $designation,
+                'section' => $section,
                 'member_count' => $rows->count(),
-                'card_type' => 'Family Card',
+                'card_type' => $first->card_type ?? 'Family',
             ];
         })->values();
+        
+        // Apply card type filter after grouping
+        $cardType = request()->get('card_type', '');
+        if (!empty($cardType)) {
+            $groupList = $groupList->filter(function ($group) use ($cardType) {
+                return $group->card_type === $cardType;
+            })->values();
+        }
+        
         $page = request()->get($pageName, 1);
         $slice = $groupList->forPage($page, $perPage);
+        
         return new LengthAwarePaginator(
             $slice->values(),
             $groupList->count(),
             $perPage,
             $page,
-            ['path' => request()->url(), 'pageName' => $pageName]
+            ['path' => request()->url(), 'pageName' => $pageName, 'query' => request()->query()]
         );
     }
 
@@ -90,6 +141,8 @@ class FamilyIDCardRequestController extends Controller
             ->orderBy('fml_id_apply')
             ->get();
         $memberDtos = $members->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
+    //    print_r($memberDtos);
+    //    die;
         return view('admin.family_idcard.members', [
             'parentId' => $row->emp_id_apply,
             'requestDate' => $row->created_date,
@@ -141,15 +194,36 @@ class FamilyIDCardRequestController extends Controller
             'members' => 'required|array|min:1',
             'members.*.name' => 'required|string|max:255',
             'members.*.relation' => 'nullable|string|max:100',
-            'members.*.family_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'members.*.family_photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
             'members.*.dob' => 'nullable|date',
             'members.*.valid_from' => 'nullable|date',
             'members.*.valid_to' => 'nullable|date',
         ];
-        if ($request->input('employee_type') === 'Contractual Employee') {
-            $rules['approval_authority'] = 'required|exists:employee_master,pk';
-        }
+        
         $request->validate($rules);
+
+        // Check for duplicate family member names
+        $members = $request->input('members', []);
+        $memberNames = [];
+        $duplicateNames = [];
+        foreach ($members as $member) {
+            $name = trim($member['name'] ?? '');
+            if (!empty($name)) {
+                $nameKey = strtolower($name);
+                if (in_array($nameKey, $memberNames)) {
+                    if (!in_array($nameKey, $duplicateNames)) {
+                        $duplicateNames[] = $nameKey;
+                    }
+                } else {
+                    $memberNames[] = $nameKey;
+                }
+            }
+        }
+        if (!empty($duplicateNames)) {
+            throw ValidationException::withMessages([
+                'members' => 'Duplicate family member(s) found: ' . implode(', ', array_map('ucfirst', $duplicateNames)) . '. Each family member can only be added once.'
+            ]);
+        }
 
         $employeeId = $request->input('employee_id');
         $createdBy = Auth::user()->user_id;
@@ -157,18 +231,20 @@ class FamilyIDCardRequestController extends Controller
         $approvalAuthorityPk = $request->input('employee_type') === 'Contractual Employee'
             ? (int) $request->input('approval_authority')
             : null;
-        $members = $request->input('members', []);
         $count = 0;
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
-
+        $groupPhotoPath = null;
+        if ($request->hasFile('group_photo')) {
+            $groupPhotoPath = $request->file('group_photo')->store('family_idcard/Group_photos', 'public');
+        }
         foreach ($members as $index => $member) {
             $name = $member['name'] ?? null;
             if (empty(trim($name ?? ''))) {
                 continue;
             }
-            $familyPhotoPath = null;
+            $familyPhotoPath_individual = null;
             if ($request->hasFile('members.' . $index . '.family_photo')) {
-                $familyPhotoPath = $request->file('members.' . $index . '.family_photo')->store('family_idcard/photos', 'public');
+                $familyPhotoPath_individual = $request->file('members.' . $index . '.family_photo')->store('family_idcard/Individual_photos', 'public');
             }
             $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
             $nextPk++;
@@ -182,8 +258,8 @@ class FamilyIDCardRequestController extends Controller
                 'id_status' => 1,
                 'created_by' => $createdBy,
                 'created_date' => now()->format('Y-m-d H:i:s'),
-                'id_photo_path' => $familyPhotoPath,
-                'family_photo' => $familyPhotoPath,
+                'id_photo_path' => $familyPhotoPath_individual,
+                'family_photo' => $groupPhotoPath,
                 'employee_dob' => !empty($member['dob']) ? $member['dob'] : null,
                 'emp_id_apply' => $employeeId,
             ]);
@@ -226,7 +302,7 @@ class FamilyIDCardRequestController extends Controller
             'name' => 'required|string|max:255',
             'relation' => 'nullable|string|max:100',
             'section' => 'required|string|max:255',
-            'family_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'family_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'dob' => 'nullable|date',
             'valid_from' => 'nullable|date',
             'valid_to' => 'nullable|date',
@@ -264,8 +340,29 @@ class FamilyIDCardRequestController extends Controller
 
     public function restore($id)
     {
-        return redirect()->route('admin.family_idcard.index')
-            ->with('info', 'Security table does not use soft delete.');
+        // Restore an approved / rejected Family ID card request back to Active list
+        $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->first();
+        if ($row) {
+            // Find all rows belonging to the same grouped request (same emp_id_apply + created_by + created_date)
+            $query = SecurityFamilyIdApply::where('emp_id_apply', $row->emp_id_apply)
+                ->where('created_by', $row->created_by);
+
+            if ($row->created_date) {
+                $created = \Carbon\Carbon::parse($row->created_date)->format('Y-m-d H:i:s');
+                $query->whereRaw("DATE_FORMAT(created_date, '%Y-%m-%d %H:%i:%s') = ?", [$created]);
+            }
+
+            // Move all members in this group back to id_status = 1 (Active)
+            $query->update(['id_status' => 1]);
+
+            return redirect()
+                ->route('admin.family_idcard.index')
+                ->with('success', 'Family ID Card request restored to Active list successfully.');
+        }
+
+        return redirect()
+            ->route('admin.family_idcard.index')
+            ->with('error', 'Family ID Card request not found.');
     }
 
     public function forceDelete($id)
@@ -307,16 +404,38 @@ class FamilyIDCardRequestController extends Controller
     {
         $tab = $request->get('tab', 'active');
         $format = $request->get('format', 'xlsx');
+        $search = $request->get('search', '');
+        $cardType = $request->get('card_type', '');
+        
         if (!in_array($tab, ['active', 'archive', 'all'])) {
             $tab = 'active';
         }
         $filename = 'family_idcard_requests_' . $tab . '_' . now()->format('Y-m-d_His');
 
         $query = match ($tab) {
-            'archive' => SecurityFamilyIdApply::whereIn('id_status', [2, 3])->orderBy('created_date', 'desc'),
-            'all' => SecurityFamilyIdApply::orderBy('created_date', 'desc'),
-            default => SecurityFamilyIdApply::where('id_status', 1)->orderBy('created_date', 'desc'),
+            'archive' => SecurityFamilyIdApply::whereIn('id_status', [2, 3]),
+            'all' => SecurityFamilyIdApply::query(),
+            default => SecurityFamilyIdApply::where('id_status', 1),
         };
+        
+        // Filter by current user
+        $query->where('created_by', Auth::user()->user_id);
+        
+        // Apply search filter
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('emp_id_apply', 'LIKE', "%{$search}%")
+                  ->orWhere('family_name', 'LIKE', "%{$search}%")
+                  ->orWhere('family_relation', 'LIKE', "%{$search}%");
+            });
+        }
+        
+        // Apply card type filter
+        if (!empty($cardType)) {
+            $query->where('card_type', $cardType);
+        }
+        
+        $query->orderBy('created_date', 'desc');
         $rows = $query->get();
         $requests = $rows->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
 
@@ -325,6 +444,7 @@ class FamilyIDCardRequestController extends Controller
                 'requests' => $requests,
                 'tab' => $tab,
                 'export_date' => now()->format('d/m/Y H:i'),
+                'filters' => compact('search', 'cardType'),
             ])
                 ->setPaper('a4', 'landscape')
                 ->setOption('isHtml5ParserEnabled', true)
@@ -333,7 +453,7 @@ class FamilyIDCardRequestController extends Controller
         }
 
         return Excel::download(
-            new FamilyIDCardExport($tab, true),
+            new FamilyIDCardExport($tab, true, $search, $cardType),
             $filename . ($format === 'csv' ? '.csv' : '.xlsx'),
             $format === 'csv' ? \Maatwebsite\Excel\Excel::CSV : \Maatwebsite\Excel\Excel::XLSX
         );

@@ -69,10 +69,9 @@
                         <label for="doc_upload" class="form-label">Upload Document</label>
                         <input type="file" name="doc_upload" id="doc_upload" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
                         @if($req->doc_upload)
-                            <small class="text-muted">Current: <a href="{{ asset('storage/' . $req->doc_upload) }}" target="_blank">Download</a></small>
-                        @else
-                            <small class="text-muted">PDF or image (max 2MB)</small>
+                            <small class="text-muted d-block">Current: <a href="{{ asset('storage/' . $req->doc_upload) }}" target="_blank">Download</a></small>
                         @endif
+                        <small class="text-muted d-block">Allowed: PDF, JPG, PNG. Max size: 2 MB</small>
                         @error('doc_upload')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
