@@ -25,9 +25,6 @@
 <link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
 <!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
 
-<!-- Choices.js (global searchable selects) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-
 <!-- DataTables 1.13.8 + Bootstrap 5 (latest) -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" crossorigin="anonymous">
@@ -60,20 +57,6 @@
   'wght' 400,
   'GRAD' 0,
   'opsz' 24
-}
-
-/* Choices.js - make it visually match Bootstrap form controls globally */
-.choices {
-  width: 100%;
-}
-.choices__inner {
-  min-height: calc(2.25rem + 2px);
-  padding: 0.375rem 0.75rem;
-  border-radius: 0.375rem;
-  border: 1px solid #ced4da;
-}
-.choices__list--single {
-  padding: 0;
 }
 
 /* Color themes (Blue_Theme, Aqua_Theme, etc.) work in both light and dark mode */
