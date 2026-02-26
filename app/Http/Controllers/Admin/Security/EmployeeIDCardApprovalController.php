@@ -48,10 +48,20 @@ class EmployeeIDCardApprovalController extends Controller
         $dupPermA1Done = DB::table('security_dup_perm_id_apply_approval')
             ->where('status', 1)
             ->pluck('security_parm_id_apply_pk');
-        $dupPermQuery = DB::table('security_dup_perm_id_apply')
-            ->where('id_status', 1)
-            ->whereNotIn('emp_id_apply', $dupPermA1Done)
-            ->orderByDesc('created_date');
+        $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
+            ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
+            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
+            ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk')
+            ->where('dup.id_status', 1)
+            ->whereNotIn('dup.emp_id_apply', $dupPermA1Done)
+            ->orderByDesc('dup.created_date')
+            ->select([
+                'dup.*',
+                'emp.first_name',
+                'emp.last_name',
+                'desig.designation_name',
+                'dept.department_name',
+            ]);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -60,8 +70,8 @@ class EmployeeIDCardApprovalController extends Controller
                     ->orWhere('id_card_no', 'like', '%' . $search . '%');
             });
             $dupPermQuery->where(function ($q) use ($search) {
-                $q->where('employee_name', 'like', '%' . $search . '%')
-                    ->orWhere('id_card_no', 'like', '%' . $search . '%');
+                $q->where('dup.employee_name', 'like', '%' . $search . '%')
+                    ->orWhere('dup.id_card_no', 'like', '%' . $search . '%');
             });
         }
         if ($request->filled('card_type')) {
@@ -72,12 +82,16 @@ class EmployeeIDCardApprovalController extends Controller
         $dupPermRows = $dupPermQuery->get();
 
         $contDtos = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
-        // Permanent Duplicate - Approval 1
+        // Permanent Duplicate - Approval 1 (id must be emp_id_apply for p-dup- lookup in approve1)
         $dupPermDtos = $dupPermRows->map(function ($r) {
+            $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
+            if ($fullName === '') {
+                $fullName = $r->employee_name ?? '--';
+            }
             return (object) [
-                'id' => 'p-dup-' . $r->emp_id_apply,
-                'name' => $r->employee_name ?? '--',
-                'designation' => null,
+                'id' => $r->emp_id_apply,
+                'name' => $fullName,
+                'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
                 'card_type' => null,
@@ -89,8 +103,8 @@ class EmployeeIDCardApprovalController extends Controller
                 'id_card_valid_upto' => $r->card_valid_to,
                 'photo' => $r->id_photo_path,
                 'created_at' => $r->created_date ? \Carbon\Carbon::parse($r->created_date) : null,
-                'requested_by' => null,
-                'requested_section' => null,
+                'requested_by' => $fullName,
+                'requested_section' => $r->department_name ?? null,
                 'request_type' => 'duplicate',
             ];
         });
@@ -132,11 +146,21 @@ class EmployeeIDCardApprovalController extends Controller
         // Permanent Duplicate: has A1, no A2 (A1 done in Approval 1)
         $dupPermA1 = DB::table('security_dup_perm_id_apply_approval')->where('status', 1)->pluck('security_parm_id_apply_pk');
         $dupPermA2 = DB::table('security_dup_perm_id_apply_approval')->where('status', 2)->pluck('security_parm_id_apply_pk');
-        $dupPermQuery = DB::table('security_dup_perm_id_apply')
-            ->where('id_status', 1)
-            ->whereIn('emp_id_apply', $dupPermA1)
-            ->whereNotIn('emp_id_apply', $dupPermA2)
-            ->orderByDesc('created_date');
+        $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
+            ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
+            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
+            ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk')
+            ->where('dup.id_status', 1)
+            ->whereIn('dup.emp_id_apply', $dupPermA1)
+            ->whereNotIn('dup.emp_id_apply', $dupPermA2)
+            ->orderByDesc('dup.created_date')
+            ->select([
+                'dup.*',
+                'emp.first_name',
+                'emp.last_name',
+                'desig.designation_name',
+                'dept.department_name',
+            ]);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -148,7 +172,8 @@ class EmployeeIDCardApprovalController extends Controller
                     ->orWhere('id_card_no', 'like', "%{$search}%");
             });
             $dupPermQuery->where(function ($q) use ($search) {
-                $q->where('id_card_no', 'like', '%' . $search . '%');
+                $q->where('dup.id_card_no', 'like', '%' . $search . '%')
+                    ->orWhere('dup.employee_name', 'like', '%' . $search . '%');
             });
         }
         if ($request->filled('card_type')) {
@@ -161,10 +186,14 @@ class EmployeeIDCardApprovalController extends Controller
         $permDtos = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
         // For duplicate permanent records (stdClass from DB query), create DTOs directly without mapper
         $dupPermDtos = $dupPermRows->map(function ($r) {
+            $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
+            if ($fullName === '') {
+                $fullName = $r->employee_name ?? '--';
+            }
             $dto = (object) [
-                'id' => 'p-dup-' . $r->emp_id_apply,
-                'name' => $r->employee_name ?? '--',
-                'designation' => null,
+                'id' => $r->emp_id_apply,
+                'name' => $fullName,
+                'designation' => $r->designation_name ?? null,
                 'father_name' => null,
                 'id_card_number' => $r->id_card_no,
                 'card_type' => null,
@@ -176,8 +205,8 @@ class EmployeeIDCardApprovalController extends Controller
                 'id_card_valid_upto' => $r->card_valid_to,
                 'photo' => $r->id_photo_path,
                 'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
-                'requested_by' => null,
-                'requested_section' => null,
+                'requested_by' => $fullName,
+                'requested_section' => $r->department_name ?? null,
                 'request_type' => 'duplicate',
             ];
             return $dto;
@@ -227,7 +256,8 @@ class EmployeeIDCardApprovalController extends Controller
         // For duplicate contractual records (stdClass from DB query), create DTOs directly without mapper
         $dupContDtos = $dupContRows->map(function ($r) {
             $dto = (object) [
-                'id' => 'c-dup-' . $r->emp_id_apply,
+                // Use "c-<applyId>" as base id so view can build c-dup- prefix
+                'id' => 'c-' . $r->emp_id_apply,
                 'name' => $r->employee_name ?? '--',
                 'designation' => $r->designation_name ?? '--',
                 'father_name' => null,
@@ -366,6 +396,7 @@ class EmployeeIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? $user->pk ?? null;
 
         // Permanent Duplicate ID Card request (p-dup- prefix) - Approval 1: insert A1 only
+        // Identifier after "p-dup-" is emp_id_apply (e.g. DUP00001), not numeric pk
         if (is_string($decrypted) && str_starts_with($decrypted, 'p-dup-')) {
             $applyId = substr($decrypted, 6);
             $row = DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->first();
@@ -499,9 +530,10 @@ class EmployeeIDCardApprovalController extends Controller
                 ->with('success', 'Duplicate ID Card request approved successfully.');
         }
         // Permanent Duplicate ID Card request (p-dup- prefix)
+        // Identifier after "p-dup-" is emp_id_apply (e.g. DUP00001), not numeric pk
         elseif (is_string($pk) && str_starts_with($pk, 'p-dup-')) {
-            $permPk = (int) substr($pk, 6);
-            $row = DB::table('security_dup_perm_id_apply')->where('pk', $permPk)->first();
+            $applyId = substr($pk, 6);
+            $row = DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->first();
             if (!$row || (int) $row->id_status !== 1) {
                 return redirect()->back()->with('error', 'This request is not pending your approval.');
             }
@@ -519,7 +551,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_by' => $employeePk,
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
-            DB::table('security_dup_perm_id_apply')->where('pk', $permPk)->update(['id_status' => 2]);
+            DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->update(['id_status' => 2]);
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Duplicate ID Card request approved successfully.');
         }
@@ -768,5 +800,131 @@ class EmployeeIDCardApprovalController extends Controller
         $requests = $paginator;
 
         return view('admin.security.employee_idcard_approval.all', compact('requests'));
+    }
+
+    public function export(Request $request)
+    {
+        $stage = $request->get('stage', '1');
+        $format = $request->get('format', 'xlsx');
+        $search = $request->get('search', '');
+        $cardType = $request->get('card_type', '');
+        $perPage = (int) $request->get('per_page', 100);
+
+        // Fetch data based on stage
+        if ($stage === '1') {
+            return $this->exportApproval1($search, $cardType, $format, $perPage);
+        } else {
+            return $this->exportApproval2($search, $cardType, $format, $perPage);
+        }
+    }
+
+    private function exportApproval1($search, $cardType, $format, $perPage)
+    {
+        $user = Auth::user();
+        $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
+
+        // Build query for Contractual requests
+        $contQuery = DB::table('security_con_oth_id_apply')
+            ->where('id_status', 1)
+            ->where('department_approval_emp_pk', $currentEmployeePk)
+            ->select('emp_id_apply as id', 'employee_name as name', 'designation_name as designation', 
+                    'id_card_no', 'employee_dob', 'blood_group', 'mobile_no', 'created_date', 
+                    DB::raw("'Regular' as type"), 'permanent_type as card_type');
+
+        if (!empty($search)) {
+            $contQuery->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', "%{$search}%")
+                  ->orWhere('id_card_no', 'like', "%{$search}%");
+            });
+        }
+        if (!empty($cardType)) {
+            $contQuery->where('permanent_type', $cardType);
+        }
+
+        $data = $contQuery->get()->toArray();
+
+        return $this->outputExport($data, 'Approval_I_' . now()->format('Y-m-d'), $format);
+    }
+
+    private function exportApproval2($search, $cardType, $format, $perPage)
+    {
+        // Build query for all requests in Approval 2
+        $query = DB::table('security_parm_id_apply')
+            ->where('id_status', 1)
+            ->select('emp_id_apply as id', 'employee_name as name', 'designation_name as designation', 
+                    'id_card_no', 'employee_dob', 'blood_group', 'mobile_no', 'created_date', 
+                    DB::raw("'Regular' as type"), DB::raw("'Permanent' as card_type"));
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', "%{$search}%")
+                  ->orWhere('id_card_no', 'like', "%{$search}%");
+            });
+        }
+
+        $data = $query->get()->toArray();
+
+        return $this->outputExport($data, 'Approval_II_' . now()->format('Y-m-d'), $format);
+    }
+
+    private function outputExport($data, $filename, $format)
+    {
+        if ($format === 'pdf') {
+            return $this->exportPdf($data, $filename);
+        } else {
+            return $this->exportExcel($data, $filename);
+        }
+    }
+
+    private function exportExcel($data, $filename)
+    {
+        $headers = ['ID', 'Employee Name', 'Designation', 'ID Card No', 'DOB', 'Blood Group', 'Mobile', 'Request Date', 'Type', 'Card Type'];
+        
+        $csvData = implode(',', $headers) . "\n";
+        foreach ($data as $row) {
+            $csvData .= implode(',', [
+                $row->id ?? '',
+                '"' . ($row->name ?? '') . '"',
+                $row->designation ?? '',
+                $row->id_card_no ?? '',
+                $row->employee_dob ?? '',
+                $row->blood_group ?? '',
+                $row->mobile_no ?? '',
+                $row->created_date ?? '',
+                $row->type ?? '',
+                $row->card_type ?? '',
+            ]) . "\n";
+        }
+
+        return response($csvData)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', "attachment; filename=\"{$filename}.csv\"");
+    }
+
+    private function exportPdf($data, $filename)
+    {
+        $html = '<table border="1" cellpadding="5" style="width:100%;">';
+        $html .= '<tr><th>ID</th><th>Employee Name</th><th>Designation</th><th>ID Card No</th><th>DOB</th><th>Blood Group</th><th>Mobile</th><th>Request Date</th><th>Type</th><th>Card Type</th></tr>';
+        
+        foreach ($data as $row) {
+            $html .= '<tr>';
+            $html .= '<td>' . ($row->id ?? '') . '</td>';
+            $html .= '<td>' . ($row->name ?? '') . '</td>';
+            $html .= '<td>' . ($row->designation ?? '') . '</td>';
+            $html .= '<td>' . ($row->id_card_no ?? '') . '</td>';
+            $html .= '<td>' . ($row->employee_dob ?? '') . '</td>';
+            $html .= '<td>' . ($row->blood_group ?? '') . '</td>';
+            $html .= '<td>' . ($row->mobile_no ?? '') . '</td>';
+            $html .= '<td>' . ($row->created_date ?? '') . '</td>';
+            $html .= '<td>' . ($row->type ?? '') . '</td>';
+            $html .= '<td>' . ($row->card_type ?? '') . '</td>';
+            $html .= '</tr>';
+        }
+        $html .= '</table>';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download($filename . '.pdf');
     }
 }

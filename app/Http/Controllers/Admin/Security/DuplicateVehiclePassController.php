@@ -52,8 +52,8 @@ class DuplicateVehiclePassController extends Controller
                 return (object) [
                     'pk' => $e->pk,
                     'name' => trim($e->first_name . ' ' . ($e->last_name ?? '')),
-                    'designation' => $e->designation->designation_name ?? '',
-                    'department' => $e->department->department_name ?? '',
+                    'designation' => $e->designation?->designation_name ?? '',
+                    'department' => $e->department?->department_name ?? '',
                     'emp_id' => $e->emp_id ?? '',
                 ];
             });
@@ -229,8 +229,8 @@ class DuplicateVehiclePassController extends Controller
                 return (object) [
                     'pk' => $e->pk,
                     'name' => trim($e->first_name . ' ' . ($e->last_name ?? '')),
-                    'designation' => $e->designation->designation_name ?? '',
-                    'department' => $e->department->department_name ?? '',
+                    'designation' => $e->designation?->designation_name ?? '',
+                    'department' => $e->department?->department_name ?? '',
                     'emp_id' => $e->emp_id ?? '',
                 ];
             });

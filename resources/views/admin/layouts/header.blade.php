@@ -289,7 +289,7 @@
     <form action="{{ route('logout') }}" method="POST" class="m-0">
         @csrf
         <button type="submit"
-            class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
+            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
             aria-label="Sign out">
             <i class="material-icons material-symbols-rounded fs-6">logout</i>
             <span class="small fw-medium">Logout</span>

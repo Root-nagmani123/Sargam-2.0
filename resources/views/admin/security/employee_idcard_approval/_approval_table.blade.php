@@ -47,7 +47,15 @@
                     <td>{{ $req->mobile_number ?? $req->telephone_number ?? '--' }}</td>
                     <td>
                         @if($req->photo)
-                            <a href="{{ asset('storage/' . (str_starts_with($req->photo, 'idcard/') ? $req->photo : 'idcard/photos/' . $req->photo)) }}" target="_blank" class="text-primary" title="Download Photo">Download</a>
+                            @php
+                                // Construct the correct storage path
+                                $photoPath = str_starts_with($req->photo, 'idcard/')
+                                    ? $req->photo
+                                    : 'idcard/photos/' . $req->photo;
+                                $photoExists = \Storage::disk('public')->exists($photoPath);
+                                $photoUrl = $photoExists ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
+                            @endphp
+                            <a href="{{ $photoUrl }}" target="_blank" class="text-primary" title="Download Photo">Download</a>
                         @else
                             <span class="text-muted">--</span>
                         @endif

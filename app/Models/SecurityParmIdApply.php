@@ -46,6 +46,8 @@ class SecurityParmIdApply extends Model
         'perm_sub_type',
         'telephone_no',
         'path_image',
+        'extension_reason',
+        'extension_document_path',
     ];
 
     protected $casts = [

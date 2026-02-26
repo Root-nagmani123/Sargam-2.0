@@ -33,7 +33,7 @@
                 @php $isContractual = ($request->employee_type ?? '') === 'Contractual Employee'; @endphp
                 <div class="row g-3">
                     <!-- Row 1: Card Type, Sub Type, Request For -->
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="card_type" class="form-label">Card Type <span class="text-danger">*</span></label>
                         <select name="card_type" id="card_type" class="form-select @error('card_type') is-invalid @enderror" required>
                             <option value="">Select Card Type</option>
@@ -45,7 +45,7 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="sub_type" class="form-label">Sub Type <span class="text-danger">*</span></label>
                         <select name="sub_type" id="sub_type" class="form-select @error('sub_type') is-invalid @enderror" required>
                             <option value="">Select Sub Type</option>
@@ -57,7 +57,7 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="request_for" class="form-label">Request For <span class="text-danger">*</span></label>
                         <select name="request_for" id="request_for" class="form-select @error('request_for') is-invalid @enderror" required>
                             @if($isContractual)
@@ -221,10 +221,11 @@
                         @endif
                         <div class="idcard-upload-zone" id="photoUploadArea">
                             <input type="file" name="photo" id="photo" class="d-none @error('photo') is-invalid @enderror" 
-                                   accept="image/*" onchange="displayFileName(this, 'photoName')">
+                                   accept=".jpeg,.jpg,.png,.gif" onchange="displayFileName(this, 'photoName')">
                             <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                             <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                         </div>
+                        <small class="text-muted d-block">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
                         <small id="photoName" class="d-block mt-2 text-body-secondary"></small>
                         @error('photo')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -245,6 +246,7 @@
                             <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                             <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                         </div>
+                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX. Max size: 5 MB</small>
                         <small id="joiningLetterName" class="d-block mt-2 text-body-secondary"></small>
                         @error('joining_letter')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -326,6 +328,7 @@
                                     <div class="idcard-upload-placeholder {{ $request->fir_receipt ? 'd-none' : '' }}" id="firReceiptPlaceholderEdit">
                                         <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                         <p class="mt-2 mb-0 small">Upload FIR filed against lost card</p>
+                                        <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                     </div>
                                     <div class="idcard-upload-preview idcard-doc-preview {{ $request->fir_receipt ? '' : 'd-none' }}" id="firReceiptPreviewEdit">
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
@@ -345,6 +348,7 @@
                                     <div class="idcard-upload-placeholder {{ $request->payment_receipt ? 'd-none' : '' }}" id="paymentReceiptPlaceholderEdit">
                                         <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                         <p class="mt-2 mb-0 small">Click to upload</p>
+                                        <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                     </div>
                                     <div class="idcard-upload-preview idcard-doc-preview {{ $request->payment_receipt ? '' : 'd-none' }}" id="paymentReceiptPreviewEdit">
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>

@@ -12,17 +12,24 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 class EmployeeIDCardExport implements FromCollection, WithHeadings
 {
     protected string $tab;
+
     protected bool $useSecurity;
 
-    public function __construct(string $tab = 'active', bool $useSecurity = false)
+    /** @var Collection|null When set, export uses this collection (filtered by controller). */
+    protected ?Collection $requests = null;
+
+    public function __construct(string $tab = 'active', bool $useSecurity = false, ?Collection $requests = null)
     {
         $this->tab = $tab;
         $this->useSecurity = $useSecurity;
+        $this->requests = $requests;
     }
 
     public function collection(): Collection
     {
-        if ($this->useSecurity) {
+        if ($this->requests !== null) {
+            $data = $this->requests;
+        } elseif ($this->useSecurity) {
             $query = match ($this->tab) {
                 'archive' => SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])->whereIn('id_status', [SecurityParmIdApply::ID_STATUS_APPROVED, SecurityParmIdApply::ID_STATUS_REJECTED])->orderBy('pk', 'desc'),
                 'duplication', 'extension' => SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING)->orderBy('pk', 'desc'),

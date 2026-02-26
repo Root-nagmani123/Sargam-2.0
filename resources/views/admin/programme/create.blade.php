@@ -3,7 +3,16 @@
 @section('title', 'Programme - Sargam | Lal Bahadur')
 
 @section('setup_content')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
 <style>
+/* Choices.js + Bootstrap in programme-create */
+.programme-create .choices { width: 100%; }
+.programme-create .choices__inner { min-height: 38px; padding: 0.375rem 2.25rem 0.375rem 0.75rem; background-color: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); font-size: 1rem; }
+.programme-create .choices[data-type*="select-one"] .choices__inner { padding-bottom: 0.375rem; }
+.programme-create .choices.is-focused .choices__inner { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+.programme-create .choices__list--dropdown { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); z-index: 1050; }
+.programme-create .choices__list--dropdown .choices__item--selectable.is-highlighted { background-color: var(--bs-primary-bg-subtle); color: var(--bs-primary); }
+.programme-create .choices__input { background-color: var(--bs-body-bg); }
 /* Programme Create - Responsive */
 @media (max-width: 991.98px) {
     .programme-create .card-body { padding: 1.25rem; }
@@ -35,7 +44,7 @@
 @media (max-width: 575.98px) {
     .programme-create .container-fluid { padding-left: 0.375rem !important; padding-right: 0.375rem !important; }
     .programme-create .card-body { padding: 0.75rem; }
-    .programme-create .select2-container { width: 100% !important; }
+    .programme-create .choices { width: 100% !important; }
     .programme-create #add-coordinator { width: 100%; justify-content: center; }
     .programme-create .remove-coordinator { min-width: 2.5rem; }
 }
@@ -116,7 +125,7 @@
                                 label="Course Coordinator" 
                                 placeholder="Course Coordinator" 
                                 formLabelClass="form-label" 
-                                formSelectClass="select2"
+                                formSelectClass="choices-select"
                                 value="{{ $coordinator_name ?? '' }}"
                                 :options="$facultyList" />
                         
@@ -127,9 +136,9 @@
                                 label="Supporting Section" 
                                 placeholder="Select Supporting Section" 
                                 formLabelClass="form-label" 
-                                formSelectClass="select2"
+                                formSelectClass="choices-select"
                                 value="{{ $selectedSupportingSection ?? '' }}"
-                                :options="$supportingSectionList" />
+                                :options="$supportingSectionList" required="true" />
                         </div>
                         <div class="col-12">
                             <label class="form-label">Assistant Course Coordinators</label>
@@ -144,7 +153,6 @@
                                                     label="Assistant Coordinator" 
                                                     placeholder="Assistant Coordinator" 
                                                     formLabelClass="form-label" 
-                                                    formSelectClass="select2"
                                                     :options="$facultyList" 
                                                     value="{{ $coordinator }}"
                                                     required="true" />
@@ -154,8 +162,7 @@
                                                     name="assistant_coordinator_role[]" 
                                                     label="Role" 
                                                     placeholder="Select Role" 
-                                                    formLabelClass="form-label" 
-                                                    formSelectClass="select2"
+                                                    formLabelClass="form-label"
                                                     :options="$roleOptions" 
                                                     value="{{ $assistant_coordinator_roles[$index] ?? '' }}" />
                                             </div>
@@ -174,7 +181,7 @@
                                                 label="Assistant Coordinator" 
                                                 placeholder="Assistant Coordinator" 
                                                 formLabelClass="form-label" 
-                                                formSelectClass="select2"
+                                                formSelectClass="choices-select"
                                                 :options="$facultyList" 
                                                 required="true" />
                                         </div>
@@ -184,7 +191,7 @@
                                                 label="Role" 
                                                 placeholder="Select Role" 
                                                 formLabelClass="form-label" 
-                                                formSelectClass="select2"
+                                                formSelectClass="choices-select"
                                                 :options="$roleOptions" />
                                         </div>
                                         <div class="col-12 col-md-1 d-flex align-items-end">
@@ -223,5 +230,6 @@
 
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <script src="{{ asset('js/programme.js') }}"></script>
 @endpush

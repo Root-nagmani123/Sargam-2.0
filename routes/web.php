@@ -438,6 +438,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/approval2', 'approval2')->name('approval2');
         Route::get('/all', 'all')->name('all');
         Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/export', 'export')->name('export');
         Route::post('/approve1/{id}', 'approve1')->name('approve1');
         Route::post('/approve2/{id}', 'approve2')->name('approve2');
         Route::post('/reject1/{id}', 'reject1')->name('reject1');
@@ -828,7 +829,10 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/duplicate-idcard')->name('admin.duplicate_idcard.')->controller(DuplicateIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
+        Route::get('/{id}/edit', 'edit')->name('edit');
         Route::post('/store', 'store')->name('store');
+        Route::post('/{id}/update', 'update')->name('update');
+        Route::get('/lookup/by-card-number', 'lookupByCardNumber')->name('lookup');
     });
 
     // Family ID Card Request Routes

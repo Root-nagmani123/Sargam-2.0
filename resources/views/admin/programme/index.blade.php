@@ -21,7 +21,7 @@
                     </div>
                     <div class="col-12 col-md-8 col-lg-9">
                         <div class="d-flex flex-wrap flex-md-nowrap justify-content-md-end align-items-stretch align-items-md-center gap-2 gap-md-3 w-100">
-                            <div class="btn-group shadow-sm rounded-pill w-100 w-md-auto" role="group" aria-label="Filter courses by status">
+                            <div class="btn-group shadow-sm rounded-pill w-auto w-md-100" role="group" aria-label="Filter courses by status">
                                 <button type="button" class="btn btn-success px-3 px-md-4 fw-semibold active" id="filterActive"
                                     aria-pressed="true" aria-current="true">
                                     <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
@@ -34,7 +34,7 @@
                                 </button>
                             </div>
                             <a href="{{ route('programme.create') }}"
-                                class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 px-3 px-md-4 shadow-sm w-100 w-md-auto"
+                                class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 px-3 px-md-4 shadow-sm w-auto w-md-100"
                                 aria-label="Add a new course">
                                 <iconify-icon icon="ep:circle-plus-filled" aria-hidden="true"></iconify-icon>
                                 <span class="fw-semibold">Add Course</span>

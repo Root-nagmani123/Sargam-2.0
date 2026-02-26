@@ -13,7 +13,7 @@
                         <i class="material-icons material-symbols-rounded align-middle me-2" style="font-size:28px;">visibility</i>
                         Employee ID Card Request Details
                     </h4>
-                    <p class="text-muted mb-0">Request ID: <strong>#{{ $request->id }}</strong> | Created: <strong>{{ $request->created_at->format('d M, Y H:i') }}</strong></p>
+                    <p class="text-muted mb-0">Request ID: <strong>#{{ $request->id }}</strong> | Created: <strong>{{ $request->created_at ? $request->created_at->format('d/m/Y H:i') : '--' }}</strong></p>
                 </div>
                 @php
                     $statusClass = match($request->status) {
@@ -248,7 +248,7 @@
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded-2">
                                 <small class="text-muted d-block mb-1">Request Date</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->created_at->format('d M, Y') }}</strong>
+                                <strong class="text-dark d-block fs-6">{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</strong>
                             </div>
                         </div>
                     </div>
