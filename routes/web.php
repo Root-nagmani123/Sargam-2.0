@@ -1030,6 +1030,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
         Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
         Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
+        Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
         Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
         Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
         Route::get('new-request/allot-details/{id}', [EstateController::class, 'getNewRequestAllotDetails'])->name('new-request.allot-details');
@@ -1043,6 +1044,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
         Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
         Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
+        Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
 
