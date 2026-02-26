@@ -23,7 +23,7 @@
             @endif
 
             <div class="table-responsive">
-                <table id="itemCategoriesTable" class="table table-bordered table-hover align-middle w-100">
+                <table id="itemCategoriesTable" class="table table-striped table-hover table-bordered align-middle mb-0 w-100">
                     <thead>
                         <tr>
                             <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>

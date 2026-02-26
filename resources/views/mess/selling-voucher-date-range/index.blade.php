@@ -58,7 +58,7 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle" id="sellingVoucherDateRangeTable">
+        <table class="table table-striped table-hover table-bordered align-middle mb-0 w-100" id="sellingVoucherDateRangeTable">
             <thead style="background-color: #af2910;">
                 <tr>
                     <th style="color: #fff; width: 50px;">Serial No.</th>

@@ -18,7 +18,7 @@
                     </div>
                 @endif
                 <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table table-bordered table-hover align-middle w-100">
+                    <table id="purchaseOrdersTable" class="table table-striped table-hover table-bordered align-middle mb-0 w-100">
                         <thead>
                             <tr>
                                 <th style="background-color: #004a93; color: #fff; border-color: #004a93; width: 60px;">S.No</th>
