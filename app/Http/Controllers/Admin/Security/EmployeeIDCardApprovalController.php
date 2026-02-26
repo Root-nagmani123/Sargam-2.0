@@ -82,15 +82,14 @@ class EmployeeIDCardApprovalController extends Controller
         $dupPermRows = $dupPermQuery->get();
 
         $contDtos = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
-        // Permanent Duplicate - Approval 1
+        // Permanent Duplicate - Approval 1 (id must be emp_id_apply for p-dup- lookup in approve1)
         $dupPermDtos = $dupPermRows->map(function ($r) {
             $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
             if ($fullName === '') {
                 $fullName = $r->employee_name ?? '--';
             }
             return (object) [
-                // Use numeric PK as base id; prefix is added in view when encrypting
-                'id' => $r->pk,
+                'id' => $r->emp_id_apply,
                 'name' => $fullName,
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
@@ -192,8 +191,7 @@ class EmployeeIDCardApprovalController extends Controller
                 $fullName = $r->employee_name ?? '--';
             }
             $dto = (object) [
-                // Use numeric PK as base id; prefix is added in view
-                'id' => $r->pk,
+                'id' => $r->emp_id_apply,
                 'name' => $fullName,
                 'designation' => $r->designation_name ?? null,
                 'father_name' => null,
@@ -398,9 +396,10 @@ class EmployeeIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? $user->pk ?? null;
 
         // Permanent Duplicate ID Card request (p-dup- prefix) - Approval 1: insert A1 only
+        // Identifier after "p-dup-" is emp_id_apply (e.g. DUP00001), not numeric pk
         if (is_string($decrypted) && str_starts_with($decrypted, 'p-dup-')) {
-            $permPk = (int) substr($decrypted, 6);
-            $row = DB::table('security_dup_perm_id_apply')->where('pk', $permPk)->first();
+            $applyId = substr($decrypted, 6);
+            $row = DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->first();
             if (!$row || (int) $row->id_status !== 1) {
                 return redirect()->back()->with('error', 'This request is not pending your approval.');
             }
@@ -531,9 +530,10 @@ class EmployeeIDCardApprovalController extends Controller
                 ->with('success', 'Duplicate ID Card request approved successfully.');
         }
         // Permanent Duplicate ID Card request (p-dup- prefix)
+        // Identifier after "p-dup-" is emp_id_apply (e.g. DUP00001), not numeric pk
         elseif (is_string($pk) && str_starts_with($pk, 'p-dup-')) {
-            $permPk = (int) substr($pk, 6);
-            $row = DB::table('security_dup_perm_id_apply')->where('pk', $permPk)->first();
+            $applyId = substr($pk, 6);
+            $row = DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->first();
             if (!$row || (int) $row->id_status !== 1) {
                 return redirect()->back()->with('error', 'This request is not pending your approval.');
             }
@@ -551,7 +551,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_by' => $employeePk,
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
-            DB::table('security_dup_perm_id_apply')->where('pk', $permPk)->update(['id_status' => 2]);
+            DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->update(['id_status' => 2]);
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Duplicate ID Card request approved successfully.');
         }
