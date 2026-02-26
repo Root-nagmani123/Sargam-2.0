@@ -296,6 +296,16 @@
 .memo-type-index .dtr-details { display: none !important; }
 .memo-type-index .child { display: none !important; }
 
+/* Employee ID card index - hide DataTables responsive child toggle (down arrow) */
+.idcard-index-page .dtr-control,
+.idcard-index-page .dtr-expandable {
+    display: none !important;
+}
+.idcard-index-page .dtr-details,
+.idcard-index-page .child {
+    display: none !important;
+}
+
 @media (max-width: 767.98px) {
     .memo-type-index .btn-primary { width: 100%; justify-content: center; }
     .memo-type-index #memotypemaster-table_wrapper .dataTables_wrapper .row { flex-direction: column; gap: 0.5rem; }

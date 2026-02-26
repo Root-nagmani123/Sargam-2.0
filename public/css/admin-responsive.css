@@ -780,6 +780,16 @@
   }
   .idcard-index-page .idcard-index-tabs {
     justify-content: flex-start;
+    flex-wrap: nowrap;
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .idcard-index-page .idcard-index-tabs .nav-item {
+    flex: 0 0 auto;
   }
   .idcard-index-page .d-flex.align-items-center.gap-2.flex-wrap {
     flex-direction: column;
@@ -802,6 +812,12 @@
   .idcard-index-page .idcard-index-table td {
     padding: 6px 8px;
     font-size: 0.85rem;
+  }
+  /* Vertical scroll for table on smaller screens */
+  .idcard-index-page .table-responsive {
+    max-height: 65vh;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Family ID card create - stack header, reduce padding */
@@ -2026,11 +2042,26 @@
     box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
   }
 
-  /* Employee ID card index - phone */
+  /* Employee ID card index - phone: vertical scroll for tabs + table */
+  .idcard-index-page .idcard-index-card {
+    overflow: visible;
+  }
   .idcard-index-page .d-flex.flex-wrap.justify-content-between.align-items-center.gap-3.mb-4 {
     flex-direction: column;
     align-items: stretch !important;
     gap: 0.5rem;
+  }
+  .idcard-index-page .idcard-index-tabs {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    align-items: stretch;
+  }
+  .idcard-index-page .idcard-index-tabs .nav-item {
+    flex: 0 0 auto;
   }
   .idcard-index-page .idcard-index-tabs .nav-link {
     padding: 0.4rem 0.75rem;
@@ -2080,6 +2111,9 @@
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.08);
+    max-height: 65vh;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
   .idcard-index-page .pagination {
     flex-wrap: wrap;
