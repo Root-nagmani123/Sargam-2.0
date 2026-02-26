@@ -1009,6 +1009,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
         Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
         Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
+        Route::get('request-details/{id}', [EstateController::class, 'requestAndChangeRequestDetails'])->name('request-details');
         Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
         Route::post('request-for-estate', [EstateController::class, 'storeRequestForEstate'])->name('request-for-estate.store');
         Route::delete('request-for-estate/{id}', [EstateController::class, 'destroyRequestForEstate'])->name('request-for-estate.destroy');
@@ -1032,6 +1033,8 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
         Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
         Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
+        Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
+        Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
         Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
         Route::get('new-request/allot-details/{id}', [EstateController::class, 'getNewRequestAllotDetails'])->name('new-request.allot-details');
         Route::post('new-request/allot/{id}', [EstateController::class, 'allotNewRequest'])->name('new-request.allot');
@@ -1074,10 +1077,17 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
         Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
 
-        // Generate Estate Bill / Estate Bill Summary
+        // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
         Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
+        Route::post('generate-estate-bill/verify-selected', [EstateController::class, 'verifySelectedBillsLbsna'])->name('generate-estate-bill.verify-selected');
+        Route::post('generate-estate-bill/save-as-draft', [EstateController::class, 'saveAsDraftBillsLbsna'])->name('generate-estate-bill.save-as-draft');
 
-        // Return House (estate_possession_other where return_home_status = 0)
+        // Generate Estate Bill for Other (contract employees)
+        Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
+        Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+        Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
+        Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
+
         Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
         Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
         Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');

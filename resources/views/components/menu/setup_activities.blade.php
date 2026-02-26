@@ -280,6 +280,12 @@
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill-for-other') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.generate-estate-bill-for-other') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill for Other</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.return-house') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.return-house') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Return House</span>

@@ -57,8 +57,8 @@
                         <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                         Print Selected
                     </button>
-                    <a href="#" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</a>
-                    <a href="#" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">Save As Draft</a>
+                    <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
+                    <button type="button" id="btn_save_as_draft" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">Save As Draft</button>
                 </div>
             </form>
         </div>
@@ -204,6 +204,95 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     // Print All: opens the print-all page (all bills in one view with option to print or download PDF)
     // Link is used instead of button; no extra script needed.
+
+    function getSelectedBillPks() {
+        var pks = [];
+        document.querySelectorAll('.bill-checkbox:checked').forEach(function (el) {
+            var v = parseInt(el.value, 10);
+            if (v > 0) pks.push(v);
+        });
+        return pks;
+    }
+
+    function showStatusMessage(msg, type) {
+        type = type || 'success';
+        var alertClass = type === 'success' ? 'alert-success' : (type === 'error' ? 'alert-danger' : 'alert-warning');
+        var icon = type === 'success' ? 'check_circle' : (type === 'error' ? 'error' : 'info');
+        var statusEl = document.getElementById('status-msg');
+        if (statusEl) {
+            statusEl.innerHTML = '<div class="alert ' + alertClass + ' alert-dismissible fade show shadow-sm" role="alert">' +
+                '<i class="material-icons material-symbols-rounded me-2">' + icon + '</i> ' + msg +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+            statusEl.style.display = 'block';
+            setTimeout(function () { statusEl.style.display = 'none'; }, 4000);
+        }
+    }
+
+    var btnNotify = document.getElementById('btn_notify_selected');
+    if (btnNotify) {
+        btnNotify.addEventListener('click', function () {
+            var pks = getSelectedBillPks();
+            if (pks.length === 0) {
+                showStatusMessage('Please select at least one bill to verify.', 'warning');
+                return;
+            }
+            btnNotify.disabled = true;
+            var form = document.querySelector('form[action*="generate-estate-bill"]');
+            var billMonth = form ? form.querySelector('#bill_month') : null;
+            var unitSub = form ? form.querySelector('#unit_sub_type_pk') : null;
+            var params = new URLSearchParams();
+            pks.forEach(function (p) { params.append('pks[]', p); });
+            params.append('_token', '{{ csrf_token() }}');
+            if (billMonth && billMonth.value) params.append('bill_month', billMonth.value);
+            if (unitSub && unitSub.value) params.append('unit_sub_type_pk', unitSub.value);
+            fetch('{{ route("admin.estate.generate-estate-bill.verify-selected") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: params.toString()
+            }).then(function (r) { return r.json(); }).then(function (res) {
+                btnNotify.disabled = false;
+                if (res.status && res.message) {
+                    showStatusMessage(res.message, 'success');
+                    if (form && billMonth && billMonth.value) form.submit();
+                }
+            }).catch(function () {
+                btnNotify.disabled = false;
+                showStatusMessage('Failed to verify bills.', 'error');
+            });
+        });
+    }
+
+    var btnDraft = document.getElementById('btn_save_as_draft');
+    if (btnDraft) {
+        btnDraft.addEventListener('click', function () {
+            var pks = getSelectedBillPks();
+            if (pks.length === 0) {
+                showStatusMessage('Please select at least one bill to save as draft.', 'warning');
+                return;
+            }
+            btnDraft.disabled = true;
+            var form = document.querySelector('form[action*="generate-estate-bill"]');
+            var billMonth = form ? form.querySelector('#bill_month') : null;
+            var params = new URLSearchParams();
+            pks.forEach(function (p) { params.append('pks[]', p); });
+            params.append('_token', '{{ csrf_token() }}');
+            if (billMonth && billMonth.value) params.append('bill_month', billMonth.value);
+            fetch('{{ route("admin.estate.generate-estate-bill.save-as-draft") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: params.toString()
+            }).then(function (r) { return r.json(); }).then(function (res) {
+                btnDraft.disabled = false;
+                if (res.status && res.message) {
+                    showStatusMessage(res.message, 'success');
+                    if (form && billMonth && billMonth.value) form.submit();
+                }
+            }).catch(function () {
+                btnDraft.disabled = false;
+                showStatusMessage('Failed to save as draft.', 'error');
+            });
+        });
+    }
 });
 </script>
 @endpush
