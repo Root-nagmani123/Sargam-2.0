@@ -32,11 +32,14 @@
 
 <link rel="stylesheet" href="{{asset('admin_assets/libs/select2/dist/css/select2.min.css')}}">
 <<<<<<< HEAD
+<<<<<<< HEAD
 <link rel="stylesheet" href="{{asset('css/select2-enhancements.css')}}">
 =======
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" crossorigin="anonymous">
 <link rel="stylesheet" href="{{asset('css/select2-bootstrap5-enhancements.css')}}">
 >>>>>>> 1d23f418 (mess select2)
+=======
+>>>>>>> 8dca9a47 (Revert "select2 enrolment in all module")
 <link rel="stylesheet" href="{{asset('admin_assets/css/plugins/datatable.min.css')}}">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
 <!-- Breadcrumb Component CSS -->
