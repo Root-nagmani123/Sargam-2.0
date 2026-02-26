@@ -3,10 +3,22 @@
 @section('setup_content')
 <div class="container-fluid family-idcard-create-page">
     <x-breadcrum title="Generate New ID Card"></x-breadcrum>
+   
+    @if(count($errors) > 0)
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+    <strong>Validation Error - </strong>
+    <ul class="mb-0 mt-1">
+        @foreach($errors->all() as $message)
+        <li>{{ $message }}</li>
+        @endforeach
+    </ul>
+   </div>
+    @endif
 
     <form action="{{ route('admin.family_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
         @csrf
-
+    
         <!-- Employee Type: Government / Contractual -->
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body py-4 px-4">
@@ -82,7 +94,7 @@
                             <div class="family-idcard-upload-placeholder" id="groupPhotoPlaceholder">
                                 <i class="material-icons material-symbols-rounded family-idcard-upload-icon">upload</i>
                                 <p class="mt-2 mb-0">Click to upload or drag and drop</p>
-                                <span class="small text-muted">One photo for all family members</span>
+                                <span class="small text-muted">One photo for all family members. Allowed: JPG, PNG, GIF. Max size: 2 MB</span>
                             </div>
                             <div class="family-idcard-upload-preview d-none position-relative" id="groupPhotoPreview">
                                 <img src="" alt="Group Photo Preview" class="family-idcard-preview-img" id="groupPhotoPreviewImg">
@@ -140,17 +152,18 @@
                                     <input type="date" name="members[0][dob]" class="form-control form-control-sm" placeholder="DOB">
                                 </td>
                                 <td class="align-middle">
-                                    <input type="date" name="members[0][valid_from]" class="form-control form-control-sm">
+                                    <input type="date" name="members[0][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}">
                                 </td>
                                 <td class="align-middle">
                                     <input type="date" name="members[0][valid_to]" class="form-control form-control-sm">
                                 </td>
                                 <td class="align-middle">
                                     <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="0">
-                                        <input type="file" name="members[0][family_photo]" class="d-none member-photo-input" accept="image/*" required data-row="0">
+                                        <input type="file" name="members[0][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" required data-row="0">
                                         <div class="family-idcard-upload-placeholder-sm" data-placeholder="0">
                                             <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
                                             <span class="small d-block mt-1">Upload</span>
+                                            <span class="small text-muted d-block">JPG, PNG. Max 2 MB</span>
                                         </div>
                                         <div class="family-idcard-upload-preview-sm d-none position-relative" data-preview="0">
                                             <img src="" alt="Preview" class="member-preview-img" data-img="0" style="max-height:60px; border-radius:4px;">
@@ -204,17 +217,18 @@
             <input type="date" name="members[{{INDEX}}][dob]" class="form-control form-control-sm">
         </td>
         <td class="align-middle">
-            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control form-control-sm">
+            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}">
         </td>
         <td class="align-middle">
             <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control form-control-sm">
         </td>
         <td class="align-middle">
             <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">
-                <input type="file" name="members[{{INDEX}}][family_photo]" class="d-none member-photo-input" accept="image/*" required data-row="{{INDEX}}">
+                <input type="file" name="members[{{INDEX}}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" required data-row="{{INDEX}}">
                 <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{INDEX}}">
                     <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
                     <span class="small d-block mt-1">Upload</span>
+                    <span class="small text-muted d-block">JPG, PNG. Max 2 MB</span>
                 </div>
                 <div class="family-idcard-upload-preview-sm d-none position-relative" data-preview="{{INDEX}}">
                     <img src="" alt="Preview" class="member-preview-img" data-img="{{INDEX}}" style="max-height:60px; border-radius:4px;">
@@ -390,6 +404,40 @@
         var img = row.querySelector('.member-preview-img[data-img="' + idx + '"]');
         var removePhotoBtn = row.querySelector('.member-photo-remove');
         var removeRowBtn = row.querySelector('.remove-member-btn');
+        var nameInput = row.querySelector('.member-name');
+
+        // Real-time duplicate checking for member name
+        if (nameInput) {
+            nameInput.addEventListener('blur', function() {
+                var currentName = this.value.trim().toLowerCase();
+                var isDuplicate = false;
+                
+                if (currentName) {
+                    var allNameInputs = tbody.querySelectorAll('.member-name');
+                    var nameCount = 0;
+                    allNameInputs.forEach(function(inp) {
+                        if (inp.value.trim().toLowerCase() === currentName) {
+                            nameCount++;
+                        }
+                    });
+                    isDuplicate = nameCount > 1;
+                }
+                
+                if (isDuplicate) {
+                    this.classList.add('is-invalid');
+                    if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('duplicate-warning')) {
+                        var warning = document.createElement('div');
+                        warning.className = 'invalid-feedback d-block duplicate-warning';
+                        warning.textContent = 'This family member already exists in the list.';
+                        this.parentNode.appendChild(warning);
+                    }
+                } else {
+                    this.classList.remove('is-invalid');
+                    var warning = this.parentNode.querySelector('.duplicate-warning');
+                    if (warning) warning.remove();
+                }
+            });
+        }
 
         if (photoCell) {
             photoCell.addEventListener('click', function(e) {
@@ -400,7 +448,19 @@
         if (input) {
             input.addEventListener('change', function() {
                 var file = this.files[0];
-                if (!file || !file.type.match(/^image\//)) return;
+                if (!file) return;
+                
+                // Check for GIF files and reject them
+                if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+                    alert('GIF files are not allowed. Please upload JPG or PNG images only.');
+                    this.value = '';
+                    if (placeholder) placeholder.classList.remove('d-none');
+                    if (preview) preview.classList.add('d-none');
+                    if (img) img.src = '';
+                    return;
+                }
+                
+                if (!file.type.match(/^image\//)) return;
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     if (img) img.src = e.target.result;
@@ -430,6 +490,34 @@
     }
 
     addBtn.addEventListener('click', addRow);
+
+    // Apply date restrictions to Valid From fields
+    function applyDateRestrictions() {
+        var today = new Date().toISOString().split('T')[0];
+        var validFromFields = document.querySelectorAll('.valid-from-field');
+        validFromFields.forEach(function(field) {
+            field.setAttribute('min', today);
+            // Prevent user from clearing the value and selecting a past date
+            field.addEventListener('change', function() {
+                if (this.value && this.value < today) {
+                    this.value = today;
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        });
+    }
+    
+    // Apply date restrictions on page load
+    applyDateRestrictions();
+    
+    // Reapply restrictions after adding new rows
+    var originalAddRow = addRow;
+    addRow = function() {
+        originalAddRow();
+        applyDateRestrictions();
+    };
 
     // Group photo: preview and remove
     var groupZone = document.getElementById('groupPhotoUploadZone');
@@ -500,7 +588,51 @@
     var firstRow = tbody.querySelector('.family-member-row');
     if (firstRow) bindRowEvents(firstRow);
 
-    // Form submit: ensure at least one member
+    // Function to check for duplicate family members
+    function checkDuplicateMembers() {
+        var rows = tbody.querySelectorAll('.family-member-row');
+        var names = [];
+        var duplicates = [];
+        
+        rows.forEach(function(row) {
+            var nameInput = row.querySelector('.member-name');
+            if (nameInput && nameInput.value.trim()) {
+                var name = nameInput.value.trim().toLowerCase();
+                if (names.includes(name) && !duplicates.includes(name)) {
+                    duplicates.push(name);
+                }
+                names.push(name);
+            }
+        });
+        
+        return duplicates;
+    }
+
+    // Function to display duplicate error
+    function displayDuplicateError(duplicates) {
+        // Remove any existing error
+        var existingError = document.getElementById('duplicateMembersError');
+        if (existingError) existingError.remove();
+        
+        if (duplicates.length > 0) {
+            var errorMsg = 'Duplicate family member(s) found: ' + duplicates.map(function(n) {
+                return n.charAt(0).toUpperCase() + n.slice(1);
+            }).join(', ') + '. Please ensure each family member is added only once.';
+            
+            var errorDiv = document.createElement('div');
+            errorDiv.id = 'duplicateMembersError';
+            errorDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+            errorDiv.innerHTML = '<button type="button" class="btn-close" data-bs-dismiss="alert"></button><strong>Validation Error - </strong>' + errorMsg;
+            
+            var form = document.getElementById('familyIdcardForm');
+            form.insertBefore(errorDiv, form.firstChild);
+            
+            // Scroll to error
+            errorDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    // Form submit: ensure at least one member and no duplicates
     document.getElementById('familyIdcardForm').addEventListener('submit', function(e) {
         var rows = tbody.querySelectorAll('.family-member-row');
         if (rows.length === 0) {
@@ -508,6 +640,15 @@
             document.getElementById('noMembersMsg').classList.remove('d-none');
             return;
         }
+        
+        // Check for duplicates
+        var duplicates = checkDuplicateMembers();
+        if (duplicates.length > 0) {
+            e.preventDefault();
+            displayDuplicateError(duplicates);
+            return;
+        }
+        
         var groupInput = document.getElementById('group_photo');
         if (groupInput && (!groupInput.files || !groupInput.files.length)) {
             e.preventDefault();

@@ -142,6 +142,55 @@ class DuplicateIDCardRequestController extends Controller
         return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions'));
     }
 
+    /**
+     * Prefetch existing ID card details (permanent / contractual / family) by card number for Duplicate ID Card form.
+     */
+    public function lookupByCardNumber(Request $request)
+    {
+        $cardNo = trim((string) $request->get('id_card_number', ''));
+        $type = $request->get('id_card_type', 'Permanent');
+
+        if ($cardNo === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'ID Card Number is required.',
+            ], 422);
+        }
+
+        // For now, only Permanent is fully supported; Contractual/Family can be extended later.
+        if ($type === 'Permanent') {
+            $row = SecurityParmIdApply::with(['employee.designation'])
+                ->where('id_card_no', $cardNo)
+                ->first();
+            if (!$row) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active permanent ID card found with this number.',
+                ], 404);
+            }
+
+            $emp = $row->employee;
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'employee_name' => $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : '',
+                    'designation' => $emp?->designation?->designation_name ?? '',
+                    'date_of_birth' => $row->employee_dob ? $row->employee_dob->format('Y-m-d') : null,
+                    'blood_group' => $row->blood_group ?? '',
+                    'mobile_number' => $row->mobile_no ?? '',
+                    'father_name' => $emp->father_name ?? null,
+                    'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : null,
+                    'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : null,
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Lookup is currently supported only for Permanent ID cards.',
+        ], 422);
+    }
+
     public function store(Request $request)
     {
         $user = Auth::user();
@@ -156,7 +205,7 @@ class DuplicateIDCardRequestController extends Controller
             'id_card_number' => 'required|string|max:20',
             'photo' => 'required|file|image|max:2048',
             'id_proof' => 'required|integer',
-            'aadhar_doc' => 'required|file|max:5120',
+            'aadhar_doc' => 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'employee_name' => 'required|string|max:100',
             'designation' => 'nullable|string|max:100',
             'date_of_birth' => 'nullable|date',
@@ -170,15 +219,17 @@ class DuplicateIDCardRequestController extends Controller
 
         // Conditional validation based on card_reason
         $cardReason = $request->get('card_reason');
-        if ($cardReason === 'Card Lost') {
-            $baseRules['fir_doc'] = 'required|file|max:5120';
+        if ($cardReason === 'Damage Card') {
+            $baseRules['damage_doc'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
+        } elseif ($cardReason === 'Card Lost') {
+            $baseRules['fir_doc'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Service Extended') {
-            $baseRules['service_ext'] = 'required|file|max:5120';
+            $baseRules['service_ext'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Change in Name') {
             $baseRules['new_employee_name'] = 'required|string|max:100';
-            $baseRules['name_proof'] = 'required|file|max:5120';
+            $baseRules['name_proof'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Designation Change') {
-            $baseRules['designation_order'] = 'required|file|max:5120';
+            $baseRules['designation_order'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         }
 
         $validated = $request->validate($baseRules);
@@ -327,7 +378,12 @@ class DuplicateIDCardRequestController extends Controller
     {
         $data = [];
 
-        if ($cardReason === 'Card Lost' && $request->hasFile('fir_doc')) {
+        if ($cardReason === 'Damage Card' && $request->hasFile('damage_doc')) {
+            $ext = $request->file('damage_doc')->getClientOriginalExtension();
+            $file = $applyId . '_DAMAGE_PROOF_' . time() . '.' . $ext;
+            $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
+            $data['fir_doc'] = $file; // Reusing fir_doc column for damage proof
+        } elseif ($cardReason === 'Card Lost' && $request->hasFile('fir_doc')) {
             $ext = $request->file('fir_doc')->getClientOriginalExtension();
             $file = $applyId . '_FIR_' . time() . '.' . $ext;
             $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
