@@ -110,7 +110,7 @@
                             <div class="vehicle-pass-upload-placeholder" id="ownershipDocPlaceholder">
                                 <i class="material-icons material-symbols-rounded vehicle-pass-upload-icon">upload</i>
                                 <p class="mt-2 mb-0">Click to upload or drag and drop</p>
-                                <span class="small text-muted">Image or PDF (max 2MB)</span>
+                                <span class="small text-muted">Allowed: PDF, JPG, PNG. Max size: 2 MB</span>
                             </div>
                             <div class="vehicle-pass-upload-preview d-none" id="ownershipDocPreview">
                                 <div class="vehicle-pass-preview-inner position-relative">
