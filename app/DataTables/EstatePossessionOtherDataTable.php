@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\EstatePossessionOther;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -33,7 +34,13 @@ class EstatePossessionOtherDataTable extends DataTable
             ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
             ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
             ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
-            ->editColumn('meter_reading_oth', fn($row) => ($row->meter_reading_oth ?? '---') . '/' . ($row->meter_reading_oth1 ?? '---'))
+            ->editColumn('meter_reading_oth', function ($row) {
+                $latestCurr = $row->getAttribute('latest_curr_month_elec_red');
+                if ($latestCurr !== null && $latestCurr !== '') {
+                    return $latestCurr;
+                }
+                return $row->meter_reading_oth ?? '---';
+            })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (empty($searchValue)) {
@@ -84,6 +91,10 @@ class EstatePossessionOtherDataTable extends DataTable
 
     public function query(EstatePossessionOther $model): QueryBuilder
     {
+        $latestOtherReadings = DB::table('estate_month_reading_details_other as emro')
+            ->join(DB::raw('(SELECT estate_possession_other_pk, MAX(pk) as max_pk FROM estate_month_reading_details_other GROUP BY estate_possession_other_pk) as x'), 'emro.pk', '=', 'x.max_pk')
+            ->select('emro.estate_possession_other_pk', 'emro.curr_month_elec_red');
+
         return $model->newQuery()
             ->with(['estateOtherRequest:pk,emp_name,request_no_oth,section,designation'])
             ->select([
@@ -99,13 +110,17 @@ class EstatePossessionOtherDataTable extends DataTable
                 'eut.unit_type as unit_type_name',
                 'eust.unit_sub_type as unit_sub_type_name',
                 'ehm.house_no as house_no_display',
+                'emro_latest.curr_month_elec_red as latest_curr_month_elec_red',
             ])
             ->leftJoin('estate_other_req as eor', 'estate_possession_other.estate_other_req_pk', '=', 'eor.pk')
             ->leftJoin('estate_campus_master as ec', 'estate_possession_other.estate_campus_master_pk', '=', 'ec.pk')
             ->leftJoin('estate_block_master as eb', 'estate_possession_other.estate_block_master_pk', '=', 'eb.pk')
             ->leftJoin('estate_unit_type_master as eut', 'estate_possession_other.estate_unit_type_master_pk', '=', 'eut.pk')
             ->leftJoin('estate_unit_sub_type_master as eust', 'estate_possession_other.estate_unit_sub_type_master_pk', '=', 'eust.pk')
-            ->leftJoin('estate_house_master as ehm', 'estate_possession_other.estate_house_master_pk', '=', 'ehm.pk');
+            ->leftJoin('estate_house_master as ehm', 'estate_possession_other.estate_house_master_pk', '=', 'ehm.pk')
+            ->leftJoinSub($latestOtherReadings, 'emro_latest', function ($join) {
+                $join->on('emro_latest.estate_possession_other_pk', '=', 'estate_possession_other.pk');
+            });
     }
 
     public function html(): HtmlBuilder

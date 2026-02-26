@@ -2,19 +2,28 @@
 @php
     $inModal = $inModal ?? false;
     $formId = $inModal ? 'formChangeRequestDetailsModal' : 'formChangeRequestDetails';
+    $estateCampuses = $estateCampuses ?? collect();
+    $unitTypes = $unitTypes ?? collect();
+    $buildings = $buildings ?? collect();
+    $unitSubTypes = $unitSubTypes ?? collect();
+    $houseOptions = $houseOptions ?? collect();
 @endphp
 <form method="POST" action="{{ $formAction ?? '#' }}" id="{{ $formId }}" class="needs-validation" novalidate>
     @csrf
+
+    @if(!optional($detail)->pk)
+        <div class="alert alert-warning mb-4">No change request details found.</div>
+    @endif
 
     {{-- Personal and Employment Details (read-only) --}}
     <div class="row g-3 mb-4">
         <div class="col-12 col-md-6 col-lg-4">
             <label class="form-label fw-semibold">Request ID <span class="text-danger">*</span></label>
-            <input type="text" class="form-control bg-warning bg-opacity-10 border-secondary border-opacity-25" value="{{ optional($detail)->request_id ?? 'Chg-Req-'.rand(1000, 9999) }}" readonly>
+            <input type="text" class="form-control bg-warning bg-opacity-10 border-secondary border-opacity-25" value="{{ optional($detail)->request_id ?? '—' }}" readonly>
         </div>
         <div class="col-12 col-md-6 col-lg-4">
             <label class="form-label fw-semibold">Request Date <span class="text-danger">*</span></label>
-            <input type="text" class="form-control bg-warning bg-opacity-10 border-secondary border-opacity-25" value="{{ optional($detail)->request_date ?? date('d-m-Y') }}" readonly>
+            <input type="text" class="form-control bg-warning bg-opacity-10 border-secondary border-opacity-25" value="{{ optional($detail)->request_date ?? '—' }}" readonly>
         </div>
         <div class="col-12 col-md-6 col-lg-4">
             <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
@@ -48,6 +57,10 @@
             <label class="form-label fw-semibold">Current Allotment <span class="text-danger">*</span></label>
             <input type="text" class="form-control bg-warning bg-opacity-10 border-secondary border-opacity-25" value="{{ optional($detail)->current_allotment ?? '' }}" readonly>
         </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            <label class="form-label fw-semibold">Requested Change House <span class="text-danger">*</span></label>
+            <input type="text" class="form-control bg-warning bg-opacity-10 border-secondary border-opacity-25" value="{{ optional($detail)->requested_change_house ?? '' }}" readonly>
+        </div>
     </div>
 
     {{-- Change Unit Sub Type for House Details --}}
@@ -70,31 +83,56 @@
                         <td>
                             <select name="estate_name" class="form-select form-select-sm" required>
                                 <option value="">— Select —</option>
-                                <option value="indira" selected>Indira Bhavan Campus</option>
+                                @foreach($estateCampuses as $campus)
+                                    <option value="{{ $campus->pk }}"
+                                        {{ (string) old('estate_name', optional($detail)->estate_campus_master_pk) === (string) $campus->pk ? 'selected' : '' }}>
+                                        {{ $campus->campus_name }}
+                                    </option>
+                                @endforeach
                             </select>
                         </td>
                         <td>
                             <select name="unit_type" class="form-select form-select-sm" required>
                                 <option value="">— Select —</option>
-                                <option value="residential" selected>Residential</option>
+                                @foreach($unitTypes as $unitType)
+                                    <option value="{{ $unitType->pk }}"
+                                        {{ (string) old('unit_type', optional($detail)->estate_unit_type_master_pk) === (string) $unitType->pk ? 'selected' : '' }}>
+                                        {{ $unitType->unit_type }}
+                                    </option>
+                                @endforeach
                             </select>
                         </td>
                         <td>
                             <select name="building_name" class="form-select form-select-sm" required>
                                 <option value="">— Select —</option>
-                                <option value="kalpatru" selected>Kalpatru Avas</option>
+                                @foreach($buildings as $building)
+                                    <option value="{{ $building->pk }}"
+                                        {{ (string) old('building_name', optional($detail)->estate_block_master_pk) === (string) $building->pk ? 'selected' : '' }}>
+                                        {{ $building->block_name }}
+                                    </option>
+                                @endforeach
                             </select>
                         </td>
                         <td>
                             <select name="unit_sub_type" class="form-select form-select-sm" required>
                                 <option value="">— Select —</option>
-                                <option value="type-ii" selected>Type - II</option>
+                                @foreach($unitSubTypes as $subType)
+                                    <option value="{{ $subType->pk }}"
+                                        {{ (string) old('unit_sub_type', optional($detail)->estate_unit_sub_type_master_pk) === (string) $subType->pk ? 'selected' : '' }}>
+                                        {{ $subType->unit_sub_type }}
+                                    </option>
+                                @endforeach
                             </select>
                         </td>
                         <td>
                             <select name="house_no" class="form-select form-select-sm" required>
                                 <option value="">— Select —</option>
-                                <option value="kt-09" selected>KT-09</option>
+                                @foreach($houseOptions as $house)
+                                    <option value="{{ $house->house_no }}"
+                                        {{ (string) old('house_no', optional($detail)->change_house_no) === (string) $house->house_no ? 'selected' : '' }}>
+                                        {{ $house->label }}
+                                    </option>
+                                @endforeach
                             </select>
                         </td>
                     </tr>
@@ -106,12 +144,12 @@
     {{-- Remarks --}}
     <div class="mb-4">
         <label for="remarks_{{ $formId }}" class="form-label fw-semibold">Remarks</label>
-        <textarea class="form-control" id="remarks_{{ $formId }}" name="remarks" rows="4" placeholder="Enter remarks..."></textarea>
+        <textarea class="form-control" id="remarks_{{ $formId }}" name="remarks" rows="4" placeholder="Enter remarks...">{{ old('remarks', optional($detail)->remarks ?? '') }}</textarea>
     </div>
 
     {{-- Action buttons --}}
     <div class="d-flex flex-wrap gap-2">
-        <button type="submit" class="btn btn-success px-4">
+        <button type="submit" class="btn btn-success px-4" {{ ($formAction ?? '#') === '#' ? 'disabled' : '' }}>
             <i class="bi bi-save me-2"></i>Save
         </button>
         @if($inModal)

@@ -24,10 +24,6 @@
                         <i class="bi bi-plus-lg"></i>
                         <span>Add</span>
                     </a>
-                    <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnDeleteSelected" title="Delete selected" disabled>
-                        <i class="bi bi-trash"></i>
-                        <span class="d-none d-md-inline">Delete Selected</span>
-                    </button>
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Show / hide columns">
                             <i class="bi bi-columns-gap"></i>
@@ -184,35 +180,6 @@
 
         $('#btnPrint').on('click', function() {
             window.print();
-        });
-
-        $(document).on('change', '.row-select-possession', function() {
-            var any = $('#estatePossessionTable tbody .row-select-possession:checked').length;
-            $('#btnDeleteSelected').prop('disabled', !any);
-        });
-        $('#btnDeleteSelected').on('click', function() {
-            var ids = [];
-            $('#estatePossessionTable tbody .row-select-possession:checked').each(function() {
-                ids.push($(this).data('id'));
-            });
-            if (ids.length === 0) return;
-            if (!confirm('Delete ' + ids.length + ' selected record(s)?')) return;
-            var $btn = $(this);
-            $btn.prop('disabled', true);
-            var completed = 0;
-            function doNext() {
-                if (completed >= ids.length) {
-                    $('#estatePossessionTable').DataTable().ajax.reload(null, false);
-                    $btn.prop('disabled', true);
-                    return;
-                }
-                $.ajax({ url: '{{ url("admin/estate/possession-delete") }}/' + ids[completed], type: 'DELETE', data: { _token: '{{ csrf_token() }}' } })
-                    .always(function() {
-                        completed++;
-                        doNext();
-                    });
-            }
-            doNext();
         });
 
         $(document).on('click', '.btn-delete-possession', function(e) {

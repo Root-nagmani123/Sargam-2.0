@@ -22,36 +22,6 @@
                 This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print, etc.
             </p>
 
-            {{-- Table controls --}}
-            <div class="row flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
-                <div class="col-auto">
-                    <label class="form-label mb-0 me-2 d-inline-flex align-items-center">
-                        <span class="me-2">Show</span>
-                        <select class="form-select form-select-sm d-inline-block w-auto" id="entriesPerPage" aria-label="Entries per page">
-                            <option value="10" selected>10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                        <span class="ms-2">entries</span>
-                    </label>
-                </div>
-                <div class="col-auto d-flex flex-wrap align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" title="Show / hide columns">
-                        <i class="bi bi-columns-gap me-1"></i> Show / hide columns
-                    </button>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-success" title="Excel export"><i class="bi bi-file-earmark-excel"></i></button>
-                        <button type="button" class="btn btn-outline-danger" title="PDF export"><i class="bi bi-file-earmark-pdf"></i></button>
-                        <button type="button" class="btn btn-outline-secondary" title="Print"><i class="bi bi-printer"></i></button>
-                    </div>
-                    <label class="form-label mb-0 d-inline-flex align-items-center gap-2">
-                        <span class="small text-nowrap">Search within table:</span>
-                        <input type="search" class="form-control form-control-sm" id="tableSearch" placeholder="Search..." aria-label="Search within table" style="min-width: 180px;">
-                    </label>
-                </div>
-            </div>
-
             {{-- Main data table --}}
             <div class="table-responsive">
                 <table class="table table-striped table-bordered align-middle mb-0" id="requestForHouseTable">
@@ -76,7 +46,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php $requestList = $requests ?? []; @endphp
+                        @php $requestList = $requests ?? collect(); @endphp
                         @forelse($requestList as $index => $row)
                         <tr>
                             <td class="text-center">
@@ -103,85 +73,14 @@
                             </td>
                         </tr>
                         @empty
-                        {{-- Sample rows when no data --}}
                         <tr>
-                            <td class="text-center"><input type="checkbox" class="form-check-input row-select" aria-label="Select row"></td>
-                            <td>1</td>
-                            <td>Chg-Req-223</td>
-                            <td>02-02-2026</td>
-                            <td>BALWANT SINGH (NNP00048)</td>
-                            <td>08-04-2014</td>
-                            <td>Approved</td>
-                            <td>GA-III-01</td>
-                            <td>Type-II</td>
-                            <td>01-01-2025</td>
-                            <td>31-12-2025</td>
-                            <td><a href="#" class="link-primary text-decoration-none">Extension</a></td>
-                            <td>
-                                <a href="#" class="link-primary text-decoration-none btn-change-request" data-request-id="223">Change</a>
-                                <span class="text-success small d-block">(Your request has been approved)</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-center"><input type="checkbox" class="form-check-input row-select" aria-label="Select row"></td>
-                            <td>2</td>
-                            <td>Chg-Req-224</td>
-                            <td>03-02-2026</td>
-                            <td>EXAMPLE USER (EMP001)</td>
-                            <td>01-06-2020</td>
-                            <td>Pending</td>
-                            <td>CA-II-01</td>
-                            <td>Type-II</td>
-                            <td>01-02-2025</td>
-                            <td>31-01-2026</td>
-                            <td><a href="#" class="link-primary text-decoration-none">Extension</a></td>
-                            <td><a href="#" class="link-primary text-decoration-none btn-change-request" data-request-id="224">Change</a></td>
+                            <td colspan="13" class="text-center text-body-secondary py-4">No request records found.</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-
-            {{-- Table footer & pagination --}}
-            <div class="row align-items-center justify-content-between gap-2 mt-3">
-                <div class="col-auto small text-body-secondary">
-                    Showing <span id="showingFrom">1</span> to <span id="showingTo">3</span> of <span id="totalEntries">3</span> entries.
-                </div>
-                <div class="col-auto">
-                    <nav aria-label="Table pagination">
-                        <ul class="pagination pagination-sm mb-0 flex-wrap">
-                            <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">First</a></li>
-                            <li class="page-item disabled"><a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a></li>
-                            <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
-                            <li class="page-item disabled"><a class="page-link" href="#" aria-disabled="true">Next</a></li>
-                            <li class="page-item disabled"><a class="page-link" href="#" aria-disabled="true">Last</a></li>
-                        </ul>
-                    </nav>
-                </div>
-            </div>
         </div>
-    </div>
-
-    {{-- Visit Links footer --}}
-    <div class="mt-4 pt-3 border-top">
-        <p class="small fw-semibold text-body mb-2">Visit Links:</p>
-        <p class="small text-body-secondary mb-0">
-            <a href="#" class="text-decoration-none">Request for Protocol Services</a>
-            &nbsp;-&nbsp;
-            <a href="#" class="text-decoration-none">Request For House</a>
-            &nbsp;-&nbsp;
-            <a href="#" class="text-decoration-none">Lodge a Complaint</a>
-            &nbsp;-&nbsp;
-            <a href="#" class="text-decoration-none">Vehicle Pass Request</a>
-            &nbsp;-&nbsp;
-            <a href="#" class="text-decoration-none">Request For Reprographic Services</a>
-            &nbsp;-&nbsp;
-            <a href="#" class="text-decoration-none">Request Employee ID Card</a>
-            &nbsp;-&nbsp;
-            <a href="#" class="text-decoration-none">Request For Family ID Card</a>
-            &nbsp;-&nbsp;
-            <a href="#" class="text-decoration-none">Extension/Duplicate IDCard</a>
-        </p>
     </div>
 </div>
 
@@ -272,6 +171,40 @@ document.addEventListener('DOMContentLoaded', function() {
     modalEl.addEventListener('hidden.bs.modal', function() {
         modalBody.innerHTML = '';
     });
+
+    if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+        var table = jQuery('#requestForHouseTable');
+        if (table.length && !jQuery.fn.DataTable.isDataTable(table)) {
+            table.DataTable({
+                responsive: false,
+                autoWidth: false,
+                scrollX: true,
+                ordering: true,
+                searching: true,
+                lengthChange: true,
+                pageLength: 10,
+                order: [[1, 'desc']],
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                columnDefs: [
+                    { targets: [0, 11, 12], orderable: false, searchable: false }
+                ],
+                language: {
+                    search: 'Search within table:',
+                    lengthMenu: 'Show _MENU_ entries',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                    infoEmpty: 'Showing 0 to 0 of 0 entries',
+                    infoFiltered: '(filtered from _MAX_ total entries)',
+                    paginate: {
+                        first: 'First',
+                        last: 'Last',
+                        next: 'Next',
+                        previous: 'Previous'
+                    }
+                },
+                dom: '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+            });
+        }
+    }
 });
 </script>
 @endpush

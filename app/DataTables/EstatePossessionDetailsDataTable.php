@@ -33,6 +33,21 @@ class EstatePossessionDetailsDataTable extends DataTable
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
             ->editColumn('electric_meter_reading', fn ($row) => $row->electric_meter_reading ?? '—')
+            ->addColumn('actions', function ($row) {
+                $editUrl = route('admin.estate.possession-details.create', [
+                    'requester_id' => $row->estate_home_request_details_pk,
+                ]);
+                $deleteUrl = route('admin.estate.possession-details.delete', ['id' => $row->pk]);
+
+                return '<div class="d-inline-flex align-items-center gap-1" role="group">
+                    <a href="' . e($editUrl) . '" class="text-primary" title="Edit">
+                        <i class="material-symbols-rounded">edit</i>
+                    </a>
+                    <a href="javascript:void(0);" class="text-primary btn-delete-possession-details" data-url="' . e($deleteUrl) . '" data-id="' . (int) $row->pk . '" title="Delete">
+                        <i class="material-symbols-rounded">delete</i>
+                    </a>
+                </div>';
+            })
             ->filter(function ($query) {
                 $searchValue = trim((string) request()->input('search.value', ''));
                 if ($searchValue === '') {
@@ -51,6 +66,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                         ->orWhere('ehm.house_no', 'like', $searchLike);
                 });
             }, true)
+            ->rawColumns(['actions'])
             ->setRowId('pk');
     }
 
@@ -66,6 +82,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->select([
                 'epd.pk as pk',
+                'ehrd.pk as estate_home_request_details_pk',
                 'ehrd.req_id as request_id',
                 'ehrd.emp_name',
                 'ehrd.employee_id',
@@ -133,6 +150,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             Column::make('allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date')->title('POSSESSION DATE')->orderable(true)->searchable(false),
             Column::make('electric_meter_reading')->title('ELECTRIC METER READING')->orderable(false)->searchable(false),
+            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
     }
 

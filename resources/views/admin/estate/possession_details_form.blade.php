@@ -111,8 +111,30 @@
                         <input type="date" class="form-control" id="possession_date" name="possession_date" value="{{ old('possession_date') }}" required>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label for="electric_meter_reading" class="form-label">Electric Meter Reading</label>
-                        <input type="number" class="form-control" id="electric_meter_reading" name="electric_meter_reading" min="0" value="{{ old('electric_meter_reading', 0) }}">
+                        <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input
+                                type="number"
+                                class="form-control"
+                                id="electric_meter_reading_primary"
+                                name="electric_meter_reading_primary"
+                                min="0"
+                                value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', 0)) }}"
+                                placeholder="Primary"
+                            >
+                            <span class="input-group-text">/</span>
+                            <input
+                                type="number"
+                                class="form-control"
+                                id="electric_meter_reading_secondary"
+                                name="electric_meter_reading_secondary"
+                                min="0"
+                                value="{{ old('electric_meter_reading_secondary') }}"
+                                placeholder="Secondary"
+                            >
+                        </div>
+                        <input type="hidden" id="electric_meter_reading" name="electric_meter_reading" value="{{ old('electric_meter_reading', 0) }}">
+                        <div class="form-text">Electric Meter Reading (Primary / Secondary)</div>
                     </div>
                 </div>
 
@@ -149,6 +171,13 @@ $(document).ready(function() {
         return opt.attr('data-employee-pk') || '';
     }
 
+    function syncElectricMeterReading() {
+        const primary = $('#electric_meter_reading_primary').val();
+        const secondary = $('#electric_meter_reading_secondary').val();
+        const valueToStore = (primary !== '' && primary !== null) ? primary : ((secondary !== '' && secondary !== null) ? secondary : '');
+        $('#electric_meter_reading').val(valueToStore);
+    }
+
     function selectedRequesterPrefill() {
         const opt = $('#estate_home_request_details_pk option:selected');
         return {
@@ -178,7 +207,11 @@ $(document).ready(function() {
         const prefill = selectedRequesterPrefill();
         if (prefill.allotmentDate) $('#allotment_date').val(prefill.allotmentDate);
         if (prefill.possessionDate) $('#possession_date').val(prefill.possessionDate);
-        if (prefill.electricMeterReading !== '') $('#electric_meter_reading').val(prefill.electricMeterReading);
+        if (prefill.electricMeterReading !== '') {
+            $('#electric_meter_reading_primary').val(prefill.electricMeterReading);
+            $('#electric_meter_reading_secondary').val('');
+        }
+        syncElectricMeterReading();
         preferred = {
             campusPk: prefill.campusPk ? String(prefill.campusPk) : '',
             unitTypePk: prefill.unitTypePk ? String(prefill.unitTypePk) : '',
@@ -192,6 +225,11 @@ $(document).ready(function() {
             $('#estate_house_master_pk').html('<option value="">---select---</option>');
         }
     }).trigger('change');
+
+    $('#electric_meter_reading_primary, #electric_meter_reading_secondary').on('input change', function() {
+        syncElectricMeterReading();
+    });
+    syncElectricMeterReading();
 
     $('#estate_campus_master_pk').change(function() {
         const campusId = $(this).val();
