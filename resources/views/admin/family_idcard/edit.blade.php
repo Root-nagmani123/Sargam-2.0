@@ -75,7 +75,7 @@
                     <div class="col-12">
                         <label class="form-label">Upload Family Photo</label>
                         <div class="family-idcard-upload-zone position-relative" id="familyPhotoUploadZone">
-                            <input type="file" name="family_photo" id="family_photo" class="d-none" accept="image/*">
+                            <input type="file" name="family_photo" id="family_photo" class="d-none" accept=".jpeg,.jpg,.png">
                             <div class="family-idcard-upload-placeholder" id="familyPhotoPlaceholder">
                                 @if($request->family_photo)
                                     <img src="{{ asset('storage/' . $request->family_photo) }}" alt="Current" class="family-idcard-preview-img mb-2" style="max-height:120px;">
@@ -183,7 +183,17 @@
     var removeBtn = document.getElementById('familyPhotoRemove');
 
     function showPreview(file) {
-        if (!file || !file.type.match(/^image\//)) return;
+        if (!file) return;
+        
+        // Check for GIF files and reject them
+        if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+            alert('GIF files are not allowed. Please upload JPG or PNG images only.');
+            input.value = '';
+            clearPreview();
+            return;
+        }
+        
+        if (!file.type.match(/^image\//)) return;
         var reader = new FileReader();
         reader.onload = function(e) {
             previewImg.src = e.target.result;

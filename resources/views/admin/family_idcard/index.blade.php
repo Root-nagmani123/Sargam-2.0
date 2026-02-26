@@ -1,21 +1,30 @@
 @extends('admin.layouts.master')
 @section('title', 'Request For Family Id Card - Sargam | Lal Bahadur Shastri')
 @section('setup_content')
-<div class="container-fluid family-idcard-index-page">
-    <x-breadcrum title="Request For Family Id Card"></x-breadcrum>
+<div class="container-fluid family-idcard-index-page family-idcard-print-area">
+    {{-- Print-only header: visible only when printing --}}
+    <div class="print-only-header family-idcard-print-header">
+        <h5 class="mb-0">Request For Family Id Card - List</h5>
+        <p class="text-muted small mb-0">Printed on: {{ now()->format('d-m-Y H:i') }}</p>
+        <p class="text-muted small mb-0 print-tab-info" id="familyIdcardPrintTabInfo">Active requests</p>
+    </div>
 
-    <h5 class="fw-bold mb-1">Request For Family Id Card</h5>
-    <p class="text-muted small mb-4">This page displays all Family ID Card added in the system, and provide options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
+    <div class="no-print">
+        <x-breadcrum title="Request For Family Id Card"></x-breadcrum>
+    </div>
+
+    <h5 class="fw-bold mb-1 no-print">Request For Family Id Card</h5>
+    <p class="text-muted small mb-4 no-print">This page displays all Family ID Card added in the system, and provide options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-success alert-dismissible fade show no-print" role="alert">
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
     <!-- Filter Section -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm mb-4 no-print">
         <div class="card-header bg-light border-bottom">
             <h6 class="mb-0 fw-semibold">Filters & Search</h6>
         </div>
@@ -49,7 +58,7 @@
     </div>
 
     <!-- Tabs and Action Buttons -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 no-print">
         <ul class="nav nav-pills family-idcard-tabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
@@ -114,7 +123,7 @@
                                 <th>DEPARTMENT</th>
                                 <th>NO OF MEMBERS</th>
                                 <th>ID TYPE</th>
-                                <th class="text-end">ACTIONS</th>
+                                    <th class="text-end family-idcard-actions-col">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -128,7 +137,7 @@
                                     <td>{{ $req->section ?? '--' }}</td>
                                     <td><a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="text-primary fw-medium">{{ $req->member_count }}</a></td>
                                     <td>{{ $req->card_type ?? 'Family Card' }}</td>
-                                    <td class="text-end">
+                                    <td class="text-end family-idcard-actions-col">
                                         <div class="d-flex align-items-center justify-content-end gap-1">
                                             <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn btn-sm btn-outline-primary" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
                                             <a href="{{ route('admin.family_idcard.edit', $req->first_id) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i></a>
@@ -142,7 +151,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center py-5 text-muted">
+                                    <td colspan="9" class="text-center py-5 text-body-secondary">
                                         <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">inbox</i>
                                         <p class="mb-1">No family ID card requests found.</p>
                                         <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-primary btn-sm mt-2">Add Request</a>
@@ -153,7 +162,7 @@
                     </table>
                 </div>
                 @if($activeRequests->count() > 0)
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
+                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2 no-print">
                         <div class="small text-muted">
                             Showing <strong>{{ $activeRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $activeRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $activeRequests->total() }}</strong> entries
                         </div>
@@ -176,7 +185,7 @@
                                 <th>DEPARTMENT</th>
                                 <th>NO OF MEMBERS</th>
                                 <th>ID TYPE</th>
-                                <th class="text-end">ACTIONS</th>
+                                <th class="text-end family-idcard-actions-col">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -190,7 +199,7 @@
                                     <td>{{ $req->section ?? '--' }}</td>
                                     <td><a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="text-primary fw-medium">{{ $req->member_count }}</a></td>
                                     <td>{{ $req->card_type ?? 'Family Card' }}</td>
-                                    <td class="text-end">
+                                    <td class="text-end family-idcard-actions-col">
                                         <div class="d-flex align-items-center justify-content-end gap-1">
                                             <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn btn-sm btn-outline-primary" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
                                             <form action="{{ route('admin.family_idcard.restore', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
@@ -207,14 +216,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center py-5 text-muted">No archived requests.</td>
+                                    <td colspan="9" class="text-center py-5 text-body-secondary">No archived requests.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
                 @if($archivedRequests->count() > 0)
-                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2">
+                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top flex-wrap gap-2 no-print">
                         <div class="small text-muted">
                             Showing <strong>{{ $archivedRequests->firstItem() ?? 0 }}</strong> to <strong>{{ $archivedRequests->lastItem() ?? 0 }}</strong> of <strong>{{ $archivedRequests->total() }}</strong> entries
                         </div>
@@ -243,6 +252,61 @@
     .family-idcard-table tbody tr:hover {
         background-color: #f8f9fa;
     }
+    /* Print-only header: hidden on screen */
+    .family-idcard-print-header { display: none !important; }
+    @media print {
+        body * { visibility: hidden !important; }
+        .family-idcard-print-area,
+        .family-idcard-print-area * { visibility: visible !important; }
+        .family-idcard-print-area .no-print,
+        .family-idcard-print-area .no-print * { visibility: hidden !important; display: none !important; }
+        /* Show only the tab panel that is active when print was triggered (set by beforeprint) */
+        .family-idcard-print-area.printing-archive .tab-pane#active-panel { display: none !important; visibility: hidden !important; }
+        .family-idcard-print-area.printing-active .tab-pane#archive-panel { display: none !important; visibility: hidden !important; }
+        .family-idcard-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 12px !important;
+            background: #fff !important;
+        }
+        .family-idcard-print-header {
+            display: block !important;
+            visibility: visible !important;
+            margin-bottom: 12px !important;
+            padding-bottom: 8px !important;
+            border-bottom: 1px solid #000 !important;
+        }
+        .family-idcard-print-header h5 { font-size: 16px !important; color: #000 !important; font-weight: 700 !important; }
+        .family-idcard-print-header p { font-size: 11px !important; margin: 2px 0 !important; color: #000 !important; }
+        .family-idcard-print-area .card { border: 1px solid #000 !important; box-shadow: none !important; background: #fff !important; }
+        .family-idcard-print-area .table-responsive { overflow: visible !important; }
+        .family-idcard-print-area .family-idcard-table {
+            width: 100% !important;
+            font-size: 11px !important;
+            border-collapse: collapse !important;
+            color: #000 !important;
+        }
+        .family-idcard-print-area .family-idcard-table thead { display: table-header-group !important; }
+        .family-idcard-print-area .family-idcard-table th,
+        .family-idcard-print-area .family-idcard-table td {
+            border: 1px solid #000 !important;
+            padding: 5px 6px !important;
+            color: #000 !important;
+            background: #fff !important;
+        }
+        .family-idcard-print-area .family-idcard-table .table-primary th {
+            background: #e9ecef !important;
+            color: #000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .family-idcard-print-area .family-idcard-table tbody tr { page-break-inside: avoid !important; }
+        .family-idcard-print-area .family-idcard-table a { color: #000 !important; text-decoration: none !important; }
+        .family-idcard-print-area .family-idcard-actions-col { display: none !important; }
+    }
 </style>
 
 <script>
@@ -252,7 +316,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (activeTabButton) {
         const tab = new bootstrap.Tab(activeTabButton);
         tab.show();
-        console.log('✅ Active tab initialized and shown');
     }
 
     // Auto-submit filter form when per_page changes
@@ -262,6 +325,35 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('filterForm').submit();
         });
     }
+
+    // Before print: set print header and mark which tab to show so only that tab prints
+    window.addEventListener('beforeprint', function() {
+        var container = document.querySelector('.family-idcard-print-area');
+        var infoEl = document.getElementById('familyIdcardPrintTabInfo');
+        var activePanel = document.getElementById('active-panel');
+        var isActive = activePanel && activePanel.classList.contains('show') && activePanel.classList.contains('active');
+        if (container) {
+            container.classList.remove('printing-active', 'printing-archive');
+            container.classList.add(isActive ? 'printing-active' : 'printing-archive');
+        }
+        if (infoEl) {
+            if (isActive) {
+                var first = {{ $activeRequests->firstItem() ?? 0 }};
+                var last = {{ $activeRequests->lastItem() ?? 0 }};
+                var total = {{ $activeRequests->total() }};
+                infoEl.textContent = 'Active: Showing ' + first + ' to ' + last + ' of ' + total + ' entries';
+            } else {
+                var first = {{ $archivedRequests->firstItem() ?? 0 }};
+                var last = {{ $archivedRequests->lastItem() ?? 0 }};
+                var total = {{ $archivedRequests->total() }};
+                infoEl.textContent = 'Archive: Showing ' + first + ' to ' + last + ' of ' + total + ' entries';
+            }
+        }
+    });
+    window.addEventListener('afterprint', function() {
+        var container = document.querySelector('.family-idcard-print-area');
+        if (container) container.classList.remove('printing-active', 'printing-archive');
+    });
 });
 </script>
 @endsection

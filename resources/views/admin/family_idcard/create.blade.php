@@ -159,7 +159,7 @@
                                 </td>
                                 <td class="align-middle">
                                     <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="0">
-                                        <input type="file" name="members[0][family_photo]" class="d-none member-photo-input" accept="image/*" required data-row="0">
+                                        <input type="file" name="members[0][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" required data-row="0">
                                         <div class="family-idcard-upload-placeholder-sm" data-placeholder="0">
                                             <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
                                             <span class="small d-block mt-1">Upload</span>
@@ -224,7 +224,7 @@
         </td>
         <td class="align-middle">
             <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">
-                <input type="file" name="members[{{INDEX}}][family_photo]" class="d-none member-photo-input" accept="image/*" required data-row="{{INDEX}}">
+                <input type="file" name="members[{{INDEX}}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" required data-row="{{INDEX}}">
                 <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{INDEX}}">
                     <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
                     <span class="small d-block mt-1">Upload</span>
@@ -448,7 +448,19 @@
         if (input) {
             input.addEventListener('change', function() {
                 var file = this.files[0];
-                if (!file || !file.type.match(/^image\//)) return;
+                if (!file) return;
+                
+                // Check for GIF files and reject them
+                if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+                    alert('GIF files are not allowed. Please upload JPG or PNG images only.');
+                    this.value = '';
+                    if (placeholder) placeholder.classList.remove('d-none');
+                    if (preview) preview.classList.add('d-none');
+                    if (img) img.src = '';
+                    return;
+                }
+                
+                if (!file.type.match(/^image\//)) return;
                 var reader = new FileReader();
                 reader.onload = function(e) {
                     if (img) img.src = e.target.result;
