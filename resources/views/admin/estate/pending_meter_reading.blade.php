@@ -102,29 +102,32 @@ $(document).ready(function() {
                         );
                     });
                 } else {
-                    tbody.append('<tr id="noDataRow"><td colspan="6" class="text-center text-muted">No pending meter readings for the selected month.</td></tr>');
+                    tbody.append('<tr id="noDataRow"><td colspan="6" class="text-center text-muted">' + (res.message || 'No pending meter readings for the selected month.') + '</td></tr>');
                 }
-                dataTableInstance = $('#pendingMeterReadingTable').DataTable({
-                    order: [[0, 'asc']],
-                    pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                    language: {
-                        search: "Search:",
-                        lengthMenu: "Show _MENU_ entries",
-                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                        infoEmpty: "Showing 0 to 0 of 0 entries",
-                        infoFiltered: "(filtered from _MAX_ total entries)",
-                        paginate: {
-                            first: "First",
-                            last: "Last",
-                            next: "Next",
-                            previous: "Previous"
-                        }
-                    },
-                    responsive: true,
-                    autoWidth: false,
-                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
-                });
+                // Only init DataTable when we have data rows (6 columns each). Empty state has 1 cell with colspan=6 → column count error.
+                if (res.status && res.data && res.data.length > 0) {
+                    dataTableInstance = $('#pendingMeterReadingTable').DataTable({
+                        order: [[0, 'asc']],
+                        pageLength: 10,
+                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                        language: {
+                            search: "Search:",
+                            lengthMenu: "Show _MENU_ entries",
+                            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                            infoEmpty: "Showing 0 to 0 of 0 entries",
+                            infoFiltered: "(filtered from _MAX_ total entries)",
+                            paginate: {
+                                first: "First",
+                                last: "Last",
+                                next: "Next",
+                                previous: "Previous"
+                            }
+                        },
+                        responsive: true,
+                        autoWidth: false,
+                        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+                    });
+                }
             },
             error: function(xhr) {
                 destroyDataTable();

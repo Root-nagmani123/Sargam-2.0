@@ -3,84 +3,72 @@
 @section('title', 'Update Meter Reading of Other - Sargam')
 
 @section('setup_content')
-<div class="container-fluid">
-<x-breadcrum title="Update Meter Reading of Other"></x-breadcrum>
-<x-session_message />
+<div class="container-fluid py-4">
+    <x-breadcrum title="Update Meter Reading of Other"></x-breadcrum>
+    <x-session_message />
 
-    <div class="card">
+    <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
         <div class="card-body p-4 p-lg-5">
-<h4 class="h5 mb-4">Please Update Meter Reading</h4>
-<hr class="my-2">
-            <form id="meterReadingFilterForm">
+            <h2 class="h5 fw-semibold mb-1">Update Meter Reading of Other</h2>
+            <p class="text-muted small mb-4">Please Update Meter Reading</p>
+            <hr class="my-4">
+
+            <form id="meterReadingFilterForm" class="needs-validation" novalidate>
                 @csrf
-                <div class="row mb-3">
-                    <div class="col-md-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                        <select class="form-select" id="bill_month" name="bill_month">
-                            <option value="">Select</option>
-                            @foreach($billMonths as $bm)
-                                <option value="{{ $bm->bill_month }}" data-year="{{ $bm->bill_year }}">{{ $bm->bill_month }} {{ $bm->bill_year }}</option>
-                            @endforeach
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Bill Month
-                        </small>
+                        <div class="input-group">
+                            <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select Bill Month" required>
+                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                        </div>
+                        <div class="form-text">Select Bill Month</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name">
-                            <option value="">Select</option>
+                            <option value="">---Select---</option>
                             @foreach($campuses as $c)
                                 <option value="{{ $c->pk }}">{{ $c->campus_name }}</option>
                             @endforeach
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Estate Name
-                        </small>
+                        <div class="form-text">Select Estate Name</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
-                            <option value="">Select</option>
-                            @foreach($unitTypes as $ut)
-                                <option value="{{ $ut->pk }}" {{ ($ut->unit_type ?? '') == 'Residential' ? 'selected' : '' }}>{{ $ut->unit_type }}</option>
-                            @endforeach
+                            <option value="">---Select---</option>
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Unit
-                        </small>
+                        <div class="form-text">Select Unit</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
                         <select class="form-select" id="building" name="building">
-                            <option value="">Select</option>
+                            <option value="">---Select---</option>
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Building
-                        </small>
+                        <div class="form-text">Select Building</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="unit_sub_type" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_sub_type" name="unit_sub_type">
-                            <option value="">All</option>
+                            <option value="">---Select---</option>
                             @foreach($unitSubTypes ?? [] as $ust)
                                 <option value="{{ $ust->pk }}">{{ $ust->unit_sub_type }}</option>
                             @endforeach
                         </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Unit Sub Type
-                        </small>
+                        <div class="form-text">Select Unit Sub Type</div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-6 col-lg-4">
                         <label for="meter_reading_date" class="form-label">Meter Reading Date <span class="text-danger">*</span></label>
-                        <select class="form-select" id="meter_reading_date" name="meter_reading_date">
-                            <option value="">Select</option>
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Meter Reading Date
-                        </small>
+                        <div class="input-group">
+                            <select class="form-select" id="meter_reading_date" name="meter_reading_date">
+                                <option value="">---Select---</option>
+                            </select>
+                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                        </div>
+                        <div class="form-text">Meter Reading Date</div>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-12">
                         <button type="button" class="btn btn-primary" id="loadMeterReadingsBtn">
                             <i class="bi bi-search me-2"></i>Load Data
                         </button>
@@ -90,11 +78,11 @@
 
             <form id="meterReadingSaveForm" method="POST" action="{{ route('admin.estate.update-meter-reading-of-other.store') }}" style="display:none;">
                 @csrf
-                <div class="table-responsive mt-4">
-                    <table class="table" id="updateMeterReadingOtherTable">
-                        <thead>
+                <div class="table-responsive mt-4 rounded-3 overflow-hidden border">
+                    <table class="table table-striped table-hover align-middle mb-0" id="updateMeterReadingOtherTable">
+                        <thead class="table-primary">
                             <tr>
-                                <th><input type="checkbox" class="form-check-input" id="select_all"></th>
+                                <th><input type="checkbox" class="form-check-input" id="select_all" aria-label="Select all"></th>
                                 <th>House No.</th>
                                 <th>Name</th>
                                 <th>Last Month Electric Reading Date</th>
@@ -109,11 +97,13 @@
                     </table>
                 </div>
 
-                <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-save me-2"></i>Save
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-save"></i> Save
                     </button>
-                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ route('admin.estate.possession-for-others') }}" class="btn btn-secondary d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </a>
                 </div>
             </form>
 
@@ -132,15 +122,24 @@ $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.update-meter-reading-of-other.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
     const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
+    const unitTypesByCampus = @json($unitTypesByCampus ?? []);
 
     let dataTable = null;
 
+    function parseBillMonthInput(val) {
+        if (!val || val.length < 7) return { bill_month: null, bill_year: null };
+        const parts = val.split('-');
+        const year = parts[0] ? parseInt(parts[0], 10) : null;
+        const month = parts[1] ? parseInt(parts[1], 10) : null;
+        return { bill_month: (month >= 1 && month <= 12) ? month : null, bill_year: year };
+    }
+
     $('#bill_month').on('change', function() {
-        const billMonth = $(this).val();
-        const billYear = $(this).find('option:selected').data('year');
+        const val = $(this).val();
+        const { bill_month, bill_year } = parseBillMonthInput(val);
         $('#meter_reading_date').html('<option value="">Select</option>');
-        if (!billMonth || !billYear) return;
-        $.get(meterReadingDatesUrl, { bill_month: billMonth, bill_year: billYear }, function(res) {
+        if (!bill_month || !bill_year) return;
+        $.get(meterReadingDatesUrl, { bill_month: bill_month, bill_year: bill_year }, function(res) {
             if (res.status && res.data && res.data.length) {
                 res.data.forEach(function(d) {
                     $('#meter_reading_date').append('<option value="'+d.value+'">'+d.label+'</option>');
@@ -152,11 +151,18 @@ $(document).ready(function() {
 
     $('#estate_name').on('change', function() {
         const campusId = $(this).val();
+        $('#unit_name').html('<option value="">Select</option>');
         $('#building').html('<option value="">All</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
         if (!campusId) return;
+        var unitList = unitTypesByCampus[campusId] || [];
+        unitList.forEach(function(ut) {
+            var sel = (ut.unit_type === 'Residential') ? ' selected' : '';
+            $('#unit_name').append('<option value="'+ut.pk+'"'+sel+'>'+ut.unit_type+'</option>');
+        });
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
+                $('#building').html('<option value="">All</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
@@ -183,8 +189,8 @@ $(document).ready(function() {
             dataTable.destroy();
             dataTable = null;
         }
-        const billMonth = $('#bill_month').val();
-        const billYear = $('#bill_month option:selected').data('year');
+        const billMonthVal = $('#bill_month').val();
+        const { bill_month: billMonth, bill_year: billYear } = parseBillMonthInput(billMonthVal);
         if (!billMonth || !billYear) {
             alert('Please select Bill Month.');
             return;

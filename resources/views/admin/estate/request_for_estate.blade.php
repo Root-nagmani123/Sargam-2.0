@@ -5,25 +5,28 @@
 @section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
    <x-breadcrum title="Request For Estate" />
+   <x-estate-workflow-stepper current="request-for-estate" />
 
     <x-session_message />
 
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-                <div>
+                <div class="flex-grow-1">
                     <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
                     <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-primary" id="btn-open-add-request-estate" title="Add"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
+                <div class="flex-shrink-0 d-flex flex-wrap gap-2">
+                    <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
+                    <a href="{{ route('admin.estate.change-request-hac-approved') }}" class="btn btn-outline-primary px-3" title="HAC Approved"><i class="bi bi-check2-square me-1"></i> HAC Approved</a>
+                    <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
                 </div>
             </div>
 
             <div id="request-for-estate-card-body">
             <div class="table-responsive request-for-estate-table-wrap">
                 {!! $dataTable->table([
-                    'class' => 'table table-bordered table-striped table-hover text-nowrap align-middle mb-0',
+                    'class' => 'table text-nowrap align-middle mb-0',
                     'aria-describedby' => 'request-for-estate-caption'
                 ]) !!}
             </div>
@@ -48,18 +51,19 @@
                 <form id="formAddEditRequestEstate" method="POST" action="{{ route('admin.estate.request-for-estate.store') }}">
                     @csrf
                     <input type="hidden" name="id" id="request_estate_id" value="">
+                    <input type="hidden" name="employee_pk" id="request_employee_pk" value="">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="modal_req_id" class="form-label">Request ID <span class="text-muted small">(leave blank to auto-generate)</span></label>
-                            <input type="text" class="form-control" id="modal_req_id" name="req_id" placeholder="e.g. home-req-1" maxlength="50">
+                        <div class="col-md-6">
+                            <label for="modal_req_id" class="form-label">Request ID</label>
+                            <input type="text" class="form-control" id="modal_req_id" name="req_id" maxlength="50" readonly>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="modal_req_date" class="form-label">Request Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="modal_req_date" name="req_date" required>
+                            <input type="date" class="form-control" id="modal_req_date" name="req_date" required readonly>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 d-none" id="modal_status_wrap">
                             <label for="modal_status" class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="modal_status" name="status" required>
+                            <select class="form-select" id="modal_status" name="status">
                                 <option value="0">Pending</option>
                                 <option value="1">Allotted</option>
                                 <option value="2">Rejected</option>
@@ -103,41 +107,13 @@
                         </div>
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
-                                <option value="61">I</option>
-                                <option value="62">II</option>
-                                <option value="63">III</option>
-                                <option value="64">IV</option>
-                                <option value="65">V</option>
-                                <option value="66">VI</option>
-                                <option value="69">IX</option>
-                                <option value="70">X</option>
-                                <option value="71">XI</option>
-                                <option value="73">XIII</option>
+                            <select class="form-select" id="modal_eligibility_type_pk" disabled>
+                                <option value="">— Select eligibility type —</option>
+                                @foreach($eligibilityTypes ?? [] as $pk => $name)
+                                    <option value="{{ (string) $pk }}">{{ $name }}</option>
+                                @endforeach
                             </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_vacant_house_select" class="form-label">Vacant house <span class="text-muted small">(by eligibility type)</span></label>
-                            <select class="form-select" id="modal_vacant_house_select">
-                                <option value="">— Select vacant house —</option>
-                                <option value="__manual__">— Manual entry —</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_current_alot" class="form-label">Alloted House</label>
-                            <input type="text" class="form-control" id="modal_current_alot" name="current_alot" maxlength="100" placeholder="e.g. Block - 14 or type manually">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_pos_from" class="form-label">Possession From</label>
-                            <input type="date" class="form-control" id="modal_pos_from" name="pos_from">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_pos_to" class="form-label">Possession To</label>
-                            <input type="date" class="form-control" id="modal_pos_to" name="pos_to">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_extension" class="form-label">Extension</label>
-                            <input type="text" class="form-control" id="modal_extension" name="extension" maxlength="255" placeholder="e.g. extension details">
+                            <input type="hidden" id="modal_eligibility_type_pk_hidden" name="eligibility_type_pk" value="">
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -174,7 +150,7 @@
 
 @push('styles')
 <style>
-    /* Bootstrap 5 table wrapper: horizontal scroll */
+    /* Responsive table: horizontal scroll */
     .request-for-estate-table-wrap {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -274,6 +250,22 @@
             });
         }
 
+        function ensureEligibilityOptionAndSetVal(pk, label) {
+            var $sel = $('#modal_eligibility_type_pk');
+            var $hidden = $('#modal_eligibility_type_pk_hidden');
+            var val = (pk !== undefined && pk !== null && pk !== '') ? String(pk) : '';
+            if (!val) {
+                $sel.val('').trigger('change');
+                $hidden.val('');
+                return;
+            }
+            if ($sel.find('option[value="' + val + '"]').length === 0) {
+                $sel.append(new Option(label || ('Type ' + val), val, false, false));
+            }
+            $sel.val(val).trigger('change');
+            $hidden.val(val);
+        }
+
         function fillFromEmployeeDetails(data) {
             $('#modal_emp_name').val(data.emp_name || '');
             $('#modal_employee_id').val(data.employee_id || '');
@@ -282,58 +274,41 @@
             $('#modal_doj_pay_scale').val(data.doj_pay_scale || '');
             $('#modal_doj_academic').val(data.doj_academic || '');
             $('#modal_doj_service').val(data.doj_service || '');
-            $('#modal_eligibility_type_pk').val(data.eligibility_type_pk !== undefined ? String(data.eligibility_type_pk) : '62');
+            ensureEligibilityOptionAndSetVal(data.eligibility_type_pk, data.eligibility_type_name);
         }
 
         function clearEmployeeDerivedFields() {
             fillFromEmployeeDetails({});
         }
 
-        function loadVacantHouses(eligibilityTypePk, thenSelectValue) {
-            if (!eligibilityTypePk) {
-                $('#modal_vacant_house_select').find('option:not([value=""])').not('[value="__manual__"]').remove();
-                $('#modal_vacant_house_select').val('');
-                return;
-            }
-            var url = '{{ route("admin.estate.request-for-estate.vacant-houses") }}?eligibility_type_pk=' + eligibilityTypePk;
-            var $sel = $('#modal_vacant_house_select');
-            $sel.find('option[value!=""][value!="__manual__"]').remove();
-            $.get(url, function(res) {
-                var data = res.data || [];
-                data.forEach(function(o) {
-                    var label = o.label || (o.block_name + ' - ' + o.house_no);
-                    $sel.append($('<option></option>').attr('value', label).text(label));
-                });
-                if (thenSelectValue !== undefined && thenSelectValue !== '') {
-                    $sel.val(thenSelectValue);
-                    if ($sel.val() !== thenSelectValue) {
-                        $sel.val('__manual__');
-                    }
-                }
-            });
-        }
-
         $('#btn-open-add-request-estate').on('click', function() {
             $('#addEditRequestEstateModalLabel').text('Add Estate Request');
             $('#request_estate_id').val('');
+            $('#request_employee_pk').val('0');
             $('#formAddEditRequestEstate')[0].reset();
             $('#request_estate_id').val('');
             $('#modal_employee_pk').val('');
-            $('#modal_vacant_house_select').val('');
+            $('#modal_req_id').val('');
+            $('#modal_req_date').val(new Date().toISOString().slice(0, 10));
+            $('#modal_status_wrap').addClass('d-none');
+            $('#modal_status').removeAttr('required');
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees();
-            var defElig = $('#modal_eligibility_type_pk').val();
-            loadVacantHouses(defElig || 62);
-            if (addEditModal) addEditModal.show();
+            $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
+                if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
+                if (addEditModal) addEditModal.show();
+            });
         });
 
         $(document).on('click', '.btn-edit-request-estate', function(e) {
             e.preventDefault();
             var $btn = $(this);
             var rowPk = $btn.data('id');
+            var employeePk = $btn.data('employee_pk') || 0;
             $('#addEditRequestEstateModalLabel').text('Edit Estate Request');
             $('#request_estate_id').val(rowPk || '');
+            $('#request_employee_pk').val(employeePk);
             $('#modal_req_id').val($btn.data('req_id') || '');
             $('#modal_req_date').val($btn.data('req_date') || '');
             $('#modal_emp_name').val($btn.data('emp_name') || '');
@@ -343,17 +318,13 @@
             $('#modal_doj_pay_scale').val($btn.data('doj_pay_scale') || '');
             $('#modal_doj_academic').val($btn.data('doj_academic') || '');
             $('#modal_doj_service').val($btn.data('doj_service') || '');
-            $('#modal_eligibility_type_pk').val($btn.data('eligibility_type_pk') !== undefined ? String($btn.data('eligibility_type_pk')) : '62');
+            var eligPk = $btn.data('eligibility_type_pk');
+            var eligLabel = $btn.data('eligibility_type_label');
+            ensureEligibilityOptionAndSetVal(eligPk, eligLabel);
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
-            $('#modal_current_alot').val($btn.data('current_alot') || '');
-            $('#modal_pos_from').val($btn.data('pos_from') || '');
-            $('#modal_pos_to').val($btn.data('pos_to') || '');
-            $('#modal_extension').val($btn.data('extension') || '');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
-            loadRequestEstateEmployees(rowPk, rowPk);
-            var eligPk = $btn.data('eligibility_type_pk');
-            loadVacantHouses(eligPk, $btn.data('current_alot'));
+            loadRequestEstateEmployees(rowPk, employeePk);
             if (addEditModal) addEditModal.show();
         });
 
@@ -388,28 +359,14 @@
             }
         });
 
-        $('#modal_eligibility_type_pk').on('change', function() {
-            var pk = $(this).val();
-            loadVacantHouses(pk);
-            $('#modal_vacant_house_select').val('');
-            $('#modal_current_alot').val('');
-        });
-
-        $('#modal_vacant_house_select').on('change', function() {
-            var v = $(this).val();
-            if (v === '__manual__') {
-                $('#modal_current_alot').val('').focus();
-            } else if (v) {
-                $('#modal_current_alot').val(v);
-            } else {
-                $('#modal_current_alot').val('');
-            }
-        });
-
         $('#formAddEditRequestEstate').on('submit', function(e) {
             e.preventDefault();
-            if ($('#modal_employee_pk').val() === '__new__') {
+            var selVal = $('#modal_employee_pk').val();
+            if (selVal === '__new__') {
                 $('#modal_emp_name').val($('#modal_new_emp_name').val().trim());
+                $('#request_employee_pk').val('0');
+            } else {
+                $('#request_employee_pk').val(selVal || '0');
             }
             var $form = $(this);
             var $errors = $('#addEditRequestEstateFormErrors');

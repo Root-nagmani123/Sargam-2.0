@@ -1055,8 +1055,14 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 
         // Request For Estate (estate_home_request_details + possession)
         Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
+        Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
+
+        // Put In HAC workflow
+        Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
+        Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
         Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
         Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
+        Route::get('request-details/{id}', [EstateController::class, 'requestAndChangeRequestDetails'])->name('request-details');
         Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
         Route::post('request-for-estate', [EstateController::class, 'storeRequestForEstate'])->name('request-for-estate.store');
         Route::delete('request-for-estate/{id}', [EstateController::class, 'destroyRequestForEstate'])->name('request-for-estate.destroy');
@@ -1065,26 +1071,36 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('estate-approval-setting', [EstateController::class, 'estateApprovalSetting'])->name('estate-approval-setting');
         Route::get('add-approved-request-house', [EstateController::class, 'addApprovedRequestHouse'])->name('add-approved-request-house');
         Route::post('store-approved-request-house', [EstateController::class, 'storeApprovedRequestHouse'])->name('store-approved-request-house');
+        Route::delete('estate-approval-setting/{id}', [EstateController::class, 'destroyEstateApprovalSetting'])->name('estate-approval-setting.destroy');
 
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
-        Route::get('change-request-hac-approved', function () {
-            return view('admin.estate.change-request-hac-approved');
-        })->name('change-request-hac-approved');
-
-
-        // Change Requests (HAC Approved)
+        // Change Requests (HAC Approved) + New requests
         Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+        Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
+        Route::get('change-request/vacant-houses', [EstateController::class, 'getChangeRequestVacantHouses'])->name('change-request.vacant-houses');
         Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
         Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
+        Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
+        Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
+        Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
+        Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
+        Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
+        Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
+        Route::get('new-request/allot-details/{id}', [EstateController::class, 'getNewRequestAllotDetails'])->name('new-request.allot-details');
+        Route::post('new-request/allot/{id}', [EstateController::class, 'allotNewRequest'])->name('new-request.allot');
         
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
-        // Estate Possession
+        // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
+        Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
+        Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
+        Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
+        Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
 
@@ -1109,17 +1125,25 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('update-meter-reading-of-other/blocks', [EstateController::class, 'getMeterReadingBlocksOther'])->name('update-meter-reading-of-other.blocks');
         Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
         Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
-        Route::get('update-meter-no', function () {
-            return view('admin.estate.update_meter_no');
-        })->name('update-meter-no');
 
-        // Generate Estate Bill / Estate Bill Summary
+        Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
+        Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
+
+        // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
         Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
+        Route::post('generate-estate-bill/verify-selected', [EstateController::class, 'verifySelectedBillsLbsna'])->name('generate-estate-bill.verify-selected');
+        Route::post('generate-estate-bill/save-as-draft', [EstateController::class, 'saveAsDraftBillsLbsna'])->name('generate-estate-bill.save-as-draft');
 
-        // Return House
-        Route::get('return-house', function () {
-            return view('admin.estate.return_house');
-        })->name('return-house');
+        // Generate Estate Bill for Other (contract employees)
+        Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
+        Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+        Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
+        Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
+
+        Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+        Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
+        Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
+        Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
 
         // Define House
         Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
@@ -1202,6 +1226,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
                 return view('admin.estate.house_status');
             })->name('house-status');
 
+            Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
             Route::get('bill-report-grid', function () {
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');

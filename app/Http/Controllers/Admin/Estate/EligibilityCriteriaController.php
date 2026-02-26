@@ -7,16 +7,14 @@ use App\Models\EligibilityCriterion;
 use App\Models\SalaryGrade;
 use App\Models\UnitType;
 use App\Models\UnitSubType;
+use App\DataTables\EligibilityCriteriaDataTable;
 use Illuminate\Http\Request;
 
 class EligibilityCriteriaController extends Controller
 {
-    public function index()
+    public function index(EligibilityCriteriaDataTable $dataTable)
     {
-        $items = EligibilityCriterion::with(['salaryGrade', 'unitType', 'unitSubType'])
-            ->orderBy('pk')
-            ->paginate(request('per_page', 10));
-        return view('admin.estate.eligibility_criteria.index', compact('items'));
+        return $dataTable->render('admin.estate.eligibility_criteria.index');
     }
 
     public function create()
