@@ -7,6 +7,7 @@
     <x-session_message />
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <ul class="nav nav-pills nav-fill gap-2 idcard-index-tabs" role="tablist">
             <li class="nav-item" role="presentation">
@@ -16,6 +17,11 @@
                         <span class="badge text-bg-light text-primary ms-1">{{ $activeTotal }}</span>
 =======
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 p-md-4 border border-body-secondary rounded-4 bg-body shadow-sm">
+=======
+    <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
+        <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 p-md-4 border border-body-secondary rounded-4 bg-body shadow-sm">
+>>>>>>> 9dc7162d (choices.js)
         <ul class="nav nav-pills gap-1 idcard-index-tabs bg-body-tertiary p-1 rounded-3 shadow-sm" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center transition-opacity" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
@@ -143,13 +149,17 @@
             </a>
         </div>
     </div>
+<<<<<<< HEAD
 
     <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
         <div class="card-body p-0">
+<<<<<<< HEAD
+=======
+>>>>>>> 9dc7162d (choices.js)
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
-                        <table class="table text-nowrap align-middle idcard-index-table table-striped" id="activeIdcardTable">
+                        <table class="table text-nowrap align-middle idcard-index-table" id="activeIdcardTable">
                             <thead>
                                 <tr>
 <<<<<<< HEAD
@@ -752,7 +762,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
         <div class="modal-content border-0 shadow-lg idcard-view-modal rounded-4 overflow-hidden">
             <div class="modal-header idcard-modal-header py-3 px-4 border-0">
-                <h2 class="modal-title h5 fw-bold mb-0 text-white" id="viewDetailsModalLabel">
+                <h2 class="modal-title h5 fw-bold mb-0" id="viewDetailsModalLabel">
                     <span class="material-icons material-symbols-rounded align-middle me-2" aria-hidden="true">badge</span>
                     ID Card Request Details
                 </h2>
@@ -908,8 +918,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // DataTables: init only when table has data rows (no empty-state colspan row)
     var dtDefaults = {
-        order: [[2, 'desc']],
-        pageLength: 25,
+        order: [[0, 'asc']],
+        pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
         language: {
             search: 'Search:',
