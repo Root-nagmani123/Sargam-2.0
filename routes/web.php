@@ -84,6 +84,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
         Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
             ->name('users.assignRoleSave');
+
+        Route::get('password/change-password', [UserController::class, 'change_password'])->name('password.change_password');
+        Route::post('password/change-password', [UserController::class, 'submit_change_password'])->name('password.submit_change_password');
+
+        // Issue Management
+        Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+        Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
+        Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
+        Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
+        Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
     });
 
     // // Dashboard
@@ -598,14 +608,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
-    Route::prefix('admin/setup/caste-category')->name('admin.setup.caste_category.')->controller(CasteCategoryController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-    });
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -636,17 +638,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Report walal route
 
-    Route::get('/faculty_view', function () {
-     return view('admin.feedback.faculty_view');
- })->name('admin.feedback.faculty_view');
-
-  Route::get('/feedback_average', function () {
-     return view('admin.feedback.faculty_average');
- })->name('admin.feedback.faculty_average');
-
     //  dashboard page route
 
-    //   Route::get('/active-course', function () { DashboardController:}})->name('admin.dashboard.active_course');
+    //   Route::get('/active-course', function () { DashboardController::class })->name('admin.dashboard.active_course');
     Route::get('/active-course', [DashboardController::class, 'active_course'])->name('admin.dashboard.active_course');
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
@@ -711,7 +705,8 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
     });
     Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'])->name('feedback.average');
-    Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
+    Route::get('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
+    Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view.post');
     Route::get('/faculty_view/suggestions', [FeedbackController::class, 'getFacultySuggestions'])->name('feedback.faculty_suggestions');
     Route::post('/faculty_view/export', [FeedbackController::class, 'exportFacultyFeedback'])->name('admin.feedback.faculty_view.export');
     Route::get('/feedback_details', [FeedbackController::class, 'feedbackDetails'])->name('admin.feedback.feedback_details');
