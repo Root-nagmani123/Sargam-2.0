@@ -190,14 +190,14 @@
                     </button>
                 </div>
                 <div class="table-responsive table-scroll-wrapper">
-                    <table class="table table-hover align-middle mb-0" id="exceptiongetcategory">
+                    <table class="table text-nowrap align-middle mb-0" id="exceptiongetcategory">
                         <thead>
                             <tr>
-                                <th class="col" style="width: 5rem;">S.No.</th>
+                                <th class="col">S.No.</th>
                                 <th class="col">Category name</th>
                                 <th class="col">Short Name</th>
-                                <th class="col" style="width: 8rem;">Status</th>
-                                <th class="col text-end" style="width: 12rem;">Actions</th>
+                                <th class="col">Status</th>
+                                <th class="col">Actions</th>
                             </tr>
                         </thead>
                     </table>

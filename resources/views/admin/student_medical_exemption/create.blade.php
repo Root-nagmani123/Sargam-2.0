@@ -2,128 +2,56 @@
 
 @section('title', 'Student Medical Exemption - Sargam | Lal Bahadur')
 
-@section('setup_content')
-<style>
-/* Student Medical Exemption Create - Modern Bootstrap 5 */
-.student-medical-create .form-card {
-    border: none;
-    border-radius: 0.75rem;
-    box-shadow: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.06), 0 0.5rem 1rem rgba(0, 0, 0, 0.04);
-}
-.student-medical-create .form-card .card-body {
-    padding: 1.5rem;
-}
-.student-medical-create .section-title {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--bs-secondary);
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--bs-border-color-translucent);
-}
-.student-medical-create .form-label {
-    font-weight: 500;
-    color: var(--bs-body-color);
-}
-.student-medical-create .form-control,
-.student-medical-create .form-select {
-    border-radius: 0.5rem;
-    min-height: 2.5rem;
-}
-.student-medical-create .form-control:focus,
-.student-medical-create .form-select:focus {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.15);
-}
-.student-medical-create .file-upload-hint {
-    background: var(--bs-tertiary-bg);
-    border-radius: 0.5rem;
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    color: var(--bs-secondary);
-}
-.student-medical-create .form-actions {
-    padding-top: 1rem;
-    border-top: 1px solid var(--bs-border-color-translucent);
-}
-.student-medical-create .btn {
-    border-radius: 0.5rem;
-    font-weight: 500;
-    min-width: 6rem;
-}
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .student-medical-create .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+        }
 
-/* Responsive */
-@media (min-width: 576px) {
-    .student-medical-create .form-card .card-body {
-        padding: 1.75rem;
-    }
-}
-@media (min-width: 768px) {
-    .student-medical-create .form-card .card-body {
-        padding: 2rem;
-    }
-    .student-medical-create .section-title {
-        margin-top: 1.25rem;
-    }
-    .student-medical-create .section-title:first-child {
-        margin-top: 0;
-    }
-}
-@media (min-width: 992px) {
-    .student-medical-create .form-card .card-body {
-        padding: 2.25rem;
-    }
-}
-@media (max-width: 767.98px) {
-    .student-medical-create .form-card .card-body {
-        padding: 1rem;
-    }
-    .student-medical-create .form-actions {
-        flex-direction: column;
-        gap: 0.5rem !important;
-    }
-    .student-medical-create .form-actions .btn {
-        width: 100%;
-        min-width: unset;
-    }
-}
-@media (max-width: 575.98px) {
-    .student-medical-create .form-card .card-body {
-        padding: 0.75rem;
-    }
-    .student-medical-create .section-title {
-        font-size: 0.75rem;
-        margin-bottom: 0.75rem;
-    }
-    .student-medical-create .form-label {
-        font-size: 0.9375rem;
-    }
-    .student-medical-create .form-control,
-    .student-medical-create .form-select {
-        font-size: 0.9375rem;
-        min-height: 2.625rem;
-    }
-}
-.student-medical-create input[type="datetime-local"] {
-    max-width: 100%;
-}
-.student-medical-create .select2-container {
-    width: 100% !important;
-}
-</style>
+        .student-medical-create .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .student-medical-create .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .student-medical-create .choices.is-focused .choices__inner,
+        .student-medical-create .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
+@section('setup_content')
 <div class="container-fluid student-medical-create py-2 py-md-3">
     <x-session_message />
     <x-breadcrum title="Add Student Medical Exemption" />
 
-    <div class="card form-card mt-3">
-        <div class="card-body">
+    <div class="card form-card mt-3 shadow-sm border-0 rounded-3">
+        <div class="card-header border-0 bg-primary py-3">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                <div>
+                    <h5 class="mb-1 fw-semibold text-white">Student Medical Exemption</h5>
+                    <p class="mb-0 text-white small">Capture exemption details, timing and supporting documents in one place.</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body pt-3 pt-md-4">
             <form method="POST" action="{{ route('student.medical.exemption.store') }}" enctype="multipart/form-data">
                 @csrf
 
-                <p class="section-title mb-3">Course &amp; Student</p>
-                <div class="row g-3 mb-0">
+                <p class="section-title text-uppercase small fw-semibold text-muted mb-3">Course &amp; Student</p>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 mb-0">
                     <div class="col-12 col-sm-6 col-lg-4">
                         <label class="form-label">Course <span class="text-danger">*</span></label>
                         <select name="course_master_pk" class="form-select" id="courseDropdown" required>
@@ -153,8 +81,9 @@
                     </div>
                 </div>
 
-                <p class="section-title">Exemption Details</p>
-                <div class="row g-3 mb-0">
+                <hr class="my-4">
+                <p class="section-title text-uppercase small fw-semibold text-muted mb-3">Exemption Details</p>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 mb-0">
                     <div class="col-12 col-sm-6 col-lg-4">
                         <label class="form-label">Exemption Category <span class="text-danger">*</span></label>
                         <select name="exemption_category_master_pk" class="form-select" required>
@@ -197,8 +126,9 @@
                     </div>
                 </div>
 
-                <p class="section-title">Date &amp; Time</p>
-                <div class="row g-3 mb-0">
+                <hr class="my-4">
+                <p class="section-title text-uppercase small fw-semibold text-muted mb-3">Date &amp; Time</p>
+                <div class="row row-cols-1 row-cols-sm-2 g-3 mb-0">
                     <div class="col-12 col-sm-6 col-lg-4">
                         <label class="form-label">From Date &amp; Time <span class="text-danger">*</span></label>
                         <input type="datetime-local" name="from_date" class="form-control" required value="{{ old('from_date') }}">
@@ -215,8 +145,9 @@
                     </div>
                 </div>
 
-                <p class="section-title">Description &amp; Document</p>
-                <div class="row g-3 mb-0">
+                <hr class="my-4">
+                <p class="section-title text-uppercase small fw-semibold text-muted mb-3">Description &amp; Document</p>
+                <div class="row row-cols-1 row-cols-lg-2 g-3 mb-0">
                     <div class="col-12 col-lg-6">
                         <label class="form-label">Description</label>
                         <textarea name="Description" class="form-control" rows="3" placeholder="Optional notes">{{ old('Description') }}</textarea>
@@ -249,13 +180,54 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('#studentDropdown').select2({
-        placeholder: 'Search Student',
-        allowClear: true,
-        width: '100%'
+let studentChoicesInstance = null;
+
+function initStudentChoices() {
+    if (typeof Choices === 'undefined') return;
+    const el = document.getElementById('studentDropdown');
+    if (!el) return;
+
+    if (studentChoicesInstance) {
+        studentChoicesInstance.destroy();
+    }
+
+    studentChoicesInstance = new Choices(el, {
+        allowHTML: false,
+        searchPlaceholderValue: 'Search Student',
+        removeItemButton: false,
+        shouldSort: false,
+        placeholder: true,
+        placeholderValue: 'Search Student',
     });
+}
+
+$(document).ready(function() {
+    // Initialize Choices on all selects in this form
+    if (typeof Choices !== 'undefined') {
+        document.querySelectorAll('.student-medical-create select').forEach(function (el) {
+            if (el.id === 'studentDropdown') {
+                // handled separately
+                return;
+            }
+            if (el.dataset.choicesInitialized === 'true') return;
+
+            new Choices(el, {
+                allowHTML: false,
+                searchPlaceholderValue: 'Search...',
+                removeItemButton: !!el.multiple,
+                shouldSort: false,
+                placeholder: true,
+                placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+            });
+
+            el.dataset.choicesInitialized = 'true';
+        });
+    }
+
+    // Initialize student dropdown with Choices
+    initStudentChoices();
 
     $('#courseDropdown').on('change', function() {
         var courseId = $(this).val();
@@ -272,20 +244,12 @@ $(document).ready(function() {
                         options += '<option value="' + student.pk + '" data-ot_code="' + (student.generated_OT_code || '') + '">' + student.display_name + '</option>';
                     });
                     $('#studentDropdown').html(options);
-                    $('#studentDropdown').select2('destroy').select2({
-                        placeholder: 'Search Student',
-                        allowClear: true,
-                        width: '100%'
-                    });
+                    initStudentChoices();
                 }
             });
         } else {
             $('#studentDropdown').html('<option value="">Select Course First</option>');
-            $('#studentDropdown').select2('destroy').select2({
-                placeholder: 'Select Course First',
-                allowClear: true,
-                width: '100%'
-            });
+            initStudentChoices();
         }
     });
 
@@ -294,6 +258,43 @@ $(document).ready(function() {
         $('#otCodeField').val(otCode);
     });
 });
+
+// Restore student after validation error
+let oldCourse = "{{ old('course_master_pk') }}";
+let oldStudent = "{{ old('student_master_pk') }}";
+
+if (oldCourse) {
+
+    $('#courseDropdown').val(oldCourse);
+
+    $.ajax({
+        url: '{{ route("student.medical.exemption.getStudentsByCourse") }}',
+        type: 'GET',
+        data: { course_id: oldCourse },
+        success: function(response) {
+
+            var options = '<option value="">Search Student</option>';
+
+            $.each(response.students, function(i, student) {
+
+                let selected = oldStudent == student.pk ? 'selected' : '';
+
+                options += '<option value="' + student.pk + '" data-ot_code="' +
+                    (student.generated_OT_code || '') + '" ' + selected + '>' +
+                    student.display_name + '</option>';
+            });
+
+            $('#studentDropdown').html(options).trigger('change');
+
+            initStudentChoices();
+
+            // Restore OT code
+            let otCode = $('#studentDropdown option:selected').data('ot_code') || '';
+            $('#otCodeField').val(otCode);
+        }
+    });
+}
+
 </script>
 <script>
 document.getElementById('Doc_upload').addEventListener('change', function() {

@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 @section('css')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
 .dual-list-container {
     display: flex;
@@ -416,6 +417,31 @@
     background: #f1f1f1;
 }
 
+/* Choices.js Bootstrap-like styling */
+.mdo-create-page .choices__inner {
+    min-height: calc(2.25rem + 2px);
+    border-radius: 0.375rem;
+    border: 1px solid #ced4da;
+    padding: 0.375rem 0.75rem;
+    background-color: #fff;
+}
+
+.mdo-create-page .choices__list--single .choices__item {
+    padding: 0;
+    margin: 0;
+}
+
+.mdo-create-page .choices__list--dropdown {
+    border-radius: 0.375rem;
+    border-color: #ced4da;
+}
+
+.mdo-create-page .choices.is-focused .choices__inner,
+.mdo-create-page .choices.is-open .choices__inner {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
 </style>
 @endsection
 @section('title', 'MDO/Escort Exemption')
@@ -441,7 +467,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <x-select name="course_master_pk" label="Course Name :" formLabelClass="form-label"
-                                formSelectClass="select2 course-selected" :options="$courseMaster" labelRequired="true"
+                                formSelectClass=" course-selected" :options="$courseMaster" labelRequired="true"
                                 value="{{ old('course_master_pk', $mdoDutyType->course_master_pk ?? '') }}" />
                         </div>
                     </div>
@@ -450,7 +476,7 @@
                         <div class="mb-3">
 
                             <x-select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
-                                formSelectClass="select2 "
+                               
                                 value="{{ old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '') }}"
                                 :options="$MDODutyTypeMaster" labelRequired="true" />
                         </div>
@@ -459,7 +485,7 @@
                     <div class="col-12 col-md-6" id="faculty_field_container" style="display: none;">
                         <div class="mb-3">
                             <x-select name="faculty_master_pk" id="faculty_master_pk" label="Faculty :" formLabelClass="form-label"
-                                formSelectClass="select2"
+                                
                                 value="{{ old('faculty_master_pk', '') }}"
                                 :options="$facultyMaster" labelRequired="true" />
                         </div>
@@ -603,7 +629,28 @@
 
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
+// Dual list + Choices.js initialization
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof Choices !== 'undefined') {
+        document.querySelectorAll('.mdo-create-page select').forEach(function (el) {
+            if (el.dataset.choicesInitialized === 'true') return;
+
+            new Choices(el, {
+                allowHTML: false,
+                searchPlaceholderValue: 'Search...',
+                removeItemButton: !!el.multiple,
+                shouldSort: false,
+                placeholder: true,
+                placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+            });
+
+            el.dataset.choicesInitialized = 'true';
+        });
+    }
+});
+
 const availableList = document.getElementById('availableList');
 const selectedList = document.getElementById('selectedList');
 const hiddenSelect = document.getElementById('hiddenStudentSelect');
