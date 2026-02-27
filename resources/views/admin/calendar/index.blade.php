@@ -11,7 +11,118 @@
     }
 @endphp
 
-<link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
+                    <!-- Density Toggle -->
+                    <div class="density-toggle d-flex align-items-center gap-2 ms-2">
+                        <button type="button" class="btn btn-outline-secondary" id="toggleDensityBtn" aria-pressed="false" aria-label="Toggle compact mode">
+                            Expand / Collapse
+                        </button>
+                    </div>
+                </div>
+                <!-- Action Buttons -->
+                @if(hasRole('Training') || hasRole('Admin'))
+                <button type="button" class="btn btn-primary px-4" id="createEventButton" data-bs-toggle="modal"
+                    data-bs-target="#eventModal">
+                    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Add New Event
+                </button>
+                @endif
+            </div>
+        </section>
+
+        <!-- Calendar Container -->
+        <section class="calendar-container" aria-label="Academic calendar">
+            <div class="card border-start-4 border-primary shadow-sm">
+                <div class="card-body p-3 p-md-4">
+
+                    <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
+                    <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
+
+                    <!-- List View -->
+                    <div id="eventListView" class="mt-4" role="region" aria-label="Weekly timetable">
+                        <div class="timetable-wrapper">
+                            <!-- Timetable Header -->
+                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
+                                <div class="row align-items-center g-4">
+                                    <div class="col-md-2 text-center text-md-start">
+                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
+                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
+                                                class="img-fluid" width="70" height="70">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 text-center">
+                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
+                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText">
+                                            <i class="bi bi-calendar-week me-2"></i>—
+                                        </p>
+                                    </div>
+
+                                    <div class="col-md-4 text-center text-md-end">
+                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
+                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
+                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
+                                                    aria-label="Previous week">
+                                                    <i class="bi bi-chevron-left"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
+                                                    aria-label="Current week">
+                                                    <i class="bi bi-calendar-check me-2"></i>Today
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
+                                                    aria-label="Next week">
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="week-badge">
+                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
+                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Timetable table -->
+                            <div class="timetable-container border rounded-3 overflow-hidden">
+                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
+                                    <table class="table table-bordered timetable-grid" id="timetableTable"
+                                        aria-describedby="timetableDescription">
+                                        <caption class="visually-hidden" id="timetableDescription">
+                                            Weekly academic timetable showing events
+                                        </caption>
+                                        <thead id="timetableHead">
+                                            <tr>
+                                                <th scope="col" class="time-column">Time</th>
+                                                <th scope="col">Monday</th>
+                                                <th scope="col">Tuesday</th>
+                                                <th scope="col">Wednesday</th>
+                                                <th scope="col">Thursday</th>
+                                                <th scope="col">Friday</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody id="timetableBody">
+                                            <!-- JS will populate body -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+@include('admin.calendar.partials.add_edit_events')
+@include('admin.calendar.partials.events_details')
+@include('admin.calendar.partials.confirmation')
+
+<!-- Add CSS for modern look -->
 <style>
         :root {
         --primary: #004a93;
@@ -280,59 +391,47 @@
     box-shadow: 0 16px 64px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.12) !important;
     border: 2px solid #4e73df !important;
     overflow: hidden;
-    max-height: 650px;
+    max-height: 500px;
     display: flex;
     flex-direction: column;
-    backdrop-filter: blur(12px);
 }
 
 .fc-popover .fc-popover-title {
-    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
-    color: white;
-    font-weight: 700;
+    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
+    font-weight: 600;
     flex-shrink: 0;
     position: sticky;
     top: 0;
     z-index: 10;
-    padding: 1.1rem 1.4rem;
-    font-size: 1rem;
-    letter-spacing: 0.4px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
-    text-transform: uppercase;
 }
 
-/* Make popover body scrollable for many events */
 .fc-popover .fc-popover-body {
     max-height: 450px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 1rem;
+    padding: 0.5rem;
     scrollbar-width: thin;
-    scrollbar-color: #4e73df #f3f4f6;
-    background: linear-gradient(to bottom, #ffffff 0%, #f8fbff 100%);
+    scrollbar-color: var(--primary-color) rgba(0, 74, 147, 0.05);
 }
 
 /* Custom scrollbar for popover body */
 .fc-popover .fc-popover-body::-webkit-scrollbar {
-    width: 12px;
+    width: 8px;
 }
 
 .fc-popover .fc-popover-body::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 12px;
-    margin: 0.5rem 0;
+    background: rgba(0, 74, 147, 0.05);
+    border-radius: 4px;
 }
 
 .fc-popover .fc-popover-body::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #4e73df 0%, #3a5bc7 100%);
-    border-radius: 12px;
-    border: 3px solid #f3f4f6;
+    background: var(--primary-color);
+    border-radius: 4px;
     transition: background 0.2s ease;
 }
 
 .fc-popover .fc-popover-body::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #3a5bc7 0%, #2d4aa7 100%);
-    border-width: 2px;
+    background: var(--primary-dark);
 }
 
 .fc-popover .fc-popover-body .fc-event-card {
@@ -2190,43 +2289,21 @@ class CalendarManager {
             },
             views: {
                 dayGridMonth: {
-                    dayMaxEvents: 2, // Show max 2 events, then +x more
-                    displayEventEnd: true
+                    dayMaxEvents: true,
+                    dayMaxEventRows: 4
                 },
                 timeGridWeek: {
-                    dayMaxEvents: false,
-                    eventMaxStack: 8
+                    dayMaxEvents: true,
+                    dayMaxEventRows: 3,
+                    eventMaxStack: 3
                 },
                 timeGridDay: {
-                    dayMaxEvents: false,
-                    eventMaxStack: 8
+                    dayMaxEvents: true,
+                    dayMaxEventRows: 4,
+                    eventMaxStack: 4
                 }
             },
-            events: (info, successCallback, failureCallback) => {
-                this.fetchEvents(info, successCallback, failureCallback);
-            },
-            loading: (isLoading) => {
-                console.log('Calendar loading state:', isLoading);
-                const loadingOverlay = document.getElementById('calendarLoadingOverlay');
-                
-                if (!isLoading) {
-                    // Events have finished loading
-                    console.log('Events loaded, hiding overlay');
-                    
-                    try {
-                        this.updateWeekendVisibility();
-                    } catch (error) {
-                        console.error('Error updating weekend visibility:', error);
-                    }
-                    
-                    // Hide loading overlay
-                    if (loadingOverlay) {
-                        loadingOverlay.style.display = 'none';
-                    }
-                } else {
-                    console.log('Loading events...');
-                }
-            },
+            events: CalendarConfig.api.events,
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
@@ -3671,85 +3748,6 @@ async setInternalFaculty(internalFacultyIds) {
         tbody.innerHTML = html;
         this.applyBreakLunchRowStyles();
         this.initializeScrollIndicators();
-    }
-
-    renderWeekCards(events, weekStart) {
-        const container = document.querySelector('#weekCards .row');
-        if (!container) return;
-
-        const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-        const byDay = new Map();
-
-        // Prepare boundaries: Monday start to Sunday end
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-
-        days.forEach((_, i) => {
-            const d = new Date(weekStart);
-            d.setDate(d.getDate() + i);
-            const key = d.toISOString().split('T')[0];
-            byDay.set(key, { date: d, events: [] });
-        });
-
-        // Filter incoming events to week range and allocate to day buckets
-        (events || []).forEach(evt => {
-            const d = new Date(evt.start);
-            if (isNaN(d)) return;
-            if (d < weekStart || d > weekEnd) return;
-            const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString?.() ?
-                new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().split('T')[0] :
-                `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            if (byDay.has(key)) byDay.get(key).events.push(evt);
-        });
-
-        container.innerHTML = '';
-        days.forEach((label, i) => {
-            const d = new Date(weekStart);
-            d.setDate(d.getDate() + i);
-            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const info = byDay.get(key) || { date: d, events: [] };
-            const count = info.events.length;
-
-            const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-            const fullStr = d.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-            const col = document.createElement('div');
-            col.className = 'col-12 col-md-6 col-xl-4';
-            col.setAttribute('role', 'listitem');
-            col.innerHTML = `
-                <div class="week-day-card" tabindex="0" aria-label="${label} ${fullStr}, ${count} event${count!==1?'s':''}">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-bold text-dark">${label} <span class="text-muted">${dateStr}</span></div>
-                        <span class="badge bg-primary-subtle text-primary">${count} event${count!==1?'s':''}</span>
-                    </div>
-                    <div class="week-day-events">
-                        ${info.events.slice(0, 3).map(evt => {
-                            const title = evt.title || evt.extendedProps?.topic || '';
-                            const venue = evt.extendedProps?.vanue || evt.extendedProps?.venue_name || '';
-                            const faculty = evt.extendedProps?.faculty_name || '';
-                            const timeTxt = evt.start ? new Date(evt.start).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
-                            return `
-                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeTxt?`, at ${timeTxt}`:''}${venue?`, at ${venue}`:''}">
-                                <i class="bi bi-clock text-primary" aria-hidden="true"></i>
-                                <span class="mini-title text-truncate">${title}</span>
-                                ${timeTxt ? `<span class="mini-time text-muted">${timeTxt}</span>` : ''}
-                            </div>`;
-                        }).join('')}
-                        ${count > 3 ? `<a href="#" class="mini-more" aria-label="Show ${count-3} more events">+ ${count-3} more</a>` : ''}
-                    </div>
-                </div>
-            `;
-            container.appendChild(col);
-        });
-    }
-
-    updateWeekRangeText(weekStart) {
-        const el = document.getElementById('weekRangeText');
-        if (!el) return;
-        const startStr = new Date(weekStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        const end = new Date(weekStart); end.setDate(end.getDate() + 6);
-        const endStr = end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-        el.innerHTML = `<i class="bi bi-calendar-week me-2" aria-hidden="true"></i>${startStr} – ${endStr}`;
     }
 
     groupEventsByTime(events) {
