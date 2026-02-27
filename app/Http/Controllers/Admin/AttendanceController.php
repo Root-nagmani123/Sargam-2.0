@@ -446,13 +446,6 @@ $currentPath = $segments[1] ?? null;
             return redirect()->back()->with('error', 'An error occurred while saving attendance: ' . $exception->getMessage());
         }
     }
-###old code naseer###
-    //   public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
-    //     // Check if this is a DataTables AJAX request
-    //     if ($request->ajax() || $request->has('draw')) {
-    //         // This is a DataTables request, return JSON data
-    //         return $this->getOTAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
-    //     }
 
       public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
         // Get student information
@@ -496,6 +489,27 @@ $currentPath = $segments[1] ?? null;
                 'timetable.venue:venue_id,venue_name',
                 'timetable.faculty:pk,full_name',
             ]);
+
+            // Apply course filter if provided (only in archive mode)
+            if ($archiveMode === 'archive' && $filterCourse) {
+                $query->where('Programme_pk', $filterCourse);
+                // Also need to update group_pk based on the selected course
+                // Get the group for this student and the selected course
+                $studentGroupMap = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
+                    ->where('student_master_pk', $student_pk)
+                    ->whereHas('groupTypeMasterCourseMasterMap', function($q) use ($filterCourse) {
+                        $q->where('course_name', $filterCourse);
+                    })
+                    ->first();
+                
+                if ($studentGroupMap && $studentGroupMap->groupTypeMasterCourseMasterMap) {
+                    $query->where('group_pk', $studentGroupMap->groupTypeMasterCourseMasterMap->pk);
+                }
+            } else {
+                // Default behavior: use the original course and group
+                $query->where('group_pk', $group_pk)
+                      ->where('Programme_pk', $course_pk);
+            }
 
             // Apply course filter if provided (only in archive mode)
             if ($archiveMode === 'archive' && $filterCourse) {

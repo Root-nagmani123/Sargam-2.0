@@ -814,15 +814,16 @@
                 <hr class="my-4">
 
                 <div class="row g-4">
-                    <div class="coursehide col-lg-4 col-md-6">
-                        <label for="filter_course" class="form-label-modern">
-                            <i class="bi bi-book-fill text-primary" aria-hidden="true"></i>
-                            <span>Course</span>
+                    {{-- Course Filter - Only show in Archive mode --}}
+                    @if(($archiveMode ?? 'active') === 'archive')
+                    <div class="col-lg-4 col-md-6">
+                        <label for="filter_course" class="form-label fw-semibold">
+                            <i class="bi bi-book me-1 text-primary"></i> Course:
                         </label>
-                         <select class="modern-form-select select2" id="filter_course"
-                            name="filter_course" aria-label="Filter attendance records by course">
-                            <option value="">All Courses</option>
-                            @foreach($archivedCourses as $archivedCourse)
+                        <select class="form-select form-select-lg select2" id="filter_course"
+                            name="filter_course" aria-label="Filter by Course">
+                            <option value="">-- Select Course --</option>
+                                @foreach($archivedCourses as $archivedCourse)
                             <option value="{{ $archivedCourse->pk }}"
                                 {{ $filterCourse == $archivedCourse->pk ? 'selected' : '' }}>
                                 {{ $archivedCourse->course_name }}
@@ -832,33 +833,26 @@
                     </div>
                     @endif
                     
-                    <div class="archive-column col-lg-4 col-md-6">
-                        <label for="filter_date" class="form-label-modern">
-                            <i class="bi bi-calendar-event-fill text-primary" aria-hidden="true"></i>
-                            <span>Date</span>
+                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
+                        <label for="filter_date" class="form-label fw-semibold">
+                            <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
                         </label>
-                        <input type="date" 
-                            class="modern-form-control" 
-                            id="filter_date" 
-                            name="filter_date"
-                            value="{{ $filterDate ?? '' }}" 
-                            max="{{ date('Y-m-d') }}" 
-                            aria-label="Filter attendance records by date"
-                            aria-describedby="date-help">
-                        <small id="date-help" class="form-text text-muted mt-1 d-block">
-                            Select a specific date to view attendance
-                        </small>
+                        <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
+                            value="{{ $filterDate ?? '' }}" aria-label="Filter by Date">
                     </div>
-                    <div class="archive-column col-lg-4 col-md-6">
-                        <label for="filter_session_time" class="form-label-modern">
-                            <i class="bi bi-clock-fill text-primary" aria-hidden="true"></i>
-                            <span>Session Time</span>
+                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
+                        <label for="filter_session_time" class="form-label fw-semibold">
+                            <i class="bi bi-clock-history me-1 text-primary"></i> Session Time:
                         </label>
-                        <select class="modern-form-select select2" 
-                            id="filter_session_time"
-                            name="filter_session_time" 
-                            aria-label="Filter attendance records by session time">
-                            <option value="">All Sessions</option>
+                        <select class="form-select form-select-lg select2" id="filter_session_time"
+                            name="filter_session_time" aria-label="Filter by Session Time">
+                            <option value="">-- Select Session Time --</option>
+                            @foreach($sessions as $session)
+                            <option value="{{ $session->pk }}"
+                                {{ $filterSessionTime == $session->pk ? 'selected' : '' }}>
+                                {{ $session->shift_name }} ({{ $session->start_time }} - {{ $session->end_time }})
+                            </option>
+                            @endforeach
                             @foreach($maunalSessions as $manualSession)
                             <option value="{{ $manualSession->class_session }}"
                                 {{ $filterSessionTime == $manualSession->class_session ? 'selected' : '' }}>
@@ -867,13 +861,12 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-lg-12 d-flex align-items-end gap-3 mt-4 no-print">
-                        <button type="button" 
-                            class="btn btn-modern-outline flex-grow-1" 
-                            id="clearFilters"
-                            aria-label="Clear all filters">
-                            <i class="bi bi-x-circle-fill me-2" aria-hidden="true"></i>
-                            <span>Clear Filters</span>
+                    <div class="col-lg-2 col-md-12 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold btn-lg me-2" id="applyFilters">
+                            <i class="bi bi-search"></i> Apply
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100 btn-lg" id="clearFilters">
+                            <i class="bi bi-x-circle"></i> Clear
                         </button>
                     </div>
                 </div>
@@ -927,7 +920,8 @@
             }
 
             // Re-apply the current archive mode for context
-            archiveModeInput.value = '{{ $archiveMode ?? 'active' }}';
+            archiveModeInput.value = '{{ $archiveMode ?? '
+            active ' }}';
 
             // Submit the form with cleared filters
             form.submit();
@@ -947,23 +941,11 @@
     });
     </script>
 
-    {{-- Enhanced Attendance Details Table --}}
-    <div class="modern-card" role="region" aria-label="Attendance Details Table">
-        <div class="modern-card-header">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <h4 class="mb-0 fw-bold text-white d-flex align-items-center">
-                    <i class="bi bi-table me-2" aria-hidden="true"></i>
-                    <span>Attendance Records</span>
-                </h4>
-                <div class="d-flex gap-2 no-print">
-                    <button type="button" 
-                        class="btn btn-light btn-sm" 
-                        onclick="window.print()"
-                        aria-label="Print attendance records">
-                        <i class="bi bi-printer-fill me-1" aria-hidden="true"></i>
-                        <span>Print</span>
-                    </button>
-                </div>
+    {{-- Attendance Details Table --}}
+    <div class="card shadow">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0 fw-semibold">Attendance Details</h4>
             </div>
         </div>
         <div class="card-body">
@@ -1072,97 +1054,10 @@ $(function() {
             }
         }
         // Reset to active mode
+        setActiveButton($('#filterActive'));
         $('#archive_mode_input').val('active');
         $('#filterForm').submit();
     });
-    
-});
-
-
-$(document).ready(function () {
-    // Initialize state
-    $('.coursehide').hide();
-    $('#filterArchive_active').addClass('bg-primary text-white shadow-sm');
-    
-    // Archive button click handler
-    $('#filterArchive').on('click', function () {
-        let isArchiveActive = $(this).attr('aria-pressed');
-        if(isArchiveActive == 'false'){
-            // Update layout
-            $('.archive-column')
-                .removeClass('col-lg-5')
-                .addClass('col-lg-4');
-            
-            // Update button states
-            $('#filterArchive_active')
-                .removeClass('bg-primary text-white shadow-sm')
-                .attr('aria-pressed', 'false');
-            $(this)
-                .addClass('bg-primary text-white shadow-sm')
-                .attr('aria-pressed', 'true');
-            
-            // Show course filter with animation
-            $('.coursehide').slideDown(300);
-            
-            // Announce to screen readers
-            announceToScreenReader('Switched to archived records view');
-        }
-    });
-    
-    // Active button click handler
-    $('#filterArchive_active').on('click', function () {
-        let isArchiveActive = $(this).attr('aria-pressed');
-        if(isArchiveActive == 'false'){
-            // Update layout
-            $('.archive-column').removeClass('col-lg-4');
-            
-            // Hide course filter with animation
-            $('.coursehide').slideUp(300);
-            
-            // Update button states
-            $('#filterArchive')
-                .removeClass('bg-primary text-white shadow-sm')
-                .attr('aria-pressed', 'false');
-            $(this)
-                .addClass('bg-primary text-white shadow-sm')
-                .attr('aria-pressed', 'true');
-            
-            // Announce to screen readers
-            announceToScreenReader('Switched to active records view');
-        }
-    });
-    
-    // Accessibility: Announce messages to screen readers
-    function announceToScreenReader(message) {
-        let announcement = $('<div>', {
-            'role': 'status',
-            'aria-live': 'polite',
-            'aria-atomic': 'true',
-            'class': 'sr-only position-absolute',
-            'text': message
-        });
-        $('body').append(announcement);
-        setTimeout(function() {
-            announcement.remove();
-        }, 1000);
-    }
-    
-    // Enhance select2 for accessibility
-    if ($.fn.select2) {
-        $('.select2').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            dropdownAutoWidth: true,
-            language: {
-                noResults: function() {
-                    return 'No results found';
-                },
-                searching: function() {
-                    return 'Searching...';
-                }
-            }
-        });
-    }
 });
 </script>
 @endsection
