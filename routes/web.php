@@ -644,7 +644,71 @@ Route::middleware(['auth'])->group(function () {
      return view('admin.feedback.faculty_average');
  })->name('admin.feedback.faculty_average');
 
-  Route::get('/faculty_database', function () {
-     return view('admin.feedback.feedback_database');
- })->name('admin.feedback.feedback_database');
+    //  dashboard page route
+
+    //   Route::get('/active-course', function () { DashboardController:}})->name('admin.dashboard.active_course');
+    Route::get('/active-course', [DashboardController::class, 'active_course'])->name('admin.dashboard.active_course');
+    Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
+    Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
+    Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
+    Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
+
+    Route::get('/upcoming-events', function () {
+        return view('admin.dashboard.upcoming_events');
+    })->name('admin.dashboard.upcoming_events');
+
+    //    Route::get('/guest-faculty', function () {
+    //      return view('admin.dashboard.guest_faculty');
+    //  })->name('admin.dashboard.guest_faculty');
+
+    //    Route::get('/inhouse-faculty', function () {
+    //      return view('admin.dashboard.inhouse_faculty');
+    //  })->name('admin.dashboard.inhouse_faculty');
+    // });
+    //course repository AJAX routes (MUST be before resource route)
+    Route::get('course-repository/subjects', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
+    Route::get('course-repository/topics', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
+    Route::get('course-repository/session-dates', [CourseRepositoryController::class, 'getSessionDateByTopic'])->name('course-repository.session-dates');
+    Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
+    Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
+    Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
+    
+    // Custom routes for document operations
+    Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
+    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
+
+    // Search route
+    Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
+    
+    //course repository resource routes (MUST be after AJAX routes)
+    Route::resource('course-repository', CourseRepositoryController::class, [
+    'parameters' => ['course-repository' => 'pk']
+]);
+
+// User view routes
+Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
+Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');
+Route::get('/course-repository-user/foundation-course/{courseCode}', [CourseRepositoryController::class, 'foundationCourseDetail'])->name('admin.course-repository.user.foundation-course.detail');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-subject-wise', [CourseRepositoryController::class, 'classMaterialSubjectWise'])->name('admin.course-repository.user.class-material-subject-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-week-wise', [CourseRepositoryController::class, 'classMaterialWeekWise'])->name('admin.course-repository.user.class-material-week-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNumber}', [CourseRepositoryController::class, 'weekDetail'])->name('admin.course-repository.user.week-detail');
+Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
+Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
+Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
+
+    // Feedback Database Routes
+    Route::prefix('faculty')->group(function () {
+        Route::get('/database', [FeedbackController::class, 'database'])->name('admin.feedback.database');
+        Route::get('/database/data', [FeedbackController::class, 'getDatabaseData'])->name('admin.feedback.database.data');
+        Route::get('/database/topics', [FeedbackController::class, 'getTopicsForCourse'])->name('admin.feedback.database.topics');
+        Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
+    });
+    Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'])->name('feedback.average');
+    Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
+    Route::get('/faculty_view/suggestions', [FeedbackController::class, 'getFacultySuggestions'])->name('feedback.faculty_suggestions');
+    Route::post('/faculty_view/export', [FeedbackController::class, 'exportFacultyFeedback'])->name('admin.feedback.faculty_view.export');
+    Route::get('/feedback_details', [FeedbackController::class, 'feedbackDetails'])->name('admin.feedback.feedback_details');
+    Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });

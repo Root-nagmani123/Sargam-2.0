@@ -11,7 +11,7 @@
                        class="sidebar-link {{ request()->route('courseCode') == 'FC-' . $i ? 'active' : '' }}"
                        aria-label="View FC-{{ $i }}">
                         <span>FC-{{ $i }}</span>
-                        <i class="material-icons material-symbols-rounded">chevron_right</i>
+                        <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>
             @endfor

@@ -72,7 +72,7 @@
     box-shadow: 2px 0 8px rgba(0, 74, 147, 0.3);
 }
 
-/* Back Button - Enhanced with Modern Interactions & Bootstrap 5.3+ */
+/* Back Button - Enhanced with Modern Interactions */
 .btn-back {
     background: linear-gradient(135deg, var(--breadcrumb-primary-light) 0%, rgba(0, 74, 147, 0.05) 100%);
     color: var(--breadcrumb-primary-color);
@@ -82,21 +82,6 @@
     border: 1px solid rgba(0, 74, 147, 0.1);
     font-size: 0.875rem;
     will-change: transform;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-back::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.btn-back:hover::before {
-    opacity: 1;
 }
 
 .btn-back:hover {
@@ -210,7 +195,7 @@
     transition: all 0.3s ease;
 }
 
-/* Current Page Badge - Enhanced with Bootstrap 5.3+ badge utilities */
+/* Current Page Badge */
 .badge-current-page {
     display: inline-flex;
     align-items: center;
@@ -219,7 +204,7 @@
     font-weight: 600;
     color: var(--breadcrumb-primary-color);
     background: linear-gradient(135deg, rgba(0, 74, 147, 0.12) 0%, rgba(0, 74, 147, 0.08) 100%);
-    border-radius: 0.5rem;
+    border-radius: 10px;
     white-space: nowrap;
     max-width: 220px;
     overflow: hidden;
@@ -234,13 +219,6 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 74, 147, 0.15);
     background: linear-gradient(135deg, var(--breadcrumb-primary-medium) 0%, rgba(0, 74, 147, 0.12) 100%);
-}
-
-/* Enhanced badge styling when using Bootstrap badge classes */
-.badge-current-page.text-bg-primary-subtle {
-    background-color: rgba(0, 74, 147, 0.1) !important;
-    color: var(--breadcrumb-primary-color) !important;
-    border-color: rgba(0, 74, 147, 0.2);
 }
 
 /* Enhanced Mobile Responsiveness */

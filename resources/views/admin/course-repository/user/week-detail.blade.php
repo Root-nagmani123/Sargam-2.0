@@ -19,7 +19,7 @@
                             onclick="window.history.back()" 
                             class="btn-back btn btn-link p-0 text-decoration-none"
                             aria-label="Go back">
-                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
+                        <i class="bi bi-arrow-left fs-4 text-dark"></i>
                     </button>
                     <h1 class="h2 mb-0 fw-bold text-dark">Week-{{ str_pad($weekNumber, 2, '0', STR_PAD_LEFT) }}</h1>
                 </div>
@@ -34,80 +34,50 @@
                 'filters' => $filters,
             ])
 
-            <!-- Tabs -->
-            <ul class="nav nav-tabs mb-3" id="weekTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
-                        Active
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive" type="button" role="tab" aria-controls="archive" aria-selected="false">
-                        Archive
-                    </button>
-                </li>
-            </ul>
-
-            <!-- Tab Content -->
-            <div class="tab-content" id="weekTabContent">
-                <!-- Active Tab -->
-                <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
-                    @if($documents->isEmpty())
-                        <div class="alert alert-info text-center">
-                            <span class="material-icons material-symbols-rounded me-2">info</span>
-                            No documents found for this week.
+            <!-- Documents List -->
+            <div class="documents-list mt-4">
+                @forelse($documents as $document)
+                    <div class="card document-item shadow-sm mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-1 text-center">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-3"></i>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="{{ route('admin.course-repository.user.document-view', $document->pk) }}" 
+                                       class="text-decoration-none fw-semibold text-primary">
+                                        {{ $document->detail_document ?? 'Document ' . $document->pk }}
+                                    </a>
+                                    <p class="text-muted small mb-0 mt-1">
+                                        Last modified {{ $document->modify_date ? $document->modify_date->format('d/m/Y H:i') : 'N/A' }}
+                                    </p>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="#" 
+                                       class="text-decoration-none text-primary small"
+                                       data-bs-toggle="modal" 
+                                       data-bs-target="#pdfDetailsModal"
+                                       data-document-id="{{ $document->pk }}">
+                                        Click here for PDF details
+                                    </a>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    @if($document->videolink)
+                                        <a href="{{ route('admin.course-repository.user.document-video', $document->pk) }}" 
+                                           class="btn btn-sm btn-info">
+                                            Open Video
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
-                    @else
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle">
-                                <thead style="background-color: #dc3545; color: white;">
-                                    <tr>
-                                        <th class="text-center fw-bold">S.No.</th>
-                                        <th class="text-center fw-bold">Course Name</th>
-                                        <th class="text-center fw-bold">Major Subject Name</th>
-                                        <th class="text-center fw-bold">Topic Name</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($documents as $index => $document)
-                                    <tr class="{{ $loop->odd ? 'table-light' : '' }}">
-                                        <td class="text-center">{{ $loop->iteration }}</td>
-                                        <td class="text-center">
-                                            @if($document->detail && $document->detail->course)
-                                                {{ $document->detail->course->course_name }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @if($document->detail && $document->detail->subject)
-                                                {{ $document->detail->subject->subject_name }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @if($document->detail && $document->detail->topic)
-                                                {{ $document->detail->topic->subject_topic }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
-                </div>
-
-                <!-- Archive Tab -->
-                <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
-                    <div class="alert alert-info text-center">
-                        <span class="material-icons material-symbols-rounded me-2">archive</span>
-                        No archived documents found.
                     </div>
-                </div>
+                @empty
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No documents found for this week.
+                    </div>
+                @endforelse
             </div>
         </div>
     </main>

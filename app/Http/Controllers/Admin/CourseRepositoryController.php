@@ -888,36 +888,16 @@ class CourseRepositoryController extends Controller
             $facultyPk = $request->query('faculty');
 
             // Get root repositories (main course categories)
-            $query = CourseRepositoryMaster::where('del_folder_status', 1)
+            $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
                 ->whereNull('parent_type')
-                ->with(['children', 'documents']);
+                ->with(['children', 'documents'])
+                ->orderBy('created_date', 'desc')
+                ->get();
 
             // Apply filters if provided
             if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
-                // Filter repositories that have documents matching the criteria
-                $query->whereHas('documents', function($q) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
-                    $q->where('del_type', 1);
-                    
-                    if ($coursePk || $subjectPk || $date || $facultyPk) {
-                        $q->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
-                            if ($coursePk) {
-                                $detailQuery->where('course_master_pk', $coursePk);
-                            }
-                            if ($subjectPk) {
-                                $detailQuery->where('subject_pk', $subjectPk);
-                            }
-                            if ($date) {
-                                $detailQuery->whereDate('session_date', $date);
-                            }
-                            if ($facultyPk) {
-                                $detailQuery->where('author_name', $facultyPk);
-                            }
-                        });
-                    }
-                });
+                // Filter logic can be added here based on requirements
             }
-            
-            $repositories = $query->orderBy('created_date', 'desc')->get();
 
             // Get dropdown data
             $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
@@ -1206,7 +1186,7 @@ class CourseRepositoryController extends Controller
      * User-facing repository view page
      * GET /course-repository-user/{pk}
      */
-    public function userShow(Request $request, $pk)
+    public function userShow($pk)
     {
         try {
             $repository = CourseRepositoryMaster::with([
@@ -1236,38 +1216,15 @@ class CourseRepositoryController extends Controller
           
             // Get all documents linked through details with course_repository_details_pk
             // Also include documents directly linked to master via course_repository_master_pk
-            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
+            $documents = CourseRepositoryDocument::where('del_type', 1)
                 ->where(function($query) use ($pk) {
                     $query->where('course_repository_master_pk', $pk)
                         ->orWhereIn('course_repository_details_pk', 
                             CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
                         );
-                });
-
-            // Apply filters if provided
-            $date = $request->query('date');
-            $coursePk = $request->query('course');
-            $subjectPk = $request->query('subject');
-            $facultyPk = $request->query('faculty');
-
-            if ($date || $coursePk || $subjectPk || $facultyPk) {
-                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
-                    if ($coursePk) {
-                        $detailQuery->where('course_master_pk', $coursePk);
-                    }
-                    if ($subjectPk) {
-                        $detailQuery->where('subject_pk', $subjectPk);
-                    }
-                    if ($date) {
-                        $detailQuery->whereDate('session_date', $date);
-                    }
-                    if ($facultyPk) {
-                        $detailQuery->where('author_name', $facultyPk);
-                    }
-                });
-            }
-
-            $documents = $documentsQuery->orderBy('pk', 'desc')->get();
+                })
+                ->orderBy('pk', 'desc')
+                ->get();
 
             // Build ancestor chain for breadcrumb
             $ancestors = [];
@@ -1278,8 +1235,8 @@ class CourseRepositoryController extends Controller
             }
 
             // Get dropdown data for filters
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $courses = CourseMaster::where('active_inactive', 1)->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->get();
             $faculties = FacultyMaster::select('pk', 'full_name')
                 ->whereNotNull('full_name')
                 ->orderBy('full_name')
@@ -1293,13 +1250,6 @@ class CourseRepositoryController extends Controller
                 'courses' => $courses,
                 'subjects' => $subjects,
                 'faculties' => $faculties,
-                'filters' => [
-                    'date' => $date,
-                    'course' => $coursePk,
-                    'subject' => $subjectPk,
-                    'week' => $request->query('week'),
-                    'faculty' => $facultyPk,
-                ],
             ]);
         } catch (Exception $e) {
             Log::error('Error in course repository user show: ' . $e->getMessage());

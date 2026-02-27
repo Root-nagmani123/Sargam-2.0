@@ -13,7 +13,7 @@
                     onclick="window.history.back()" 
                     class="btn-back btn btn-link p-0 text-decoration-none"
                     aria-label="Go back">
-                <i class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back_ios</i>
+                <i class="bi bi-arrow-left fs-4 text-dark"></i>
             </button>
             <h1 class="h2 mb-0 fw-bold text-dark">Central Course Repository of LBSNAA</h1>
         </div>
@@ -21,7 +21,7 @@
 
     <!-- Filter Card -->
     <div class="card filter-card shadow-sm mb-4">
-        <div class="card-body p-4" style="background-color: #FBF8F8;">
+        <div class="card-body p-4">
             <form method="GET" action="{{ route('admin.course-repository.user.index') }}" id="filterForm">
                 <div class="row g-3 align-items-end">
                     <!-- Date Filter -->
@@ -34,7 +34,7 @@
                                    name="date" 
                                    value="{{ $filters['date'] ?? '' }}">
                             <span class="input-group-text bg-white">
-                                <span class="material-icons material-symbols-rounded">calendar_today</span>
+                                <i class="bi bi-calendar3"></i>
                             </span>
                         </div>
                     </div>
@@ -111,9 +111,13 @@
                         <div class="card-img-wrapper">
                             @php
                                 $imageUrl = null;
-                                // Check if category has an image
-                                if($repository->category_image && \Storage::disk('public')->exists($repository->category_image)) {
-                                    $imageUrl = asset('storage/' . $repository->category_image);
+                                if($repository->documents && $repository->documents->count() > 0) {
+                                    $firstDoc = $repository->documents->first();
+                                    if($firstDoc && $firstDoc->document_path) {
+                                        $imageUrl = Storage::exists($firstDoc->document_path) 
+                                            ? Storage::url($firstDoc->document_path) 
+                                            : null;
+                                    }
                                 }
                                 // Use placeholder if no image found
                                 if(!$imageUrl) {
@@ -123,10 +127,9 @@
                             <img src="{{ $imageUrl }}" 
                                  alt="{{ $repository->course_repository_name }}"
                                  class="card-img-top"
-                                 loading="lazy"
-                                 onerror="this.src='https://via.placeholder.com/400x200/004a93/ffffff?text={{ urlencode($repository->course_repository_name) }}'">
+                                 loading="lazy">
                         </div>
-                        <div class="card-body d-flex flex-column" style="background-color: #F2F2F2;">
+                        <div class="card-body d-flex flex-column">
                             <h5 class="card-title text-center fw-bold mb-3">{{ $repository->course_repository_name }}</h5>
                             <div class="mt-auto">
                                 @php
@@ -153,7 +156,7 @@
             @empty
                 <div class="col-12">
                     <div class="alert alert-info text-center">
-                        <span class="material-icons material-symbols-rounded me-2">info</span>
+                        <i class="bi bi-info-circle me-2"></i>
                         No course repositories found.
                     </div>
                 </div>

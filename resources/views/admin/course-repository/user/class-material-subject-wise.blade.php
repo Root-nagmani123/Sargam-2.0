@@ -19,7 +19,7 @@
                             onclick="window.history.back()" 
                             class="btn-back btn btn-link p-0 text-decoration-none"
                             aria-label="Go back">
-                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
+                        <i class="bi bi-arrow-left fs-4 text-dark"></i>
                     </button>
                     <h1 class="h2 mb-0 fw-bold text-dark">Class Material (Subject Wise)</h1>
                 </div>
@@ -47,7 +47,7 @@
                                 <div class="card-body">
                                     <div class="d-flex align-items-start gap-3">
                                         <div class="material-icon-wrapper">
-                                            <span class="material-icons material-symbols-rounded">folder</span>
+                                            <i class="bi bi-folder-fill"></i>
                                         </div>
                                         <div class="flex-grow-1">
                                             <h5 class="card-title fw-bold mb-2">{{ $cardTitle }}</h5>
@@ -72,11 +72,11 @@
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="subject-icon-wrapper">
-                                                <span class="material-icons material-symbols-rounded">folder</span>
+                                                <i class="bi bi-folder-fill"></i>
                                             </div>
                                             <span class="fw-semibold">{{ $subject->subject_name }}</span>
                                         </div>
-                                        <span class="material-icons material-symbols-rounded">chevron_right</span>
+                                        <i class="bi bi-chevron-right"></i>
                                     </div>
                                 </div>
                             </div>

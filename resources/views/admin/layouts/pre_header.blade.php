@@ -26,8 +26,6 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
 <!-- Breadcrumb Component CSS -->
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
-<!-- Sidebar Menu Enhanced CSS -->
-<link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:
