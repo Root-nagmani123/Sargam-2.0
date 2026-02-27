@@ -2,6 +2,36 @@
 
 @section('title', 'Course Memo Decision Mapping - Sargam | Lal Bahadur')
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .course-memo-decision-mapping-index .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+        }
+
+        .course-memo-decision-mapping-index .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .course-memo-decision-mapping-index .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .course-memo-decision-mapping-index .choices.is-focused .choices__inner,
+        .course-memo-decision-mapping-index .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
 @section('setup_content')
 <style>
 /* Course Memo Decision Mapping - responsive (mobile/tablet only, desktop unchanged) */
@@ -330,6 +360,7 @@
 
 @endsection
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
     $(function() {
         $('#memoDecisionTable').DataTable({
@@ -389,6 +420,23 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Choices.js on all selects in this page (modals + any filters)
+        if (typeof Choices !== 'undefined') {
+            document.querySelectorAll('.course-memo-decision-mapping-index select').forEach(function (el) {
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                new Choices(el, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!el.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+                });
+
+                el.dataset.choicesInitialized = 'true';
+            });
+        }
 
         // Show modal on button click
         document.getElementById('showConclusionAlert').addEventListener('click', function() {
