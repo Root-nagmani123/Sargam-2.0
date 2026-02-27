@@ -2377,63 +2377,43 @@
                         <div class="carousel-inner">
                             <div class="carousel-item active">
                                 <img src="{{ asset('images/carasoul/1.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 1"
-                                    loading="eager">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/2.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 2"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/3.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 3"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
-                            <div class="carousel-item">
+                            <div class="carousel-item" data-bs-interval="40000">
                                 <img src="{{ asset('images/carasoul/4.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 4"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/5.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 5"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/6.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 6"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/7.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 7"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/8.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 8"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/9.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 9"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
                                 <img src="{{ asset('images/carasoul/10.webp') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" 
-                                    alt="LBSNAA Campus view 10"
-                                    loading="lazy">
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                         </div>
 

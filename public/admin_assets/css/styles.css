@@ -38953,6 +38953,12 @@ fieldset:disabled .btn {
     min-height: calc(100% - 102px);
     min-height: 100vh;
 }
+@media (max-width: 480px) {
+    .body-wrapper {
+        margin-left: 0px;
+        margin-right: 0px;
+    }
+}
 
 .container-fluid,
 .container-lg,

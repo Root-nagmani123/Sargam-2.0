@@ -1004,7 +1004,7 @@ table>thead {
                 </div>
 
                 <!-- Notice Body -->
-                <div class="card-body" style="overflow-y:auto;">
+                <div class="card-body" style="max-height:400px; overflow-y:auto;">
                     @php $notices = get_notice_notification_by_role() @endphp
                     @foreach($notices as $notice)
                     @php //print_r($notice); @endphp
