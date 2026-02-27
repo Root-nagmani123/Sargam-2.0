@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <div class="d-flex flex-column w-100">
+                <div class="d-flex flex-column w-100"> 
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="modal-title h5 mb-0" id="eventDetailsTitle">
                             <span id="eventTitle">Event</span>
@@ -12,7 +12,7 @@
                             aria-label="Close"></button>
                     </div>
                     <div class="mt-2">
-                        <p class="mb-0 small">
+                        <p class="mb-0 small fw-medium text-white">
                             <i class="material-icons me-1" aria-hidden="true">date_range</i><i class="bi bi-calendar me-1" aria-hidden="true"></i>
                             <span id="eventDate"></span>
                         </p>
