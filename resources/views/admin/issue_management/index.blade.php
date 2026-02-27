@@ -157,67 +157,6 @@
                                     </div>
                                 </td>
                             </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Issues DataTable -->
-                <div class="table-responsive">
-                    {!! $dataTable->table() !!}
-                </div>
-
-                <!-- Issues DataTable -->
-              <!-- Issues Table -->
-              <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead>
-                            <tr>
-                                <th class="ps-4">ID</th>
-                                <th>Date</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Priority</th>
-                               
-                                <th>Status</th>
-                                <th class="text-end pe-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($issues as $issue)
-                            <tr>
-                                <td class="ps-4 fw-medium text-body-secondary">#{{ $issue->pk }}</td>
-                                <td><span class="text-body-secondary">{{ $issue->created_date->format('d M Y') }}</span></td>
-                                <td>{{ $issue->category->issue_category ?? '—' }}</td>
-                                <td class="text-break" style="max-width: 220px;">{{ Str::limit($issue->description, 50) }}</td>
-                                <td>
-                                    @php
-                                        $p = $issue->priority->priority ?? 'N/A';
-                                        $priorityClass = $p == 'High' ? 'danger' : ($p == 'Medium' ? 'warning' : 'info');
-                                    @endphp
-                                    <span class="badge badge-pill bg-{{ $priorityClass }} {{ $priorityClass == 'warning' ? 'text-dark' : '' }}">{{ $p }}</span>
-                                </td>
-                               
-                                <td>
-                                    @php
-                                        $s = (int) $issue->issue_status;
-                                        $statusClass = $s == 2 ? 'success' : ($s == 1 ? 'info' : ($s == 6 ? 'warning' : 'secondary'));
-                                    @endphp
-                                    <span class="badge badge-pill bg-{{ $statusClass }} {{ $statusClass == 'warning' ? 'text-dark' : '' }}">{{ $issue->status_label }}</span>
-                                </td>
-                                <td class="pe-4">
-                                    <div class="d-flex justify-content-end gap-1">
-                                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-action btn-info btn-sm" title="View">
-                                            <iconify-icon icon="solar:eye-bold"></iconify-icon>
-                                        </a>
-                                        @if($issue->issue_logger == Auth::user()->user_id || $issue->created_by == Auth::user()->user_id)
-                                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning btn-sm" title="Edit">
-                                            <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                                        </a>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
                             @empty
                             <tr>
                                 <td colspan="8" class="p-0">
