@@ -30,19 +30,29 @@
         /* Used for main branding and primary action */
         --primary-blue-light: #e0eafc;
         /* Light background pattern */
+        --primary-blue-dark: #003366;
         --text-primary: #212529;
         --text-secondary: #6c757d;
         --accent-orange: #ff6b35;
         /* High-contrast focus/accessibility */
         --border-color: #dee2e6;
+        --success-color: #28a745;
+        --error-color: #dc3545;
+        --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
 
     body {
         font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
         line-height: 1.6;
         color: var(--text-primary);
-        background-color: #ffffff;
-        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fb 0%, #ffffff 100%);
+        min-height: calc(100% - 56px);
         display: flex;
         flex-direction: column;
     }
@@ -54,11 +64,13 @@
         left: 0;
         background: #000;
         color: white;
-        padding: 8px 16px;
+        padding: 12px 16px;
         text-decoration: none;
         border-radius: 0 0 4px 0;
         z-index: 9999;
         transition: top 0.3s;
+        font-weight: 500;
+        font-size: 14px;
     }
 
     .skip-to-content:focus {
@@ -67,6 +79,7 @@
         outline-offset: 2px;
     }
 
+    /* Enhanced Focus States - GIGW Compliant */
     a:focus,
     button:focus,
     input:focus,
@@ -74,41 +87,46 @@
     .dropdown-toggle:focus {
         outline: 3px solid var(--accent-orange) !important;
         outline-offset: 2px !important;
-        box-shadow: none !important;
+        box-shadow: 0 0 0 1px var(--primary-blue) !important;
     }
 
-    /* GIGW Top Header Bar (Blue) */
+    /* GIGW Top Header Bar (Blue) - Enhanced */
     .gigw-header-top {
-        background-color: var(--primary-blue);
+        background: linear-gradient(90deg, var(--primary-blue) 0%, #003d7a 100%);
         color: white;
-        padding: 4px 0;
+        padding: 6px 0;
         font-size: 13px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .gigw-header-top a {
         color: white;
         text-decoration: none;
-        padding: 4px 8px;
-        margin-inline-end: 4px;
-        transition: background-color 0.2s;
+        padding: 6px 10px;
+        margin-inline-end: 6px;
+        transition: var(--transition-smooth);
+        border-radius: 3px;
     }
 
-    .gigw-header-top a:hover {
-        background-color: rgba(255, 255, 255, 0.2);
+    .gigw-header-top a:hover,
+    .gigw-header-top a:focus {
+        background-color: rgba(255, 255, 255, 0.25);
     }
 
-    /* Main Header (Logo Bar) */
+    /* Main Header (Logo Bar) - Modern Design */
     .main-header-nav {
         background: white;
         border-bottom: 1px solid var(--border-color);
-        padding: 10px 0;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        padding: 12px 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        backdrop-filter: blur(10px);
+        background-color: rgba(255, 255, 255, 0.98);
     }
 
     .logo-text {
         color: #333;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
         line-height: 1.3;
     }
 
@@ -123,34 +141,70 @@
         color: var(--text-primary) !important;
         font-size: 15px;
         font-weight: 500;
+        transition: var(--transition-smooth);
+        position: relative;
     }
 
-    /* GIGW Font Size Adjusters */
+    .header-nav-link:hover {
+        color: var(--primary-blue) !important;
+    }
+
+    .header-nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: var(--primary-blue);
+        transition: width 0.3s ease;
+    }
+
+    .header-nav-link:hover::after {
+        width: 100%;
+    }
+
+    /* GIGW Font Size Adjusters - Enhanced */
     .font-size-adjuster .btn {
         font-weight: 700;
         font-size: 14px;
-        padding: 4px 8px;
-        border: 1px solid var(--border-color);
+        padding: 6px 10px;
+        border: 1.5px solid var(--border-color);
         color: var(--text-primary);
+        background: white;
+        transition: var(--transition-smooth);
     }
 
     .font-size-adjuster .btn:hover {
         background-color: #f0f0f0;
+        border-color: var(--primary-blue);
+    }
+
+    .font-size-adjuster .btn:active {
+        background: var(--primary-blue);
+        color: white;
     }
 
     .login-btn-header {
-        background-color: var(--primary-blue);
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
         color: white;
         font-weight: 600;
-        padding: 8px 20px;
-        border-radius: 4px;
+        padding: 10px 24px;
+        border-radius: 6px;
         text-decoration: none;
-        transition: background-color 0.2s;
+        transition: var(--transition-smooth);
+        display: inline-block;
+        box-shadow: 0 2px 8px rgba(0, 74, 147, 0.2);
     }
 
     .login-btn-header:hover {
-        background-color: #003366;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 74, 147, 0.3);
         color: white;
+    }
+
+    .login-btn-header:active {
+        transform: translateY(0);
     }
 
     /* Main Content & Background Pattern */
@@ -159,219 +213,430 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 20px;
     }
 
-    /* Login Card - Replicating the Image Style */
+    /* Login Card - Modern Glassmorphism & Enhanced Design */
     .login-card-image {
         background: white;
-        border: 1px solid #ddd;
-        /* Subtle border */
-        border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 74, 147, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         max-width: 480px;
         width: 100%;
-        padding: 30px;
+        padding: 40px;
         text-align: center;
+        transition: var(--transition-smooth);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .login-card-image::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-blue) 0%, var(--accent-orange) 100%);
+    }
+
+    .login-card-image:hover {
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
     }
 
     .login-card-image h2 {
         color: var(--primary-blue);
-        font-weight: 600;
-        font-size: 24px;
+        font-weight: 700;
+        font-size: 28px;
         margin-bottom: 8px;
+        letter-spacing: -0.5px;
     }
 
     .login-card-image p {
         color: var(--text-secondary);
         font-size: 15px;
-        margin-bottom: 24px;
+        margin-bottom: 28px;
+        line-height: 1.5;
     }
 
+    /* Form Controls - Modern Styling */
     .form-label {
         display: block;
         text-align: left;
-        margin-bottom: 4px;
-        font-weight: 500;
+        margin-bottom: 6px;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 14px;
+        transition: color 0.2s;
+    }
+
+    .form-label i {
+        color: var(--primary-blue);
+        margin-right: 6px;
     }
 
     .form-control {
-        padding: 12px;
-        border-radius: 4px;
-    }
-
-    .password-toggle-btn {
-        background-color: white;
-        border: 1px solid var(--border-color);
-        border-left: none;
-        border-radius: 0 4px 4px 0;
-        color: var(--text-secondary);
-        padding: 0 12px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    .password-toggle-btn:hover {
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1.5px solid var(--border-color);
+        font-size: 15px;
+        transition: var(--transition-smooth);
         background-color: #f8f9fa;
     }
 
-    .login-button {
-        background-color: var(--primary-blue);
+    .form-control:focus {
+        background-color: white;
         border-color: var(--primary-blue);
-        font-weight: 600;
-        padding: 10px 0;
-        transition: background-color 0.2s;
-        margin-top: 20px;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1) !important;
+    }
+
+    .form-control::placeholder {
+        color: #adb5bd;
+        font-size: 14px;
+    }
+
+    .input-group .form-control {
+        border-right: none;
+    }
+
+    .password-toggle-btn {
+        background-color: #f8f9fa;
+        border: 1.5px solid var(--border-color);
+        border-left: none;
+        border-radius: 0 8px 8px 0;
+        color: var(--text-secondary);
+        padding: 0 14px;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        font-size: 18px;
+    }
+
+    .password-toggle-btn:hover {
+        background-color: white;
+        color: var(--primary-blue);
+    }
+
+    .password-toggle-btn:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
+    }
+
+    /* Login Button - Modern with Gradient & Animation */
+    .login-button {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+        border-color: transparent;
+        border: none;
+        color: white;
+        font-weight: 700;
+        padding: 12px 0;
+        transition: var(--transition-smooth);
+        margin-top: 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 15px rgba(0, 74, 147, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .login-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .login-button:hover::before {
+        left: 100%;
     }
 
     .login-button:hover {
-        background-color: #003366;
-        border-color: #003366;
+        background: linear-gradient(135deg, var(--primary-blue-dark) 0%, #002a5a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 74, 147, 0.3);
     }
 
-    /* GIGW Footer */
+    .login-button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 10px rgba(0, 74, 147, 0.2);
+    }
+
+    .login-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* GIGW Footer - Enhanced */
     .gigw-footer {
-        background-color: #004a93;
-        color: #ddd;
-        padding: 10px 0;
+        background: linear-gradient(90deg, var(--primary-blue) 0%, #003d7a 100%);
+        color: #e0e0e0;
+        padding: 16px 0;
         font-size: 13px;
         text-align: center;
+        margin-top: auto;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
     }
 
     .gigw-footer a {
-        color: #ddd;
+        color: #fff;
         text-decoration: none;
-        margin-left: 15px;
+        margin-left: 12px;
+        transition: var(--transition-smooth);
+        font-weight: 500;
     }
 
-    .gigw-footer a:hover {
-        color: white;
+    .gigw-footer a:hover,
+    .gigw-footer a:focus {
+        color: var(--accent-orange);
         text-decoration: underline;
     }
 
-    /* Language Dropdown Adjustment */
+    .gigw-footer span {
+        display: inline-block;
+        line-height: 1.6;
+    }
+
+    /* Language Dropdown Adjustment - Enhanced */
     .language-dropdown .btn {
         color: var(--text-primary);
-        border: 1px solid var(--border-color);
+        border: 1.5px solid var(--border-color);
+        background: white;
+        transition: var(--transition-smooth);
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    .language-dropdown .btn:hover {
+        border-color: var(--primary-blue);
+        background: #f8f9fa;
     }
 
     .language-dropdown .btn:focus {
-        box-shadow: none !important;
+        border-color: var(--primary-blue) !important;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1) !important;
+    }
+
+    /* Additional Modern Form Enhancements */
+    .form-check-input {
+        width: 20px;
+        height: 20px;
+        margin-top: 2px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-blue);
+        border-color: var(--primary-blue);
+    }
+
+    .form-check-input:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1) !important;
+    }
+
+    .form-check-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .form-check-label i {
+        margin-right: 6px;
+        color: var(--primary-blue);
+        font-size: 14px;
+    }
+
+    .form-text {
+        font-size: 13px;
+        margin-top: 6px;
+        color: var(--text-secondary);
+    }
+
+    /* Security Badge */
+    .security-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: var(--success-color);
+        font-weight: 500;
+        font-size: 13px;
+        margin-top: 16px;
+        padding: 8px 12px;
+        background: rgba(40, 167, 69, 0.08);
+        border-radius: 6px;
+    }
+
+    .security-badge i {
+        font-size: 16px;
     }
 
     @media (max-width: 991.98px) {
         .main-header-nav .navbar-collapse {
             text-align: center;
             border-top: 1px solid var(--border-color);
-            margin-top: 10px;
-            padding-top: 10px;
+            margin-top: 12px;
+            padding-top: 12px;
+        }
+
+        .login-card-enhanced {
+            padding: 24px 20px;
         }
     }
 
-    /* --- GIGW-Based Styling for Login Card ---
-    (Assuming parent body/wrapper styles define:
-     --primary-blue: #004a93;
-     --accent-orange: #ff6b35; for focus) 
-    */
-
+    /* --- Modern Enhanced Login Card ---*/
     .login-card-enhanced {
         border-radius: 12px;
-        /* Smoother corners */
         width: 100%;
-        padding: 30px 40px;
-        /* More padding */
+        padding: 40px;
         text-align: left;
-        /* Align text left for form readability */
-        min-height: 100%;
+        position: relative;
+        overflow: hidden;
+        background: white;
+        border: 1px solid rgba(0, 74, 147, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        animation: slideInUp 0.5s ease-out;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .login-card-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-blue) 0%, var(--accent-orange) 100%);
     }
 
     .login-card-enhanced h2 {
         color: var(--primary-blue);
         font-weight: 700;
         font-size: 28px;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
         text-align: center;
+        letter-spacing: -0.5px;
     }
 
     .login-card-enhanced p {
         color: #6c757d;
         font-size: 15px;
-        margin-bottom: 30px;
+        margin-bottom: 28px;
         text-align: center;
+        line-height: 1.5;
     }
 
-    /* GIGW: Focus outline is crucial */
+    /* Form Control Focus Styles - GIGW Compliant */
     .form-control:focus,
     .btn:focus,
     .form-check-input:focus,
     a:focus {
         border-color: var(--primary-blue) !important;
-        box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.5) !important;
-        /* Using accent-orange for high-visibility focus ring */
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.15) !important;
         outline: none;
     }
 
-    .form-label {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
-    }
-
-    .form-label i {
-        margin-right: 8px;
-        color: var(--primary-blue);
-    }
-
-    .required-indicator {
-        color: red;
-        margin-left: 4px;
-        font-weight: 400;
-    }
-
+    /* Input Group Text */
     .input-group-text {
         background-color: #f8f9fa;
         border-left: none;
         cursor: pointer;
-        color: #6c757d;
-        border-radius: 0 6px 6px 0;
+        color: var(--text-secondary);
+        border-radius: 0 8px 8px 0;
+        transition: var(--transition-smooth);
+        border: 1.5px solid var(--border-color);
+        border-left: none;
     }
 
     .input-group-text:hover {
-        background-color: #e9ecef;
+        background-color: white;
+        color: var(--primary-blue);
     }
 
+    /* Enhanced Button Styles */
     .login-button-enhanced {
-        background-color: var(--primary-blue);
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
         border: none;
         font-weight: 700;
         padding: 12px;
-        border-radius: 6px;
-        transition: background-color 0.2s, transform 0.2s;
+        border-radius: 8px;
+        transition: var(--transition-smooth);
+        color: white;
+        font-size: 16px;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 15px rgba(0, 74, 147, 0.2);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .login-button-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .login-button-enhanced:hover::before {
+        left: 100%;
     }
 
     .login-button-enhanced:hover {
-        background-color: #003366;
-        /* Darker blue on hover */
-        transform: translateY(-1px);
+        background: linear-gradient(135deg, var(--primary-blue-dark) 0%, #002a5a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 74, 147, 0.3);
     }
 
+    .login-button-enhanced:active {
+        transform: translateY(0);
+    }
+
+    /* Forgot Password Link */
     .forgot-password-link {
         color: var(--primary-blue) !important;
         text-decoration: none;
         font-weight: 500;
         font-size: 14px;
+        transition: var(--transition-smooth);
     }
 
-    .forgot-password-link:hover {
+    .forgot-password-link:hover,
+    .forgot-password-link:focus {
+        color: var(--primary-blue-dark) !important;
         text-decoration: underline;
     }
 
-    /* Login Carousel enhancements */
+    /* Carousel Enhancements */
     #carouselExampleFade,
     #carouselExampleFade .carousel-inner,
     #carouselExampleFade .carousel-item {
-        height: 100vh !important;
+        height: calc(100% - 56px) !important;
     }
 
     #carouselExampleFade .carousel-item img {
@@ -384,50 +649,80 @@
         object-fit: cover;
         width: 100%;
         height: 100vh !important;
+        animation: zoomIn 0.5s ease-out;
     }
 
-    /* --------- RESPONSIVE TWEAKS --------- */
+    @keyframes zoomIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    /* Carousel Controls - GIGW Accessible */
+    .carousel-control-prev,
+    .carousel-control-next {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition-smooth);
+    }
+
+    .carousel-control-prev:hover,
+    .carousel-control-next:hover {
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .carousel-control-prev-icon,
+    .carousel-control-next-icon {
+        filter: brightness(1.2);
+    }
+
+    /* Responsive Design - Tablet & Mobile */
     @media (max-width: 991.98px) {
-        /* Stack content nicely on tablets & mobiles */
         .login-page-wrapper {
-            align-items: flex-start;
-            padding: 24px 16px;
+            padding: 16px;
         }
 
-        .login-card-enhanced {
-            padding: 24px 20px;
-            margin: 16px 0 32px;
-            min-height: auto;
-        }
-
-        /* Header logos wrap better */
         .main-header-nav .navbar-brand {
             flex-wrap: wrap;
-        }
-
-        /* Avoid overly tall carousel on medium devices
-           (note: carousel is already hidden < lg via d-none d-lg-block) */
-        #carouselExampleFade,
-        #carouselExampleFade .carousel-inner,
-        #carouselExampleFade .carousel-item,
-        .carasoul-image {
-            height: 70vh !important;
         }
     }
 
     @media (max-width: 575.98px) {
-        /* Extra-small phones */
+        .login-card-enhanced {
+            padding: 24px 16px;
+            border-radius: 8px;
+        }
+
         .login-card-enhanced h2 {
-            font-size: 22px;
+            font-size: 24px;
         }
 
         .login-card-enhanced p {
             font-size: 14px;
         }
 
-        .top-header span,
-        .gigw-footer span {
-            font-size: 12px;
+        .form-label {
+            font-size: 13px;
+        }
+
+        .form-control {
+            font-size: 14px;
+            padding: 10px 12px;
+        }
+
+        .login-button-enhanced {
+            padding: 10px;
+            font-size: 15px;
         }
 
         /* Center Government of India + Ashoka emblem + LBSNAA text on small screens */
@@ -444,6 +739,11 @@
 
         .main-header-nav .navbar-brand .lh-sm {
             text-align: center;
+        }
+
+        .top-header span,
+        .gigw-footer span {
+            font-size: 12px;
         }
     }
     </style>
@@ -508,18 +808,28 @@
 
                         <!-- Right: LBSNAA Logo -->
                         <div class="d-flex justify-content-end align-items-center">
-                            <a href="{{ route('login') }}" class="d-flex align-items-center text-decoration-none"
+                            <a href="{{ route('login') }}"
+                                class="brand-link d-flex align-items-center gap-3 text-decoration-none"
                                 aria-label="Login to LBSNAA Portal">
 
                                 <!-- Light Mode Logo -->
-                                <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo"
-                                    class="img-fluid d-none d-dark-none d-lg-block" width="240">
+                                <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png"
+                                    alt="Lal Bahadur Shastri National Academy of Administration"
+                                    class="brand-logo img-fluid d-none d-lg-block d-dark-none" width="230"
+                                    height="auto">
 
                                 <!-- Dark Mode Logo -->
-                                <img src="{{ asset('admin_assets/images/logos/logo.svg') }}"
-                                    alt="LBSNAA Logo - Dark Mode" class="img-fluid" width="240">
+                                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/1200px-Digital_India_logo.svg.png"
+                                    alt="LBSNAA Portal – Dark Mode"
+                                    class="brand-logo img-fluid d-none d-lg-block d-dark-block" width="150"
+                                    height="auto">
+
+                                <!-- Mobile Fallback Logo -->
+                                <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA"
+                                    class="brand-logo img-fluid d-lg-none" width="160" height="auto">
                             </a>
                         </div>
+
 
                     </div>
                 </nav>
@@ -530,6 +840,8 @@
                 <div class="col-lg-4 col-12 d-flex align-items-center justify-content-center bg-light">
                     <main class="login-page-wrapper flex-grow-1">
                         <div class="login-card-enhanced">
+                            <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="LBSNAA Logo - Dark Mode"
+                                class="img-fluid" style="width: 550px;">
                             <h2 id="login-form-start" tabindex="-1">Welcome Back</h2>
                             <p>Sign in to your account for application and status services.</p>
                             <form action="{{route('post_login')}}" method="POST" novalidate>
@@ -663,21 +975,163 @@
 
 
         <script>
-        // UX Script: Password visibility toggle
-        document.getElementById('togglePassword')?.addEventListener('click', function() {
+        // ===== Modern Enhanced UX Scripts =====
+        
+        // Password Visibility Toggle with Smooth Interaction
+        (function() {
+            const toggleButton = document.getElementById('togglePassword');
             const passwordInput = document.getElementById('passwordInput');
-            const icon = this.querySelector('i');
 
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.replace('fa-eye', 'fa-eye-slash');
-                this.setAttribute('aria-label', 'Hide password');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.replace('fa-eye-slash', 'fa-eye');
-                this.setAttribute('aria-label', 'Show password');
+            if (toggleButton && passwordInput) {
+                toggleButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const isPassword = passwordInput.type === 'password';
+                    passwordInput.type = isPassword ? 'text' : 'password';
+                    const icon = this.querySelector('i');
+                    
+                    // Smooth icon animation
+                    icon.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        icon.classList.toggle('fa-eye', !isPassword);
+                        icon.classList.toggle('fa-eye-slash', isPassword);
+                        icon.style.transform = 'scale(1)';
+                    }, 150);
+                    
+                    this.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+                    passwordInput.focus();
+                });
             }
-        });
+        })();
+
+        // Form Validation Enhancement
+        (function() {
+            const form = document.querySelector('form[action*="post_login"]');
+            if (!form) return;
+
+            form.addEventListener('submit', function(e) {
+                const username = document.getElementById('usernameInput');
+                const password = document.getElementById('passwordInput');
+                let isValid = true;
+
+                // Clear previous errors
+                [username, password].forEach(field => {
+                    field.classList.remove('is-invalid');
+                    field.classList.remove('is-valid');
+                });
+
+                // Validation
+                if (!username.value.trim()) {
+                    username.classList.add('is-invalid');
+                    username.focus();
+                    isValid = false;
+                } else {
+                    username.classList.add('is-valid');
+                }
+
+                if (!password.value) {
+                    password.classList.add('is-invalid');
+                    if (isValid) password.focus();
+                    isValid = false;
+                } else {
+                    password.classList.add('is-valid');
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    return;
+                }
+
+                // Set fresh login flag
+                sessionStorage.setItem('fresh_login', 'true');
+            });
+
+            // Real-time validation feedback
+            const username = document.getElementById('usernameInput');
+            const password = document.getElementById('passwordInput');
+
+            [username, password].forEach(field => {
+                field.addEventListener('input', function() {
+                    if (this.value.trim()) {
+                        this.classList.add('is-valid');
+                        this.classList.remove('is-invalid');
+                    } else {
+                        this.classList.remove('is-valid');
+                        this.classList.remove('is-invalid');
+                    }
+                });
+
+                field.addEventListener('blur', function() {
+                    if (!this.value.trim() && this.hasAttribute('required')) {
+                        this.classList.add('is-invalid');
+                    }
+                });
+            });
+        })();
+
+        // Login Button Loading State
+        (function() {
+            const loginBtn = document.querySelector('.login-button-enhanced');
+            const form = document.querySelector('form[action*="post_login"]');
+
+            if (loginBtn && form) {
+                form.addEventListener('submit', function() {
+                    loginBtn.disabled = true;
+                    loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Signing in...';
+                });
+            }
+        })();
+
+        // Keyboard Navigation Enhancement (Tab through form)
+        (function() {
+            const form = document.querySelector('form[action*="post_login"]');
+            if (!form) return;
+
+            form.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target !== document.querySelector('.login-button-enhanced')) {
+                    // Allow default form submission on Enter
+                    if (e.target.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        form.submit();
+                    }
+                }
+            });
+        })();
+
+        // Accessibility: Announce focus state
+        (function() {
+            const inputs = document.querySelectorAll('.form-control, .form-check-input, .btn');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    // Visual feedback is provided by CSS, this ensures screen readers know
+                    this.setAttribute('aria-focus', 'true');
+                });
+                input.addEventListener('blur', function() {
+                    this.removeAttribute('aria-focus');
+                });
+            });
+        })();
+
+        // Add CSS for form validation states if not present
+        (function() {
+            const styles = `
+                .form-control.is-valid {
+                    border-color: #28a745;
+                    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+                }
+                .form-control.is-invalid {
+                    border-color: #dc3545;
+                    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+                }
+                .spinner-border-sm {
+                    width: 1rem;
+                    height: 1rem;
+                    border-width: 0.2em;
+                }
+            `;
+            const style = document.createElement('style');
+            style.textContent = styles;
+            document.head.appendChild(style);
+        })();
         </script>
 
         <footer class="gigw-footer mt-auto">
@@ -694,76 +1148,54 @@
             </div>
         </footer>
     </div>
-    <div id="main-wrapper">
-        <div class="position-relative overflow-hidden auth-bg min-vh-100 w-100 d-flex align-items-center justify-content-center"
-            style="background-image: url(https://alumni.lbsnaa.gov.in/user_assets/images/login/login-bg.webp);">
-            <div class="d-flex align-items-center justify-content-center w-100">
-                <div class="row justify-content-center w-100 my-5 my-xl-0">
-                    <div class="col-md-4 d-flex flex-column justify-content-center">
-                        <div class="card mb-0 bg-body auth-login m-auto w-100">
-                            <div class="row justify-content-center py-4">
-                                <div class="col-lg-11">
-                                    <div class="card-body">
-                                        <a href="{{ route('login') }}" class="text-nowrap logo-img d-block mb-4 w-100">
-                                            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" class="dark-logo"
-                                                alt="Logo" width="180"> | 
-                                            <img src="{{asset('admin_assets/images/logos/logo.svg')}}" class="dark-logo"
-                                                alt="Logo-Dark">
-                                        </a>
-                                        <h2 class="lh-base mb-4">Let's get you signed in</h2>
-                                        @if(session('error'))
-                                        <div class="alert alert-danger">
-                                            {{ session('error') }}
-                                        </div>
-                                        @endif
-                                        <form action="{{route('post_login')}}" method="POST">
-                                            @csrf
-                                            <div class="mb-3">
-                                                <label for="Username" class="form-label">Username</label>
-                                                <input type="text" class="form-control" id="Username"
-                                                    placeholder="Enter your username" name="username"
-                                                    autocomplete="username">
-                                            </div>
-                                            <div class="mb-4">
-                                                <div class="d-flex align-items-center justify-content-between">
-                                                    <label for="exampleInputPassword1"
-                                                        class="form-label">Password</label>
-                                                    <a class="text-primary link-dark fs-2" href="#">Forgot
-                                                        Password ?</a>
-                                                </div>
-                                                <input type="password" class="form-control" id="exampleInputPassword1"
-                                                    placeholder="Enter your password" name="password">
-                                            </div>
-                                            <div class="d-flex align-items-center justify-content-between mb-4">
-                                                <div class="form-check">
-                                                    <input class="form-check-input primary" type="checkbox" value=""
-                                                        id="flexCheckChecked" checked="">
-                                                    <label class="form-check-label text-dark" for="flexCheckChecked">
-                                                        Keep me logged in
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <button type="submit" class="btn btn-dark w-100 py-8 mb-4 rounded-1">Sign
-                                                In</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="dark-transparent sidebartoggler"></div>
-    <!-- Import Js Files -->
-    <script src="{{asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js')}}"></script>
-    <script src="{{asset('admin_assets/libs/simplebar/dist/simplebar.min.js')}}"></script>
-    <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
-    <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
-    <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
-    <!-- solar icons -->
-    <script src="{{asset('admin_assets/css/iconify-icon.min.js')}}"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous">
+    </script>
+
+    <script>
+    // Ensure Bootstrap is present; if CDN fails, load local fallback and then init carousel
+    (function() {
+        function initCarousel() {
+            var el = document.getElementById('carouselExampleFade');
+            if (!el || !(window.bootstrap && bootstrap.Carousel)) return;
+            try {
+                var carousel = bootstrap.Carousel.getOrCreateInstance(el, {
+                    interval: 5000,
+                    ride: 'carousel',
+                    pause: 'hover',
+                    touch: true,
+                    keyboard: true,
+                    wrap: true
+                });
+                // Lazy-load images except first
+                var imgs = el.querySelectorAll('.carousel-item img');
+                imgs.forEach(function(img, idx) {
+                    if (idx > 0) img.setAttribute('loading', 'lazy');
+                    img.setAttribute('decoding', 'async');
+                });
+            } catch (e) {
+                /* swallow */
+            }
+        }
+
+        function ensureBootstrap(cb) {
+            if (window.bootstrap && bootstrap.Carousel) {
+                cb();
+                return;
+            }
+            var s = document.createElement('script');
+            s.src = "{{ asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}";
+            s.async = true;
+            s.onload = cb;
+            document.head.appendChild(s);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            ensureBootstrap(initCarousel);
+        });
+    })();
+    </script>
 </body>
 
 </html>
