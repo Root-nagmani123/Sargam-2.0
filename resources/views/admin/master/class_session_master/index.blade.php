@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Class Session Master" />
+<x-breadcrum title="Class Session Master" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -32,7 +32,7 @@
                     <hr>
                     <div class="table-responsive">
                         <table class="table w-100 nowrap">
-                            <thead>
+                            <thead class="table-light">
                                 <!-- start row -->
                                 <tr>
                                     <th class="col">S.No.</th>

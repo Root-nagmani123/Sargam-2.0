@@ -1,14 +1,22 @@
-<nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-setup-mini-4" data-simplebar="init">
-    <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
-        <div class="simplebar-height-auto-observer-wrapper">
-            <div class="simplebar-height-auto-observer"></div>
+<nav class="sidebar-nav" id="menu-right-setup-mini-4">
+    <div style="display: flex; flex-direction: column; height: 100%;">
+        <!-- Profile (Fixed) -->
+        <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
+            @include('components.profile')
         </div>
-        <div class="simplebar-mask">
-            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
-                <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
-                    style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 20px 24px;">
-                        <ul class="sidebar-menu" id="sidebarnav">
+        
+        <!-- Menu Items (Scrollable) -->
+        <div class="simplebar-scrollable-y" data-simplebar="init" style="flex: 1; overflow: hidden;">
+            <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
+                <div class="simplebar-height-auto-observer-wrapper">
+                    <div class="simplebar-height-auto-observer"></div>
+                </div>
+                <div class="simplebar-mask">
+                    <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                        <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
+                            style="height: 100%; overflow: hidden scroll;">
+                            <div class="simplebar-content" style="padding: 20px 0px 20px 24px;">
+                                <ul class="sidebar-menu" id="sidebarnav">
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
@@ -248,18 +256,20 @@
                                 </a></li>
                                 </ul>
                             @endif
-                        </ul>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                <div class="simplebar-placeholder" style="width: 240px; height: 864px;"></div>
             </div>
-        </div>
-        <div class="simplebar-placeholder" style="width: 240px; height: 864px;"></div>
-    </div>
-    <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
-        <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
-    </div>
-    <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
-        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
+            <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
+                <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
+            </div>
+            <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
+                <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
+                </div>
+            </div>
         </div>
     </div>
 </nav>
