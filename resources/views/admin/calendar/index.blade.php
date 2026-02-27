@@ -2,7 +2,15 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+@section('content')
+
+@php
+    // Debug: Check if courseMaster is available
+    if (!isset($courseMaster) || $courseMaster->isEmpty()) {
+        \Log::error('Calendar view: courseMaster is empty or not set');
+    }
+@endphp
+
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <style>
         :root {
