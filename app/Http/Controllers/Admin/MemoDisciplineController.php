@@ -37,14 +37,13 @@ class MemoDisciplineController extends Controller
     $programNameFilter = $request->program_name;
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
+    $fromDateFilter    = $request->get('from_date');
+    $toDateFilter      = $request->get('to_date');
 
-    // First load (no date params in URL) = show today's data; Clear Filters (empty date params) = show all data
-    if (!$request->has('from_date') && !$request->has('to_date')) {
+    // Default today date
+    if (!$fromDateFilter && !$toDateFilter) {
         $fromDateFilter = Carbon::today()->toDateString();
         $toDateFilter   = Carbon::today()->toDateString();
-    } else {
-        $fromDateFilter = $request->get('from_date') ?: null;
-        $toDateFilter   = $request->get('to_date') ?: null;
     }
 
     $memos = MemoDiscipline::with([
@@ -100,11 +99,13 @@ class MemoDisciplineController extends Controller
     {
         $activeCourses = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now())
-            ->select('pk', 'course_name')
-            ->orderBy('course_name')
             ->get();
 
-        return view('admin.memo_discipline.create', compact('activeCourses'));
+            $disciplines = DisciplineMaster::where('active_inactive', 1)
+                ->get();
+              
+
+        return view('admin.memo_discipline.create', compact('activeCourses', 'disciplines'));
     }
     function getStudentByCourse(Request $request){
         try {
@@ -181,22 +182,20 @@ class MemoDisciplineController extends Controller
     }
     function getMarkDeduction(Request $request){
         $discipline_master_pk = $request->discipline_master_pk;
+        $course_id = $request->course_id;
 
-        if (!$discipline_master_pk) {
-            return response()->json(['success' => false, 'message' => 'Discipline is required.', 'mark_deduction' => null]);
+        if (!$discipline_master_pk && !$course_id) {
+            return response()->json('Discipline and Course are required.');
         }
 
-        // Fetch by primary key only so the selected discipline's mark is always returned
-        $discipline = DisciplineMaster::find($discipline_master_pk);
+        $discipline = DisciplineMaster::find($discipline_master_pk)->where('course_master_pk', $course_id)->where('active_inactive', 1)->first();
 
-        if (!$discipline || $discipline->active_inactive != 1) {
-            return response()->json(['success' => false, 'message' => 'Discipline not found.', 'mark_deduction' => null]);
+        if (!$discipline) {
+            return response()->json('Discipline not found.');
         }
 
-        return response()->json([
-            'success' => true,
-            'mark_deduction' => $discipline->mark_deduction !== null && $discipline->mark_deduction !== '' ? (float) $discipline->mark_deduction : 0
-        ]);
+        return response()->json($discipline->mark_deduction);
+        
     }
     function discipline_generate_memo_store(Request $request){
         // return $request->all();

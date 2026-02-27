@@ -77,29 +77,32 @@ class CourseMemoDecisionMappController extends Controller
 
                     $editBtn = '
                 <a href="javascript:void(0)"
-                    class="d-inline-flex align-items-center gap-1 text-primary editConclusion"
+                    class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 editConclusion"
                     data-id="' . $row->pk . '"
                     data-course="' . $row->course_master_pk . '"
                     data-memo="' . $row->memo_type_master_pk . '"
                     data-conclusion="' . $row->memo_conclusion_master_pk . '"
                     data-status="' . $row->active_inactive . '">
-                    <i class="material-icons material-symbols-rounded">edit</i>
+                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+                    <span class="d-none d-md-inline">Edit</span>
                 </a>';
 
                     if ($row->active_inactive == 1) {
                         $deleteBtn = '
-                        <a href="javascript:void(0)" class="d-inline-flex align-items-center gap-1 text-primary" disabled>
-                        <span class="material-icons material-symbols-rounded">delete</span>
-                    </a>';
+                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" disabled>
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                        <span class="d-none d-md-inline">Delete</span>
+                    </button>';
                     } else {
                         $deleteBtn = '
                     <form action="' . $deleteUrl . '" method="POST" class="d-inline">
                         ' . csrf_field() . method_field('DELETE') . '
-                        <a href="javascript:void(0)"
-                            class="d-inline-flex align-items-center gap-1 text-primary"
+                        <button type="submit"
+                            class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
                             onclick="return confirm(\'Are you sure you want to delete this memo type?\');">
-                            <span class="material-icons material-symbols-rounded">delete</span>
-                        </a>
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                            <span class="d-none d-md-inline">Delete</span>
+                        </button>
                     </form>';
                     }
 

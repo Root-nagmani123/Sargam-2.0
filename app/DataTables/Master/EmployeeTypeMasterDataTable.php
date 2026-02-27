@@ -27,28 +27,7 @@ class EmployeeTypeMasterDataTable extends DataTable
             ->addColumn('category_type_name', fn($row) => $row->category_type_name ?? '-')
             ->addColumn('action', function ($row) {
                 $editUrl = route('master.employee.type.edit', ['id' => encrypt($row->pk)]);
-                $deleteUrl = route('master.employee.type.delete', ['id' => encrypt($row->pk)]);
-                $csrf = csrf_token();
-                $isActive = $row->active_inactive == 1;
-
-                $deleteButton = $isActive
-                    ? '<a href="javascript:void(0)" class="text-primary d-flex align-items-center gap-1" title="Cannot delete active employee type">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">delete</i>
-                    </a>'
-                    : '<form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this employee type?\');">
-                        <input type="hidden" name="_token" value="' . $csrf . '">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <a class="text-primary d-inline-flex align-items-center gap-1" aria-label="Delete employee type">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">delete</i>
-                        </a>
-                    </form>';
-
-                return '<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Employee type actions">
-                    <a href="' . $editUrl . '" class="text-primary d-inline-flex align-items-center gap-1 edit-employee-type" aria-label="Edit employee type">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">edit</i>
-                    </a>
-                    ' . $deleteButton . '
-                </div>';
+                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
@@ -74,7 +53,7 @@ class EmployeeTypeMasterDataTable extends DataTable
      */
     public function query(EmployeeTypeMaster $model): QueryBuilder
     {
-        return $model->newQuery()->orderBy('pk', 'desc');
+        return $model->newQuery();
     }
 
     /**
@@ -92,7 +71,7 @@ class EmployeeTypeMasterDataTable extends DataTable
             // ->orderBy(1)
             ->selectStyleSingle()
             ->parameters([
-                'responsive' => false,
+                'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
                 'order' => [],
@@ -117,8 +96,8 @@ class EmployeeTypeMasterDataTable extends DataTable
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('category_type_name')->title('Category Type Name')->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center')
+            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];
     }
 

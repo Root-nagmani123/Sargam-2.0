@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Admin\IssueManagement;
 use App\Http\Controllers\Controller;
 use App\Models\{
     IssueCategoryMaster,
-    IssueSubCategoryMaster,
-    IssueLogSubCategoryMap
+    IssueSubCategoryMaster
 };
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,14 +15,12 @@ class IssueSubCategoryController extends Controller
     /**
      * Display a listing of issue sub-categories.
      */
-    public function index(Request $request)
+    public function index()
     {
-       
-        $query = IssueSubCategoryMaster::with('category');
-        if ($request->filled('category_id')) {
-            $query->where('issue_category_master_pk', $request->category_id);
-        }
-        $subCategories = $query->orderBy('pk','desc')->get();
+        $subCategories = IssueSubCategoryMaster::with('category')
+            ->orderBy('issue_sub_category')
+            ->paginate(20);
+
         $categories = IssueCategoryMaster::active()->orderBy('issue_category')->get();
 
         return view('admin.issue_management.sub_categories.index', compact('subCategories', 'categories'));
@@ -37,15 +34,15 @@ class IssueSubCategoryController extends Controller
         $request->validate([
             'issue_category_master_pk' => 'required|exists:issue_category_master,pk',
             'issue_sub_category' => 'required|string|max:255',
-            
+            'description' => 'nullable|string',
         ]);
 
-        $userId = Auth::user()->user_id ?? Auth::id();
         IssueSubCategoryMaster::create([
             'issue_category_master_pk' => $request->issue_category_master_pk,
             'issue_sub_category' => $request->issue_sub_category,
-            'created_date' => now()->setTimezone('Asia/Kolkata')->format('Y-m-d'),
-            'created_by' => $userId,
+            'description' => $request->description,
+            'created_by' => Auth::id(),
+            'created_date' => now(),
             'status' => 1,
         ]);
 
@@ -63,15 +60,16 @@ class IssueSubCategoryController extends Controller
         $request->validate([
             'issue_category_master_pk' => 'required|exists:issue_category_master,pk',
             'issue_sub_category' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'status' => 'required|in:0,1',
         ]);
 
-        $userId = Auth::user()->user_id ?? Auth::id();
         $subCategory->update([
             'issue_category_master_pk' => $request->issue_category_master_pk,
             'issue_sub_category' => $request->issue_sub_category,
+            'description' => $request->description,
             'status' => $request->status,
-            'modified_by' => $userId,
+            'modified_by' => Auth::id(),
             'modified_date' => now(),
         ]);
 
@@ -85,15 +83,6 @@ class IssueSubCategoryController extends Controller
     public function destroy($id)
     {
         $subCategory = IssueSubCategoryMaster::findOrFail($id);
-
-        if ($subCategory->status == 1) {
-            return back()->with('error', 'Cannot delete an active sub-category. Please set it to Inactive first.');
-        }
-
-        if (IssueLogSubCategoryMap::where('issue_sub_category_master_pk', $id)->exists()) {
-            return back()->with('error', 'Cannot delete sub-category with associated issues.');
-        }
-
         $subCategory->delete();
 
         return redirect()->route('admin.issue-sub-categories.index')

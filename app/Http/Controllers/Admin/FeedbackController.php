@@ -20,7 +20,6 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str; // Add this import
-use Illuminate\Support\Facades\Validator;
 use App\Exports\PendingFeedbackExport;
 
 
@@ -142,7 +141,7 @@ class FeedbackController extends Controller
     {
         try {
             /* ---------------- Validation ---------------- */
-            $validator = Validator::make($request->all(), [
+            $validated = $request->validate([
                 'course_id'    => 'required|integer',
                 'search_param' => 'nullable|string|in:all,faculty,topic',
                 'faculty_id'   => 'nullable|integer',
@@ -150,15 +149,6 @@ class FeedbackController extends Controller
                 'per_page'     => 'nullable|integer',
                 'page'         => 'nullable|integer',
             ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'error'   => $validator->errors()->first(),
-                    'data'    => [],
-                    'total'   => 0,
-                ], 422);
-            }
 
             /* ---------------- Base Query ---------------- */
             $query = $this->baseDatabaseQuery($request);
@@ -2010,7 +2000,7 @@ class FeedbackController extends Controller
         $sheet->setCellValue('A' . $row, 'Faculty Feedback with Comments (Admin View)');
         $sheet->mergeCells('A' . $row . ':G' . $row);
         $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '004a93']],
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'AF2910']],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);
         $row++;
@@ -2034,7 +2024,7 @@ class FeedbackController extends Controller
         $sheet->setCellValue('A' . $row, 'Applied Filters');
         $sheet->mergeCells('A' . $row . ':G' . $row);
         $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '004a93']],
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'AF2910']],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                 'startColor' => ['rgb' => 'F8F9FA']
@@ -2131,7 +2121,7 @@ class FeedbackController extends Controller
             // EXCELLENT ROW
             $sheet->setCellValue('A' . $row, 'Excellent');
             $sheet->getStyle('A' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => '004a93']],
+                'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
             ]);
             $sheet->setCellValue('B' . $row, $item['Content - Excellent']);
             $sheet->setCellValue('C' . $row, $item['Presentation - Excellent']);
@@ -2141,7 +2131,7 @@ class FeedbackController extends Controller
             // VERY GOOD ROW
             $sheet->setCellValue('A' . $row, 'Very Good');
             $sheet->getStyle('A' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => '004a93']],
+                'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
             ]);
             $sheet->setCellValue('B' . $row, $item['Content - Very Good']);
             $sheet->setCellValue('C' . $row, $item['Presentation - Very Good']);
@@ -2151,7 +2141,7 @@ class FeedbackController extends Controller
             // GOOD ROW
             $sheet->setCellValue('A' . $row, 'Good');
             $sheet->getStyle('A' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => '004a93']],
+                'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
             ]);
             $sheet->setCellValue('B' . $row, $item['Content - Good']);
             $sheet->setCellValue('C' . $row, $item['Presentation - Good']);
@@ -2161,7 +2151,7 @@ class FeedbackController extends Controller
             // AVERAGE ROW
             $sheet->setCellValue('A' . $row, 'Average');
             $sheet->getStyle('A' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => '004a93']],
+                'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
             ]);
             $sheet->setCellValue('B' . $row, $item['Content - Average']);
             $sheet->setCellValue('C' . $row, $item['Presentation - Average']);
@@ -2171,7 +2161,7 @@ class FeedbackController extends Controller
             // BELOW AVERAGE ROW
             $sheet->setCellValue('A' . $row, 'Below Average');
             $sheet->getStyle('A' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => '004a93']],
+                'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
             ]);
             $sheet->setCellValue('B' . $row, $item['Content - Below Average']);
             $sheet->setCellValue('C' . $row, $item['Presentation - Below Average']);
@@ -2181,12 +2171,12 @@ class FeedbackController extends Controller
             // PERCENTAGE ROW
             $sheet->setCellValue('A' . $row, 'Percentage');
             $sheet->getStyle('A' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => '004a93']],
+                'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
             ]);
             $sheet->setCellValue('B' . $row, $item['Content Percentage']);
             $sheet->setCellValue('C' . $row, $item['Presentation Percentage']);
             $sheet->getStyle('B' . $row . ':C' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => '004a93']],
+                'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
             ]);
             $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
             $row++;
@@ -2211,7 +2201,7 @@ class FeedbackController extends Controller
                         'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                         'fill' => [
                             'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                            'startColor' => ['rgb' => '004a93']
+                            'startColor' => ['rgb' => 'AF2910']
                         ],
                         'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
                     ]);
@@ -2776,7 +2766,7 @@ class FeedbackController extends Controller
         $sheet->setCellValue('A' . $row, 'Faculty Feedback Detailed Report - All Individual Responses');
         $sheet->mergeCells('A' . $row . ':N' . $row);
         $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '004a93']],
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'AF2910']],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);
         $row++;
@@ -2801,7 +2791,7 @@ class FeedbackController extends Controller
         $sheet->setCellValue('A' . $row, 'Applied Filters');
         $sheet->mergeCells('A' . $row . ':N' . $row);
         $sheet->getStyle('A' . $row)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '004a93']],
+            'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'AF2910']],
             'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8F9FA']],
             'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT],
@@ -2876,7 +2866,7 @@ class FeedbackController extends Controller
         // Style headers
         $sheet->getStyle('A' . $headerRow . ':N' . $headerRow)->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '004a93']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'AF2910']],
             'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);

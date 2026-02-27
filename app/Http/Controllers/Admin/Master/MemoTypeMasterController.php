@@ -44,8 +44,7 @@ class MemoTypeMasterController extends Controller
         try {
             // ✅ Add / Edit logic
             if ($request->filled('pk')) {
-                $decryptedPk = decrypt($request->pk);
-                $memoType = MemoTypeMaster::findOrFail($decryptedPk);
+                $memoType = MemoTypeMaster::findOrFail($request->pk);
             } else {
                 $memoType = new MemoTypeMaster();
             }

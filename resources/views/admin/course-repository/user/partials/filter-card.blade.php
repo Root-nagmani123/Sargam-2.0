@@ -1,10 +1,7 @@
 <!-- Filter Card Partial -->
 <div class="card filter-card shadow-sm mb-4">
     <div class="card-body p-4">
-        @php
-            $formAction = $route ?? route('admin.course-repository.user.filter-data');
-        @endphp
-        <form method="GET" action="{{ route('admin.course-repository.user.filter-data') }}" id="filterForm">
+        <form method="GET" action="{{ $route }}" id="filterForm">
             <div class="row g-3 align-items-end">
                 <!-- Date Filter -->
                 <div class="col-md-2">
@@ -31,7 +28,7 @@
                                 {{ $course->course_name }}
                             </option>
                         @endforeach
-                    </select> 
+                    </select>
                 </div>
 
                 <!-- Subject Filter -->
@@ -47,7 +44,19 @@
                     </select>
                 </div>
 
-               
+                <!-- Week Filter -->
+                <div class="col-md-2">
+                    <label for="filter_week" class="form-label fw-semibold mb-2">Week</label>
+                    <select class="form-select" id="filter_week" name="week">
+                        <option value="">Select Week</option>
+                        @for($i = 1; $i <= 52; $i++)
+                            <option value="{{ $i }}" {{ $filters['week'] == $i ? 'selected' : '' }}>
+                                {{ $i }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
+
                 <!-- Faculty Filter -->
                 <div class="col-md-2">
                     <label for="filter_faculty" class="form-label fw-semibold mb-2">Faculty</label>
@@ -66,11 +75,6 @@
                     <button type="submit" class="btn btn-primary w-100 fw-semibold">
                         Apply Filters
                     </button>
-                </div>
-                <div class="col-md-2">
-                    <a href="{{ route('admin.course-repository.user.index') }}" class="btn btn-primary w-100 fw-semibold">
-                        Reset Filters
-                    </a>
                 </div>
             </div>
         </form>

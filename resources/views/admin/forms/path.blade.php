@@ -8,9 +8,9 @@
 
 @section('setup_content')
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
-    @include('components.jquery-3-6')
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
-    <div class="container-fluid path-page-form">
+    <div class="container-fluid">
         <!-- Page Header -->
     <x-breadcrum title="Create Path Page" />
     <x-session_message />
@@ -160,7 +160,7 @@
 @endsection
 
 @section('scripts')
-    @include('components.jquery-3-6')
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-lite.min.js"></script>
 
     <script>

@@ -3,24 +3,23 @@
 @section('title', 'Class Session Master')
 
 @section('setup_content')
-<div class="container-fluid class-session-master-index">
+<div class="container-fluid">
     <x-breadcrum title="Class Session Master" />
-    <x-session_message />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row class-session-header-row align-items-center">
-                        <div class="col-12 col-md-6">
+                    <div class="row">
+                        <div class="col-6">
                             <h4>Class Session Master</h4>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="d-flex justify-content-md-end align-items-center gap-2 mb-3 mb-md-0">
+                        <div class="col-6">
+                            <div class="d-flex justify-content-end align-items-center gap-2">
 
                                 <!-- Add Group Mapping -->
                                 <a href="{{route('master.class.session.create')}}"
-                                    class="btn btn-primary d-flex align-items-center class-session-add-btn">
+                                    class="btn btn-primary d-flex align-items-center">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 20px; vertical-align: middle;">add</i>
                                     Add Class Session
@@ -32,7 +31,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table w-100 nowrap" id="class-session-master-table">
+                        <table class="table w-100 nowrap">
                             <thead>
                                 <!-- start row -->
                                 <tr>

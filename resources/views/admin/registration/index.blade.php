@@ -3,7 +3,7 @@
 @section('title', 'Forms - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid registration-index">
+<div class="container-fluid">
        <x-breadcrum title="Registration" />
     <x-session_message />
     <div class="card mt-3" style="border-left: 4px solid #004a93;">

@@ -427,7 +427,7 @@
     }
 
     h6.text-primary {
-        border-bottom: 2px solid #004a93;
+        border-bottom: 2px solid #af2910;
         padding-bottom: 8px;
         margin-bottom: 20px;
     }

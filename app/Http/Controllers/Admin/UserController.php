@@ -195,9 +195,7 @@ class UserController extends Controller
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
          }
 
-        $batchProfileCoursesCount = CourseMaster::where('active_inactive', 1)->count();
-
-        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC', 'batchProfileCoursesCount'));
+        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC'));
     }
 
     /**

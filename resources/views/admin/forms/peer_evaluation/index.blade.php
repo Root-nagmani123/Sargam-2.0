@@ -197,7 +197,7 @@
         </div>
     </div>
 
-    @include('components.jquery-3-6')
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         function validateScore(input) {
             let maxMarks = parseInt(input.getAttribute('max')) || 10;

@@ -20,7 +20,6 @@ class IssueLogStatus extends Model
         'issue_status',
         'remarks',
         'assign_to',
-        'assigned_to_contact',
     ];
 
     protected $casts = [
@@ -41,7 +40,7 @@ class IssueLogStatus extends Model
      */
     public function creator()
     {
-        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk')->select('pk', 'first_name', 'middle_name', 'last_name');
+        return $this->belongsTo(User::class, 'created_by', 'pk');
     }
 
     /**

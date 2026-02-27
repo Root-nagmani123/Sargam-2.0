@@ -1235,7 +1235,7 @@
     </div>
     <!-- END MODAL -->
 </div>
-@include('components.jquery-3-6')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
     $('#fullDayCheckbox').on('change', function() {

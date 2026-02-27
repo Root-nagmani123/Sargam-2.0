@@ -3,7 +3,7 @@
 @section('title', 'User Registration and Exemption Summary - Sargam | Lal Bahadur')
 
 @section('setup_content')
-    <div class="container-fluid exemption-datalist-page">
+    <div class="container-fluid">
         <x-breadcrum title="User Registration and Exemption Summary" />
         <div class="card" style="border-left: 4px solid #004a93;">
                 <div class="card-body">

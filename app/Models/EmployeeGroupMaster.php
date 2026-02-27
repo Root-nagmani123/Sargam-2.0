@@ -10,7 +10,6 @@ class EmployeeGroupMaster extends Model
     protected $table = 'employee_group_master';
     protected $primaryKey = 'pk';
     public $timestamps = false;
-    protected $fillable = ['emp_group_name', 'modified_date'];
 
     protected $guarded = [];
 
@@ -25,5 +24,5 @@ class EmployeeGroupMaster extends Model
         return $employeeGroupList->toArray();
     }
 
-
+    
 }

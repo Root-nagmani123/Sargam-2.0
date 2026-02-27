@@ -43,12 +43,11 @@ class PeerEvaluationController extends Controller
         // Get events with their course and group counts
         $events = PeerEvent::active()->withCount('groups')->get();
 
-        // Get groups with member count using proper Eloquent (paginated)
+        // Get groups with member count using proper Eloquent
         $groups = PeerGroup::with(['course', 'event'])
             ->withCount('members')
             ->where('is_active', 1)
-            ->orderBy('id', 'desc')
-            ->paginate(15);
+            ->get();
 
         $columns = PeerColumn::with(['course', 'event'])->get();
 

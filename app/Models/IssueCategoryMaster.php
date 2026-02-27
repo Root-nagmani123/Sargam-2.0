@@ -24,8 +24,8 @@ class IssueCategoryMaster extends Model
     ];
 
     protected $casts = [
-        'created_date' => 'date',
-        'modified_date' => 'date',
+        'created_date' => 'datetime',
+        'modified_date' => 'datetime',
         'status' => 'integer',
     ];
 

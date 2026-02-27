@@ -45,27 +45,24 @@ class RoleDataTable extends DataTable
             ->addColumn('action', function ($row) {
 
                 $id = Crypt::encrypt($row->pk);
-                $updateUrl = route('admin.roles.update', $id);
+
+                $editUrl = route('admin.roles.edit', $id);
                 $deleteUrl = route('admin.roles.destroy', $id);
-                $roleName = e($row->user_role_name);
-                $displayName = e($row->user_role_display_name);
 
                 return '
-                    <a href="javascript:void(0)" class="edit-role-btn text-primary me-2 text-decoration-none"
-                       data-edit-url="'.$updateUrl.'"
-                       data-name="'.$roleName.'"
-                       data-display-name="'.$displayName.'"
-                       title="Edit role">
+                    <a href="'.$editUrl.'" class="text-primary me-2">
                         <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">edit</i>
                     </a>
 
-                    <form class="delete-role-form d-inline"
-                          action="'.$deleteUrl.'" method="POST">
-                        '.csrf_field().method_field("DELETE").'
-                        <a href="javascript:void(0)" class="text-primary delete-role-link text-decoration-none" title="Delete role">
-                            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
-                        </a>
-                    </form>
+                    
+                    <form class="delete-role-form"
+      action="'.$deleteUrl.'" method="POST" style="display:inline">
+    '.csrf_field().method_field("DELETE").'
+    <a href="javascript:void(0)" class="text-danger delete-role-link">
+        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
+    </a>
+</form>
+
                 ';
             })
 

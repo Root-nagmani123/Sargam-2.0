@@ -22,6 +22,7 @@
         box-shadow: none !important;
         padding: 10px 5px !important;
         font-weight: 600 !important;
+        color: #666 !important;
         border-bottom: 2px solid #e0e0e0 !important;
     }
     
@@ -92,27 +93,6 @@
         height: 12px;
         border-radius: 2px;
     }
-
-    /* Mobile: Add spacing between Month and Year selects and view buttons */
-    @media (max-width: 767.98px) {
-        .calendar-component .calendar-year {
-            margin-right: 1rem;
-        }
-        .calendar-component .calendar-month {
-            margin-left: 1rem !important;
-        }
-        .calendar-component .d-flex.align-items-center.mb-3 {
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        .calendar-component .btn-group.btn-group-sm {
-            margin-left: 0.5rem !important;
-        }
-        .calendar-component .btn-group .view-btn {
-            padding: 0.35rem 0.65rem;
-            min-width: 3rem;
-        }
-    }
 </style>
 
 <div class="calendar-component" data-year="{{ $year }}" data-month="{{ $month }}">
@@ -130,7 +110,7 @@
 </select>
 
 
-<div class="btn-group btn-group-sm gap-2" role="group" aria-label="View type">
+<div class="btn-group btn-group-sm ms-auto" role="group" aria-label="View type">
 <button type="button" class="btn btn-outline-secondary view-btn" data-view="month">Month</button>
 <button type="button" class="btn btn-secondary view-btn active" data-view="year">Year</button>
 </div>
@@ -185,13 +165,7 @@ $hasEvent = array_key_exists($iso, $events);
 @endphp
 
 
-<td
-    tabindex="0"
-    role="button"
-    class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $hasEvent ? 'has-event' : '' }}"
-    data-date="{{ $iso }}"
-    aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
-    aria-label="{{ $d->format('d M Y') }}{{ $hasEvent ? ', has events' : '' }}">
+<td tabindex="0" role="button" class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $hasEvent ? 'has-event' : '' }}" data-date="{{ $iso }}" aria-pressed="{{ $isSelected ? 'true' : 'false' }}">
 <span class="day-number">{{ $d->day }}</span>
 @if($hasEvent)
     @foreach($events[$iso] as $event)

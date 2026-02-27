@@ -59,40 +59,67 @@ class CourseMasterDataTable extends DataTable
         <!-- View -->
         <a
             href="{$viewUrl}"
-            class="text-primary d-inline-block"
+            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
             aria-label="View course"
         >
             <span class="material-icons material-symbols-rounded"
                   style="font-size:18px;"
-                  aria-hidden="true">visibility</span>
+                  aria-hidden="true">
+                visibility
+            </span>
+            <span class="d-none d-lg-inline">View</span>
         </a>
 
         <!-- Edit -->
         <a
             href="{$editUrl}"
-            class="text-primary d-inline-block"
+            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
             aria-label="Edit course"
         >
             <span class="material-icons material-symbols-rounded"
                   style="font-size:18px;"
-                  aria-hidden="true">edit</span>
+                  aria-hidden="true">
+                edit
+            </span>
+            <span class="d-none d-lg-inline">Edit</span>
         </a>
 
+        <!-- Delete -->
+        <?php if ($isActive): ?>
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
+                disabled
+                aria-disabled="true"
+                title="Cannot delete active course"
+            >
+                <span class="material-icons material-symbols-rounded"
+                      style="font-size:18px;"
+                      aria-hidden="true">
+                    delete
+                </span>
+                <span class="d-none d-lg-inline">Delete</span>
+            </button>
+        <?php else: ?>
             <form action="{$deleteUrl}" method="POST" class="d-inline">
                 <input type="hidden" name="_token" value="{$csrf}">
                 <input type="hidden" name="_method" value="DELETE">
 
                 <button
                     type="submit"
-                    class="border-0 bg-transparent p-0 text-primary d-inline-block"
+                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
                     aria-label="Delete course"
                     onclick="return confirm('Are you sure you want to delete this course?');"
                 >
                     <span class="material-icons material-symbols-rounded"
                           style="font-size:18px;"
-                          aria-hidden="true">delete</span>
+                          aria-hidden="true">
+                        delete
+                    </span>
+                    <span class="d-none d-lg-inline">Delete</span>
                 </button>
             </form>
+        <?php endif; ?>
 
     </div>
 </td>
@@ -177,18 +204,18 @@ HTML;
             ->setTableId('coursemaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax() // This will use the current route for ajax
+            // ->orderBy(1)
             ->selectStyleSingle()
+            ->responsive(true)
             ->parameters([
-                // Disable responsive child row (no expand arrow); full table shown with horizontal scroll via .table-responsive
-                'responsive' => false,
+                'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
-                'ordering' => true,
+                'ordering' => false,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                // Default sort by Course Name (second column, index 1)
-                'order' => [[1, 'asc']],
+                'order' => [],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -209,39 +236,13 @@ HTML;
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->searchable(false)->orderable(false),
-            Column::make('course_name')
-                ->title('Course Name')
-                ->addClass('text-center')
-                ->orderable(true)
-                ->searchable(true),
-            Column::make('couse_short_name')
-                ->title('Short Name')
-                ->addClass('text-center')
-                ->orderable(true)
-                ->searchable(true),
-            Column::make('course_year')
-                ->title('Course Year')
-                ->addClass('text-center')
-                ->orderable(true)
-                ->searchable(true),
-            Column::make('start_year')
-                ->title('Start Date')
-                ->addClass('text-center')
-                ->orderable(true)
-                ->searchable(false),
-            Column::make('end_date')
-                ->title('End Date')
-                ->addClass('text-center')
-                ->orderable(true)
-                ->searchable(false),
-            Column::computed('status')
-                ->addClass('text-center')
-                ->orderable(false)
-                ->searchable(false),
-            Column::computed('action')
-                ->addClass('text-center')
-                ->orderable(false)
-                ->searchable(false),
+            Column::make('course_name')->title('Course Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('couse_short_name')->title('Short Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('course_year')->title('Course Year')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('start_year')->title('Start Date')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('end_date')->title('End Date')->addClass('text-center')->orderable(false)->searchable(false),
+                Column::computed('status')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('action')->addClass('text-center')->orderable(false)->searchable(false),
         
         ];
     }

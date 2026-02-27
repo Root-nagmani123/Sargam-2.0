@@ -4,16 +4,16 @@
 
 @section('setup_content')
 
-<div class="container-fluid medical-exception-faculty-view">
+<div class="container-fluid">
     <x-breadcrum title="Medical Exception Faculty View"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row mb-3">
-                <div class="col-12 col-md-6">
+                <div class="col-6">
                     <h4>Medical Exception Faculty View</h4>
                 </div>
-                <div class="col-12 col-md-6">
-                    <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
+                <div class="col-6">
+                    <div class="d-flex justify-content-end align-items-center gap-2">
                         <button type="button" class="btn btn-info d-flex align-items-center" onclick="window.print()">
                             <i class="material-icons menu-icon material-symbols-rounded"
                                 style="font-size: 24px;">print</i>
@@ -23,7 +23,7 @@
                 </div>
             </div>
             <form class="row" role="search" aria-label="Medical exception filters" method="GET" action="{{ route('medical.exception.faculty.view') }}">
-                <div class="col-12 col-md-5">
+                <div class="col-5">
                     <div class="mb-3">
                         <label for="filter_course" class="form-label">Course Name</label>
                         <select name="course" id="filter_course" class="form-control"
@@ -39,16 +39,16 @@
                             records.</small>
                     </div>
                 </div>
-                <div class="col-12 col-md-5">
+                <div class="col-5">
                     <div class="mb-3">
                         <label for="filter_date_from" class="form-label">Date From</label>
                         <input type="date" name="date_from" id="filter_date_from" class="form-control" value="{{ $dateFromFilter ?? '' }}">
                     </div>
                 </div>
-                <div class="col-12 col-md-2">
+                <div class="col-2">
                     <div class="mb-3 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn btn-success flex-fill">Filter</button>
-                        <a href="{{ route('medical.exception.faculty.view') }}" class="btn btn-primary flex-fill">Reset</a>
+                        <button type="submit" class="btn btn-success w-100">Filter</button>
+                        <a href="{{ route('medical.exception.faculty.view') }}" class="btn btn-primary w-100">Reset</a>
                     </div>
                 </div>
             </form>
@@ -69,7 +69,7 @@
                             <th scope="col">OT Code</th>
                             <th scope="col">Medical Document</th>
                             <th scope="col">Application Type</th>
-                           {{--<th scope="col">Exemption Count</th>--}}
+                            <th scope="col">Exemption Count</th>
                             <th scope="col">Submitted On</th>
                         </tr>
                     </thead>
@@ -106,7 +106,7 @@
                                     @endif
                                 </td>
                                 <td>{{ $record->application_type ?? 'N/A' }}</td>
-                                {{--<td>{{ $record->exemption_count ?? 0 }}</td>--}}
+                                <td>{{ $record->exemption_count ?? 0 }}</td>
                                 <td>
                                     @if($record->submitted_on)
                                         {{ \Carbon\Carbon::parse($record->submitted_on)->format('d-m-Y h:i A') }}
@@ -126,14 +126,5 @@
         </div>
     </div>
 </div>
-
-<style>
-    /* Mobile responsive - desktop unchanged */
-    @media (max-width: 767.98px) {
-        .medical-exception-faculty-view .table-responsive {
-            -webkit-overflow-scrolling: touch;
-        }
-    }
-</style>
 
 @endsection

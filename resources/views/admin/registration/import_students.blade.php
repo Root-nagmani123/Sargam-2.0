@@ -41,7 +41,6 @@
 
 @section('setup_content')
     <div class="container-fluid mt-5">
-        <x-breadcrum title="Import Students" />
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
                 {{ session('success') }}
@@ -54,7 +53,7 @@
             </div>
         @endif
 
-        <div class="card mx-auto import-students-card" style="border-left: 4px solid #004a93;">
+        <div class="card mx-auto">
             <div class="card-body text-center">
                 <p class="mb-4 text-muted status-message">
                     Click the button below to import students from the source table into the system.
