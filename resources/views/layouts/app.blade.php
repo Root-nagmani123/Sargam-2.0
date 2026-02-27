@@ -44,8 +44,6 @@
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/responsive.css')}}">
     <!-- Mobile-First Responsive css-->
     <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-responsive.css')}}">
-    <!-- Mobile Sidebar CSS (must load after theme CSS) -->
-    <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-sidebar.css')}}">
     <!-- Custom css-->
     <link rel="stylesheet" type="text/css" href="{{asset('css/custom.css')}}">
 </head>
