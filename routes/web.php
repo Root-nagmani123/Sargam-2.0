@@ -51,17 +51,10 @@ use App\Http\Controllers\Admin\IssueManagement\{
     IssueManagementController,
     IssueCategoryController,
     IssueSubCategoryController,
+    IssueEscalationMatrixController,
     IssuePriorityController,
-    IssueEscalationMatrixController
-};
-use App\Http\Controllers\Admin\Estate\{
-    EstateCampusController,
-    EstateElectricSlabController,
-    UnitTypeController,
-    UnitSubTypeController,
-    EstateBlockController,
-    PayScaleController,
-    EligibilityCriteriaController
+
+
 };
 
 Route::get('clear-cache', function () {
@@ -960,7 +953,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 // ============================================
 // Issue Management Module Routes (CENTCOM)
 // ============================================
-    Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
 
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
@@ -1007,190 +1000,4 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
     Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
     Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
-
-    // Estate Management Routes
-    Route::prefix('estate')->name('estate.')->group(function () {
-        // Estate Request for Others
-        Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
-
-        // Request For Estate (estate_home_request_details + possession)
-        Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
-        Route::get('request-for-house', [EstateController::class, 'requestForEstate'])->name('request-for-house');
-        Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
-        Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
-        Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
-        Route::post('request-for-estate', [EstateController::class, 'storeRequestForEstate'])->name('request-for-estate.store');
-        Route::delete('request-for-estate/{id}', [EstateController::class, 'destroyRequestForEstate'])->name('request-for-estate.destroy');
-
-        // Put In HAC
-        Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
-        Route::post('put-in-hac/action', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
-
-        // HAC Forward
-        Route::get('hac-forward', [EstateController::class, 'hacForward'])->name('hac-forward');
-        Route::post('request-for-estate/forward/{id}', [EstateController::class, 'forwardToAllotment'])->name('request-for-estate.forward');
-
-        // Estate Approval Setting & Add Approved Request House
-        Route::get('estate-approval-setting', [EstateController::class, 'estateApprovalSetting'])->name('estate-approval-setting');
-        Route::get('add-approved-request-house', [EstateController::class, 'addApprovedRequestHouse'])->name('add-approved-request-house');
-        Route::post('store-approved-request-house', [EstateController::class, 'storeApprovedRequestHouse'])->name('store-approved-request-house');
-
-        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
-        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
-        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
-
-        Route::get('change-request-hac-approved', function () {
-            return view('admin.estate.change-request-hac-approved');
-        })->name('change-request-hac-approved');
-
-
-        // Change Requests (HAC Approved)
-        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
-        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
-        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
-        Route::get('change-request-details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
-        Route::get('change-request-details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
-
-        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
-        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
-        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
-
-        // Estate Possession
-        Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
-        Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
-        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
-
-        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
-        Route::post('possession-view/store', [EstateController::class, 'storePossession'])->name('possession-view.store');
-        Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
-        Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
-        Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
-
-        // Update Meter
-        Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
-        Route::get('list-meter-reading', [EstateController::class, 'listMeterReading'])->name('list-meter-reading');
-        Route::get('list-meter-reading/data', [EstateController::class, 'getListMeterReadingData'])->name('list-meter-reading.data');
-        Route::get('update-meter-reading/list', [EstateController::class, 'getMeterReadingList'])->name('update-meter-reading.list');
-        Route::get('update-meter-reading/meter-reading-dates', [EstateController::class, 'getMeterReadingDates'])->name('update-meter-reading.meter-reading-dates');
-        Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
-        Route::get('update-meter-reading/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypes'])->name('update-meter-reading.unit-sub-types');
-        Route::post('update-meter-reading/store', [EstateController::class, 'storeMeterReadings'])->name('update-meter-reading.store');
-
-        Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
-        Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
-        Route::get('update-meter-reading-of-other/meter-reading-dates', [EstateController::class, 'getMeterReadingDatesOther'])->name('update-meter-reading-of-other.meter-reading-dates');
-        Route::get('update-meter-reading-of-other/blocks', [EstateController::class, 'getMeterReadingBlocksOther'])->name('update-meter-reading-of-other.blocks');
-        Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
-        Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
-
-        Route::get('update-meter-no', function () {
-            return view('admin.estate.update_meter_no');
-        })->name('update-meter-no');
-
-        // Generate Estate Bill / Estate Bill Summary
-        Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
-
-        // Return House
-        Route::get('return-house', function () {
-            return view('admin.estate.return_house');
-        })->name('return-house');
-
-        // Define House
-        Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
-        Route::post('define-house', [EstateController::class, 'storeDefineHouse'])->name('define-house.store');
-        Route::get('define-house/data', [EstateController::class, 'getDefineHouseData'])->name('define-house.data');
-        Route::get('define-house/blocks', [EstateController::class, 'getDefineHouseBlocks'])->name('define-house.blocks');
-        Route::get('define-house/{id}', [EstateController::class, 'showDefineHouse'])->name('define-house.show');
-        Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
-        Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
-
-        // Define Electric Slab
-        Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
-        Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
-        Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
-        Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
-        Route::put('define-electric-slab/{id}', [EstateElectricSlabController::class, 'update'])->name('define-electric-slab.update');
-        Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
-
-        // Define Estate/Campus
-        Route::get('define-campus', [EstateCampusController::class, 'index'])->name('define-campus.index');
-        Route::get('define-campus/create', [EstateCampusController::class, 'create'])->name('define-campus.create');
-        Route::post('define-campus', [EstateCampusController::class, 'store'])->name('define-campus.store');
-        Route::get('define-campus/{id}/edit', [EstateCampusController::class, 'edit'])->name('define-campus.edit');
-        Route::put('define-campus/{id}', [EstateCampusController::class, 'update'])->name('define-campus.update');
-        Route::delete('define-campus/{id}', [EstateCampusController::class, 'destroy'])->name('define-campus.destroy');
-
-        // Define Unit Type
-        Route::get('define-unit-type', [UnitTypeController::class, 'index'])->name('define-unit-type.index');
-        Route::get('define-unit-type/create', [UnitTypeController::class, 'create'])->name('define-unit-type.create');
-        Route::post('define-unit-type', [UnitTypeController::class, 'store'])->name('define-unit-type.store');
-        Route::get('define-unit-type/{id}/edit', [UnitTypeController::class, 'edit'])->name('define-unit-type.edit');
-        Route::put('define-unit-type/{id}', [UnitTypeController::class, 'update'])->name('define-unit-type.update');
-        Route::delete('define-unit-type/{id}', [UnitTypeController::class, 'destroy'])->name('define-unit-type.destroy');
-
-        // Define Unit Sub Type
-        Route::get('define-unit-sub-type', [UnitSubTypeController::class, 'index'])->name('define-unit-sub-type.index');
-        Route::get('define-unit-sub-type/create', [UnitSubTypeController::class, 'create'])->name('define-unit-sub-type.create');
-        Route::post('define-unit-sub-type', [UnitSubTypeController::class, 'store'])->name('define-unit-sub-type.store');
-        Route::get('define-unit-sub-type/{id}/edit', [UnitSubTypeController::class, 'edit'])->name('define-unit-sub-type.edit');
-        Route::put('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'update'])->name('define-unit-sub-type.update');
-        Route::delete('define-unit-sub-type/{id}', [UnitSubTypeController::class, 'destroy'])->name('define-unit-sub-type.destroy');
-
-        // Define Block/Building
-        Route::get('define-block-building', [EstateBlockController::class, 'index'])->name('define-block-building.index');
-        Route::get('define-block-building/create', [EstateBlockController::class, 'create'])->name('define-block-building.create');
-        Route::post('define-block-building', [EstateBlockController::class, 'store'])->name('define-block-building.store');
-        Route::get('define-block-building/{id}/edit', [EstateBlockController::class, 'edit'])->name('define-block-building.edit');
-        Route::put('define-block-building/{id}', [EstateBlockController::class, 'update'])->name('define-block-building.update');
-        Route::delete('define-block-building/{id}', [EstateBlockController::class, 'destroy'])->name('define-block-building.destroy');
-
-        // Define Pay Scale (for eligibility)
-        Route::get('define-pay-scale', [PayScaleController::class, 'index'])->name('define-pay-scale.index');
-        Route::get('define-pay-scale/create', [PayScaleController::class, 'create'])->name('define-pay-scale.create');
-        Route::post('define-pay-scale', [PayScaleController::class, 'store'])->name('define-pay-scale.store');
-        Route::get('define-pay-scale/{id}/edit', [PayScaleController::class, 'edit'])->name('define-pay-scale.edit');
-        Route::put('define-pay-scale/{id}', [PayScaleController::class, 'update'])->name('define-pay-scale.update');
-        Route::delete('define-pay-scale/{id}', [PayScaleController::class, 'destroy'])->name('define-pay-scale.destroy');
-
-        // Eligibility - Criteria
-        Route::get('eligibility-criteria', [EligibilityCriteriaController::class, 'index'])->name('eligibility-criteria.index');
-        Route::get('eligibility-criteria/create', [EligibilityCriteriaController::class, 'create'])->name('eligibility-criteria.create');
-        Route::post('eligibility-criteria', [EligibilityCriteriaController::class, 'store'])->name('eligibility-criteria.store');
-        Route::get('eligibility-criteria/{id}/edit', [EligibilityCriteriaController::class, 'edit'])->name('eligibility-criteria.edit');
-        Route::put('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'update'])->name('eligibility-criteria.update');
-        Route::delete('eligibility-criteria/{id}', [EligibilityCriteriaController::class, 'destroy'])->name('eligibility-criteria.destroy');
-
-        // Estate Reports
-        Route::prefix('reports')->name('reports.')->group(function () {
-            Route::get('pending-meter-reading/data', [EstateController::class, 'getPendingMeterReadingData'])->name('pending-meter-reading.data');
-            Route::get('pending-meter-reading', [EstateController::class, 'pendingMeterReading'])->name('pending-meter-reading');
-            
-            Route::get('house-status/data', [EstateController::class, 'getHouseStatusData'])->name('house-status.data');
-            Route::get('house-status', [EstateController::class, 'houseStatus'])->name('house-status');
-            
-            Route::get('pending-meter-reading', function () {
-                return view('admin.estate.pending_meter_reading');
-            })->name('pending-meter-reading');
-
-            Route::get('house-status', function () {
-                return view('admin.estate.house_status');
-            })->name('house-status');
-
-            Route::get('bill-report-grid', function () {
-                return view('admin.estate.estate_bill_report_grid');
-            })->name('bill-report-grid');
-
-            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
-            
-            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
-            Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
-            Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
-
-            Route::get('migration-report', [EstateController::class, 'estateMigrationReport'])->name('migration-report');
-            Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
-        });
-    });
 });
-
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
-    ->middleware('auth');
