@@ -565,7 +565,7 @@
                 <div class="tab-content" id="mainNavbarContent">
                     <!-- Home Tab -->
                     <div class="tab-pane fade show active" id="home" role="tabpanel">
-                        @yield('content')
+                                @yield('content')
                     </div>
 
                     <!-- Setup Tab -->
