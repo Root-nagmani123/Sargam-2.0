@@ -6,7 +6,7 @@
         <div class="card-body">
             <h4 class="mb-3">Add Vendor</h4>
 
-            <form method="POST" action="{{ route('admin.mess.vendors.store') }}">
+            <form method="POST" action="{{ route('admin.mess.vendors.store') }}" enctype="multipart/form-data">
                 @csrf
 
                 @include('mess.vendors._form', ['vendor' => null])

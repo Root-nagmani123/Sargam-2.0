@@ -10,7 +10,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('admin.mess.vendors.update', $vendor->id) }}">
+            <form method="POST" action="{{ route('admin.mess.vendors.update', $vendor->id) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
