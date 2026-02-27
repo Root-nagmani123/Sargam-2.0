@@ -87,9 +87,9 @@
 
 {{-- Create Vendor Modal --}}
 <div class="modal fade" id="createVendorModal" tabindex="-1" aria-labelledby="createVendorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.mess.vendors.store') }}">
+            <form method="POST" action="{{ route('admin.mess.vendors.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="createVendorModalLabel">Add Vendor</h5>
@@ -103,8 +103,8 @@
                             @error('name')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" required value="{{ old('email') }}">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ old('email') }}" placeholder="Optional">
                             @error('email')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
@@ -141,6 +141,11 @@
                             <label class="form-label">Account Number</label>
                             <input type="text" name="account_number" class="form-control" value="{{ old('account_number') }}" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
                             @error('account_number')<div class="text-danger small">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Upload Licence</label>
+                            <input type="file" name="licence_document" class="form-control">
+                            @error('licence_document')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                     </div>
                 </div>
@@ -212,7 +217,7 @@
 <div class="modal fade" id="editVendorModal" tabindex="-1" aria-labelledby="editVendorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="editVendorForm" method="POST" action="">
+            <form id="editVendorForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-header border-bottom bg-light">
@@ -226,8 +231,8 @@
                             <input type="text" name="name" id="edit_vendor_name" class="form-control" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" id="edit_vendor_email" class="form-control" required>
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" id="edit_vendor_email" class="form-control" placeholder="Optional">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Contact Person <span class="text-danger">*</span></label>
@@ -256,6 +261,10 @@
                         <div class="col-md-6">
                             <label class="form-label">Account Number</label>
                             <input type="text" name="account_number" id="edit_vendor_account_number" class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Upload Licence</label>
+                            <input type="file" name="licence_document" class="form-control">
                         </div>
                     </div>
                 </div>

@@ -21,7 +21,7 @@
 
     <div class="col-md-6 mb-3">
         <label class="form-label">Email</label>
-        <input type="email" name="email" class="form-control" value="{{ $oldEmail }}">
+        <input type="email" name="email" class="form-control" value="{{ $oldEmail }}" placeholder="Optional">
         @error('email')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
 </div>
@@ -71,5 +71,13 @@
         <label class="form-label">Account Number</label>
         <input type="text" name="account_number" class="form-control" value="{{ $oldAccountNumber }}" placeholder="Optional">
         @error('account_number')<div class="text-danger small">{{ $message }}</div>@enderror
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Upload Licence</label>
+        <input type="file" name="licence_document" class="form-control">
+        @error('licence_document')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
 </div>

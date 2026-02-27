@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mess;
 use App\Http\Controllers\Controller;
 use App\Models\Mess\Vendor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class VendorController extends Controller
 {
@@ -22,6 +23,11 @@ class VendorController extends Controller
     {
         $data = $this->validatedData($request);
 
+        if ($request->hasFile('licence_document')) {
+            $data['licence_document'] = $request->file('licence_document')
+                ->store('mess_vendors/licences', 'public');
+        }
+
         Vendor::create($data);
 
         return redirect()->route('admin.mess.vendors.index')->with('success', 'Vendor added successfully');
@@ -37,6 +43,15 @@ class VendorController extends Controller
     {
         $vendor = Vendor::findOrFail($id);
         $data = $this->validatedData($request, $vendor);
+
+        if ($request->hasFile('licence_document')) {
+            if ($vendor->licence_document && Storage::disk('public')->exists($vendor->licence_document)) {
+                Storage::disk('public')->delete($vendor->licence_document);
+            }
+
+            $data['licence_document'] = $request->file('licence_document')
+                ->store('mess_vendors/licences', 'public');
+        }
 
         $vendor->update($data);
         return redirect()->route('admin.mess.vendors.index')->with('success', 'Vendor updated successfully');
@@ -56,7 +71,7 @@ class VendorController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
             'contact_person' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:20', 'regex:/^[0-9]+$/'],
             'address' => ['required', 'string'],
@@ -64,6 +79,7 @@ class VendorController extends Controller
             'bank_name' => ['nullable', 'string', 'max:255'],
             'ifsc_code' => ['nullable', 'string', 'max:20'],
             'account_number' => ['nullable', 'string', 'max:50', 'regex:/^[0-9]+$/'],
+            'licence_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ], [
             'phone.regex' => 'The phone number must contain only digits.',
             'account_number.regex' => 'The account number must contain only digits.',
