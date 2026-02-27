@@ -531,8 +531,7 @@
                                 <label for="internal_faculty" class="form-label required">
                                     <i class="bi bi-person-check"></i>Internal Faculty
                                 </label>
-                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required
-                                    aria-required="true" multiple>
+                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required aria-required="true" multiple>
                                     @foreach($internal_faculty as $faculty)
                                     <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
                                         {{ $faculty->full_name }}
@@ -725,6 +724,56 @@ document.addEventListener('DOMContentLoaded', function () {
             rating.checked = false;
         }
     });
+    const internalFacultyDiv = document.getElementById('internalFacultyDiv');
+    const facultySelect = document.getElementById('faculty');
+    internalFacultyDiv.style.display = 'none'; // Hide initially
+    const faculty_type = document.getElementById('faculty_type');
+
+    // Example: Show internal faculty when a specific group type is selected
+    facultySelect.addEventListener('change', function () {
+        const facultyType = document.getElementById('faculty_type').value;
+        updateinternal_faculty(facultyType);
+    });
+    faculty_type.addEventListener('change', function () {
+        const facultyType = this.value;
+        updateinternal_faculty(facultyType);
+    });
+
+   function  updateinternal_faculty(facultyType) {
+    
+        console.log(facultyType);
+        switch (facultyType) {
+            case '1': // Internal
+                console.log('internal');
+                internalFacultyDiv.style.display = 'none';
+                break;
+            case '2': // Guest
+                console.log('guest');
+                internalFacultyDiv.style.display = 'block';
+                // Reinitialize Select2 after showing the div
+                if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
+                    $('#internal_faculty').select2({
+                        placeholder: 'Select Internal Faculty',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownParent: $('#eventModal')
+                    });
+                }
+                break;
+            default: // Research/Other
+                console.log('rtyuio');
+                internalFacultyDiv.style.display = 'block';
+                // Reinitialize Select2 after showing the div
+                if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
+                    $('#internal_faculty').select2({
+                        placeholder: 'Select Internal Faculty',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownParent: $('#eventModal')
+                    });
+                }
+        }
+    }
 });
 </script>
 <style>
