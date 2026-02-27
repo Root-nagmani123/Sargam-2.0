@@ -161,21 +161,17 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
+                                <ul class="collapse list-unstyled ps-3" id="feedbackCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('feedback.get.feedbackList') }}">
+                                            <span class="hide-menu">Feedback</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('feedback.get.studentFeedback') }}">
+                                            <span class="hide-menu">Student Feedback</span>
+                                        </a></li>
+                                </ul>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="reportCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.feedback.faculty_view') }}">
-                                        <span class="hide-menu">Average Rating - Course / Topic wise</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.average') }}">
-                                        <span class="hide-menu">Faculty Feedback Average</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.feedback.database') }}">
-                                        <span class="hide-menu">Faculty Feedback Database</span>
-                                    </a></li>
-
-                            </ul>
                           @endif
 
                             <!-- faculty menu start -->

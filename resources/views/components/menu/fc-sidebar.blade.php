@@ -204,45 +204,7 @@
                     </li>
                 </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.peer.index') }}">
-                        <span class="hide-menu">Peer Evaluation (Admin Panel)</span>
-                    </a>
-                </li>
-            </ul>
-        @endif
-
-    </ul>
-</nav>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle toggle icon rotation for all collapsible sections
-        const collapseElements = document.querySelectorAll('.collapse');
-
-        collapseElements.forEach(function(collapseEl) {
-            collapseEl.addEventListener('show.bs.collapse', function() {
-                const trigger = document.querySelector(
-                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
-                if (trigger) {
-                    const icon = trigger.querySelector('.toggle-icon');
-                    if (icon) {
-                        icon.textContent = 'keyboard_arrow_down';
-                    }
-                }
-            });
-
-            collapseEl.addEventListener('hide.bs.collapse', function() {
-                const trigger = document.querySelector(
-                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
-                if (trigger) {
-                    const icon = trigger.querySelector('.toggle-icon');
-                    if (icon) {
-                        icon.textContent = 'keyboard_arrow_right';
-                    }
-                }
-            });
-        });
-    });
-</script>
+            @endif
+           
+        </ul>
+    </nav>
