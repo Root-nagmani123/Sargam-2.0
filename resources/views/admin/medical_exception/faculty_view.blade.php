@@ -3,150 +3,6 @@
 @section('title', 'Medical Exception Faculty View - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<style>
-.faculty-card {
-    background: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    padding: 20px;
-}
-
-.faculty-header {
-    border-bottom: 2px solid #af2910;
-    color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
-
-.course-card {
-    background: #f8f9fa;
-    border-left: 4px solid #004a93;
-    border-radius: 6px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
-
-.coordinator-badge {
-    display: inline-block;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    margin: 5px 5px 5px 0;
-}
-
-.cc-badge {
-    background: #004a93;
-    color: white;
-}
-
-.acc-badge {
-    background: #28a745;
-    color: white;
-}
-
-.exemption-badge {
-    background: #ffc107;
-    color: #000;
-    font-weight: 700;
-    padding: 8px 15px;
-    border-radius: 25px;
-}
-
-.student-list {
-    max-height: 200px;
-    overflow-y: auto;
-    margin-top: 10px;
-}
-
-.student-item {
-    padding: 8px 12px;
-    background: white;
-    border-radius: 5px;
-    margin-bottom: 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.student-card {
-    background: #ffffff;
-    border-left: 4px solid #004a93;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 15px;
-    padding: 20px;
-}
-
-.student-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #e9ecef;
-}
-
-.exemption-count-badge {
-    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-    color: #000;
-    font-weight: 700;
-    padding: 10px 20px;
-    border-radius: 25px;
-    font-size: 18px;
-}
-
-.exemption-item {
-    background: #f8f9fa;
-    border-left: 3px solid #b72a2a;
-    border-radius: 5px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-
-.exemption-details {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.detail-item {
-    font-size: 14px;
-}
-
-.detail-label {
-    font-weight: 600;
-    color: #666;
-}
-
-.detail-value {
-    color: #000;
-}
-
-.table-responsive {
-    overflow-x: auto;
-}
-
-.badge {
-    font-weight: 500;
-    padding: 6px 10px;
-}
-
-.bg-warning-subtle {
-    background-color: #fff4d6;
-}
-
-.bg-danger-subtle {
-    background-color: #fde8e8;
-}
-
-.card h6 {
-    color: #003366;
-}
-</style>
 
 <div class="container-fluid">
     <x-breadcrum title="Medical Exception Faculty View"></x-breadcrum>
@@ -235,165 +91,87 @@
 
             <hr>
 
-            @php
-            // Check if this is a faculty login view
-            $isFacultyView = isset($isFacultyView) && $isFacultyView === true;
-            @endphp
-
-            @if($isFacultyView)
-
-            @if(isset($hasData) && $hasData && count($studentData) > 0)
-
-            @foreach($studentData as $course)
-
-            <div class="card mb-4 shadow-sm border-0" style="border-left:4px solid #004a93;">
-                <div class="card-body">
-
-                    <!-- Course Header -->
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-1">
-                                {{ $course['course_name'] }}
-                            </h6>
-
-                            <div class="text-muted small">
-                                CC:
-                                <span class="fw-semibold text-dark">
-                                    {{ $course['cc_name'] ?? 'N/A' }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="text-end">
-                            <span class="badge bg-warning-subtle text-warning border mb-1 d-block">
-                                {{ $course['total_exemption_count'] }} Student(s) on Medical Exception
-                            </span>
-                            <div class="text-muted small">
-                                Total Students: {{ $course['total_students'] }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Students List -->
-                    @if(count($course['students']) > 0)
-                    <div class="mt-3">
-
-                        @foreach($course['students'] as $student)
-                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <div>
-                                <span class="fw-semibold">
-                                    {{ $student['generated_OT_code'] }}
-                                </span>
-                                <span class="text-muted">
-                                    – {{ $student['display_name'] }}
-                                </span>
-                            </div>
-
-                            <span class="badge bg-danger-subtle text-danger border">
-                                Medical Exception
-                            </span>
-                        </div>
-                        @endforeach
-
-                    </div>
-                    @else
-                    <div class="text-muted fst-italic">
-                        No students under medical exception.
-                    </div>
-                    @endif
-
-                </div>
+            <!-- Course Summary Table -->
+            <div class="table-responsive">
+                <table class="table" role="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">S.No.</th>
+                            <th scope="col">Course Name</th>
+                            <th scope="col">CC</th>
+                            <th scope="col">ACC</th>
+                            <th scope="col">Faculty Name</th>
+                            <th scope="col">Topics</th>
+                            <th scope="col">Total Students</th>
+                            <th scope="col">Students on Medical Exception</th>
+                            <th scope="col" class="text-end" style="width: 44px;">&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody id="facultyAccordion">
+                        <tr class="accordion-toggle" data-bs-toggle="collapse" data-bs-target="#row1"
+                            aria-expanded="false" aria-controls="row1" role="button" tabindex="0">
+                            <td>1</td>
+                            <td>
+                                IAS Professional Course Phase-I 2025 Batch
+                            </td>
+                            <td>Premkumar VR</td>
+                            <td>PRIYANKA DAS</td>
+                            <td>BAGADI GAUTHAM</td>
+                            <td>Phase-II 2024</td>
+                            <td>20</td>
+                            <td>2</td>
+                            <td class="text-end">
+                                <i class="material-icons material-symbols-rounded accordion-caret" aria-hidden="true" title="Expand row" style="font-size:30px;">expand_more</i>
+                            </td>
+                        </tr>
+                        <tr id="row1" class="collapse accordion-collapse" data-bs-parent="#facultyAccordion">
+                            <td colspan="9">
+                                <div class="table-responsive">
+                                        <table class="table table-bordered mt-3" role="table">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="color: #000 !important; font-weight: bold">S.No</th>
+                                                    <th style="color: #000 !important; font-weight: bold">Student Name</th>
+                                                    <th style="color: #000 !important; font-weight: bold">Medical Exception Date</th>
+                                                    <th style="color: #000 !important; font-weight: bold">Medical Exception Time</th>
+                                                    <th style="color: #000 !important; font-weight: bold">OT Code</th>
+                                                    <th style="color: #000 !important; font-weight: bold">Medical Document</th>
+                                                    <th style="color: #000 !important; font-weight: bold">Application Type</th>
+                                                    <th style="color: #000 !important; font-weight: bold">Exemption Count</th>
+                                                    <th style="color: #000 !important; font-weight: bold">Submitted On</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td>John Doe</td>
+                                                    <td>2024-05-01</td>
+                                                    <td>10:00 AM - 12:00 PM</td>
+                                                    <td>A01</td>
+                                                    <td><a href="#">View Document</a></td>
+                                                    <td>Medical Leave</td>
+                                                    <td>1</td>
+                                                    <td>2024-04-28 09:15 AM</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-
-            @endforeach
-
-            @else
-            <div class="alert alert-info text-center">
-                <i class="material-icons material-symbols-rounded fs-1">info</i>
-                <div class="mt-2">No records found</div>
-            </div>
-
-            @endif
-
-            @else
-            <!-- Admin View -->
-            <!-- Faculty Data -->
-            @if(isset($facultyData) && count($facultyData) > 0)
-            @foreach($facultyData as $faculty)
-            <div class="faculty-card">
-                <div class="faculty-header">
-                    <div class="row">
-                        <div class="col-6">
-                            <h5 class="mb-0">
-                        <i class="material-icons menu-icon material-symbols-rounded"
-                            style="font-size: 24px; vertical-align: middle;">person</i>
-                        {{ $faculty['faculty_name'] }}
-                    </h5>
-                        </div>
-                        <div class="col-6 gap-2 text-end">
-                             <a href=""><i class="material-icons menu-icon material-symbols-rounded text-dark"
-                            style="font-size: 24px; vertical-align: middle;" tooltip="Eye Tracking">eye_tracking</i> </a>
-                            <a href=""><i class="material-icons menu-icon material-symbols-rounded text-dark"
-                            style="font-size: 24px; vertical-align: middle;" tooltip="Download">download</i></a>
-                        </div>
-                    </div>
-                </div>
-
-                @foreach($faculty['courses'] as $course)
-                <div class="course-card">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-2">{{ $course['course_name'] }}</h6>
-                            <div>
-                                <span class="coordinator-badge cc-badge">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 16px; vertical-align: middle;">person</i>
-                                    CC: {{ $course['cc'] }}
-                                </span>
-                                <span class="coordinator-badge acc-badge">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 16px; vertical-align: middle;">person</i>
-                                    ACC: {{ $course['acc'] }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <div class="exemption-badge">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 18px; vertical-align: middle;">medical_services</i>
-                                {{ $course['exemption_count'] }} Student(s) on Medical Exception
-                            </div>
-                            <div class="mt-2 text-muted">
-                                Total Students: {{ $course['total_students'] }}
-                            </div>
-                        </div>
-                    </div>
-
-                    @if($course['students']->count() > 0)
-                    <div class="student-list">
-                        <h6 class="fw-semibold mb-2">Students:</h6>
-                        @foreach($course['students'] as $student)
-                        <div class="student-item">
-                            <div>
-                                <strong>{{ $student->generated_OT_code }}</strong> - {{ $student->display_name }}
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                    @else
-                    <p class="text-muted mb-0">No students enrolled in this course.</p>
-                    @endif
-                </div>
-                @endforeach
-            </div>
-            @endforeach
-            @else
-            <div class="alert alert-info text-center">
-                <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 48px;">info</i>
-                <p class="mt-2">No faculty data found matching the selected filters.</p>
-            </div>
-            @endif
-            @endif
+            <style>
+                .accordion-toggle { cursor: pointer; }
+                .accordion-toggle .accordion-caret {
+                    transition: transform .2s ease;
+                    color: #004a93;
+                    vertical-align: middle;
+                }
+                .accordion-toggle[aria-expanded="true"] .accordion-caret {
+                    transform: rotate(180deg);
+                }
+            </style>
         </div>
     </div>
 </div>
