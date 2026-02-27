@@ -124,16 +124,11 @@
                                             <span class="hide-menu">User Permissions</span>
                                         </a></li>
 
-                                    {{-- <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('admin.permissions.index') }}">
-                                    <span class="hide-menu">Permissions</span>
-                                    </a></li> --}}
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('admin.notice.index') }}">
-                                            <span class="hide-menu">Notice Notifications</span>
-                                        </a></li>
-                                </ul>
-                            </li>
+                                {{-- <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.permissions.index') }}">
+                                <span class="hide-menu">Permissions</span>
+                                </a></li> --}}
+                            </ul>
                             
                             @endif
 

@@ -11,6 +11,18 @@
                         <ul class="sidebar-menu" id="sidebarnav">
                             {{-- GENERAL --}}
 
+                            <!-- Dashboard Link -->
+                            <li class="sidebar-item">
+                                <a class="sidebar-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                                    href="{{ route('admin.dashboard') }}">
+                                    <span class="hide-menu">Dashboard</span>
+                                </a>
+                            </li>
+                             <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.notice.index') }}">
+                                        <span class="hide-menu">Notice Notifications</span>
+                                    </a></li>
+
                             <!-- Faculty Dashboard Route -->
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.dashboard') }}">
                                     <span class="hide-menu">Dashbaord</span>

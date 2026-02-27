@@ -495,267 +495,96 @@
 
 <div class="container-fluid">
     <x-breadcrum title="Session Feedback" />
-    
-    <!-- Tab Navigation -->
-    <div class="feedback-tabs">
-        <ul class="nav nav-tabs border-0" id="feedbackTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-content" 
-                        type="button" role="tab" aria-controls="active-content" aria-selected="true">
-                    <i class="material-icons me-2" aria-hidden="true">check_circle</i>
-                    Active Feedback
-                    <span class="badge bg-primary ms-2" id="activeCount">{{ $activeCount ?? 0 }}</span>
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-content" 
-                        type="button" role="tab" aria-controls="archive-content" aria-selected="false">
-                    <i class="material-icons me-2" aria-hidden="true">archive</i>
-                    Archived
-                    <span class="badge bg-secondary ms-2" id="archiveCount">{{ $archiveCount ?? 0 }}</span>
-                </button>
-            </li>
-        </ul>
-    </div>
-
-    <!-- Filter Section -->
-    <section class="filter-section" aria-label="Feedback filters">
-        <div class="filter-header">
-            <div class="filter-title">
-                <i class="material-icons" aria-hidden="true">filter_list</i>
-                Filter Feedback
-            </div>
-            <div class="filter-actions">
-                <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2" 
-                        id="applyFiltersBtn" aria-label="Apply filters">
-                    <i class="material-icons" aria-hidden="true">search</i>
-                    Apply Filters
-                </button>
-                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" 
-                        id="resetFiltersBtn" aria-label="Reset all filters">
-                    <i class="material-icons" aria-hidden="true">refresh</i>
-                    Reset
-                </button>
-                <button type="button" class="btn btn-outline-success d-flex align-items-center gap-2" 
-                        id="exportBtn" aria-label="Export filtered data">
-                    <i class="material-icons" aria-hidden="true">download</i>
-                    Export
-                </button>
-            </div>
-        </div>
-        
-        <form id="feedbackFilterForm">
-            <div class="filter-row">
-                <!-- Course Filter -->
-                <div class="filter-group">
-                    <label for="courseFilter" class="filter-label">
-                        <i class="material-icons" aria-hidden="true">school</i>
-                        Course
-                    </label>
-                    <select class="form-select-enhanced" id="courseFilter" name="course" 
-                            aria-label="Filter by course">
-                        <option value="">All Courses</option>
-                        @foreach($courses as $course)
-                            <option value="{{ $course->id }}">{{ $course->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                
-                <!-- Faculty Filter -->
-                <div class="filter-group">
-                    <label for="facultyFilter" class="filter-label">
-                        <i class="material-icons" aria-hidden="true">person</i>
-                        Faculty
-                    </label>
-                    <select class="form-select-enhanced" id="facultyFilter" name="faculty" 
-                            aria-label="Filter by faculty">
-                        <option value="">All Faculty</option>
-                        @foreach($faculties as $faculty)
-                            <option value="{{ $faculty->id }}">{{ $faculty->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                
-                <!-- Subject Filter -->
-                <div class="filter-group">
-                    <label for="subjectFilter" class="filter-label">
-                        <i class="material-icons" aria-hidden="true">subject</i>
-                        Subject
-                    </label>
-                    <select class="form-select-enhanced" id="subjectFilter" name="subject" 
-                            aria-label="Filter by subject">
-                        <option value="">All Subjects</option>
-                        @foreach($subjects as $subject)
-                            <option value="{{ $subject->id }}">{{ $subject->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                
-                <!-- Date Range Filter -->
-                <div class="filter-group">
-                    <label for="dateRange" class="filter-label">
-                        <i class="material-icons" aria-hidden="true">date_range</i>
-                        Date Range
-                    </label>
-                    <input type="text" class="form-input-enhanced" id="dateRange" 
-                           placeholder="Select date range" aria-label="Filter by date range">
-                </div>
-            </div>
-            
-            <!-- Advanced Filters (Collapsible) -->
-            <div class="mt-3">
-                <button class="btn btn-link text-decoration-none d-flex align-items-center gap-2 p-0" 
-                        type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" 
-                        aria-expanded="false" aria-controls="advancedFilters" id="toggleAdvancedFilters">
-                    <i class="material-icons" aria-hidden="true">expand_more</i>
-                    <span>Advanced Filters</span>
-                </button>
-                
-                <div class="collapse mt-2" id="advancedFilters">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label for="ratingFilter" class="form-label small fw-semibold">Rating</label>
-                            <select class="form-select form-select-sm" id="ratingFilter" name="rating">
-                                <option value="">All Ratings</option>
-                                <option value="5">Excellent (5 Stars)</option>
-                                <option value="4">Good (4 Stars)</option>
-                                <option value="3">Average (3 Stars)</option>
-                                <option value="2">Poor (2 Stars)</option>
-                                <option value="1">Very Poor (1 Star)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="statusFilter" class="form-label small fw-semibold">Status</label>
-                            <select class="form-select form-select-sm" id="statusFilter" name="status">
-                                <option value="">All Status</option>
-                                <option value="submitted">Submitted</option>
-                                <option value="reviewed">Reviewed</option>
-                                <option value="pending">Pending</option>
-                            </select>
-                        </div>
+    <div>
+        <!-- Feedback Card -->
+        <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
+            <div class="card-body p-4">
+                <!-- Header Section -->
+                <div class="feedback-header">
+                    <div>
+                        <h4 class="mb-0">
+                            <i class="material-icons material-symbols-rounded me-2"
+                                style="vertical-align: middle;">feedback</i>
+                            Session Feedback
+                        </h4>
+                    </div>
+                    <div class="feedback-actions">
+                        <button class="btn btn-outline-primary btn-sm feedback-action-btn" id="viewOlderBtn"
+                            data-bs-toggle="modal" data-bs-target="#olderFeedbackModal">
+                            <i class="material-icons material-symbols-rounded me-1"
+                                style="font-size: 18px; vertical-align: middle;">history</i>
+                            View Older Feedback
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm feedback-action-btn"
+                            onclick="location.reload()">
+                            <i class="material-icons material-symbols-rounded me-1"
+                                style="font-size: 18px; vertical-align: middle;">refresh</i>
+                            Refresh
+                        </button>
                     </div>
                 </div>
             </div>
         </form>
     </section>
 
-    <!-- Tab Content -->
-    <div class="tab-content" id="feedbackTabContent">
-        <!-- Active Tab -->
-        <div class="tab-pane fade show active" id="active-content" role="tabpanel" aria-labelledby="active-tab">
-            <div class="feedback-card">
-                <div class="card-body p-4">
-                    @if($activeEvents && $activeEvents->count() > 0)
-                        <div class="table-responsive">
-                            <table class="table feedback-table" aria-label="Active feedback entries">
-                                <thead>
-                                    <tr>
-                                        <th scope="col" style="width: 8%;">
-                                            <span class="sr-only">Serial Number</span>
-                                            S.No.
-                                        </th>
-                                        <th scope="col" style="width: 20%;">Course Name</th>
-                                        <th scope="col" style="width: 18%;">Faculty</th>
-                                        <th scope="col" style="width: 16%;">Subject</th>
-                                        <th scope="col" style="width: 18%;">Topic</th>
-                                        <th scope="col" style="width: 10%;" class="text-center">Avg. Rating</th>
-                                        <th scope="col" style="width: 10%;" class="text-center">Status</th>
-                                        <th scope="col" style="width: 10%;" class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($activeEvents as $key => $event)
-                                    <tr>
-                                        <td>
-                                            <span class="fw-semibold text-primary">{{ $activeEvents->firstItem() + $key }}</span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <i class="material-icons text-primary" aria-hidden="true" style="font-size: 18px;">school</i>
-                                                <span>{{ $event->course_name ?? '-' }}</span>
-                                            </div>
-                                        </td>
-                                        <td>{{ $event->faculty_name ?? '-' }}</td>
-                                        <td>
-                                            <div class="text-truncate" style="max-width: 150px;" 
-                                                 title="{{ $event->subject_name ?? '-' }}">
-                                                {{ $event->subject_name ?? '-' }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="text-truncate" style="max-width: 180px;" 
-                                                 title="{{ $event->subject_topic ?? '-' }}">
-                                                {{ \Illuminate\Support\Str::words($event->subject_topic, 5, '...') ?? '-' }}
-                                            </div>
-                                        </td>
-                                        <td class="text-center">
-                                            @if($event->average_rating)
-                                                <div class="star-rating-display" aria-label="Average rating: {{ $event->average_rating }} stars">
-                                                    @for($i = 1; $i <= 5; $i++)
-                                                        <span class="star {{ $i <= $event->average_rating ? '' : 'empty' }}">
-                                                            ★
-                                                        </span>
-                                                    @endfor
-                                                </div>
-                                                <small class="text-muted d-block mt-1">{{ number_format($event->average_rating, 1) }}/5</small>
-                                            @else
-                                                <span class="text-muted">N/A</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="status-indicator status-active">
-                                                <i class="material-icons" aria-hidden="true">check_circle</i>
-                                                Active
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="dropdown">
-                                                <button class="action-menu-trigger" 
-                                                        id="actionMenu{{ $event->event_id }}" 
-                                                        data-bs-toggle="dropdown" 
-                                                        aria-expanded="false"
-                                                        aria-label="Actions for {{ $event->course_name }}">
-                                                    <i class="material-icons" aria-hidden="true">more_vert</i>
-                                                </button>
-                                                
-                                                <ul class="dropdown-menu action-dropdown shadow-lg" 
-                                                    aria-labelledby="actionMenu{{ $event->event_id }}">
-                                                    <li>
-                                                        <a href="javascript:void(0)" 
-                                                           class="action-item view-feedback"
-                                                           data-event="{{ $event->event_id }}"
-                                                           data-bs-toggle="modal" 
-                                                           data-bs-target="#viewModal"
-                                                           aria-label="View detailed feedback">
-                                                            <i class="material-icons" aria-hidden="true">visibility</i>
-                                                            <span>View Details</span>
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a href="javascript:void(0)" 
-                                                           class="action-item archive-feedback"
-                                                           data-event="{{ $event->event_id }}"
-                                                           aria-label="Archive this feedback">
-                                                            <i class="material-icons" aria-hidden="true">archive</i>
-                                                            <span>Archive</span>
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a href="javascript:void(0)" 
-                                                           class="action-item export-feedback"
-                                                           data-event="{{ $event->event_id }}"
-                                                           aria-label="Export feedback as PDF">
-                                                            <i class="material-icons" aria-hidden="true">download</i>
-                                                            <span>Export PDF</span>
-                                                        </a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                <!-- Feedback Table -->
+                <div class="table-responsive">
+                    @if($events && $events->count() > 0)
+                    <table class="table feedback-table w-100">
+                        <thead>
+                            <tr>
+                                <th class="col" style="width: 8%;">S.No.</th>
+                                <th class="col" style="width: 18%;">Course Name</th>
+                                <th class="col" style="width: 18%;">Faculty Name</th>
+                                <th class="col" style="width: 18%;">Subject</th>
+                                <th class="col" style="width: 20%;">Topic</th>
+                                <th class="col" style="width: 18%;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($events as $key => $event)
+                            <tr>
+                                <td>
+                                    <span class="fw-600">{{ $events->firstItem() + $key }}</span>
+                                </td>
+                                <td>{{ $event->course_name ?? '-' }}</td>
+                                <td>{{ $event->faculty_name ?? '-' }}</td>
+                                <td>{{ $event->subject_name ?? '-' }}</td>
+                                <td>{{ \Illuminate\Support\Str::words($event->subject_topic, 8, '...') ?? '-' }}</td>
+                                <td class="text-center">
+                                    <div class="dropdown">
+                                        <a href="javascript:void(0)" class="px-2 text-decoration-none"
+                                            id="actionMenu{{ $event->event_id }}" data-bs-toggle="dropdown"
+                                            aria-expanded="false" role="button" title="Actions">
+                                            <span class="material-symbols-rounded fs-5">more_horiz</span>
+                                        </a>
+
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0"
+                                            aria-labelledby="actionMenu{{ $event->event_id }}">
+                                            <!-- View Option -->
+                                            <li>
+                                                <a href="javascript:void(0)"
+                                                    class="dropdown-item d-flex align-items-center gap-2 view-btn"
+                                                    data-event="{{ $event->event_id }}" data-bs-toggle="modal"
+                                                    data-bs-target="#viewModal" title="View detailed feedback">
+                                                    <i class="material-icons material-symbols-rounded fs-6">visibility</i>
+                                                    <span>View Details</span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination -->
+                    <div class="pagination-wrapper">
+                        <div class="pagination-info">
+                            Showing <strong>{{ $events->firstItem() }}</strong> to
+                            <strong>{{ $events->lastItem() }}</strong>
+                            of <strong>{{ $events->total() }}</strong> feedback entries
                         </div>
 
                         <!-- Pagination -->

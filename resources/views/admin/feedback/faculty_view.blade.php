@@ -81,9 +81,9 @@
 
     <body>
 
-        <div class="container-fluid py-3">
-            <x-breadcrum title="Faculty Feedback with Comments Admin View"></x-breadcrum>
-            <div class="row g-3">
+    <div class="container-fluid py-3">
+        <x-breadcrum title="Average Rating - Course / Topic wise"></x-breadcrum>
+        <div class="row g-3">
 
                 <!-- LEFT FILTER PANEL -->
                 <aside class="col-lg-3 col-md-4">
@@ -141,6 +141,28 @@
                                 <button class="btn btn-primary w-50">Apply</button>
                                 <button class="btn btn-outline-secondary w-50">Reset</button>
                             </div>
+                        </form>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="col-lg-9 col-md-8">
+                <div class="card content-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="page-title">Average Rating - Course / Topic wise</span>
+                        <div class="d-flex align-items-center">
+                            <!-- Export Buttons -->
+                            <div class="btn-group ms-2" role="group">
+                                <button type="button" class="btn btn-sm btn-success" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel me-1"></i> Export Excel
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="exportToPDF()">
+                                    <i class="fas fa-file-pdf me-1"></i> Export PDF
+                                </button>
+                            </div>
+                            <small class="text-muted ms-3">Data refreshed:
+                                {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
                         </div>
                     </div>
                 </aside>

@@ -82,8 +82,8 @@
             background: #083e6c;
         }
     </style>
-</head>
-<body>
+    <div class="container-fluid py-3">
+        <x-breadcrum title="Faculty Feedback Average"></x-breadcrum>
 
 <div class="container-fluid py-3">
      <x-breadcrum title="Faculty Average"></x-breadcrum>
@@ -134,12 +134,82 @@
             </div>
         </aside>
 
-        <!-- MAIN CONTENT -->
-        <main class="col-lg-9 col-md-8">
-            <div class="card content-card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Feedback With Average</span>
-                    <small class="text-muted">Data refreshed: 16-Dec-2025 12:58</small>
+            <!-- MAIN CONTENT -->
+            <main class="col-lg-9 col-md-8">
+                <div class="card content-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Faculty Feedback Average</span>
+                        <small class="text-muted">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Loading Spinner -->
+                        <div class="loading-spinner" id="loadingSpinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading feedback data...</p>
+                        </div>
+
+                        <!-- Table Container (initially visible) -->
+                        <div id="tableContainer">
+                            @if ($currentProgram)
+                                <div class="text-center mb-3">
+                                    <h6 class="fw-semibold mb-0">{{ $currentProgram }}</h6>
+                                </div>
+                            @endif
+
+                            @if ($feedbackData->isEmpty())
+                                <div class="alert alert-info text-center">
+                                    No feedback data found for the selected filters.
+                                </div>
+                            @else
+                                <!-- TABLE -->
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="feedbackTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Faculty</th>
+                                                <th>Topic</th>
+                                                <th>Content (%)</th>
+                                                <th>Presentation (%)</th>
+                                                <th>Participants</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($feedbackData as $data)
+                                                <tr>
+                                                    <td class="faculty-name">{{ $data['faculty_name'] }}</td>
+                                                    <td>{{ Str::limit($data['topic_name'], 40) }}</td>
+                                                    <td
+                                                        class="{{ $data['content_percentage'] >= 90 ? 'percentage-good' : ($data['content_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
+                                                        {{ number_format($data['content_percentage'], 2) }}
+                                                    </td>
+                                                    <td
+                                                        class="{{ $data['presentation_percentage'] >= 90 ? 'percentage-good' : ($data['presentation_percentage'] >= 70 ? 'percentage-average' : 'percentage-low') }}">
+                                                        {{ number_format($data['presentation_percentage'], 2) }}
+                                                    </td>
+                                                    <td class="text-center">{{ $data['participants'] }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- PAGINATION (if needed) -->
+                                @if ($feedbackData->count() > 20)
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <small class="text-muted">Showing {{ $feedbackData->count() }} records</small>
+                                        <nav aria-label="Feedback pagination">
+                                            <ul class="pagination mb-0">
+                                                <!-- Add pagination logic if needed -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card-body">
