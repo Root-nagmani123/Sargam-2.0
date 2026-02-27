@@ -24,22 +24,23 @@
                             </div>
                         </div>
                     </div>
-                    <hr>
-                    <div class="table-responsive">
-                        <table class="table" id="exceptiongetcategory">
-                            <thead>
-                                <!-- start row -->
-                                <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">Name</th>
-                                    <th class="col">Short Name</th>
-                                    <th class="col">Status</th>
-                                    <th class="col">Actions</th>
-                                </tr>
-                                <!-- end row -->
-                            </thead>
-                        </table>
-                    </div>
+                    <button id="showAlert" class="btn btn-primary btn-add-exemption-category d-inline-flex align-items-center gap-2">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 1.25rem;">add</i>
+                        <span>Add Exemption categories</span>
+                    </button>
+                </div>
+                <div class="table-responsive table-scroll-wrapper">
+                    <table class="table text-nowrap align-middle mb-0" id="exceptiongetcategory">
+                        <thead>
+                            <tr>
+                                <th class="col">S.No.</th>
+                                <th class="col">Category name</th>
+                                <th class="col">Short Name</th>
+                                <th class="col">Status</th>
+                                <th class="col">Actions</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
             </div>
         </div>

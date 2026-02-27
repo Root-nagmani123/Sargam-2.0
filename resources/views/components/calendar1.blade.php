@@ -780,17 +780,49 @@ $(document).ready(function() {
                     $('#subject_name').empty().append(
                         '<option value="">Select Subject Name</option>'
                     );
+
+                    let optionsData = [{
+                        value: '',
+                        label: 'Select Subject Name',
+                        selected: true,
+                        disabled: false
+                    }];
+
                     $.each(response, function(key, module) {
                         $('#subject_name').append(
                             '<option value="' + module.pk +
                             '">' + module.subject_name +
                             '</option>');
+                        optionsData.push({
+                            value: module.pk,
+                            label: module.subject_name,
+                            selected: false,
+                            disabled: false
+                        });
                     });
+
+                    // Sync Choices.js instance if present
+                    if (window.calendarEventChoices && window.calendarEventChoices.subjectName) {
+                        const subjectNameChoices = window.calendarEventChoices.subjectName;
+                        subjectNameChoices.clearChoices();
+                        subjectNameChoices.setChoices(optionsData, 'value', 'label', true);
+                    }
                 }
             });
         } else {
             $('#subject_name').empty().append(
                 '<option value="">Select Subject Name</option>');
+
+            if (window.calendarEventChoices && window.calendarEventChoices.subjectName) {
+                const subjectNameChoices = window.calendarEventChoices.subjectName;
+                subjectNameChoices.clearChoices();
+                subjectNameChoices.setChoices([{
+                    value: '',
+                    label: 'Select Subject Name',
+                    selected: true,
+                    disabled: false
+                }], 'value', 'label', true);
+            }
         }
     });
 
@@ -858,7 +890,6 @@ $(document).ready(function() {
 
                     // Step 2: Fill the dropdown with unique group_type_name
                     $('#group_type').empty().append(
-                       
                         '<option value="">Select Group Type</option>');
                     $('#type_name_container').html('');
                     for (const key in groupedData) {
@@ -868,6 +899,31 @@ $(document).ready(function() {
                                 `<option value="${key}">${typeName}</option>`
                             );
                         }
+                    }
+
+                    // If Choices.js is active for group_type, sync its options
+                    if (window.calendarEventChoices && window.calendarEventChoices.groupType) {
+                        const groupTypeChoices = window.calendarEventChoices.groupType;
+                        const optionsData = [{
+                            value: '',
+                            label: 'Select Group Type',
+                            selected: true,
+                            disabled: false
+                        }];
+                        for (const key in groupedData) {
+                            if (groupedData[key].length > 0) {
+                                const typeName = groupedData[key][0].type_name;
+                                optionsData.push({
+                                    value: key,
+                                    label: typeName,
+                                    selected: false,
+                                    disabled: false
+                                });
+                            }
+                        }
+
+                        groupTypeChoices.clearChoices();
+                        groupTypeChoices.setChoices(optionsData, 'value', 'label', true);
                     }
 
                     $('#group_type').off('change').on('change', function() {
