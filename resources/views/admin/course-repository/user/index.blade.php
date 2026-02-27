@@ -6,6 +6,18 @@
 
 <!-- Main Content -->
 <div class="container-fluid px-4 py-4" id="main-content">
+    <!-- Title Section with Back Button -->
+    <div class="title-section mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <button type="button" 
+                    onclick="window.history.back()" 
+                    class="btn-back btn btn-link p-0 text-decoration-none"
+                    aria-label="Go back">
+                <i class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back_ios</i>
+            </button>
+            <h1 class="h2 mb-0 fw-bold text-dark">Central Course Repository of LBSNAA</h1>
+        </div>
+    </div>
 
     <!-- Filter Card -->
     <div class="card filter-card shadow-sm mb-4">
