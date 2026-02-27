@@ -454,76 +454,26 @@ $currentPath = $segments[1] ?? null;
     //         return $this->getOTAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
     //     }
 
-    //     // Get student information
-    //         $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
-
-    //         // Get course information
-    //         $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
-
-    //         // Get filter parameters - Default to today's date if not provided
-    //         $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
-    //         $filterSessionTime = $request->input('filter_session_time');
-    //         $filterCourse = $request->input('filter_course');
-    //         $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
-
-    //         // Get sessions for filter dropdown
-    //         $sessions = ClassSessionMaster::get();
-    //         $maunalSessions = Timetable::select('class_session')
-    //             ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
-    //             ->groupBy('class_session')
-    //             ->select('class_session')
-    //             ->get();
-
-    //         // Get archived courses for the student (only when in archive mode)
-    //         $archivedCourses = [];
-    //         if ($archiveMode === 'archive') {
-    //             $archivedCourses = CourseMaster::join('student_master_course__map', 'student_master_course__map.course_master_pk', '=', 'course_master.pk')
-    //                 ->where('student_master_course__map.student_master_pk', $student_pk)
-    //                 ->whereNotNull('course_master.end_date')
-    //                 ->whereDate('course_master.end_date', '<', Carbon::today())
-    //                 ->select('course_master.pk', 'course_master.course_name', 'course_master.end_date')
-    //                 ->orderBy('course_master.end_date', 'desc')
-    //                 ->get();
-    //         }
-
-    //         // Return the view for regular page load
-    //         return view('admin.attendance.ot-student-view', compact(
-    //             'student',
-    //             'course',
-    //             'group_pk',
-    //             'course_pk',
-    //             'timetable_pk',
-    //             'student_pk',
-    //             'sessions',
-    //             'maunalSessions',
-    //             'archivedCourses',
-    //             'archiveMode',
-    //             'filterDate',
-    //             'filterSessionTime',
-    //             'filterCourse'
-    //         ));
-    //     }
-
-
-
-    public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
-        try {
-        // Verify user has Student-OT role
-            if (!hasRole('Student-OT')) {
-                return redirect()->back()->with('error', 'Access denied. Student-OT role required.');
-            }
-
-            // Get student information
+      public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
+        // Get student information
             $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
 
             // Get course information
             $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
             // Get filter parameters
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
+            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : null;
+            $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
-            $filterStatus = $request->input('filter_status');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
+
+            // Get sessions for filter dropdown
+            $sessions = ClassSessionMaster::get();
+            $maunalSessions = Timetable::select('class_session')
+                ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
+                ->groupBy('class_session')
+                ->select('class_session')
+                ->get();
 
             // Get archived courses for the student (only when in archive mode)
             $archivedCourses = [];
@@ -546,6 +496,27 @@ $currentPath = $segments[1] ?? null;
                 'timetable.venue:venue_id,venue_name',
                 'timetable.faculty:pk,full_name',
             ]);
+
+            // Apply course filter if provided (only in archive mode)
+            if ($archiveMode === 'archive' && $filterCourse) {
+                $query->where('Programme_pk', $filterCourse);
+                // Also need to update group_pk based on the selected course
+                // Get the group for this student and the selected course
+                $studentGroupMap = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
+                    ->where('student_master_pk', $student_pk)
+                    ->whereHas('groupTypeMasterCourseMasterMap', function($q) use ($filterCourse) {
+                        $q->where('course_name', $filterCourse);
+                    })
+                    ->first();
+                
+                if ($studentGroupMap && $studentGroupMap->groupTypeMasterCourseMasterMap) {
+                    $query->where('group_pk', $studentGroupMap->groupTypeMasterCourseMasterMap->pk);
+                }
+            } else {
+                // Default behavior: use the original course and group
+                $query->where('group_pk', $group_pk)
+                      ->where('Programme_pk', $course_pk);
+            }
 
             // Apply course filter if provided (only in archive mode)
             if ($archiveMode === 'archive' && $filterCourse) {

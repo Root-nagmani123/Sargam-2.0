@@ -94,24 +94,32 @@
                     </div>
                     @endif
                     
-                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-5' : 'col-lg-6' }} col-md-6">
+                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
                         <label for="filter_date" class="form-label fw-semibold">
                             <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
                         </label>
                         <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
-                            value="{{ $filterDate ?? date('Y-m-d') }}" max="{{ date('Y-m-d') }}" aria-label="Filter by Date">
+                            value="{{ $filterDate ?? '' }}" aria-label="Filter by Date">
                     </div>
-                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-5' : 'col-lg-4' }} col-md-6">
-                        <label for="filter_status" class="form-label fw-semibold">
-                            <i class="bi bi-check-circle me-1 text-primary"></i> Attendance Status:
+                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
+                        <label for="filter_session_time" class="form-label fw-semibold">
+                            <i class="bi bi-clock-history me-1 text-primary"></i> Session Time:
                         </label>
-                        <select class="form-select form-select-lg select2" id="filter_status"
-                            name="filter_status" aria-label="Filter by Attendance Status">
-                            <option value="">-- All Status --</option>
-                            <option value="Present" {{ $filterStatus == 'Present' ? 'selected' : '' }}>Present</option>
-                            <option value="Late" {{ $filterStatus == 'Late' ? 'selected' : '' }}>Late</option>
-                            <option value="Absent" {{ $filterStatus == 'Absent' ? 'selected' : '' }}>Absent</option>
-                            <option value="Not Marked" {{ $filterStatus == 'Not Marked' ? 'selected' : '' }}>Not Marked</option>
+                        <select class="form-select form-select-lg select2" id="filter_session_time"
+                            name="filter_session_time" aria-label="Filter by Session Time">
+                            <option value="">-- Select Session Time --</option>
+                            @foreach($sessions as $session)
+                            <option value="{{ $session->pk }}"
+                                {{ $filterSessionTime == $session->pk ? 'selected' : '' }}>
+                                {{ $session->shift_name }} ({{ $session->start_time }} - {{ $session->end_time }})
+                            </option>
+                            @endforeach
+                            @foreach($maunalSessions as $manualSession)
+                            <option value="{{ $manualSession->class_session }}"
+                                {{ $filterSessionTime == $manualSession->class_session ? 'selected' : '' }}>
+                                {{ $manualSession->class_session }}
+                            </option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="col-lg-2 col-md-12 d-flex align-items-end">
@@ -157,19 +165,26 @@
 
         // 2. Clear Filters Logic
         clearFilters.addEventListener('click', function() {
+            // Clear standard filter fields
             document.getElementById('filter_date').value = '';
-            const statusSelect = document.getElementById('filter_status');
-            if (statusSelect) statusSelect.value = '';
+            const sessionSelect = document.getElementById('filter_session_time');
+            sessionSelect.value = ''; // Set to the default 'Select Session Time' option
             
+            // Clear course filter if it exists (only in archive mode)
             const courseSelect = document.getElementById('filter_course');
             if (courseSelect) {
                 courseSelect.value = '';
+                // If select2 is initialized, trigger change
                 if ($.fn.select2 && $(courseSelect).hasClass('select2-hidden-accessible')) {
                     $(courseSelect).val('').trigger('change');
                 }
             }
 
-            archiveModeInput.value = '{{ $archiveMode ?? 'active' }}';
+            // Re-apply the current archive mode for context
+            archiveModeInput.value = '{{ $archiveMode ?? '
+            active ' }}';
+
+            // Submit the form with cleared filters
             form.submit();
         });
 
@@ -188,10 +203,24 @@
     </script>
 
     {{-- Attendance Details Table --}}
-    <div class="card shadow-sm rounded-4 overflow-hidden">
-        <div class="card-header bg-white border-bottom py-3">
+    <div class="card shadow">
+        <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="mb-0 fw-semibold">Attendance Details</h4>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <h4 class="mb-0 fw-bold d-flex align-items-center">
+                    <span>Attendance Records</span>
+                </h4>
+                <div class="d-flex gap-2 no-print">
+                    <button type="button" class="btn btn-light btn-sm" onclick="window.print()"
+                        aria-label="Print attendance records">
+                        <i class="bi bi-printer-fill me-1" aria-hidden="true"></i>
+                        <span>Print</span>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="card-body p-0">
@@ -319,69 +348,42 @@
 
 @section('scripts')
 <script>
-$(document).ready(function() {
-    // Initialize select2 if available
-    if ($.fn.select2) {
-        $('.select2').select2({
-            placeholder: 'Select an option',
-            allowClear: true
-        });
-    }
+$(function() {
+    //alert('sfsdf');
+    let table = $('#attendanceTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ route('ot.student.attendance.data')}}",
+            data: function(d) {
+                d.filter_session_time = $('#filter_session_time').val();
+                d.archive_mode = $('#archive_mode').val();
+                d.filter_date = $('#filter_date').val();
 
-    // Active/Archive toggle button handlers
-    $('#filterActive').on('click', function() {
-        setActiveButton($(this));
-        $('#archive_mode_input').val('active');
-        $('#filterForm').submit();
-    });
-
-    $('#filterArchive').on('click', function() {
-        setActiveButton($(this));
-        $('#archive_mode_input').val('archive');
-        $('#filterForm').submit();
-    });
-
-    // Function to set active button styling
-    function setActiveButton(activeBtn) {
-        // Reset all buttons to outline style
-        $('#filterActive')
-            .removeClass('btn-success active text-white')
-            .addClass('btn-outline-success')
-            .attr('aria-pressed', 'false');
-
-        $('#filterArchive')
-            .removeClass('btn-secondary active text-white')
-            .addClass('btn-outline-secondary')
-            .attr('aria-pressed', 'false');
-
-        // Set the active button
-        if (activeBtn.attr('id') === 'filterActive') {
-            activeBtn.removeClass('btn-outline-success')
-                .addClass('btn-success text-white active')
-                .attr('aria-pressed', 'true');
-        } else if (activeBtn.attr('id') === 'filterArchive') {
-            activeBtn.removeClass('btn-outline-secondary')
-                .addClass('btn-secondary text-white active')
-                .attr('aria-pressed', 'true');
+                d.group_pk = $('#group_pk').val();
+                d.course_pk = $('#course_pk').val();
+                d.timetable_pk = $('#filter_date').val();
+                d.student_pk = $('#student_pk').val();
+            }
         }
-    }
 
     // Auto-submit form when filters change
     let filterTimeout;
-    $('#filter_date, #filter_course, #filter_status').on('change', function() {
+    $('#filter_date, #filter_session_time, #filter_course').on('change', function() {
         clearTimeout(filterTimeout);
         filterTimeout = setTimeout(function() {
             $('#filterForm').submit();
-        }, 300);
+        }, 300); // Small delay to avoid multiple submissions
     });
 
     // Clear filters button
     $('#clearFilters').on('click', function() {
         $('#filter_date').val('');
-        $('#filter_status').val('');
+        $('#filter_session_time').val('').trigger('change');
         if ($.fn.select2) {
-            $('#filter_status').select2('val', '');
+            $('#filter_session_time').select2('val', '');
         }
+        // Clear course filter if it exists (only in archive mode)
         const courseSelect = $('#filter_course');
         if (courseSelect.length) {
             courseSelect.val('').trigger('change');
@@ -389,6 +391,7 @@ $(document).ready(function() {
                 courseSelect.select2('val', '');
             }
         }
+        // Reset to active mode
         setActiveButton($('#filterActive'));
         $('#archive_mode_input').val('active');
         $('#filterForm').submit();
