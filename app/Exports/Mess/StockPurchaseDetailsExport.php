@@ -28,11 +28,16 @@ class StockPurchaseDetailsExport implements FromCollection, WithHeadings
             foreach ($order->items as $item) {
                 $qty = $item->quantity ?? 0;
                 $rate = $item->unit_price ?? 0;
-                $total = $qty * $rate;
+                $taxPercent = $item->tax_percent ?? 0;
+                $subtotal = $qty * $rate;
+                $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                $total = $subtotal + $taxAmount;
                 $itemName = $item->itemSubcategory->item_name
                     ?? $item->itemSubcategory->subcategory_name
                     ?? $item->itemSubcategory->name
                     ?? 'N/A';
+                $itemCode = $item->itemSubcategory->item_code ?? '—';
+                $unit = $item->unit ?? '—';
 
                 $rows[] = [
                     $billNo,
@@ -40,8 +45,12 @@ class StockPurchaseDetailsExport implements FromCollection, WithHeadings
                     $storeName,
                     $vendorName,
                     $itemName,
+                    $itemCode,
+                    $unit,
                     number_format($qty, 2),
                     number_format($rate, 2),
+                    number_format($taxPercent, 2) . '%',
+                    number_format($taxAmount, 2),
                     number_format($total, 2),
                 ];
             }
@@ -57,8 +66,12 @@ class StockPurchaseDetailsExport implements FromCollection, WithHeadings
             'Store',
             'Vendor',
             'Item Name',
+            'Item Code',
+            'Unit',
             'Quantity',
             'Unit Price',
+            'Tax %',
+            'Tax Amount',
             'Total',
         ];
     }

@@ -1094,12 +1094,14 @@
             if (drCourseSelect) { drCourseSelect.style.display = 'none'; drCourseSelect.value = ''; drCourseSelect.removeAttribute('required'); }
             if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.value = ''; drCourseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
-            nameInput.style.display = 'none';
-            nameInput.removeAttribute('required');
+            // Course: Name field is manual text input (like Section), not dropdown
+            nameInput.style.display = 'block';
+            nameInput.placeholder = 'Course name';
+            nameInput.setAttribute('required', 'required');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
             if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
             if (drCourseSelect) { drCourseSelect.style.display = 'block'; }
-            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; }
+            if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
@@ -1154,8 +1156,8 @@
                 if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (drCourseSelect) { drCourseSelect.style.display = 'block'; drCourseSelect.setAttribute('required', 'required'); drCourseSelect.setAttribute('name', 'client_type_pk'); drCourseSelect.value = ''; }
-                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'block'; drCourseNameSelect.setAttribute('required', 'required'); drCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                if (drCourseNameSelect) { drCourseNameSelect.style.display = 'none'; drCourseNameSelect.removeAttribute('required'); drCourseNameSelect.value = ''; }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.value = ''; nameInput.placeholder = 'Course name'; nameInput.setAttribute('required', 'required'); }
             } else {
                 if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
@@ -1205,18 +1207,8 @@
     });
     document.getElementById('drCourseSelect').addEventListener('change', function() {
         const pk = this.value || '';
-        const drCourseNameSelect = document.getElementById('drCourseNameSelect');
         const inp = document.getElementById('drClientNameInput');
         const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-        if (drCourseNameSelect) drCourseNameSelect.value = pk;
-        if (inp) inp.value = courseName;
-    });
-    document.getElementById('drCourseNameSelect').addEventListener('change', function() {
-        const pk = this.value || '';
-        const drCourseSelect = document.getElementById('drCourseSelect');
-        const inp = document.getElementById('drClientNameInput');
-        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-        if (drCourseSelect) drCourseSelect.value = pk;
         if (inp) inp.value = courseName;
     });
     document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
@@ -1260,12 +1252,19 @@
         const showAcademyStaff = isEmployee && isAcademyStaff;
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
-        if (isOt || isCourse) {
+        if (isOt) {
             nameInput.style.display = 'none';
             nameInput.removeAttribute('required');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (isCourse && editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; }
-            if (isCourse && editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; }
+            if (editDrCourseSelect) { editDrCourseSelect.style.display = 'none'; editDrCourseSelect.value = ''; editDrCourseSelect.removeAttribute('required'); }
+            if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
+        } else if (isCourse) {
+            nameInput.style.display = 'block';
+            nameInput.placeholder = 'Course name';
+            nameInput.setAttribute('required', 'required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
+            if (editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; }
+            if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
@@ -1303,8 +1302,8 @@
                 if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
                 if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
                 if (editDrCourseSelect) { editDrCourseSelect.style.display = 'block'; editDrCourseSelect.setAttribute('required', 'required'); editDrCourseSelect.setAttribute('name', 'client_type_pk'); editDrCourseSelect.value = ''; }
-                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'block'; editDrCourseNameSelect.setAttribute('required', 'required'); editDrCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
+                if (editDrCourseNameSelect) { editDrCourseNameSelect.style.display = 'none'; editDrCourseNameSelect.removeAttribute('required'); editDrCourseNameSelect.value = ''; }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.value = ''; nameInput.placeholder = 'Course name'; nameInput.setAttribute('required', 'required'); }
             } else {
                 if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
@@ -1353,19 +1352,8 @@
         if (inp) inp.value = this.value || '';
     });
     document.getElementById('editDrCourseSelect').addEventListener('change', function() {
-        const pk = this.value || '';
-        const editDrCourseNameSelect = document.getElementById('editDrCourseNameSelect');
         const inp = document.getElementById('editDrClientNameInput');
         const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-        if (editDrCourseNameSelect) editDrCourseNameSelect.value = pk;
-        if (inp) inp.value = courseName;
-    });
-    document.getElementById('editDrCourseNameSelect').addEventListener('change', function() {
-        const pk = this.value || '';
-        const editDrCourseSelect = document.getElementById('editDrCourseSelect');
-        const inp = document.getElementById('editDrClientNameInput');
-        const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-        if (editDrCourseSelect) editDrCourseSelect.value = pk;
         if (inp) inp.value = courseName;
     });
     document.getElementById('editDrClientNameSelect').addEventListener('change', updateEditDrNameField);
@@ -1700,8 +1688,8 @@
                         if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
                         if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
                         if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
-                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'block'; editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_type_pk || ''; }
-                        if (editNameInp) { editNameInp.style.display = 'none'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
+                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.value = v.client_name || ''; editNameInp.placeholder = 'Course name'; editNameInp.setAttribute('required', 'required'); }
                     } else {
                         if (editClientSelect) { editClientSelect.style.display = 'block'; editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== slug; }); }
                         if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
