@@ -48,11 +48,12 @@ class FamilyIDCardApprovalController extends Controller
             return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
         };
         $groups = $pendingRows->groupBy($groupKey);
-        $creatorPks = $pendingRows->pluck('created_by')->filter()->unique();
+        $creatorUserIds = $pendingRows->pluck('created_by')->filter()->unique();
         $creators = collect();
-        if ($creatorPks->isNotEmpty()) {
-            $ucs = DB::table('user_credentials')->whereIn('pk', $creatorPks)->get(['pk', 'user_id']);
-            $empPks = $ucs->pluck('user_id')->filter()->unique();
+        if ($creatorUserIds->isNotEmpty()) {
+            // created_by in SecurityFamilyIdApply stores user_id (like 'ITS005'), not pk
+            $ucs = DB::table('user_credentials')->whereIn('user_id', $creatorUserIds)->get(['user_id', 'pk']);
+            $empPks = $ucs->pluck('pk')->filter()->unique();
             $empNames = collect();
             if ($empPks->isNotEmpty()) {
                 $emps = DB::table('employee_master')->whereIn('pk', $empPks)->get(['pk', 'first_name', 'last_name']);
@@ -61,14 +62,14 @@ class FamilyIDCardApprovalController extends Controller
                 }
             }
             foreach ($ucs as $uc) {
-                $name = $empNames[(string) ($uc->user_id ?? '')] ?? null;
-                $creators[(string) $uc->pk] = $name ?: ('User #' . $uc->pk);
+                $name = $empNames[(string) ($uc->pk ?? '')] ?? null;
+                $creators[(string) $uc->user_id] = $name ?: ('User #' . $uc->user_id);
             }
         }
 
         $groupList = $groups->map(function ($rows) use ($creators) {
             $first = $rows->sortBy('fml_id_apply')->first();
-            $creatorName = $creators[(string) ($first->created_by ?? '')] ?? 'User #' . ($first->created_by ?? '--');
+            $creatorName = $creators[(string) ($first->created_by ?? '')] ?? ('User #' . ($first->created_by ?? '--'));
             return (object) [
                 'first_id' => $first->fml_id_apply,
                 'emp_id_apply' => $first->emp_id_apply,

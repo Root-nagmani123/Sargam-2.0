@@ -151,13 +151,15 @@
 @push('scripts')
 <script>
 function approveApplication(encryptedId) {
-    const url = "{{ route('admin.security.vehicle_pass_approval.approve', ':id') }}".replace(':id', encryptedId);
+    const safeId = encodeURIComponent(encryptedId);
+    const url = "{{ route('admin.security.vehicle_pass_approval.approve', ':id') }}".replace(':id', safeId);
     $('#approveForm').attr('action', url);
     $('#approveModal').modal('show');
 }
 
 function rejectApplication(encryptedId) {
-    const url = "{{ route('admin.security.vehicle_pass_approval.reject', ':id') }}".replace(':id', encryptedId);
+    const safeId = encodeURIComponent(encryptedId);
+    const url = "{{ route('admin.security.vehicle_pass_approval.reject', ':id') }}".replace(':id', safeId);
     $('#rejectForm').attr('action', url);
     $('#rejectModal').modal('show');
 }

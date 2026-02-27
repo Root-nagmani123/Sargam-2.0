@@ -84,7 +84,7 @@
                     <div class="col-md-6">
                         <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" 
-                               value="{{ old('name', $request->name) }}" readonly required>
+                               value="{{ old('name', $request->name) }}" required>
                         @error('name')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -92,7 +92,7 @@
                     <div class="col-md-6">
                         <label for="designation" class="form-label">Designation</label>
                         <input type="text" name="designation" id="designation" class="form-control @error('designation') is-invalid @enderror" 
-                               value="{{ old('designation', $request->designation) }}" readonly>
+                               value="{{ old('designation', $request->designation) }}">
                         @error('designation')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -102,7 +102,7 @@
                     <div class="col-md-6">
                         <label for="date_of_birth" class="form-label">Date of Birth</label>
                         <input type="date" name="date_of_birth" id="date_of_birth" class="form-control @error('date_of_birth') is-invalid @enderror" 
-                               value="{{ old('date_of_birth', $request->date_of_birth ? (\Carbon\Carbon::parse($request->date_of_birth)->format('Y-m-d')) : '') }}" readonly>
+                               value="{{ old('date_of_birth', $request->date_of_birth ? (\Carbon\Carbon::parse($request->date_of_birth)->format('Y-m-d')) : '') }}">
                         @error('date_of_birth')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -110,7 +110,7 @@
                     <div class="col-md-6">
                         <label for="father_name" class="form-label">Father Name</label>
                         <input type="text" name="father_name" id="father_name" class="form-control @error('father_name') is-invalid @enderror" 
-                               value="{{ old('father_name', $request->father_name) }}" readonly>
+                               value="{{ old('father_name', $request->father_name) }}">
                         @error('father_name')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -120,14 +120,14 @@
                     <div class="col-md-6">
                         <label for="academy_joining" class="form-label">Academy Joining</label>
                         <input type="date" name="academy_joining" id="academy_joining" class="form-control @error('academy_joining') is-invalid @enderror" 
-                               value="{{ old('academy_joining', $request->academy_joining ?? '') }}" readonly>
+                               value="{{ old('academy_joining', $request->academy_joining ?? '') }}">
                         @error('academy_joining')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-md-6">
                         <label for="id_card_valid_upto" class="form-label">ID Card Valid Upto</label>
-                        <input type="text" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
+                        <input type="date" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
                                value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY" readonly>
                         @error('id_card_valid_upto')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -138,7 +138,7 @@
                     <div class="col-md-6">
                         <label for="mobile_number" class="form-label">Mobile Number</label>
                         <input type="tel" name="mobile_number" id="mobile_number" class="form-control @error('mobile_number') is-invalid @enderror" 
-                               value="{{ old('mobile_number', $request->mobile_number) }}" placeholder="10 digit mobile number" readonly>
+                               value="{{ old('mobile_number', $request->mobile_number) }}" placeholder="10 digit mobile number">
                         @error('mobile_number')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -147,7 +147,7 @@
                     <div class="col-md-6">
                         <label for="telephone_number" class="form-label">Telephone Number</label>
                         <input type="tel" name="telephone_number" id="telephone_number" class="form-control @error('telephone_number') is-invalid @enderror" 
-                               value="{{ old('telephone_number', $request->telephone_number) }}" readonly>
+                               value="{{ old('telephone_number', $request->telephone_number) }}">
                         @error('telephone_number')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -313,12 +313,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_from_edit" class="form-label">ID Card Valid From</label>
-                                <input type="text" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
+                                <input type="date" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
                                 @error('id_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_upto_edit" class="form-label">ID Card Valid Upto</label>
-                                <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
+                                <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
                                 @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6" id="firReceiptFieldEdit" style="display:none;">

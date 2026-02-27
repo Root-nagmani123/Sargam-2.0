@@ -58,29 +58,47 @@
 @push('styles')
 <style>
     @media print {
+        /* Reset default hidden elements */
+        * {
+            visibility: visible !important;
+        }
+        
         /* Hide navigation, sidebar, and action buttons */
         .no-print,
         .sidebar-nav,
         .topbar,
         .page-breadcrumb,
         .breadcrumb,
+        .navbar,
         header,
         footer,
-        .btn,
-        button {
+        .navbar-toggler,
+        nav {
             display: none !important;
         }
         
-        /* Full width for print */
-        .page-wrapper {
+        /* Ensure body and main containers are visible */
+        body,
+        html {
+            visibility: visible !important;
+            display: block !important;
+            background: #fff !important;
+            color: #000 !important;
             margin: 0 !important;
             padding: 0 !important;
         }
         
+        /* Full width for print */
+        .page-wrapper,
+        .main-content,
         .container-fluid {
             width: 100% !important;
             max-width: 100% !important;
+            margin: 0 !important;
             padding: 20px !important;
+            box-shadow: none !important;
+            display: block !important;
+            visibility: visible !important;
         }
         
         /* Card styling for print */
@@ -88,10 +106,32 @@
             border: 2px solid #004a93 !important;
             box-shadow: none !important;
             page-break-inside: avoid;
+            display: block !important;
+            visibility: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
         
         .card-body {
             padding: 20px !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        /* Row and column styling for print */
+        .row {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        .col-12,
+        .col-md-6,
+        [class*='col-'] {
+            display: block !important;
+            width: 100% !important;
+            margin: 8px 0 !important;
+            padding: 0 !important;
         }
         
         /* Make text darker for print */
@@ -100,10 +140,20 @@
             background: #fff !important;
         }
         
+        /* Remove Bootstrap print utilities that might hide content */
+        .d-print-none {
+            display: block !important;
+        }
+        
+        .d-none {
+            display: block !important;
+        }
+        
         /* Status badge print styling */
         .badge {
             border: 1px solid #000 !important;
             padding: 4px 8px !important;
+            display: inline-block !important;
         }
         
         /* Add page header */
@@ -115,10 +165,25 @@
             color: #004a93 !important;
             font-size: 18px !important;
             font-weight: bold !important;
+            display: block !important;
+            visibility: visible !important;
         }
         
         strong {
             font-weight: 600 !important;
+            display: inline !important;
+        }
+        
+        /* Ensure links are visible */
+        a {
+            color: inherit !important;
+            text-decoration: underline !important;
+        }
+        
+        /* Hide print button itself */
+        button[onclick*="print"],
+        .btn-info {
+            display: none !important;
         }
     }
 </style>

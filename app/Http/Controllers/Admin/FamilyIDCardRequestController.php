@@ -91,6 +91,7 @@ class FamilyIDCardRequestController extends Controller
                 'section' => $section,
                 'member_count' => $rows->count(),
                 'card_type' => $first->card_type ?? 'Family',
+                'id_status' => (int) ($first->id_status ?? 1),
             ];
         })->values();
         
@@ -190,7 +191,7 @@ class FamilyIDCardRequestController extends Controller
             'designation' => 'required|string|max:255',
             'card_type' => 'required|string|max:100',
             'section' => 'required|string|max:255',
-            'group_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'group_photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
             'members' => 'required|array|min:1',
             'members.*.name' => 'required|string|max:255',
             'members.*.relation' => 'nullable|string|max:100',
@@ -242,6 +243,21 @@ class FamilyIDCardRequestController extends Controller
             if (empty(trim($name ?? ''))) {
                 continue;
             }
+
+            // Hard guard: prevent duplicate family member (same employee + same name + same relation) in DB
+            $existingDuplicate = SecurityFamilyIdApply::where('emp_id_apply', $employeeId)
+                ->whereRaw('LOWER(TRIM(family_name)) = ?', [strtolower(trim($name))])
+                ->when(!empty($member['relation'] ?? null), function ($q) use ($member) {
+                    $q->whereRaw('LOWER(TRIM(family_relation)) = ?', [strtolower(trim($member['relation']))]);
+                })
+                ->exists();
+
+            if ($existingDuplicate) {
+                throw ValidationException::withMessages([
+                    "members.{$index}.name" => "Family member '{$name}' with the same relation is already added for this employee. Duplicate entries are not allowed.",
+                ]);
+            }
+
             $familyPhotoPath_individual = null;
             if ($request->hasFile('members.' . $index . '.family_photo')) {
                 $familyPhotoPath_individual = $request->file('members.' . $index . '.family_photo')->store('family_idcard/Individual_photos', 'public');
@@ -340,9 +356,17 @@ class FamilyIDCardRequestController extends Controller
 
     public function restore($id)
     {
-        // Restore an approved / rejected Family ID card request back to Active list
+        // Restore a rejected Family ID card request back to Active list
+        // Only rejected requests (id_status = 3) can be restored, not approved ones
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->first();
         if ($row) {
+            // Check if the request is rejected (id_status = 3)
+            if ((int) $row->id_status !== 3) {
+                return redirect()
+                    ->route('admin.family_idcard.index')
+                    ->with('error', 'Only rejected requests can be restored.');
+            }
+
             // Find all rows belonging to the same grouped request (same emp_id_apply + created_by + created_date)
             $query = SecurityFamilyIdApply::where('emp_id_apply', $row->emp_id_apply)
                 ->where('created_by', $row->created_by);

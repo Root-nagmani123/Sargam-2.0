@@ -26,9 +26,16 @@ class VehiclePassController extends Controller
         $employeePk = $user->user_id ?? null;
         $pk_old = $user_old_pk->pk_old ?? null;
 
+        // IMPORTANT: Group creator conditions so status filters apply correctly.
+        // Otherwise "where(veh_created_by = X) OR (veh_created_by = pk_old AND status = ...)"
+        // would cause records to appear in both Pending and Archive regardless of status.
         $baseQuery = fn () => VehiclePassTWApply::with(['vehicleType', 'employee', 'approval'])
-            ->where('veh_created_by', $employeePk)
-            ->orWhere('veh_created_by', $pk_old)
+            ->where(function ($q) use ($employeePk, $pk_old) {
+                $q->where('veh_created_by', $employeePk);
+                if ($pk_old) {
+                    $q->orWhere('veh_created_by', $pk_old);
+                }
+            })
             ->orderBy('created_date', 'desc');
             
 

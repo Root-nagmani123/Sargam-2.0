@@ -32,13 +32,28 @@ class EmployeeIDCardRequestController extends Controller
             'approvals.approver:pk,first_name,last_name',
         ];
         $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
-        $filter = $request->get('filter', 'active');
+        // Load ALL records by default; tabs below will split into Active / Archive / Duplication / Extension.
+        // Optional ?filter=active or ?filter=archive can still be used, but default is 'all'
+        $filter = $request->get('filter', 'all');
         if (! in_array($filter, ['active', 'archive', 'all'], true)) {
-            $filter = 'active';
+            $filter = 'all';
         }
 
         // Permanent
         $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
+        if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+            $currentUserId = Auth::user()->user_id ?? Auth::id();
+            if ($currentUserId) {
+                $permQuery->where('created_by', $currentUserId);
+            }
+        }
+        // Non-admin users: show only their own requests (created_by = logged-in user)
+        if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+            $currentUserId = Auth::user()->user_id ?? Auth::id();
+            if ($currentUserId) {
+                $permQuery->where('created_by', $currentUserId);
+            }
+        }
         if ($filter === 'active') {
             $permQuery->where('id_status', SecurityParmIdApply::ID_STATUS_PENDING);
         } elseif ($filter === 'archive') {
@@ -49,6 +64,18 @@ class EmployeeIDCardRequestController extends Controller
         // Contractual
         $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
         $contQuery = DB::table('security_con_oth_id_apply')->select($contCols)->orderBy('created_date', 'desc');
+        if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+            $currentUserId = Auth::user()->user_id ?? Auth::id();
+            if ($currentUserId) {
+                $contQuery->where('created_by', $currentUserId);
+            }
+        }
+        if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+            $currentUserId = Auth::user()->user_id ?? Auth::id();
+            if ($currentUserId) {
+                $contQuery->where('created_by', $currentUserId);
+            }
+        }
         if ($filter === 'active') {
             $contQuery->where('id_status', 1);
         } elseif ($filter === 'archive') {
@@ -96,10 +123,10 @@ class EmployeeIDCardRequestController extends Controller
             ->filter(fn ($r) => in_array(($r->status ?? ''), ['Approved', 'Rejected'], true))
             ->values();
         $duplicationCollection = $allRequests
-            ->filter(fn ($r) => in_array(($r->request_for ?? ''), ['Replacement', 'Duplication'], true))
+            ->filter(fn ($r) => in_array(($r->request_for ?? ''), ['Replacement', 'Duplication'], true) && ($r->status ?? '') === 'Approved')
             ->values();
         $extensionCollection = $allRequests
-            ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension')
+            ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')
             ->values();
 
         $perPage = (int) $request->get('per_page', 15);
@@ -652,8 +679,14 @@ class EmployeeIDCardRequestController extends Controller
                 'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
             ]);
         }
-        $row = SecurityParmIdApply::with(['employee.designation', 'approvals.approver'])
-            ->findOrFail($res['pk']);
+        $row = SecurityParmIdApply::with([
+            'employee:pk,first_name,last_name,middle_name,designation_master_pk,dob,father_name,doj,mobile,landline_contact_no',
+            'employee.designation:pk,designation_name',
+            'creator:pk,first_name,last_name,department_master_pk',
+            'creator.department:pk,department_name',
+            'approvals:pk,security_parm_id_apply_pk,status,approval_emp_pk,created_date,approval_remarks',
+            'approvals.approver:pk,first_name,last_name'
+        ])->findOrFail($res['pk']);
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
         return view('admin.employee_idcard.edit', [
             'request' => $request,
@@ -794,8 +827,9 @@ class EmployeeIDCardRequestController extends Controller
         }
         $row->save();
 
+        // Use emp_id_apply (business key) for redirect so show() can resolve correctly.
         return redirect()
-            ->route('admin.employee_idcard.show', $row->pk)
+            ->route('admin.employee_idcard.show', $row->emp_id_apply)
             ->with('success', 'Employee ID Card request updated successfully!');
     }
 
@@ -998,8 +1032,8 @@ class EmployeeIDCardRequestController extends Controller
 
         $filteredByTab = match ($tab) {
             'archive' => $requests->filter(fn ($r) => in_array($r->status ?? '', ['Approved', 'Rejected'], true))->values(),
-            'duplication' => $requests->filter(fn ($r) => in_array($r->request_for ?? '', ['Replacement', 'Duplication'], true))->values(),
-            'extension' => $requests->filter(fn ($r) => ($r->request_for ?? '') === 'Extension')->values(),
+            'duplication' => $requests->filter(fn ($r) => in_array($r->request_for ?? '', ['Replacement', 'Duplication'], true) && ($r->status ?? '') === 'Approved')->values(),
+            'extension' => $requests->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')->values(),
             'all' => $requests,
             default => $requests->filter(fn ($r) => ($r->status ?? '') === 'Pending')->values(),
         };

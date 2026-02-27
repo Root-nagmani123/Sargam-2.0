@@ -90,11 +90,11 @@
                     <div class="col-12">
                         <label class="form-label">Upload Group Photo <span class="text-danger">*</span></label>
                         <div class="family-idcard-upload-zone position-relative" id="groupPhotoUploadZone">
-                            <input type="file" name="group_photo" id="group_photo" class="d-none" accept="image/*" required>
+                            <input type="file" name="group_photo" id="group_photo" class="d-none" accept=".jpeg,.jpg,.png" required>
                             <div class="family-idcard-upload-placeholder" id="groupPhotoPlaceholder">
                                 <i class="material-icons material-symbols-rounded family-idcard-upload-icon">upload</i>
                                 <p class="mt-2 mb-0">Click to upload or drag and drop</p>
-                                <span class="small text-muted">One photo for all family members. Allowed: JPG, PNG, GIF. Max size: 2 MB</span>
+                                <span class="small text-muted">One photo for all family members. Allowed: JPG, PNG. Max size: 2 MB</span>
                             </div>
                             <div class="family-idcard-upload-preview d-none position-relative" id="groupPhotoPreview">
                                 <img src="" alt="Group Photo Preview" class="family-idcard-preview-img" id="groupPhotoPreviewImg">

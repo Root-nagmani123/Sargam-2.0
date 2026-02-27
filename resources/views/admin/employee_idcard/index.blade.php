@@ -26,14 +26,6 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center" id="extension-tab" data-bs-toggle="tab" data-bs-target="#extension-panel" type="button" role="tab" aria-controls="extension-panel" aria-selected="false">
-                    Extension
-                    @if($extensionRequests->total() > 0)
-                        <span class="badge rounded-pill text-bg-info ms-2">{{ $extensionRequests->total() }}</span>
-                    @endif
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
                 <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
                     Archive
                     @if($archivedRequests->total() > 0)
@@ -56,43 +48,25 @@
                     Export
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 py-2 dropdown-menu-lg-end" aria-labelledby="exportDropdown">
-                    <li><h6 class="dropdown-header text-body-secondary small text-uppercase fw-semibold">Active (with current filter)</h6></li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', array_merge(['tab' => 'active', 'format' => 'xlsx'], $exportParams)) }}">
+                        <h6 id="exportHeaderLabel" class="dropdown-header text-body-secondary small text-uppercase fw-semibold">
+                            Active (with current filter)
+                        </h6>
+                    </li>
+                    <li>
+                        <a  href="#"
+                            class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                            data-format="xlsx"
+                            data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'xlsx'], $exportParams)) }}">
                             <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
                             Excel
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', array_merge(['tab' => 'active', 'format' => 'pdf'], $exportParams)) }}">
-                            <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
-                            PDF
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header text-body-secondary small text-uppercase fw-semibold">Archive (with current filter)</h6></li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', array_merge(['tab' => 'archive', 'format' => 'xlsx'], $exportParams)) }}">
-                            <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
-                            Excel
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', array_merge(['tab' => 'archive', 'format' => 'pdf'], $exportParams)) }}">
-                            <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
-                            PDF
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header text-body-secondary small text-uppercase fw-semibold">All (with current filter)</h6></li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', array_merge(['tab' => 'all', 'format' => 'xlsx'], $exportParams)) }}">
-                            <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
-                            Excel
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', array_merge(['tab' => 'all', 'format' => 'pdf'], $exportParams)) }}">
+                        <a  href="#"
+                            class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
+                            data-format="pdf"
+                            data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'pdf'], $exportParams)) }}">
                             <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
                             PDF
                         </a>
@@ -183,13 +157,55 @@
                                             </a>
                                         </td>
                                         <td>
-                                            <a href="#" class="amend-dup-ext-btn text-decoration-none" data-request-id="{{ $request->id }}" data-type="extension" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '' }}" data-extension="{{ $request->id_card_valid_upto ?? '' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-request-for="{{ $request->request_for }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-status="{{ $request->status ?? '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                @if($request->request_for == 'Extension' && $request->id_card_valid_upto)
-                                                    <span class="badge bg-info">{{ $request->id_card_valid_upto }}</span>
-                                                @else
-                                                    <span class="text-primary">Extension</span>
-                                                @endif
-                                            </a>
+                                            @php
+                                                $validUptoDisplay = $request->id_card_valid_upto;
+                                                $isCurrentlyValid = false;
+
+                                                if ($validUptoDisplay) {
+                                                    try {
+                                                        // Try common display format d/m/Y first
+                                                        $parsed = \Carbon\Carbon::createFromFormat('d/m/Y', $validUptoDisplay);
+                                                    } catch (\Exception $e) {
+                                                        try {
+                                                            // Fallback to any other parseable format
+                                                            $parsed = \Carbon\Carbon::parse($validUptoDisplay);
+                                                        } catch (\Exception $e2) {
+                                                            $parsed = null;
+                                                        }
+                                                    }
+
+                                                    if ($parsed) {
+                                                        $isCurrentlyValid = $parsed->gte(\Carbon\Carbon::today());
+                                                    }
+                                                }
+                                            @endphp
+
+                                            @if($isCurrentlyValid)
+                                                {{-- Current valid ID card: show date only, disable extension link --}}
+                                                <span class="badge bg-info">{{ $validUptoDisplay }}</span>
+                                            @else
+                                                {{-- Expired / no validity: allow Extension action --}}
+                                                <a href="#"
+                                                   class="amend-dup-ext-btn text-decoration-none"
+                                                   data-request-id="{{ $request->id }}"
+                                                   data-type="extension"
+                                                   data-name="{{ $request->name }}"
+                                                   data-designation="{{ $request->designation ?? '--' }}"
+                                                   data-duplication="{{ $request->duplication_reason ?? '' }}"
+                                                   data-extension="{{ $request->id_card_valid_upto ?? '' }}"
+                                                   data-valid-from="{{ $request->id_card_valid_from ?? '' }}"
+                                                   data-id-number="{{ $request->id_card_number ?? '' }}"
+                                                   data-request-for="{{ $request->request_for }}"
+                                                   data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
+                                                   data-status="{{ $request->status ?? '--' }}"
+                                                   data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                    @if($request->request_for == 'Extension' && $request->id_card_valid_upto)
+                                                        <span class="badge bg-info">{{ $request->id_card_valid_upto }}</span>
+                                                    @else
+                                                        <span class="text-primary">Extension</span>
+                                                    @endif
+                                                </a>
+                                            @endif
                                         </td>
                                         <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
                                         <td>
@@ -349,99 +365,6 @@
                     @endif
                 </div>
 
-                <div class="tab-pane fade" id="extension-panel" role="tabpanel" aria-labelledby="extension-tab">
-                    <div class="table-responsive">
-                        <table class="table text-nowrap mb-0 align-middle idcard-index-table table-striped" id="extensionIdcardTable">
-                            <thead>
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>ID Card</th>
-                                    <th>Request date</th>
-                                    <th>Employee Name</th>
-                                    <th>Designation</th>
-                                    <th>Duplication</th>
-                                    <th>Extension</th>
-                                    <th>Valid Upto</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="table-group-divider">
-                                @forelse($extensionRequests as $index => $request)
-                                    <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ ($extensionRequests->currentPage() - 1) * $extensionRequests->perPage() + $loop->iteration }}</td>
-                                        <td>
-                                            @php
-                                                $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
-                                                $photoUrl = $photoExists ? asset('storage/' . $request->photo) : asset('images/dummypic.jpeg');
-                                            @endphp
-                                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
-                                                <img src="{{ $photoUrl }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
-                                            </a>
-                                        </td>
-                                        <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
-                                        <td class="fw-medium text-body-emphasis">{{ $request->name }}</td>
-                                        <td class="text-body-secondary">{{ $request->designation ?? '--' }}</td>
-                                        <td><span class="text-body-tertiary">--</span></td>
-                                        <td>
-                                            <span class="badge bg-info">{{ $request->id_card_valid_upto ?? '--' }}</span>
-                                        </td>
-                                        <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
-                                        <td>
-                                            @php
-                                                $statusClass = match($request->status ?? '') {
-                                                    'Pending' => 'warning',
-                                                    'Approved' => 'success',
-                                                    'Rejected' => 'danger',
-                                                    'Issued' => 'primary',
-                                                    default => 'secondary'
-                                                };
-                                            @endphp
-                                            <span class="badge rounded-pill bg-{{ $statusClass }}">{{ $request->status ?? '--' }}</span>
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary rounded-start-2 view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="--" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                                </a>
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-outline-secondary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-                                                </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="10" class="text-center py-5">
-                                            <div class="d-inline-flex flex-column align-items-center p-5 bg-body-tertiary rounded-4 border border-body-secondary">
-                                                <i class="material-icons material-symbols-rounded mb-3 text-body-tertiary" style="font-size:56px;">schedule</i>
-                                                <p class="mb-1 fw-semibold text-body-emphasis">No ID card extension requests found.</p>
-                                                <small class="text-body-secondary mb-4">Extension requests will appear here when request for is "Extension".</small>
-                                                <a href="{{ route('admin.duplicate_idcard.create') }}" class="btn btn-info rounded-3 px-4 py-2">
-                                                    <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
-                                                    Request Extension
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    @if($extensionRequests->hasPages())
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top bg-body-tertiary">
-                            <small class="text-body-secondary">Showing {{ $extensionRequests->firstItem() ?? 0 }} to {{ $extensionRequests->lastItem() ?? 0 }} of {{ $extensionRequests->total() }} entries</small>
-                            {{ $extensionRequests->links() }}
-                        </div>
-                    @endif
-                </div>
 
                 <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
                     <div class="table-responsive">
@@ -663,11 +586,11 @@
                                         <input type="file" name="payment_receipt" id="amend_payment_receipt" class="form-control rounded-3" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" aria-describedby="amend_reason_doc_help">
                                         <span id="amend_reason_doc_help" class="form-text text-body-secondary">Select reason above. Allowed:  JPG, PNG. Max size: 5 MB</span>
                                     </div>
-                                    <div class="col-12 col-md-6">
+                                   {{-- <div class="col-12 col-md-6">
                                         <label for="amend_supporting_document" class="form-label fw-medium text-body-emphasis">Upload supporting document <span class="text-body-secondary fw-normal">(optional)</span></label>
                                         <input type="file" name="supporting_document" id="amend_supporting_document" class="form-control rounded-3" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" aria-describedby="amend_supporting_doc_help">
                                         <span id="amend_supporting_doc_help" class="form-text text-body-secondary">Allowed: JPG, PNG. Max size: 1 MB</span>
-                                    </div>
+                                    </div> --}}
                                     <div class="col-12" id="amendExtensionSection" style="display:none;">
                                         <hr class="my-3">
                                         <h6 class="text-body-emphasis mb-2">Extension</h6>
@@ -728,20 +651,64 @@ document.addEventListener('DOMContentLoaded', function() {
         history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 
+    // ===== ID Card Export: Respect current tab (Active / Duplication / Extension / Archive) =====
+    function getCurrentIdcardTabKey() {
+        var activeBtn = document.querySelector('.idcard-index-tabs .nav-link.active');
+        if (!activeBtn) return 'active';
+        switch (activeBtn.id) {
+            case 'duplication-tab': return 'duplication';
+            case 'extension-tab': return 'extension';
+            case 'archive-tab': return 'archive';
+            default: return 'active';
+        }
+    }
+
+    function updateExportHeaderLabel() {
+        var labelEl = document.getElementById('exportHeaderLabel');
+        if (!labelEl) return;
+        var tabKey = getCurrentIdcardTabKey();
+        var titles = {
+            active: 'Active',
+            duplication: 'Duplication',
+            extension: 'Extension',
+            archive: 'Archive'
+        };
+        var title = titles[tabKey] || 'Active';
+        labelEl.textContent = title + ' (with current filter)';
+    }
+
+    // Update label on page load and whenever tab is changed
+    updateExportHeaderLabel();
+    document.querySelectorAll('.idcard-index-tabs .nav-link').forEach(function (btn) {
+        btn.addEventListener('shown.bs.tab', function () {
+            updateExportHeaderLabel();
+        });
+    });
+
+    // Handle Export click: always export only the CURRENT tab data
+    document.querySelectorAll('.export-link').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            var baseUrl = link.dataset.baseUrl || '';
+            if (!baseUrl) return;
+
+            try {
+                var url = new URL(baseUrl, window.location.origin);
+                url.searchParams.set('tab', getCurrentIdcardTabKey());
+                window.location.href = url.toString();
+            } catch (err) {
+                // Fallback if URL API is not available
+                var separator = baseUrl.indexOf('?') === -1 ? '?' : '&';
+                window.location.href = baseUrl + separator + 'tab=' + encodeURIComponent(getCurrentIdcardTabKey());
+            }
+        });
+    });
+
     // If there are no Duplication/Extension records, redirect those tabs directly to Duplicate ID Card create page
     var duplicationTab = document.getElementById('duplication-tab');
     if (duplicationTab) {
         duplicationTab.addEventListener('click', function(e) {
 @if($duplicationRequests->total() === 0)
-            e.preventDefault();
-            window.location.href = '{{ route('admin.duplicate_idcard.create') }}';
-@endif
-        });
-    }
-    var extensionTab = document.getElementById('extension-tab');
-    if (extensionTab) {
-        extensionTab.addEventListener('click', function(e) {
-@if($extensionRequests->total() === 0)
             e.preventDefault();
             window.location.href = '{{ route('admin.duplicate_idcard.create') }}';
 @endif
@@ -806,10 +773,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var currentAmendBtn = null;
-    document.body.addEventListener('click', function(e) {
-        var target = e.target.closest('a.view-details-btn');
-        if (target) { e.preventDefault(); openViewAmendModal(target); }
-    });
+    // Only Duplication / Extension actions should open the Amend modal.
+    // Normal "View" links should navigate to full details page.
     document.body.addEventListener('click', function(e) {
         var target = e.target.closest('a.amend-dup-ext-btn');
         if (target) {

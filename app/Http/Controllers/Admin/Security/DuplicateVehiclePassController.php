@@ -168,6 +168,28 @@ class DuplicateVehiclePassController extends Controller
         $user = Auth::user();
         $createdBy = $user->user_id ?? null;
 
+        // Multi-validation: prevent duplicate vehicle pass requests for same vehicle number
+        // while an existing pass (regular or duplicate) is still pending/approved.
+        $vehicleNo = $validated['vehicle_number'];
+
+        $alreadyExists = VehiclePassTWApply::where('vehicle_no', $vehicleNo)
+                ->whereIn('vech_card_status', [1, 2]) // pending or approved
+                ->exists()
+            || VehiclePassFWApply::where('vehicle_no', $vehicleNo)
+                ->whereIn('vech_card_status', [1, 2])
+                ->exists()
+            || VehiclePassDuplicateApplyTwfw::where('vehicle_no', $vehicleNo)
+                ->whereIn('vech_card_status', [1, 2])
+                ->exists();
+
+        if ($alreadyExists) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'vehicle_number' => 'A pending or approved vehicle pass already exists for this vehicle number. Duplicate vehicle pass cannot be requested.',
+                ]);
+        }
+
         $emp = EmployeeMaster::find($validated['emp_master_pk']);
         $idCardNumber = $validated['id_card_number'] ?: ($emp->emp_id ?? '');
 

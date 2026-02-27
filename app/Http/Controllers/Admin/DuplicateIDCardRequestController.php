@@ -10,6 +10,7 @@ use App\Models\SecurityDupOtherIdApplyApproval;
 use App\Models\SecurityDupPermIdApply;
 use App\Models\SecurityDupPermIdApplyApproval;
 use App\Models\SecurityParmIdApply;
+use App\Models\SecurityFamilyIdApply;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -157,7 +158,7 @@ class DuplicateIDCardRequestController extends Controller
             ], 422);
         }
 
-        // For now, only Permanent is fully supported; Contractual/Family can be extended later.
+        // Permanent ID Cards
         if ($type === 'Permanent') {
             $row = SecurityParmIdApply::with(['employee.designation'])
                 ->where('id_card_no', $cardNo)
@@ -185,9 +186,36 @@ class DuplicateIDCardRequestController extends Controller
             ]);
         }
 
+        // Family ID Cards
+        if ($type === 'Family') {
+            $row = SecurityFamilyIdApply::where('id_card_no', $cardNo)
+                ->orderByDesc('created_date')
+                ->first();
+            if (!$row) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No family ID card found with this number.',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'employee_name' => $row->family_name ?? '',
+                    'designation' => '',
+                    'date_of_birth' => $row->employee_dob ? $row->employee_dob->format('Y-m-d') : null,
+                    'blood_group' => $row->blood_group ?? '',
+                    'mobile_number' => $row->mobile_no ?? '',
+                    'father_name' => null,
+                    'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : null,
+                    'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : null,
+                ],
+            ]);
+        }
+
         return response()->json([
             'success' => false,
-            'message' => 'Lookup is currently supported only for Permanent ID cards.',
+            'message' => 'Lookup is currently supported only for Permanent and Family ID cards.',
         ], 422);
     }
 
