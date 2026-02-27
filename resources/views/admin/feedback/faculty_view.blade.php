@@ -2,6 +2,36 @@
 
 @section('title', 'Faculty Feedback with Comments Admin View - Sargam | Lal Bahadur')
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .faculty-view-page .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+        }
+
+        .faculty-view-page .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .faculty-view-page .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .faculty-view-page .choices.is-focused .choices__inner,
+        .faculty-view-page .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
 @section('setup_content')
     <style>
         :root {
@@ -349,7 +379,7 @@
     <!-- Add CSRF token meta tag -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <div class="container-fluid py-3">
+    <div class="container-fluid faculty-view-page py-3">
         <x-breadcrum title="Average Rating - Course / Topic wise"></x-breadcrum>
         <div class="row g-3">
 
@@ -554,42 +584,42 @@
                                                 <tbody class="align-middle text-dark">
                                                     <!-- Excellent -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#004a93 !important;">
+                                                        <th class="rating-header">
                                                             Excellent</th>
                                                         <td>{{ $data['content_counts']['5'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['5'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Very Good -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#004a93 !important;">Very
+                                                        <th class="rating-header">Very
                                                             Good</th>
                                                         <td>{{ $data['content_counts']['4'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['4'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Good -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#004a93 !important;">Good
+                                                        <th class="rating-header">Good
                                                         </th>
                                                         <td>{{ $data['content_counts']['3'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['3'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Average -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#004a93 !important;">
+                                                        <th class="rating-header">
                                                             Average</th>
                                                         <td>{{ $data['content_counts']['2'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['2'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Below Average -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#004a93 !important;">Below
+                                                        <th class="rating-header">Below
                                                             Average</th>
                                                         <td>{{ $data['content_counts']['1'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['1'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Percentage -->
                                                     <tr class="fw-semibold">
-                                                        <th class="rating-header" style="color:#004a93 !important;">
+                                                        <th class="rating-header">
                                                             Percentage</th>
                                                         <td class="percentage-cell">
                                                             {{ number_format($data['content_percentage'] ?? 0, 2) }}%</td>
@@ -674,7 +704,11 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
+        // Keep a reference to the Choices instance for the program select
+        let programChoicesInstance = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             const filterForm = document.getElementById('filterForm');
             const facultySearch = document.getElementById('facultySearch');
@@ -903,16 +937,25 @@
                     // Update programs dropdown
                     const newProgramSelect = doc.getElementById('programSelect');
                     if (newProgramSelect) {
-                        const currentProgramId = programSelect.value;
-                        programSelect.innerHTML = newProgramSelect.innerHTML;
-                        // Try to preserve the selected program
-                        if (currentProgramId) {
-                            const optionExists = Array.from(programSelect.options).some(opt => opt.value ===
-                                currentProgramId);
-                            if (optionExists) {
-                                programSelect.value = currentProgramId;
-                            }
+                        // Build choices data from the new select's options
+                        const optionsData = Array.from(newProgramSelect.options).map(function (opt) {
+                            return {
+                                value: opt.value,
+                                label: opt.text,
+                                selected: opt.selected,
+                                disabled: opt.disabled
+                            };
+                        });
+
+                        if (programChoicesInstance) {
+                            // Update the Choices.js instance so the UI reflects new options
+                            programChoicesInstance.clearStore();
+                            programChoicesInstance.setChoices(optionsData, 'value', 'label', true);
+                        } else {
+                            // Fallback: update the native select directly
+                            programSelect.innerHTML = newProgramSelect.innerHTML;
                         }
+
                         programSelect.disabled = false;
                     }
 
@@ -1076,5 +1119,41 @@
                     alert('Error exporting to PDF. Please try again.');
                 });
         }
+
+        // Initialize Choices.js on selects in this page
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Choices === 'undefined') return;
+
+            // Program select gets its own instance reference so we can update it after AJAX
+            const programEl = document.getElementById('programSelect');
+            if (programEl && programEl.dataset.choicesInitialized !== 'true') {
+                programChoicesInstance = new Choices(programEl, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!programEl.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: programEl.getAttribute('placeholder') || programEl.options[0]?.text || 'Select an option',
+                });
+                programEl.dataset.choicesInitialized = 'true';
+            }
+
+            // Initialize Choices for any other selects on this page
+            document.querySelectorAll('.faculty-view-page select').forEach(function (el) {
+                if (el.id === 'programSelect') return;
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                new Choices(el, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!el.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+                });
+
+                el.dataset.choicesInitialized = 'true';
+            });
+        });
     </script>
 @endsection

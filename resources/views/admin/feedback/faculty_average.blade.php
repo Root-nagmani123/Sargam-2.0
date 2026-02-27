@@ -2,6 +2,36 @@
 
 @section('title', 'Faculty Feedback Average - Sargam | Lal Bahadur')
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .faculty-average-page .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+        }
+
+        .faculty-average-page .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .faculty-average-page .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .faculty-average-page .choices.is-focused .choices__inner,
+        .faculty-average-page .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
 @section('setup_content')
     <style>
         /* Keep your existing CSS styles */
@@ -215,7 +245,7 @@
             }
         }
     </style>
-    <div class="container-fluid py-3">
+    <div class="container-fluid faculty-average-page py-3">
         <x-breadcrum title="Faculty Feedback Average"></x-breadcrum>
 
         <div class="row g-3">
@@ -256,7 +286,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Faculty Name</label>
-                                <select class="form-select select2" name="faculty_name">
+                                <select class="form-select" name="faculty_name">
                                     <option value="">All Faculty</option>
                                     @foreach ($faculties as $key => $faculty)
                                         <option value="{{ $key }}" {{ $currentFaculty == $key ? 'selected' : '' }}>
@@ -377,6 +407,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
         function resetFilters() {
             // Reset form to default values
@@ -478,6 +509,26 @@
             document.getElementById('filterForm').addEventListener('submit', function(e) {
                 e.preventDefault(); // Prevent form submission
                 loadFeedbackData(); // Load data via AJAX
+            });
+        });
+
+        // Initialize Choices.js on selects in this page
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Choices === 'undefined') return;
+
+            document.querySelectorAll('.faculty-average-page select').forEach(function (el) {
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                new Choices(el, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!el.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+                });
+
+                el.dataset.choicesInitialized = 'true';
             });
         });
         document.querySelectorAll('input[name="course_type"]').forEach(radio => {

@@ -4214,31 +4214,67 @@ class CalendarManager {
             grouped[item.group_type_name].push(item);
         });
 
-        // Populate dropdown
+        // Populate dropdown (supporting both plain select and Choices.js)
         const select = document.getElementById('group_type');
-        select.innerHTML = '<option value="">Select Group Type</option>';
+        const choicesInstance = window.calendarEventChoices && window.calendarEventChoices.groupType
+            ? window.calendarEventChoices.groupType
+            : null;
+
+        const optionsData = [{
+            value: '',
+            label: 'Select Group Type',
+            selected: true,
+            disabled: false
+        }];
 
         Object.keys(grouped).forEach(key => {
             const typeName = grouped[key][0].type_name;
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = typeName;
-            select.appendChild(option);
+            optionsData.push({
+                value: key,
+                label: typeName,
+                selected: false,
+                disabled: false
+            });
         });
 
-        // Set up change handler
-        select.onchange = () => {
-            this.populateGroupCheckboxes(grouped[select.value] || []);
-            // Clear validation error when group type changes
-            const typeNameContainer = document.getElementById('type_name_container');
-            const typeNameError = document.getElementById('type_names_error');
-            if (typeNameContainer) {
-                typeNameContainer.classList.remove('border-danger');
+        if (choicesInstance) {
+            choicesInstance.clearChoices();
+            choicesInstance.setChoices(optionsData, 'value', 'label', true);
+        } else if (select) {
+            select.innerHTML = '<option value="">Select Group Type</option>';
+            Object.keys(grouped).forEach(key => {
+                const typeName = grouped[key][0].type_name;
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = typeName;
+                select.appendChild(option);
+            });
+        }
+
+        // Set up change handler (works with both native select and Choices)
+        if (select) {
+            const handleChange = () => {
+                const value = select.value;
+                this.populateGroupCheckboxes(grouped[value] || []);
+                // Clear validation error when group type changes
+                const typeNameContainer = document.getElementById('type_name_container');
+                const typeNameError = document.getElementById('type_names_error');
+                if (typeNameContainer) {
+                    typeNameContainer.classList.remove('border-danger');
+                }
+                if (typeNameError) {
+                    typeNameError.style.display = 'none';
+                }
+            };
+
+            select.onchange = handleChange;
+
+            // If Choices is used, also listen to its change events on the underlying select
+            if (choicesInstance) {
+                select.removeEventListener('change', handleChange);
+                select.addEventListener('change', handleChange);
             }
-            if (typeNameError) {
-                typeNameError.style.display = 'none';
-            }
-        };
+        }
 
         // Return grouped data for use in edit mode
         return grouped;
@@ -4326,14 +4362,38 @@ class CalendarManager {
 
     populateSubjectNames(subjects) {
         const select = document.getElementById('subject_name');
-        select.innerHTML = '<option value="">Select Subject Name</option>';
+        const choicesInstance = window.calendarEventChoices && window.calendarEventChoices.subjectName
+            ? window.calendarEventChoices.subjectName
+            : null;
+
+        const optionsData = [{
+            value: '',
+            label: 'Select Subject Name',
+            selected: true,
+            disabled: false
+        }];
 
         subjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject.pk;
-            option.textContent = subject.subject_name;
-            select.appendChild(option);
+            optionsData.push({
+                value: subject.pk,
+                label: subject.subject_name,
+                selected: false,
+                disabled: false
+            });
         });
+
+        if (choicesInstance) {
+            choicesInstance.clearChoices();
+            choicesInstance.setChoices(optionsData, 'value', 'label', true);
+        } else if (select) {
+            select.innerHTML = '<option value="">Select Subject Name</option>';
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject.pk;
+                option.textContent = subject.subject_name;
+                select.appendChild(option);
+            });
+        }
     }
 
     updateFacultyType() {

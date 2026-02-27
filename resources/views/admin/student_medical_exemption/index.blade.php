@@ -2,258 +2,18 @@
 
 @section('title', 'Student Medical Exemption - Sargam | Lal Bahadur')
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+@endsection
 @section('setup_content')
-<style>
-.btn-group[role="group"] .btn {
-    transition: all 0.3s ease-in-out;
-    border-radius: 0;
-    /* Reset for pill-style container */
-}
-
-.btn-group[role="group"] .btn:first-child {
-    border-top-left-radius: 50rem !important;
-    border-bottom-left-radius: 50rem !important;
-}
-
-.btn-group[role="group"] .btn:last-child {
-    border-top-right-radius: 50rem !important;
-    border-bottom-right-radius: 50rem !important;
-}
-
-/* Hover + Active States */
-.btn-group .btn:hover {
-    transform: translateY(-1px);
-}
-
-.btn-group .btn.active {
-    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
-}
-
-/* Accessibility: Focus ring */
-.btn:focus-visible {
-    outline: 3px solid #0d6efd;
-    outline-offset: 2px;
-}
-
-/* Better contrast for GIGW compliance */
-.btn-outline-secondary {
-    color: #333;
-    border-color: #999;
-}
-
-.btn-outline-secondary:hover {
-    background-color: #f8f9fa;
-    border-color: #666;
-}
-
-/* Horizontal Scroll for Table */
-.datatables .table-responsive {
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-}
-
-.datatables #medicalExemptionTable {
-    min-width: 100%;
-    width: max-content;
-}
-
-.datatables #medicalExemptionTable th,
-.datatables #medicalExemptionTable td {
-    white-space: nowrap;
-    padding: 10px 12px;
-    vertical-align: middle !important;
-}
-/* Medical Speciality column - ensure vertical alignment on mobile */
-.datatables #medicalExemptionTable th:nth-child(7),
-.datatables #medicalExemptionTable td:nth-child(7) {
-    vertical-align: middle !important;
-    line-height: 1.4;
-}
-
-/* Responsive - Tablet (768px - 991px) */
-@media (max-width: 991.98px) {
-    .datatables #medicalExemptionTable th,
-    .datatables #medicalExemptionTable td {
-        padding: 8px 10px;
-        font-size: 0.9rem;
-    }
-}
-
-/* Responsive - Small tablet / large phone (576px - 767px) */
-@media (max-width: 767.98px) {
-    .datatables .card-body {
-        padding: 1rem !important;
-    }
-
-    .datatables #medicalExemptionTable th,
-    .datatables #medicalExemptionTable td {
-        padding: 6px 8px;
-        font-size: 0.85rem;
-    }
-
-    .btn-group[role="group"] .btn {
-        padding-left: 0.75rem !important;
-        padding-right: 0.75rem !important;
-        font-size: 0.875rem;
-    }
-}
-
-/* Responsive - Phone (max 575px) */
-@media (max-width: 575.98px) {
-    .datatables .container-fluid {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
-    }
-
-    .datatables .card-body {
-        padding: 0.75rem !important;
-    }
-
-    .datatables .row.align-items-center.g-3 {
-        gap: 0.75rem !important;
-    }
-
-    .datatables .row.align-items-center.g-3 .col-lg-4:first-child h4 {
-        font-size: 1.1rem !important;
-    }
-
-    .datatables .btn-group[role="group"] {
-        width: 100%;
-        justify-content: stretch;
-    }
-
-    .datatables .btn-group[role="group"] .btn {
-        flex: 1;
-        padding: 0.5rem 0.75rem !important;
-        font-size: 0.8125rem;
-    }
-
-    .datatables .d-flex.justify-content-md-end .btn {
-        flex: 1 1 auto;
-        min-width: 0;
-        justify-content: center;
-    }
-
-    .datatables .d-flex.justify-content-md-end .btn span.d-none.d-md-inline {
-        display: none !important;
-    }
-
-    .datatables #medicalExemptionTable th,
-    .datatables #medicalExemptionTable td {
-        padding: 6px 8px;
-        font-size: 0.8rem;
-    }
-
-    .datatables .row.mb-3.align-items-end .col-md-3,
-    .datatables .row.mb-3.align-items-end .col-md-2 {
-        margin-bottom: 0.5rem;
-    }
-
-    .datatables #resetFilters {
-        width: 100% !important;
-    }
-}
-
-/* Reset button: auto width on desktop */
-@media (min-width: 768px) {
-    .datatables #resetFilters {
-        width: auto !important;
-    }
-}
-
-/* Responsive - Very small phone (max 375px) */
-@media (max-width: 375px) {
-    .datatables .container-fluid {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-
-    .datatables .card-body {
-        padding: 0.5rem !important;
-    }
-
-    .datatables #medicalExemptionTable th,
-    .datatables #medicalExemptionTable td {
-        padding: 4px 6px;
-        font-size: 0.75rem;
-    }
-}
-
-/* Print Styles */
-@media print {
-    body * {
-        visibility: hidden;
-    }
-
-    #medicalExemptionTable,
-    #medicalExemptionTable * {
-        visibility: visible;
-    }
-
-    #medicalExemptionTable {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-
-    .table thead {
-        background-color: #af2910 !important;
-        color: white !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    .table th,
-    .table td {
-        border: 1px solid #000 !important;
-        padding: 8px !important;
-    }
-
-    .table {
-        border-collapse: collapse !important;
-        font-size: 12px !important;
-    }
-
-    /* Hide action and status columns in print */
-    .table th:nth-child(11),
-    .table td:nth-child(11),
-    .table th:nth-child(12),
-    .table td:nth-child(12) {
-        display: none;
-    }
-
-    /* Print header */
-    @page {
-        margin: 1cm;
-    }
-
-    .print-header {
-        display: block;
-        text-align: center;
-        margin-bottom: 20px;
-        font-size: 18px;
-        font-weight: bold;
-    }
-
-    .print-footer {
-        display: block;
-        text-align: center;
-        margin-top: 20px;
-        font-size: 10px;
-    }
-    
-}
-
-
-</style>
-<div class="container-fluid student-medical-exemption-index">
+<div class="container-fluid student-medical-exemption-index py-2 py-md-3">
     <x-breadcrum title="Medical Exemption Form" />
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
-            <div class="card-body">
-                <div class="row align-items-center g-3 mb-3">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header border-0 bg-body-tertiary pb-2 pb-md-3">
+                <div class="row align-items-center g-3">
 
                     <!-- Title -->
                     <div class="col-12 col-lg-4 col-md-12">
@@ -264,7 +24,7 @@
 
                      <!-- Active / Archive -->
                     <div class="col-12 col-lg-4 col-md-6 text-md-end text-start">
-                        <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                        <div class="btn-group shadow-sm rounded-1 overflow-hidden" role="group"
                             aria-label="Course Status Filter">
                             <a href="javascript:void(0)"
                                 class="btn btn-success active px-4 fw-semibold"
@@ -308,12 +68,10 @@
 
                         </div>
                     </div>
-
                 </div>
+            </div>
 
-
-                <hr>
-
+            <div class="card-body">
                 <!-- Filters Section -->
                 <div class="row mb-3 align-items-end g-2 g-sm-3">
                     <!-- Search Filter -->
@@ -367,9 +125,6 @@
                     </div>
                 </div>
 
-                <!-- Total Records Count Row -->
-             
-
                 <div class="table-responsive">
                     <table class="table" id="medicalExemptionTable">
                         <thead>
@@ -399,8 +154,27 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function () {
+
+    // Initialize Choices.js on select filters
+    if (typeof Choices !== 'undefined') {
+        document.querySelectorAll('.student-medical-exemption-index select').forEach(function (el) {
+            if (el.dataset.choicesInitialized === 'true') return;
+
+            new Choices(el, {
+                allowHTML: false,
+                searchPlaceholderValue: 'Search...',
+                removeItemButton: !!el.multiple,
+                shouldSort: false,
+                placeholder: true,
+                placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+            });
+
+            el.dataset.choicesInitialized = 'true';
+        });
+    }
 
     // ✅ IMPORTANT: global variable (DataTable से पहले)
     let courseStatus = 'active';
