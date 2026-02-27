@@ -69,12 +69,147 @@ body {
 
     <!-- HEADER -->
 
-    <div class="container-fluid">
-        <x-breadcrum title="Feedback Database"></x-breadcrum>
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3">
-                <img src="sargam-logo.png" alt="Sargam Logo" height="40">
-                <span class="page-title">Faculty Feedback Database</span>
+    <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card-body">
+            <!-- HEADER -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 40px; height: 40px; background: var(--lbsnaa-blue); 
+                       display: flex; align-items: center; justify-content: center; 
+                       border-radius: 6px; color: white; font-weight: bold;">
+                        S
+                    </div>
+                    <h4 class="page-title">Faculty Feedback Database</h4>
+                </div>
+                <div class="export-btn-group">
+                    <button class="btn btn-outline-primary btn-sm" id="exportExcelBtn">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" id="exportPdfBtn">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                    </button>
+                </div>
+            </div>
+            <hr class="my-2">
+            <div class="row g-3 align-items-end">
+                <!-- Course Filter -->
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label">Program Name <span class="text-danger">*</span></label>
+                    <select class="form-select" id="courseSelect" name="course_id">
+                        <option value="">Select Program</option>
+                        @if (isset($courses) && $courses->count() > 0)
+                        @foreach ($courses as $course)
+                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                        @endforeach
+                        @else
+                        <option value="" disabled>No courses available</option>
+                        @endif
+                    </select>
+                </div>
+
+                <!-- Search Parameter Filter -->
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label">Filter By</label>
+                    <select class="form-select" id="searchParam" name="search_param">
+                        <option value="all">All Records</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="topic">Topic</option>
+                    </select>
+                </div>
+
+                <!-- Faculty Filter Container (Hidden by default) -->
+                <div class="col-lg-3 col-md-4 dynamic-filter-container d-none" id="facultyFilterContainer">
+                    <label class="form-label">Select Faculty</label>
+                    <select class="form-select" id="facultyFilter" name="faculty_id">
+                        <option value="">All Faculties</option>
+                        @if (isset($faculties) && $faculties->count() > 0)
+                        @foreach ($faculties as $faculty)
+                        <option value="{{ $faculty->pk }}">{{ $faculty->full_name }}</option>
+                        @endforeach
+                        @endif
+                    </select>
+                </div>
+
+                <!-- Topic Filter Container (Hidden by default) -->
+                <div class="col-lg-3 col-md-4 dynamic-filter-container d-none" id="topicFilterContainer">
+                    <label class="form-label">Enter Topic</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="topicFilter" name="topic_value"
+                            placeholder="Type topic name...">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="clearTopicBtn">
+                            <i class="material-icons menu-icon material-symbols-rounded">close</i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Clear Filters Button -->
+                <div class="col-lg-2 col-md-3">
+                    <button type="button" class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
+                        <i class="bi bi-x-circle me-1"></i> Clear
+                    </button>
+                </div>
+            </div>
+            <hr class="my-2">
+            <!-- TABLE CONTROLS -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <label class="me-2">Show</label>
+                    <select class="form-select d-inline-block w-auto" id="perPageSelect">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <label class="ms-2">entries</label>
+                </div>
+                <div>
+                    <label class="me-2">Search within table:</label>
+                    <input type="text" class="form-control d-inline-block w-auto" id="tableSearch"
+                        placeholder="Type to search...">
+                </div>
+            </div>
+
+            <!-- TABLE -->
+            <div class="table-responsive position-relative" id="tableContainer">
+                <!-- Loading Overlay -->
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="loading-spinner"></div>
+                </div>
+                <table class="table table-hover bg-white" id="feedbackTable">
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Faculty Name</th>
+                            <th>Course Name</th>
+                            <th>Faculty Address</th>
+                            <th>Topic</th>
+                            <th>Content (%)</th>
+                            <th>Presentation (%)</th>
+                            <th>No. of Participants</th>
+                            <th>Session Date</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody id="feedbackTableBody">
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-5">
+                                <i class="bi bi-database me-2"></i>
+                                Select a program to load feedback data
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAGINATION -->
+            <div class="d-flex justify-content-between align-items-center mt-4" id="paginationSection"
+                style="display: none;">
+                <small class="text-muted" id="paginationInfo">Showing 0 to 0 of 0 entries</small>
+                <nav aria-label="Feedback pagination">
+                    <ul class="pagination mb-0" id="paginationLinks">
+                        <!-- Dynamic pagination links will be inserted here -->
+                    </ul>
+                </nav>
             </div>
         </div>
         <hr class="my-2">

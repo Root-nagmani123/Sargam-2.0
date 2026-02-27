@@ -125,12 +125,13 @@
                                 </div>
 
                             </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <!-- Edit -->
-                                    <a href="{{ route('admin.notice.edit', $encId) }}"
-                                        class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit Notice">
-                                        <span class="material-symbols-rounded fs-5">edit</span>
+                            <td class="text-center">
+                                <div class="dropdown">
+                                    <a href="#" id="actionDropdown{{ $encId }}" data-bs-toggle="dropdown" aria-expanded="false" role="button">
+                                        <i class="material-icons material-symbols-rounded"
+                                            style="font-size:24px;cursor:pointer;">
+                                            more_horiz
+                                        </i>
                                     </a>
 
                                     <!-- Delete -->

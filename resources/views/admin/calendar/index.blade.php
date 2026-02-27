@@ -4,6 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
+    <a href="#calendar" class="visually-hidden-focusable" aria-label="Skip to calendar">Skip to calendar</a>
     <!-- Page Header with ARIA landmark -->
     <header aria-label="Page header">
         <x-breadcrum title="Academic TimeTable" />
@@ -22,8 +23,8 @@
                             data-view="list">
                             <i class="bi bi-list-ul me-2"></i>List View
                         </button>
-                        <button type="button" class="btn btn-outline-primary" id="btnCalendarView"
-                            aria-pressed="false" data-view="calendar">
+                        <button type="button" class="btn btn-outline-primary active" id="btnCalendarView" aria-pressed="false"
+                            data-view="calendar">
                             <i class="bi bi-calendar3 me-2"></i>Calendar View
                         </button>
                     </div>
@@ -61,8 +62,8 @@
 
                                     <div class="col-md-6 text-center">
                                         <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
-                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText">
-                                            <i class="bi bi-calendar-week me-2"></i>—
+                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
+                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
                                         </p>
                                     </div>
 
@@ -90,6 +91,14 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Week Cards (Accessible, GIGW-friendly) -->
+                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
+                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
+                                <div class="row g-3" role="list" aria-label="Days of the week">
+                                    <!-- JS will render day cards here -->
                                 </div>
                             </div>
 
@@ -198,46 +207,15 @@
 }
 
 .fc-event-card {
-    padding: 1rem 1.1rem;
-    border-radius: 0.875rem;
-    margin: 0.4rem 0;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    border-left: 6px solid var(--primary-color);
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.06);
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    margin: 0.2rem 0;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    border-left: 4px solid var(--primary-color);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
     white-space: normal;
     word-break: break-word;
-    overflow: visible;
-    position: relative;
-    cursor: pointer;
-    border-top-right-radius: 0.875rem;
-    border-bottom-right-radius: 0.875rem;
-    min-height: fit-content;
-}
-
-.fc-event-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, rgba(78, 115, 223, 0.5) 70%, transparent 100%);
-    border-radius: 0.875rem 0.875rem 0 0;
-    opacity: 0;
-    transition: opacity 0.35s ease;
-}
-
-.fc-event-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 40px;
-    height: 40px;
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.08) 0%, transparent 70%);
-    border-radius: 0 0.875rem 0 0;
-    pointer-events: none;
 }
 
 .fc-event-card:hover {
@@ -1246,6 +1224,56 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     color: var(--text-muted);
     font-weight: 500;
     display: flex;
+/* Skip link visible on focus (GIGW) */
+.visually-hidden-focusable {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+.visually-hidden-focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 0.75rem;
+    background: #004a93;
+    color: #fff;
+    border-radius: 6px;
+    z-index: 9999;
+}
+
+/* Week Cards */
+.week-cards {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+}
+.week-day-card {
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--primary-color);
+    background: #fff;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+.week-day-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.16); }
+.week-day-card:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
+.week-day-events { display: flex; flex-direction: column; gap: 0.35rem; }
+.mini-event { padding: 0.25rem 0.5rem; border-radius: 8px; background: rgba(0,74,147,0.03); }
+.mini-event .mini-title { font-weight: 600; }
+.mini-event .mini-time { font-size: 0.85rem; }
+.mini-more { display: inline-block; margin-top: 0.25rem; font-weight: 700; }
+.mini-more:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+@media (prefers-contrast: high) {
+    .week-day-card { border-width: 2px; }
+    .mini-event { background: #fff; border: 2px solid var(--primary-color); }
+}
+
     align-items: center;
     gap: 0.25rem;
 }
@@ -1433,15 +1461,14 @@ class CalendarManager {
             allDaySlot: true,
             slotMinTime: CalendarConfig.minTime,
             slotMaxTime: CalendarConfig.maxTime,
-            slotDuration: '00:30:00',
-            snapDuration: '00:30:00',
-            slotLabelInterval: '00:30:00',
+            slotDuration: '00:20:00',
+            snapDuration: '00:20:00',
+            slotLabelInterval: '00:20:00',
             height: 'auto',
             contentHeight: 'auto',
             editable: true,
             selectable: true,
-            dayMaxEvents: true,
-            dayMaxEventRows: 4,
+            dayMaxEvents: false,
             moreLinkClick: 'popover',
             eventOrder: 'start,title',
             eventTimeFormat: {
@@ -1451,26 +1478,23 @@ class CalendarManager {
             },
             views: {
                 dayGridMonth: {
-                    dayMaxEvents: true,
-                    dayMaxEventRows: 4
+                    dayMaxEvents: false
                 },
                 timeGridWeek: {
-                    dayMaxEvents: true,
-                    dayMaxEventRows: 3,
-                    eventMaxStack: 3
+                    dayMaxEvents: false,
+                    eventMaxStack: 8
                 },
                 timeGridDay: {
-                    dayMaxEvents: true,
-                    dayMaxEventRows: 4,
-                    eventMaxStack: 4
+                    dayMaxEvents: false,
+                    eventMaxStack: 8
                 }
             },
             events: CalendarConfig.api.events,
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
-            eventDidMount: this.setEventAccessibility.bind(this),
-            dayCellDidMount: this.setDayCellAccessibility.bind(this)
+            eventDidMount: this.setEventAccessibility.bind(this)
+            ,dayCellDidMount: this.setDayCellAccessibility.bind(this)
         });
 
         this.calendar.render();
@@ -1543,6 +1567,8 @@ class CalendarManager {
     }
 
     applyDenseMode() {
+        // Only apply dense mode when compact mode is active
+        if (!document.body.classList.contains('compact-mode')) return;
         // Add/remove dense-day class based on number of events in day cells
         const dayCells = document.querySelectorAll('.fc-daygrid-day');
         dayCells.forEach(cell => {
@@ -1579,7 +1605,7 @@ class CalendarManager {
                      role="button"
                      aria-label="${topic} at ${venue} with ${faculty}"
                      ${type ? `data-event-type="${typeAttr}"` : ''}>
-                    <div class="fw-bold mb-1 text-truncate" style="color: ${cardColor};">
+                    <div class="event-title mb-1" id="${titleId}" style="color: ${cardColor};">
                         ${topic}
                     </div>
                     ${type ? `<div class="mb-1"><span class="event-badge">${type}</span></div>` : ''}
@@ -2764,6 +2790,85 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         tbody.innerHTML = html;
+    }
+
+    renderWeekCards(events, weekStart) {
+        const container = document.querySelector('#weekCards .row');
+        if (!container) return;
+
+        const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        const byDay = new Map();
+
+        // Prepare boundaries: Monday start to Sunday end
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+
+        days.forEach((_, i) => {
+            const d = new Date(weekStart);
+            d.setDate(d.getDate() + i);
+            const key = d.toISOString().split('T')[0];
+            byDay.set(key, { date: d, events: [] });
+        });
+
+        // Filter incoming events to week range and allocate to day buckets
+        (events || []).forEach(evt => {
+            const d = new Date(evt.start);
+            if (isNaN(d)) return;
+            if (d < weekStart || d > weekEnd) return;
+            const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString?.() ?
+                new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().split('T')[0] :
+                `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            if (byDay.has(key)) byDay.get(key).events.push(evt);
+        });
+
+        container.innerHTML = '';
+        days.forEach((label, i) => {
+            const d = new Date(weekStart);
+            d.setDate(d.getDate() + i);
+            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const info = byDay.get(key) || { date: d, events: [] };
+            const count = info.events.length;
+
+            const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            const fullStr = d.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            const col = document.createElement('div');
+            col.className = 'col-12 col-md-6 col-xl-4';
+            col.setAttribute('role', 'listitem');
+            col.innerHTML = `
+                <div class="week-day-card" tabindex="0" aria-label="${label} ${fullStr}, ${count} event${count!==1?'s':''}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-bold text-dark">${label} <span class="text-muted">${dateStr}</span></div>
+                        <span class="badge bg-primary-subtle text-primary">${count} event${count!==1?'s':''}</span>
+                    </div>
+                    <div class="week-day-events">
+                        ${info.events.slice(0, 3).map(evt => {
+                            const title = evt.title || evt.extendedProps?.topic || '';
+                            const venue = evt.extendedProps?.vanue || evt.extendedProps?.venue_name || '';
+                            const faculty = evt.extendedProps?.faculty_name || '';
+                            const timeTxt = evt.start ? new Date(evt.start).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+                            return `
+                            <div class="mini-event d-flex align-items-center gap-2" role="button" tabindex="0" aria-label="${title}${timeTxt?`, at ${timeTxt}`:''}${venue?`, at ${venue}`:''}">
+                                <i class="bi bi-clock text-primary" aria-hidden="true"></i>
+                                <span class="mini-title text-truncate">${title}</span>
+                                ${timeTxt ? `<span class="mini-time text-muted">${timeTxt}</span>` : ''}
+                            </div>`;
+                        }).join('')}
+                        ${count > 3 ? `<a href="#" class="mini-more" aria-label="Show ${count-3} more events">+ ${count-3} more</a>` : ''}
+                    </div>
+                </div>
+            `;
+            container.appendChild(col);
+        });
+    }
+
+    updateWeekRangeText(weekStart) {
+        const el = document.getElementById('weekRangeText');
+        if (!el) return;
+        const startStr = new Date(weekStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        const end = new Date(weekStart); end.setDate(end.getDate() + 6);
+        const endStr = end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        el.innerHTML = `<i class="bi bi-calendar-week me-2" aria-hidden="true"></i>${startStr} – ${endStr}`;
     }
 
     groupEventsByTime(events) {

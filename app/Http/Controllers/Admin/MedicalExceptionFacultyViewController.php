@@ -44,75 +44,160 @@ class MedicalExceptionFacultyViewController extends Controller
      */
     private function facultyLoginView(Request $request, $facultyPk, $currentDate)
     {
-  // Get filter parameters
-  $courseFilter = $request->get('course');
-  $dateFromFilter = $request->get('date_from');
+        // Step 1: Get user_id from user_credentials where category = 'F'
+        $userId = DB::table('user_credentials')
+            ->where('pk', $user->pk)
+            ->where('user_category', 'F')
+            ->value('user_id');
+        
+        if (!$userId) {
+            return redirect()->back()->with('error', 'Faculty record not found.');
+        }
+        
+        // Step 2: Match user_id with course_coordinator_master.coordinator_name
+        // Get all courses where this user is coordinator
+        // Try matching as both string and numeric (in case coordinator_name stores user_id)
+        $coordinatorCourses = CourseCordinatorMaster::where(function($q) use ($userId) {
+                $q->where('Coordinator_name', $userId)
+                  ->orWhere('Coordinator_name', (string)$userId);
+            })
+            ->pluck('courses_master_pk')
+            ->unique()
+            ->filter();
+        
+        if ($coordinatorCourses->isEmpty()) {
+            // Show "Data Not Found" message
+            return view('admin.medical_exception.faculty_view', [
+                'isFacultyView' => true,
+                'studentData' => [],
+                'totalExceptions' => 0,
+                'hasData' => false
+            ]);
+        }
+        
+        // Step 3: Validate courses in course_master
+        $validCourses = CourseMaster::whereIn('pk', $coordinatorCourses)
+            ->where('active_inactive', 1)
+            ->where('end_date', '>=', $currentDate)
+            ->get();
+        
+        if ($validCourses->isEmpty()) {
+            // Show "Data Not Found" message
+            return view('admin.medical_exception.faculty_view', [
+                'isFacultyView' => true,
+                'studentData' => [],
+                'totalExceptions' => 0,
+                'hasData' => false
+            ]);
+        }
+        
+        $validCourseIds = $validCourses->pluck('pk');
 
-  // Get course IDs first to optimize the main query
-  $courseIds = DB::table('course_coordinator_master')
-      ->where('Coordinator_name', $facultyPk)
-      ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk])
-      ->pluck('courses_master_pk')
-      ->unique()
-      ->filter()
-      ->values()
-      ->toArray();
+        // Build course-centric data to align with view and paginate server-side
+        $courseData = [];
+        $totalExceptions = 0;
 
-  if (empty($courseIds)) {
-      $data = collect();
-      $courses = collect();
-  } else {
-      // Build query with optimized whereIn
-      $query = DB::table('student_medical_exemption as sme')
-          ->join('course_master as cm', 'cm.pk', '=', 'sme.course_master_pk')
-          ->join('student_master as sm', 'sm.pk', '=', 'sme.student_master_pk')
-          ->join('employee_master as em', 'em.pk', '=', 'sme.employee_master_pk')
-          ->leftJoin('exemption_medical_speciality_master as ems', 'ems.pk', '=', 'sme.exemption_medical_speciality_pk')
-          ->whereIn('sme.course_master_pk', $courseIds)
-          ->where('cm.active_inactive', 1)
-          ->where('sme.active_inactive', 1);
+        foreach ($validCourses as $course) {
+            $courseId = $course->pk;
 
-      // Apply course filter
-      if ($courseFilter) {
-          $query->where('sme.course_master_pk', $courseFilter);
-      }
+            // Coordinators
+            $coordinators = CourseCordinatorMaster::where('courses_master_pk', $courseId)->first();
+            $ccName = $coordinators->Coordinator_name ?? 'Not Assigned';
 
-      // Apply date filter
-      if ($dateFromFilter) {
-          $query->whereDate('sme.from_date', '>=', $dateFromFilter);
-      }
+            // Enrolled students
+            $studentIds = StudentMasterCourseMap::where('course_master_pk', $courseId)
+                ->where('active_inactive', 1)
+                ->pluck('student_master_pk');
 
-      // Select fields
-      $data = $query->select([
-              'cm.course_name',
-              DB::raw("CONCAT_WS(' ', em.first_name, em.middle_name, em.last_name) as faculty_name"),
-              'sme.description as topics',
-              'sm.display_name as student_name',
-              'sme.from_date',
-              'sme.to_date',
-              'sm.generated_OT_code as ot_code',
-              'sme.doc_upload as medical_document',
-              'ems.speciality_name as application_type',
-              DB::raw('COUNT(sme.pk) OVER (PARTITION BY sme.course_master_pk) as exemption_count'),
-              'sme.created_date as submitted_on'
-          ])
-          ->orderBy('cm.course_name')
-          ->orderBy('sme.from_date', 'desc')
-          ->get();
+            $students = StudentMaster::whereIn('pk', $studentIds)
+                ->where('status', 1)
+                ->get(['pk', 'generated_OT_code', 'display_name']);
 
-      // Get courses for filter dropdown (reuse courseIds)
-      $courses = DB::table('course_master')
-          ->whereIn('pk', $courseIds)
-          ->where('active_inactive', 1)
-          ->select('pk', 'course_name')
-          ->orderBy('course_name')
-          ->get();
-  }
+            // Students on medical exception (current)
+            $exceptionStudentIds = StudentMedicalExemption::where('course_master_pk', $courseId)
+                ->whereIn('student_master_pk', $studentIds)
+                ->where('from_date', '<=', $currentDate)
+                ->where(function($q) use ($currentDate) {
+                    $q->where('to_date', '>=', $currentDate)
+                      ->orWhereNull('to_date');
+                })
+                ->where('active_inactive', 1)
+                ->distinct('student_master_pk')
+                ->pluck('student_master_pk');
 
-  return view('admin.medical_exception.faculty_view', compact('data', 'courses', 'courseFilter', 'dateFromFilter'));
-}        
+            $exceptionStudents = $students->whereIn('pk', $exceptionStudentIds->all())
+                ->map(function($s) {
+                    return [
+                        'generated_OT_code' => $s->generated_OT_code,
+                        'display_name' => $s->display_name,
+                    ];
+                })->values()->all();
 
+            $exemptionCount = count($exceptionStudents);
+            $totalExceptions += $exemptionCount;
 
+            $courseData[] = [
+                'course_name' => $course->course_name,
+                'cc_name' => $ccName,
+                'total_students' => $students->count(),
+                'total_exemption_count' => $exemptionCount,
+                'students' => $exceptionStudents,
+            ];
+        }
+
+        // Server-side pagination for course summary
+        $perPage = 10;
+        $coursePage = (int) $request->get('course_page', 1);
+        $courseTotal = count($courseData);
+        $courseItems = array_slice($courseData, ($coursePage - 1) * $perPage, $perPage);
+        $coursePaginator = new LengthAwarePaginator(
+            $courseItems,
+            $courseTotal,
+            $perPage,
+            $coursePage,
+            ['path' => $request->url(), 'pageName' => 'course_page']
+        );
+
+        // Server-side pagination for flattened students under exception
+        $studentRows = [];
+        foreach ($courseData as $course) {
+            if (!empty($course['students'])) {
+                foreach ($course['students'] as $student) {
+                    $studentRows[] = [
+                        'course_name' => $course['course_name'],
+                        'generated_OT_code' => $student['generated_OT_code'] ?? '',
+                        'display_name' => $student['display_name'] ?? '',
+                        'status' => 'Medical Exception',
+                    ];
+                }
+            } else {
+                $studentRows[] = [
+                    'course_name' => $course['course_name'],
+                    'generated_OT_code' => '',
+                    'display_name' => 'No students under medical exception.',
+                    'status' => '',
+                ];
+            }
+        }
+
+        $studentsPage = (int) $request->get('students_page', 1);
+        $studentsTotal = count($studentRows);
+        $studentsItems = array_slice($studentRows, ($studentsPage - 1) * $perPage, $perPage);
+        $studentsPaginator = new LengthAwarePaginator(
+            $studentsItems,
+            $studentsTotal,
+            $perPage,
+            $studentsPage,
+            ['path' => $request->url(), 'pageName' => 'students_page']
+        );
+
+        return view('admin.medical_exception.faculty_view', [
+            'isFacultyView' => true,
+            'coursePaginator' => $coursePaginator,
+            'studentsPaginator' => $studentsPaginator,
+            'hasData' => $courseTotal > 0
+        ]);
+    }
     
     /**
      * Admin view for non-faculty users (original functionality)
@@ -293,45 +378,6 @@ class MedicalExceptionFacultyViewController extends Controller
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
         
-        // Query medical exceptions for admin view (similar to faculty view)
-        $adminDataQuery = DB::table('student_medical_exemption as sme')
-            ->join('course_master as cm', 'cm.pk', '=', 'sme.course_master_pk')
-            ->join('student_master as sm', 'sm.pk', '=', 'sme.student_master_pk')
-            ->join('employee_master as em', 'em.pk', '=', 'sme.employee_master_pk')
-            ->leftJoin('exemption_medical_speciality_master as ems', 'ems.pk', '=', 'sme.exemption_medical_speciality_pk')
-            ->where('cm.active_inactive', 1)
-            ->where('sme.active_inactive', 1);
-        
-        // Apply course filter if specified
-        if ($courseFilter) {
-            $adminDataQuery->where('sme.course_master_pk', $courseFilter);
-        } else {
-            // If no course filter, only show courses that are in the faculty data
-            if (!empty($courseIds)) {
-                $adminDataQuery->whereIn('sme.course_master_pk', $courseIds);
-            } else {
-                // If no courses found, return empty
-                $adminDataQuery->whereRaw('1 = 0');
-            }
-        }
-        
-        $adminData = $adminDataQuery->select([
-                'cm.course_name',
-                DB::raw("CONCAT_WS(' ', em.first_name, em.middle_name, em.last_name) as faculty_name"),
-                'sme.description as topics',
-                'sm.display_name as student_name',
-                'sme.from_date',
-                'sme.to_date',
-                'sm.generated_OT_code as ot_code',
-                'sme.doc_upload as medical_document',
-                'ems.speciality_name as application_type',
-                DB::raw('COUNT(sme.pk) OVER (PARTITION BY sme.course_master_pk) as exemption_count'),
-                'sme.created_date as submitted_on'
-            ])
-            ->orderBy('cm.course_name')
-            ->orderBy('sme.from_date', 'desc')
-            ->get();
-        
         // Build paginated rows for admin tables
         $perPage = 10;
         $adminCoursePage = (int) $request->get('admin_course_page', 1);
@@ -397,14 +443,11 @@ class MedicalExceptionFacultyViewController extends Controller
         );
 
         return view('admin.medical_exception.faculty_view', [
-            'data' => $adminData, // Medical exceptions data for admin view
-            'courses' => $allCourses, // Map allCourses to courses for dropdown
-            'courseFilter' => $courseFilter,
-            'dateFromFilter' => null,
             'facultyData' => $facultyData,
             'allFaculties' => $allFaculties,
             'allCourses' => $allCourses,
             'facultyFilter' => $facultyFilter,
+            'courseFilter' => $courseFilter,
             'adminCoursePaginator' => $adminCoursePaginator,
             'adminStudentsPaginator' => $adminStudentsPaginator,
         ]);
