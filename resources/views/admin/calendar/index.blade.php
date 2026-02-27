@@ -2,19 +2,29 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
+<div class="container-fluid">
+    <!-- Page Header with ARIA landmark -->
+    <header aria-label="Page header">
+        <x-breadcrum title="Academic TimeTable" />
+    </header>
 
-@php
-    // Debug: Check if courseMaster is available
-    if (!isset($courseMaster) || $courseMaster->isEmpty()) {
-        \Log::error('Calendar view: courseMaster is empty or not set');
-    }
-@endphp
-
-                    <!-- Density Toggle -->
-                    <div class="density-toggle d-flex align-items-center gap-2 ms-2">
-                        <button type="button" class="btn btn-outline-secondary" id="toggleDensityBtn" aria-pressed="false" aria-label="Toggle compact mode">
-                            Expand / Collapse
+    <!-- Main Content Area -->
+    <main id="main-content" role="main">
+        <!-- Action Controls with proper semantics -->
+        <section class="calendar-controls mb-4" aria-label="Calendar view controls">
+            <div class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
+                <!-- View Toggle Buttons -->
+                <div class="view-toggle-section d-flex align-items-center gap-3">
+                    <span class="text-muted fw-medium small d-none d-md-inline">View:</span>
+                    <div class="btn-group" role="group" aria-label="Calendar view options">
+                        <button type="button" class="btn btn-outline-primary" id="btnListView" aria-pressed="false"
+                            data-view="list">
+                            <i class="bi bi-list-ul me-2"></i>List View
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnCalendarView"
+                            aria-pressed="false" data-view="calendar">
+                            <i class="bi bi-calendar3 me-2"></i>Calendar View
                         </button>
                     </div>
                 </div>
@@ -124,50 +134,23 @@
 
 <!-- Add CSS for modern look -->
 <style>
-        :root {
-        --primary: #004a93;
-        --primary-color: #004a93;
-        --primary-dark: #003366;
-        --accent: #eef5ff;
-        --bg-light: #f4f6f9;
-        --text-main: #1f2937;
-        --text-muted: #6b7280;
-        --border: #e5e7eb;
-    }
-        .course-header {
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        color: #fff;
-        padding: 2.75rem 1.5rem;
-        border-radius: 1rem 1rem 1rem 1rem;
-        text-align: center;
-    }
+:root {
+    --primary-color: #004a93;
+    --primary-dark: #003366;
+    --primary-light: #e6f0fa;
+    --secondary-color: #af2910;
+    --light-bg: #f8f9fa;
+    --border-color: #dee2e6;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --text-dark: #1a1a1a;
+    --text-muted: #6c757d;
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-    .course-header h1 {
-        font-size: 1.85rem;
-        font-weight: 600;
-        color: #fff;
-    }
-
-    .course-header .badge {
-        background: #ffffff;
-        color: #000;
-    }
-
-    /* Responsive Design for Smaller Screens */
-    @media (max-width: 768px) {
-        .course-header {
-            padding: 1.5rem 1rem;
-        }
-
-        .course-header h1 {
-            font-size: 1.25rem;
-        }
-
-        .course-header p {
-            font-size: 0.9rem;
-        }
-    }
-    /* Accessibility improvements */
+/* Accessibility improvements */
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -368,21 +351,8 @@
     padding: 0.2rem 0.4rem;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--time { 
-    display: inline-flex;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--venue { 
-    display: inline-flex;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--faculty { 
-    display: none;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-badge {
-    font-size: 0.65rem;
-    padding: 0.2rem 0.5rem;
+.fc-daygrid-day.dense-day .fc-event-card .small {
+    display: none; /* show only title to keep compact */
 }
 
 /* Popover styling for "+ more" */
@@ -560,45 +530,7 @@
 
 .fc-event-card[data-event-type="workshop"] {
     border-left-color: #f6c23e;
-    background: linear-gradient(135deg, #ffffff 0%, #fffcf2 100%) !important;
 }
-
-.fc-event-card[data-event-type="workshop"]::after {
-    background: radial-gradient(circle at top right, rgba(246, 194, 62, 0.12) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="lecture"]:hover {
-    background: linear-gradient(135deg, #fafcff 0%, #e3edff 100%) !important;
-}
-
-.fc-event-card[data-event-type="lecture"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.2) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="exam"]:hover {
-    background: linear-gradient(135deg, #fffafa 0%, #ffe8e8 100%) !important;
-}
-
-.fc-event-card[data-event-type="exam"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(231, 74, 59, 0.2) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="meeting"]:hover {
-    background: linear-gradient(135deg, #fafffe 0%, #e0f9ef 100%) !important;
-}
-
-.fc-event-card[data-event-type="meeting"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(28, 200, 138, 0.2) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="workshop"]:hover {
-    background: linear-gradient(135deg, #fffef9 0%, #fff2d0 100%) !important;
-}
-
-.fc-event-card[data-event-type="workshop"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(246, 194, 62, 0.2) 0%, transparent 70%);
-}
-
 /* Improved stacking for multiple events in same day */
 .fc-daygrid-day-frame {
     overflow: hidden;
@@ -764,224 +696,15 @@
 
 /* List Event Cards */
 .list-event-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-    border: 1.5px solid #e5e7eb;
-    border-radius: 16px;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    border-left: 6px solid var(--primary-color) !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.06);
-    position: relative;
-    cursor: pointer;
-    overflow: visible;
-    min-height: fit-content;
-    padding: 1rem 1.25rem;
-}
-
-.list-event-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, rgba(78, 115, 223, 0.5) 70%, transparent 100%);
-    opacity: 0;
-    transition: opacity 0.35s ease;
-    border-radius: 16px 16px 0 0;
-}
-
-.list-event-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 50px;
-    height: 50px;
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.08) 0%, transparent 70%);
-    border-radius: 0 16px 0 0;
-    pointer-events: none;
+    background: white;
+    border-radius: 8px;
+    transition: var(--transition);
+    border-left: 3px solid var(--primary-color) !important;
 }
 
 .list-event-card:hover {
-    transform: translateX(8px) translateY(-3px);
-    box-shadow: 0 10px 32px rgba(0, 74, 147, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
-    z-index: 10;
-    background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
-    border-left-width: 7px;
-}
-
-.list-event-card:hover::before {
-    opacity: 1;
-}
-
-.list-event-card:hover::after {
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.15) 0%, transparent 70%);
-}
-
-.list-event-card:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 4px;
-    box-shadow: 0 0 0 6px rgba(0, 74, 147, 0.15);
-}
-
-/* Hover tooltip for full details */
-.list-event-card .event-tooltip {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    min-width: 320px;
-    background: white;
-    border: 2px solid #4e73df;
-    border-radius: 14px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
-    margin-top: 0.75rem;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-15px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1000;
-    pointer-events: none;
-    backdrop-filter: blur(10px);
-}
-
-.list-event-card:hover .event-tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-/* Show tooltip on keyboard focus for accessibility */
-.list-event-card:focus-within .event-tooltip,
-.list-event-card:focus .event-tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.event-tooltip .tooltip-title {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #1f2937;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 3px solid #4e73df;
-    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.event-tooltip .tooltip-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    font-size: 0.9rem;
-}
-
-.event-tooltip .tooltip-row i {
-    color: #4e73df;
-    margin-top: 0.15rem;
-    flex-shrink: 0;
-    font-size: 1.1rem;
-}
-
-.event-tooltip .tooltip-label {
-    font-weight: 600;
-    color: #374151;
-    min-width: 70px;
-}
-
-.event-tooltip .tooltip-value {
-    color: #6b7280;
-    flex: 1;
-    line-height: 1.5;
-}
-
-.list-event-card .group-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0.3rem 0.75rem;
-    border-radius: 999px;
-    color: white;
-    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
-    margin-bottom: 0.5rem;
-    box-shadow: 0 2px 6px rgba(78, 115, 223, 0.25);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    white-space: nowrap;
-}
-
-.list-event-card .title {
-    font-weight: 700;
-    font-size: 1.1rem;
-    line-height: 1.6;
-    color: #1f2937;
-    margin-bottom: 0.65rem;
-    word-wrap: break-word;
-    overflow: visible;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-}
-
-.list-event-card .meta {
-    color: #4b5563;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-weight: 500;
-    margin-top: 0.4rem;
-    padding: 0.3rem 0.6rem;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 8px;
-    width: fit-content;
-}
-
-.list-event-card .meta i {
-    color: #4e73df;
-    font-size: 1rem;
-}
-
-.list-event-card:hover .meta {
-    background: rgba(255, 255, 255, 0.95);
-    color: #1f2937;
-}
-
-/* Group-specific backgrounds */
-.list-event-card[data-group="Group A"],
-.list-event-card[data-group*="Group A"] {
-    background: #e8e4f3;
-    border-left-color: #8b7ab8 !important;
-}
-
-.list-event-card[data-group="Group B"],
-.list-event-card[data-group*="Group B"] {
-    background: #d4edda;
-    border-left-color: #5cb85c !important;
-}
-
-.list-event-card[data-group*="Group A"] .group-badge {
-    background: #b8a9d6;
-    color: #5a4a7d;
-}
-
-.list-event-card[data-group*="Group B"] .group-badge {
-    background: #8fd19e;
-    color: #2d5f37;
-}
-
-/* Break / Lunch rows */
-.timetable-grid tr.break-row th,
-.timetable-grid tr.break-row td {
-    background: #fff7ec;
-}
-
-.timetable-grid tr.lunch-row th,
-.timetable-grid tr.lunch-row td {
-    background: #fff2f0;
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Institution name styling */
@@ -1483,675 +1206,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 }
 
-/* ========== COMPREHENSIVE RESPONSIVE DESIGN ========== */
-
-/* Extra Small Devices (< 576px) */
-@media (max-width: 575.98px) {
-    /* General Layout */
-    .container-fluid {
-        padding: 0.5rem;
-    }
-
-    /* Course Header */
-    .course-header {
-        padding: 1rem 0.75rem;
-        margin-bottom: 1rem !important;
-    }
-
-    .course-header h1 {
-        font-size: 1.15rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .course-header p {
-        font-size: 0.8rem;
-    }
-
-    .course-header .badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    /* Control Panel */
-    .control-panel {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        padding: 1rem 0.75rem !important;
-        gap: 0.75rem !important;
-    }
-
-    .view-toggle-section {
-        flex-direction: column !important;
-        width: 100%;
-        gap: 0.75rem !important;
-    }
-
-    .view-toggle-section .text-muted {
-        display: none !important;
-    }
-
-    .btn-group {
-        display: flex;
-        width: 100%;
-        gap: 0.5rem;
-    }
-
-    .btn-group .btn {
-        flex: 1;
-        font-size: 0.8rem;
-        padding: 0.4rem 0.5rem;
-    }
-
-    .btn-group .btn i {
-        margin-right: 0.25rem;
-    }
-
-    .density-toggle {
-        width: 100%;
-    }
-
-    .density-toggle .btn {
-        width: 100%;
-        font-size: 0.8rem;
-    }
-
-    #courseFilter {
-        width: 100% !important;
-        min-width: unset !important;
-        font-size: 0.9rem;
-        padding: 0.5rem;
-    }
-
-    #createEventButton {
-        width: 100%;
-        font-size: 0.85rem;
-        padding: 0.6rem !important;
-    }
-
-    /* Calendar Container */
-    .card {
-        border-left-width: 3px !important;
-    }
-
-    .card-body {
-        padding: 1rem !important;
-    }
-
-    /* FullCalendar Adjustments */
-    .fc {
-        font-size: 0.8rem;
-    }
-
-    .fc-col-header-cell {
-        padding: 0.5rem 0.25rem !important;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-
-    .fc-daygrid-day-number {
-        font-size: 0.75rem;
-        padding: 0.35rem;
-    }
-
-    .fc-event-card {
-        padding: 0.35rem 0.4rem !important;
-        border-radius: 0.3rem;
-        margin: 0.15rem 0 !important;
-        font-size: 0.7rem;
-        background: #fff !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .fc-event-card .event-title {
-        font-size: 0.75rem !important;
-        line-height: 1.2 !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 100%;
-    }
-
-    .fc-event-card .event-meta {
-        gap: 0.3rem 0.5rem !important;
-        margin-top: 0.15rem;
-        flex-wrap: wrap;
-    }
-
-    .fc-event-card .meta-item {
-        font-size: 0.7rem !important;
-        display: none !important;
-        white-space: nowrap;
-    }
-
-    .fc-event-card .event-badge {
-        font-size: 0.65rem !important;
-        padding: 0.1rem 0.35rem !important;
-        white-space: nowrap;
-    }
-
-    .fc-daygrid-day-more-link {
-        font-size: 0.8rem !important;
-        padding: 0.3rem 0.5rem !important;
-    }
-
-    /* List View / Timetable */
-    .timetable-header {
-        padding: 1rem !important;
-        border-radius: 0.75rem !important;
-    }
-
-    .timetable-header .row {
-        gap: 1rem !important;
-    }
-
-    .timetable-header .col-md-2,
-    .timetable-header .col-md-6,
-    .timetable-header .col-md-4 {
-        text-align: center !important;
-    }
-
-    .logo-wrapper {
-        padding: 0.5rem !important;
-    }
-
-    .logo-wrapper img {
-        width: 50px !important;
-        height: 50px !important;
-    }
-
-    .timetable-header h1 {
-        font-size: 1rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    .timetable-header p {
-        font-size: 0.75rem;
-    }
-
-    .week-controls {
-        padding: 0.75rem !important;
-    }
-
-    .week-controls .btn-group {
-        margin-bottom: 0.75rem;
-        gap: 0.25rem;
-    }
-
-    .week-controls .btn {
-        font-size: 0.75rem;
-        padding: 0.4rem 0.5rem;
-    }
-
-    .week-badge .badge {
-        font-size: 0.75rem !important;
-        padding: 0.35rem 0.75rem !important;
-    }
-
-    /* Week Cards */
-    .week-cards .row {
-        gap: 0.75rem !important;
-    }
-
-    .week-cards .row > * {
-        flex: 0 0 calc(33.333% - 0.5rem);
-    }
-
-    .week-card {
-        padding: 0.75rem !important;
-    }
-
-    .week-card-date {
-        font-size: 0.8rem;
-    }
-
-    .week-card-day {
-        font-size: 0.7rem;
-    }
-
-    /* Timetable Grid */
-    .timetable-container {
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-
-    .table-responsive {
-        font-size: 0.8rem;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.5rem 0.35rem !important;
-        font-size: 0.75rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 70px;
-        font-size: 0.7rem;
-    }
-
-    .timetable-grid td {
-        max-height: 200px;
-    }
-
-    /* List Event Cards */
-    .list-event-card {
-        padding: 0.65rem !important;
-        border-radius: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .list-event-card .title {
-        font-size: 0.85rem;
-    }
-
-    .list-event-card .meta {
-        font-size: 0.75rem;
-    }
-
-    .list-event-card .event-tooltip {
-        min-width: 200px;
-        font-size: 0.75rem;
-        padding: 0.65rem;
-    }
-
-    .list-event-card .group-badge {
-        font-size: 0.65rem;
-        padding: 0.1rem 0.35rem;
-    }
-
-    /* Form Elements */
-    .form-label {
-        font-size: 0.85rem;
-    }
-
-    .form-control,
-    .form-select {
-        font-size: 0.85rem;
-        padding: 0.5rem 0.65rem;
-    }
-
-    .form-check-input {
-        width: 1.1rem;
-        height: 1.1rem;
-    }
-
-    /* Modal */
-    .modal-dialog {
-        margin: 0.5rem !important;
-    }
-
-    .modal-content {
-        border-radius: 0.75rem;
-    }
-
-    .modal-header {
-        padding: 1rem !important;
-    }
-
-    .modal-header .modal-title {
-        font-size: 1rem;
-    }
-
-    .modal-body {
-        padding: 1rem !important;
-        font-size: 0.85rem;
-    }
-
-    .modal-footer {
-        padding: 0.75rem 1rem !important;
-    }
-
-    .modal-footer .btn {
-        font-size: 0.8rem;
-        padding: 0.5rem 0.75rem;
-    }
-
-    /* Buttons */
-    .btn {
-        font-size: 0.85rem;
-        padding: 0.5rem 0.75rem;
-    }
-
-    .btn-lg {
-        padding: 0.6rem 0.9rem;
-        font-size: 0.9rem;
-    }
-
-    /* Badges */
-    .badge {
-        font-size: 0.65rem;
-    }
-
-    /* Utility Classes */
-    .p-3 {
-        padding: 0.75rem !important;
-    }
-
-    .p-4 {
-        padding: 1rem !important;
-    }
-
-    .p-md-4 {
-        padding: 1rem !important;
-    }
-
-    .mb-3 {
-        margin-bottom: 0.75rem !important;
-    }
-
-    .mb-4 {
-        margin-bottom: 1rem !important;
-    }
-
-    .gap-3 {
-        gap: 0.75rem !important;
-    }
-
-    .gap-4 {
-        gap: 1rem !important;
-    }
-}
-
-/* Small Devices (576px to 767px) */
-@media (max-width: 767.98px) {
-    .course-header {
-        padding: 1.5rem 1rem;
-    }
-
-    .course-header h1 {
-        font-size: 1.35rem;
-    }
-
-    .control-panel {
-        flex-direction: column;
-        align-items: stretch !important;
-    }
-
-    .view-toggle-section {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .btn-group {
-        width: 100%;
-    }
-
-    .btn-group .btn {
-        flex: 1;
-        font-size: 0.85rem;
-    }
-
-    #courseFilter {
-        width: 100% !important;
-        min-width: unset !important;
-    }
-
-    #createEventButton {
-        width: 100%;
-    }
-
-    .fc {
-        font-size: 0.85rem;
-    }
-
-    .fc-col-header-cell {
-        padding: 0.75rem 0.4rem !important;
-        font-size: 0.8rem;
-    }
-
-    .fc-daygrid-day-number {
-        font-size: 0.8rem;
-        padding: 0.4rem;
-    }
-
-    .fc-event-card {
-        padding: 0.65rem 0.75rem !important;
-        border-radius: 0.625rem;
-        margin: 0.3rem 0 !important;
-        font-size: 0.8rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-        overflow: visible;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
-        min-height: fit-content;
-    }
-
-    .fc-event-card .event-title {
-        font-size: 0.9rem !important;
-        line-height: 1.4 !important;
-        overflow: visible;
-        -webkit-line-clamp: 3;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        margin-bottom: 0.45rem !important;
-        word-break: break-word;
-    }
-
-    .fc-event-card .event-meta {
-        gap: 0.4rem 0.6rem !important;
-        margin-top: 0.35rem;
-        padding-top: 0.4rem;
-        flex-wrap: wrap;
-        border-top-width: 1px;
-    }
-
-    .fc-event-card .meta-item {
-        font-size: 0.75rem !important;
-        padding: 0.2rem 0.4rem !important;
-        gap: 0.3rem;
-    }
-    
-    .fc-event-card .meta-item--time {
-        display: inline-flex !important;
-    }
-    
-    .fc-event-card .meta-item--venue {
-        display: inline-flex !important;
-    }
-    
-    .fc-event-card .meta-item--faculty {
-        display: none !important;
-    }
-
-    .fc-event-card .event-badge {
-        font-size: 0.65rem !important;
-        padding: 0.25rem 0.5rem !important;
-        white-space: nowrap;
-    }
-
-    .timetable-header .row {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .timetable-header .col-md-2,
-    .timetable-header .col-md-6,
-    .timetable-header .col-md-4 {
-        flex: 0 0 100%;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.65rem 0.4rem;
-        font-size: 0.8rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 90px;
-    }
-
-    .list-event-card {
-        padding: 0.75rem;
-    }
-
-    .list-event-card .title {
-        font-size: 0.9rem;
-    }
-
-    .list-event-card .event-tooltip {
-        min-width: 220px;
-    }
-}
-
-/* Medium Devices (768px to 991px) */
-@media (min-width: 768px) and (max-width: 991.98px) {
-    .course-header {
-        padding: 2rem 1.25rem;
-    }
-
-    .course-header h1 {
-        font-size: 1.5rem;
-    }
-
-    .fc {
-        font-size: 0.9rem;
-    }
-
-    .fc-event-card {
-        padding: 0.75rem 0.875rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-        overflow: visible;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
-        min-height: fit-content;
-    }
-
-    .fc-event-card .event-title {
-        overflow: visible;
-        -webkit-line-clamp: 3;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        font-size: 0.98rem;
-        line-height: 1.45;
-        word-break: break-word;
-    }
-
-    .fc-event-card .event-meta {
-        flex-wrap: wrap;
-        gap: 0.5rem 0.8rem;
-    }
-    
-    .fc-event-card .meta-item {
-        font-size: 0.82rem;
-        padding: 0.25rem 0.45rem;
-    }
-    
-    .fc-event-card .meta-item--time,
-    .fc-event-card .meta-item--venue {
-        display: inline-flex !important;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.75rem;
-        font-size: 0.85rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 100px;
-    }
-
-    .list-event-card {
-        padding: 0.75rem;
-    }
-}
-
-/* Desktop Devices (992px and up) - Keep Original Styling */
-@media (min-width: 992px) {
-    .course-header {
-        padding: 2.75rem 1.5rem;
-    }
-
-    .course-header h1 {
-        font-size: 1.85rem;
-    }
-
-    .control-panel {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .view-toggle-section {
-        flex-direction: row;
-    }
-
-    #courseFilter {
-        min-width: 200px;
-    }
-
-    .fc {
-        font-size: 0.95rem;
-    }
-
-    .fc-event-card {
-        padding: 1rem 1.1rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-        min-height: fit-content;
-    }
-
-    .fc-event-card .event-title {
-        white-space: normal;
-        font-size: 1.05rem;
-        overflow: visible;
-        word-break: break-word;
-        -webkit-line-clamp: 3;
-        line-height: 1.5;
-    }
-
-    .fc-event-card .event-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem 1.1rem;
-    }
-    
-    .fc-event-card .meta-item {
-        font-size: 0.875rem;
-        display: inline-flex !important;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.75rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 120px;
-    }
-
-    .list-event-card {
-        padding: 0.75rem 1rem;
-    }
-}
-
-/* Print Styles */
-@media print {
-    .control-panel,
-    #createEventButton,
-    .btn,
-    button {
-        display: none !important;
-    }
-
-    .calendar-container {
-        box-shadow: none;
-    }
-
-    .fc {
-        font-size: 0.95rem;
-    }
-}
-.control-panel:focus-within {
-    outline: 2px solid #004a93;
-    outline-offset: 2px;
-}
-
-.btn:focus-visible,
-.form-select:focus-visible {
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
-}
-
 </style>
-  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
+
 <!-- Modern JavaScript with improved accessibility -->
 <script>
 console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
@@ -2550,9 +1606,8 @@ class CalendarManager {
         const topic = arg.event.title || '';
         const venue = arg.event.extendedProps.vanue || '';
         const faculty = arg.event.extendedProps.faculty_name || '';
-        const idStr = (arg.event.id || arg.event._def?.publicId || Math.random().toString(36).slice(2));
-        const titleId = `fc-evt-${idStr}-title`;
-        const descId = `fc-evt-${idStr}-desc`;
+        const type = (arg.event.extendedProps.type || arg.event.extendedProps.event_type || arg.event.extendedProps.session_type || '').toString();
+        const typeAttr = type.toLowerCase();
 
         return {
             html: `
@@ -3746,8 +2801,6 @@ async setInternalFaculty(internalFacultyIds) {
         });
 
         tbody.innerHTML = html;
-        this.applyBreakLunchRowStyles();
-        this.initializeScrollIndicators();
     }
 
     groupEventsByTime(events) {
@@ -3777,102 +2830,19 @@ async setInternalFaculty(internalFacultyIds) {
         return groups;
     }
 
-    renderListEvent(events) {
-        const arr = Array.isArray(events) ? events : [events];
-        return arr.map(event => {
-            const groupName = event.extendedProps.group_name || event.extendedProps.group || '';
-            const title = event.title || event.extendedProps.topic || '';
-            const faculty = event.extendedProps.faculty_name || '';
-            const venue = event.extendedProps.vanue || event.extendedProps.venue_name || '';
-            const classSession = event.extendedProps.class_session || '';
-            const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
-            const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
-            
-            return `
-                <div class="list-event-card p-2 mb-2" data-group="${groupName}">
-                    ${groupName ? `<div class="group-badge">${groupName}</div>` : ''}
-                    <div class="title">${title}</div>
-                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">class</i>${classSession}</div> <div class="meta d-flex align-items-center"><i class="material-icons me-1">place</i>${venue}</div>
-                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">person</i>${faculty}</div>
-                    
-                    <!-- Hover Tooltip -->
-                    <div class="event-tooltip">
-                        <div class="tooltip-title">${title}</div>
-                        ${timeRange ? `
-                        <div class="tooltip-row">
-                            <i class="bi bi-clock"></i>
-                            <span class="tooltip-label">Time:</span>
-                            <span class="tooltip-value">${timeRange}</span>
-                        </div>` : ''}
-                        ${groupName ? `
-                        <div class="tooltip-row">
-                            <i class="bi bi-people"></i>
-                            <span class="tooltip-label">Group:</span>
-                            <span class="tooltip-value">${groupName}</span>
-                        </div>` : ''}
-                        ${venue ? `
-                        <div class="tooltip-row">
-                            <i class="bi bi-geo-alt"></i>
-                            <span class="tooltip-label">Venue:</span>
-                            <span class="tooltip-value">${venue}</span>
-                        </div>` : ''}
-                        ${faculty ? `
-                        <div class="tooltip-row">
-                            <i class="material-icons me-1">person</i>
-                            <span class="tooltip-label">Faculty:</span>
-                            <span class="tooltip-value">${faculty}</span>
-                        </div>` : ''}
-                        ${classSession ? `
-                        <div class="tooltip-row">
-                            <i class="material-icons me-1">book</i>
-                            <span class="tooltip-label">Session:</span>
-                            <span class="tooltip-value">${classSession}</span>
-                        </div>` : ''}
-                    </div>
+    renderListEvent(event) {
+        return `
+            <div class="list-event-card p-2 mb-2 border-start border-3" 
+                 style="border-color: ${CalendarConfig.colors[event.id % CalendarConfig.colors.length]};">
+                <div class="fw-bold small">${event.title}</div>
+                <div class="text-muted x-small">
+                    <i class="bi bi-person me-1"></i>${event.extendedProps.faculty_name || ''}
                 </div>
-            `;
-        }).join('');
-    }
-
-    initializeScrollIndicators() {
-        // Add scroll event listeners to table cells to show/hide scroll indicators
-        const cells = document.querySelectorAll('.timetable-grid td.event-cell');
-        
-        cells.forEach(cell => {
-            // Check if cell content exceeds max height
-            if (cell.scrollHeight > cell.clientHeight) {
-                cell.classList.add('has-scroll');
-                
-                // Add scroll event listener
-                cell.addEventListener('scroll', function() {
-                    const isScrolledToBottom = Math.abs(this.scrollHeight - this.clientHeight - this.scrollTop) < 5;
-                    
-                    if (isScrolledToBottom) {
-                        this.classList.add('scrolled-bottom');
-                    } else {
-                        this.classList.remove('scrolled-bottom');
-                    }
-                });
-                
-                // Initial check
-                const isScrolledToBottom = Math.abs(cell.scrollHeight - cell.clientHeight - cell.scrollTop) < 5;
-                if (isScrolledToBottom) {
-                    cell.classList.add('scrolled-bottom');
-                }
-            } else {
-                cell.classList.remove('has-scroll', 'scrolled-bottom');
-            }
-        });
-    }
-
-    applyBreakLunchRowStyles() {
-        const rows = document.querySelectorAll('#timetableBody tr');
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            if (text.includes('break time')) row.classList.add('break-row');
-            if (text.includes('lunch')) row.classList.add('lunch-row');
-        });
+                <div class="text-muted x-small">
+                    <i class="bi bi-geo-alt me-1"></i>${event.extendedProps.vanue || ''}
+                </div>
+            </div>
+        `;
     }
 
     convertTo24Hour(timeStr) {

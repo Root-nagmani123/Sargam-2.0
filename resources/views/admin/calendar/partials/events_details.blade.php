@@ -3,26 +3,16 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <div class="d-flex flex-column w-100"> 
+                <div class="d-flex flex-column w-100">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="modal-title h5 mb-0" id="eventDetailsTitle">
                             <span id="eventTitle">Event</span>
                         </h3>
-                        <div class="d-flex gap-2 align-items-center">
-                            @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
-                            <button type="button" class="btn btn-sm btn-primary" id="editEventBtn">
-                                <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
-                            </button>
-                            <button type="button" class="btn btn-sm btn-danger" id="deleteEventBtn">
-                                <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
-                            </button>
-                            @endif
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                     </div>
                     <div class="mt-2">
-                        <p class="mb-0 small fw-medium text-white">
+                        <p class="mb-0 small">
                             <i class="material-icons me-1" aria-hidden="true">date_range</i><i class="bi bi-calendar me-1" aria-hidden="true"></i>
                             <span id="eventDate"></span>
                         </p>
@@ -62,12 +52,18 @@
                                 <span id="eventVanue" class="ms-1"></span>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="detail-item">
-                                <i class="bi bi-geo-alt-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Internal Faculty:</strong>
-                                <span id="internal_faculty_name_show" class="ms-1"></span>
-                            </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="d-flex gap-2">
+                            @if(hasRole('Training') || hasRole('Admin'))
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="editEventBtn">
+                                <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="deleteEventBtn">
+                                <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
+                            </button>
+                            @endif
                         </div>
                     </div>
                 </div>
