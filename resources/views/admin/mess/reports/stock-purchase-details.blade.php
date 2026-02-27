@@ -93,8 +93,12 @@
                             <thead class="stock-purchase-thead">
                                 <tr>
                                     <th>Item</th>
+                                    <th>Item Code</th>
+                                    <th class="text-end">Unit</th>
                                     <th class="text-end">Quantity</th>
                                     <th class="text-end">Purchase</th>
+                                    <th class="text-end">Tax %</th>
+                                    <th class="text-end">Tax Amount</th>
                                     <th class="text-end">Total</th>
                                 </tr>
                             </thead>
@@ -103,32 +107,42 @@
                                     @php
                                         $storeName = $order->store ? $order->store->store_name : 'N/A';
                                         $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
-                                        $billTotal = 0;
+                                        $billSubtotal = 0;
+                                        $billTaxTotal = 0;
                                     @endphp
                                     <tr class="bill-header-row">
-                                        <td colspan="4" class="bill-header">{{ $billLabel }}</td>
+                                        <td colspan="8" class="bill-header">{{ $billLabel }}</td>
                                     </tr>
                                     @foreach($order->items as $item)
                                         @php
                                             $qty = $item->quantity ?? 0;
                                             $rate = $item->unit_price ?? 0;
-                                            $total = $qty * $rate;
-                                            $billTotal += $total;
+                                            $taxPercent = $item->tax_percent ?? 0;
+                                            $subtotal = $qty * $rate;
+                                            $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                                            $total = $subtotal + $taxAmount;
+                                            $billSubtotal += $subtotal;
+                                            $billTaxTotal += $taxAmount;
                                         @endphp
                                         <tr>
                                             <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
+                                            <td>{{ $item->itemSubcategory->item_code ?? '—' }}</td>
+                                            <td class="text-end">{{ $item->unit ?? '—' }}</td>
                                             <td class="text-end">{{ number_format($qty, 2) }}</td>
                                             <td class="text-end">₹{{ number_format($rate, 1) }}</td>
+                                            <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
+                                            <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
                                             <td class="text-end">₹{{ number_format($total, 2) }}</td>
                                         </tr>
                                     @endforeach
+                                    @php $billTotal = $billSubtotal + $billTaxTotal; @endphp
                                     <tr class="bill-total-row">
-                                        <td colspan="3" class="text-end fw-bold">Bill Total:</td>
+                                        <td colspan="7" class="text-end fw-bold">Bill Total:</td>
                                         <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">No purchase details found</td>
+                                        <td colspan="8" class="text-center text-muted py-4">No purchase details found</td>
                                     </tr>
                                 @endforelse
                             </tbody>
