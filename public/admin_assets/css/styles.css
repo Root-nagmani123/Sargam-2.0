@@ -20432,6 +20432,10 @@ progress {
     vertical-align: inherit;
 }
 
+.table>thead {
+    vertical-align: bottom;
+}
+
 .table-group-divider {
     border-top: calc(var(--bs-border-width) * 2) solid currentcolor;
 }
@@ -48168,6 +48172,11 @@ body .ql-container.ql-snow {
 
 body .ql-toolbar.ql-snow {
     border-radius: var(--bs-border-radius-sm) var(--bs-border-radius-sm) 0 0;
+}
+
+.calendar-container {
+    border-radius: 8px;
+    border: 1px solid #e0e6ed;
 }
 
 .app-calendar .fc .fc-daygrid-day-frame {
