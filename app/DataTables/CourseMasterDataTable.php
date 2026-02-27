@@ -51,10 +51,25 @@ class CourseMasterDataTable extends DataTable
                 $btnId = 'dropdown-btn-' . $row->pk;
 
                 $html = <<<HTML
-<td class="text-center">
-    <div class="d-inline-flex align-items-center gap-2"
-         role="group"
-         aria-label="Row actions">
+<div class="dropdown text-center action-dropdown">
+    <a id="{$btnId}" data-bs-toggle="dropdown" data-bs-offset="0,10" data-bs-auto-close="outside" aria-expanded="false" aria-haspopup="true" aria-label="Actions" style="cursor: pointer;">
+        <span class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px;">more_horiz</span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+        <li>
+            <a class="dropdown-item d-flex align-items-center" href="{$viewUrl}" target="_blank">
+                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">visibility</span>
+                View
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item d-flex align-items-center" href="{$editUrl}">
+                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">edit</span>
+                Edit
+            </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+HTML;
 
         <!-- View -->
         <a
@@ -104,6 +119,14 @@ class CourseMasterDataTable extends DataTable
             <form action="{$deleteUrl}" method="POST" class="d-inline">
                 <input type="hidden" name="_token" value="{$csrf}">
                 <input type="hidden" name="_method" value="DELETE">
+                <a href="#" class="dropdown-item d-flex align-items-center text-danger" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this course?')) { document.getElementById('{$formId}').submit(); }">
+                    <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
+                    Delete
+                </a>
+            </form>
+        </li>
+HTML;
+                }
 
                 <button
                     type="submit"
