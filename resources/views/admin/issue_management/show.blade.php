@@ -5,7 +5,7 @@
 @section('css')
 <style>
 .table {
-    background-color: #fff !important;
+    background-color: #cc8989 !important;
 }
 .table thead th {
     background-color: #f8f9fa;
@@ -14,7 +14,18 @@
 </style>
 @endsection
 
+
 @section('setup_content')
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        </div>
+@endif
 <div class="container-fluid">
     <x-breadcrum title="Issue Details" />
     <div class="datatables">
@@ -28,9 +39,31 @@
                         <a href="{{ route('admin.issue-management.index') }}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back to List
                         </a>
-                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-primary">
-                            <i class="bi bi-pencil"></i> Update Status
-                        </a>
+                        @php
+                            $isNodalOrAssigned = $issue->employee_master_pk == Auth::user()->user_id || $issue->assigned_to == Auth::user()->user_id;
+                            $isComplainant = $issue->created_by == Auth::user()->user_id;
+                            $isLogger = $issue->issue_logger == Auth::user()->user_id;
+                            $isCompleted = (int) $issue->issue_status === 2;
+                            $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted) || ($isLogger && $isCompleted);
+                            $showReopenOnly = ($isComplainant || $isLogger) && $isCompleted;
+                            $canEdit = ($isComplainant || $isLogger) && !$isCompleted;
+                        @endphp
+                        @once
+                        @if($canUpdateStatus)
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
+                            @if($showReopenOnly)
+                                <i class="bi bi-arrow-repeat"></i> Reopen Issue
+                            @else
+                                <i class="bi bi-arrow-up-circle"></i> Update Status
+                            @endif
+                        </button>
+                        @endif
+                        @endonce
+                        @if($canEdit)
+                            <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
+                                <i class="bi bi-pencil"></i> Edit Issue
+                            </a>
+                        @endif
                     </div>
                 </div>
                 <hr>
@@ -55,18 +88,8 @@
                                         @endforelse
                                     </td>
                                 </tr>
-                                <tr>
-                                    <th>Priority</th>
-                                    <td>
-                                        <span class="badge bg-{{ $issue->priority->priority == 'High' ? 'danger' : ($issue->priority->priority == 'Medium' ? 'warning' : 'info') }}">
-                                            {{ $issue->priority->priority ?? 'N/A' }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Reproducibility</th>
-                                    <td>{{ $issue->reproducibility->reproducibility_name ?? 'N/A' }}</td>
-                                </tr>
+                               
+                              
                                 <tr>
                                     <th>Status</th>
                                     <td>
@@ -75,38 +98,48 @@
                                         </span>
                                     </td>
                                 </tr>
-                                <tr>
-                                    <th>Behalf</th>
-                                    <td>
-                                        <span class="badge bg-{{ $issue->behalf == 0 ? 'primary' : 'secondary' }}">
-                                            {{ $issue->behalf_label }}
-                                        </span>
-                                    </td>
+                                 <tr>
+                                    <th width="40%">Created Date</th>
+                                    <td>{{ $issue->created_date->format('d-m-Y H:i:s') }}</td>
                                 </tr>
                             </table>
                         </div>
 
                         <div class="col-md-6">
                             <table class="table table-bordered">
-                                <tr>
-                                    <th width="40%">Created Date</th>
-                                    <td>{{ $issue->created_date->format('d-m-Y H:i:s') }}</td>
-                                </tr>
+                               
                                 <tr>
                                     <th>Created By</th>
-                                    <td>{{ $issue->creator->name ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Issue Logger</th>
                                     <td>{{ $issue->logger->name ?? 'N/A' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Assigned To</th>
-                                    <td>{{ $issue->assigned_to ?? 'Not Assigned' }}</td>
+                                    <th>Issue Logger</th>
+                                    <td>{{ $issue->creator->name ?? 'N/A' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Contact</th>
+                                    <th>Assigned To</th>
+                                    <td>
+                                        @if($issue->assigned_to)
+                                            @php
+                                                if (is_numeric($issue->assigned_to)) {
+                                                    $assignedEmployee = \DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+                                                    echo $assignedEmployee ? trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) : 'N/A';
+                                                } else {
+                                                    echo e($issue->assigned_to);
+                                                }
+                                            @endphp
+                                        @else
+                                            Not Assigned
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Assigned Person Contact Number</th>
                                     <td>{{ $issue->assigned_to_contact ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Nodal Officer</th>
+                                    <td>{{ $issue->nodal_officer->name ?? 'N/A' }}</td>
                                 </tr>
                                 @if($issue->clear_date)
                                 <tr>
@@ -129,29 +162,53 @@
                         </div>
                     </div>
 
-                    @if($issue->buildingMapping || $issue->hostelMapping)
                     <div class="row mt-3">
                         <div class="col-12">
                             <h5>Location Details</h5>
                             <div class="card bg-light">
                                 <div class="card-body">
-                                    @if($issue->buildingMapping)
-                                        <strong>Building:</strong> {{ $issue->buildingMapping->building->building_name ?? 'N/A' }}<br>
-                                        <strong>Floor:</strong> {{ $issue->buildingMapping->floor_name ?? 'N/A' }}<br>
-                                        <strong>Room:</strong> {{ $issue->buildingMapping->room_name ?? 'N/A' }}
+                                    @if($issue->location === 'O' && !empty($locationFallback))
+                                        <strong>Building:</strong> {{ $locationFallback['name'] }}<br>
+                                        <strong>Floor:</strong> {{ $locationFallback['floor'] }}<br>
+                                        <strong>Room:</strong> {{ $locationFallback['room'] }}<br>
+                                    @elseif($issue->buildingMapping)
+                                        @php
+                                            $bldgName = $issue->buildingMapping->building->building_name ?? '';
+                                            $bldgFloor = $issue->buildingMapping->floor_name ?? '';
+                                            $bldgRoom = $issue->buildingMapping->room_name ?? '';
+                                        @endphp
+                                        <strong>Building:</strong> {{ trim($bldgName) ?: 'N/A' }}<br>
+                                        <strong>Floor:</strong> {{ ($bldgFloor !== null && $bldgFloor !== '') ? $bldgFloor : 'N/A' }}<br>
+                                        <strong>Room:</strong> {{ ($bldgRoom !== null && $bldgRoom !== '') ? $bldgRoom : 'N/A' }}<br>
                                     @elseif($issue->hostelMapping)
-                                        <strong>Hostel:</strong> {{ $issue->hostelMapping->hostelBuilding->hostel_name ?? 'N/A' }}<br>
-                                        <strong>Floor:</strong> {{ $issue->hostelMapping->floor_name ?? 'N/A' }}<br>
-                                        <strong>Room:</strong> {{ $issue->hostelMapping->room_name ?? 'N/A' }}
+                                        @php
+                                            $hostelName = 'N/A';
+                                            if ($issue->hostelMapping->hostelBuilding) {
+                                                $hostelName = trim($issue->hostelMapping->hostelBuilding->hostel_name ?? $issue->hostelMapping->hostelBuilding->building_name ?? '') ?: 'N/A';
+                                            } else {
+                                                $hostelRow = \DB::table('hostel_building_master')->where('pk', $issue->hostelMapping->hostel_building_master_pk)->first();
+                                                $hostelName = $hostelRow ? (trim($hostelRow->hostel_name ?? $hostelRow->building_name ?? '') ?: 'N/A') : 'N/A';
+                                            }
+                                            $hostelFloor = ($issue->hostelMapping->floor_name !== null && $issue->hostelMapping->floor_name !== '') ? $issue->hostelMapping->floor_name : 'N/A';
+                                            $hostelRoom = ($issue->hostelMapping->room_name !== null && $issue->hostelMapping->room_name !== '') ? $issue->hostelMapping->room_name : 'N/A';
+                                        @endphp
+                                        <strong>Hostel:</strong> {{ $hostelName }}<br>
+                                        <strong>Floor:</strong> {{ $hostelFloor }}<br>
+                                        <strong>Room:</strong> {{ $hostelRoom }}<br>
+                                    @elseif(!empty($locationFallback))
+                                        <strong>{{ $locationFallback['type'] === 'building' ? 'Building' : ($locationFallback['type'] === 'residential' ? 'Residential' : 'Hostel') }}:</strong> {{ $locationFallback['name'] }}<br>
+                                        <strong>Floor:</strong> {{ $locationFallback['floor'] }}<br>
+                                        <strong>Room:</strong> {{ $locationFallback['room'] }}<br>
+                                    @else
+                                        <strong>Hostel:</strong> N/A<br>
+                                        <strong>Floor:</strong> N/A<br>
+                                        <strong>Room:</strong> N/A<br>
                                     @endif
-                                    @if($issue->location)
-                                        <br><strong>Additional Location:</strong> {{ $issue->location }}
-                                    @endif
+                                    <strong>Additional Location:</strong> {{ trim($issue->location ?? '') ?: 'N/A' }}
                                 </div>
                             </div>
                         </div>
                     </div>
-                    @endif
 
                     @if($issue->remark)
                     <div class="row mt-3">
@@ -179,13 +236,44 @@
                     </div>
                     @endif
 
-                    @if($issue->document)
+                    @php
+                        $docPaths = [];
+                        $d = $issue->document ?? '';
+                        $cimg = $issue->complaint_img ?? '';
+                        if (!empty($d)) {
+                            if (str_starts_with(trim($d), '[')) {
+                                $docPaths = json_decode($d, true) ?: [];
+                            } else {
+                                $docPaths = [$d];
+                            }
+                        }
+                        if (!empty($cimg)) {
+                            $decoded = is_string($cimg) ? json_decode($cimg, true) : $cimg;
+                            if (is_array($decoded)) {
+                                $docPaths = array_merge($docPaths, $decoded);
+                            }
+                        }
+                        $docPaths = array_values(array_filter($docPaths));
+                    @endphp
+                    @if(count($docPaths) > 0)
                     <div class="row mt-3">
                         <div class="col-12">
-                            <h5>Attached Document</h5>
-                            <a href="{{ Storage::url($issue->document) }}" target="_blank" class="btn btn-sm btn-info">
-                                <i class="material-icons">download</i> Download Document
-                            </a>
+                            <h5>Attachments</h5>
+                            <div class="d-flex flex-wrap gap-3 align-items-start">
+                                @foreach($docPaths as $path)
+                                @php
+                                    $url = (str_starts_with(trim($path), 'http://') || str_starts_with(trim($path), 'https://')) 
+                                        ? $path 
+                                        : asset('storage/' . ltrim($path, '/'));
+                                @endphp
+                                <div class="d-inline-block">
+                                    <a href="{{ $url }}" target="_blank" class="d-block text-decoration-none">
+                                        <img src="{{ $url }}" alt="Attachment" class="img-thumbnail" style="max-height: 120px; max-width: 180px; object-fit: cover;">
+                                    </a>
+                                    <small class="d-block text-muted text-center mt-1">Image</small>
+                                </div>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                     @endif
@@ -213,7 +301,7 @@
                                                     {{ $history->status_label }}
                                                 </span>
                                             </td>
-                                            <td>{{ $history->creator->name ?? 'System' }}</td>
+                                            <td>{{ $history->creator->first_name ?? 'System' }}</td>
                                             <td>{{ $history->remarks ?? '-' }}</td>
                                         </tr>
                                         @endforeach
@@ -232,4 +320,248 @@
         </div>
     </div>
 </div>
+
+<!-- Update Status Modal -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('admin.issue-management.status_update', $issue->pk) }}">
+                @csrf
+                @method('PUT')
+                <div class="modal-header">
+                    <h5 class="modal-title" id="updateStatusModalLabel">Update Issue Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @php
+                        $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
+                        $isAssigned = !empty($issue->assigned_to);
+                        $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
+                        $canReassign = $isNodalOfficer && !$isCompleted; // Re-assign not allowed for closed (Completed) issues
+                        $canOnlyReopen = $isComplainant && $isCompleted;
+                    @endphp
+
+                    @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Reopen:</strong> As the complainant, you can reopen this completed issue. Add a remark (optional) and submit.
+                    </div>
+                    <input type="hidden" name="issue_status" value="6">
+                    @else
+                    <!-- Assignment Locked: non-nodal (assigned person) or closed issue (re-assign restricted) -->
+                    @if($isAssigned && !$canReassign)
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        @if($isCompleted)
+                        <strong>Re-assign restricted:</strong> Assignment cannot be changed for closed (Completed) issues.
+                        @else
+                        <strong>Assignment Locked:</strong> This issue has been assigned. You can only update the status and remarks.
+                        @endif
+                    </div>
+                    @endif
+                    @if($isAssigned && $canReassign)
+                    <div class="alert alert-secondary mb-3">
+                        <i class="bi bi-person-gear"></i>
+                        <strong>Re-assign:</strong> As nodal officer, you can change the assigned person below if needed.
+                    </div>
+                    @endif
+
+                    @php
+                        // After Reopen (6), all status options stay enabled so user can set any status again
+                        $disableStatusOptions = (int)$issue->issue_status !== 6;
+                    @endphp
+                    <div class="mb-3">
+                        <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>
+                        <select name="issue_status" id="issue_status" class="form-select" required>
+                            <option value="">-- Select Status --</option>
+                            <option value="0" {{ $issue->issue_status == 0 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(0, $usedStatuses) && $issue->issue_status != 0 ? 'disabled' : '' }}>Reported</option>
+                            <option value="1" {{ $issue->issue_status == 1 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(1, $usedStatuses) && $issue->issue_status != 1 ? 'disabled' : '' }}>In Progress</option>
+                            <option value="2" {{ $issue->issue_status == 2 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(2, $usedStatuses) && $issue->issue_status != 2 ? 'disabled' : '' }}>Completed</option>
+                            <option value="3" {{ $issue->issue_status == 3 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(3, $usedStatuses) && $issue->issue_status != 3 ? 'disabled' : '' }}>Pending</option>
+                            <option value="6" {{ $issue->issue_status == 6 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(6, $usedStatuses) && $issue->issue_status != 6 ? 'disabled' : '' }}>Reopened</option>
+                        </select>
+                    </div>
+
+                    <!-- Assignment: read-only when assigned and user is not nodal; else show dropdown (first assign or re-assign by nodal) -->
+                    @if($isAssigned && !$canReassign)
+                    <!-- Show current assignment as read-only (assigned person cannot change) -->
+                    <div class="mb-3">
+                        <label for="current_assignment" class="form-label">Currently Assigned To</label>
+                        <input type="text" class="form-control" id="current_assignment" readonly style="background-color: #e9ecef;">
+                        <input type="hidden" name="assigned_to" id="assigned_to_hidden">
+                        <input type="hidden" name="assigned_to_contact" id="assigned_to_contact_hidden">
+                    </div>
+                    @else
+                    <!-- Assign / Re-assign dropdown (required when not assigned; optional when nodal re-assigning) -->
+                    <div class="mb-3">
+                        <label for="assign_to_type" class="form-label">Assign To @if(!$isAssigned)<span class="text-danger">*</span>@endif</label>
+                        <select name="assign_to_type" id="assign_to_type" class="form-select" @if(!$isAssigned) required @endif>
+                            <option value="">-- Select @if($isAssigned)(keep current)@else--@endif</option>
+                            <option value="other">Other Employee</option>
+                            @if(isset($employees) && count($employees) > 0)
+                                @foreach($employees as $employee)
+                                    <option value="{{ $employee->employee_pk }}" 
+                                        data-name="{{ $employee->employee_name }}"
+                                        data-mobile="{{ $employee->mobile ?? '' }}"
+                                        @if($isAssigned && (string)$issue->assigned_to === (string)$employee->employee_pk) selected @endif>
+                                        {{ $employee->employee_name }}
+                                    </option>
+                                @endforeach
+                            @else
+                                <option value="" disabled>No employees found</option>
+                            @endif
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="phoneNumberSection" style="display: none;">
+                        <label for="display_phone" class="form-label">Phone Number</label>
+                        <input type="text" class="form-control" id="display_phone" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <input type="hidden" name="assigned_to" id="assigned_to_hidden">
+                    <input type="hidden" name="assigned_to_contact" id="assigned_to_contact_hidden">
+
+                    <div id="otherFieldsSection" style="display: none;">
+                        <div class="mb-3">
+                            <label for="other_name" class="form-label">Member Name <span class="text-danger">*</span></label>
+                            <input type="text" name="other_name" class="form-control" id="other_name" placeholder="Enter member name" value="{{ $isAssigned && !is_numeric($issue->assigned_to) ? $issue->assigned_to : '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="other_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="tel" name="other_phone" class="form-control" id="other_phone" placeholder="Enter 10 digit mobile number (cannot start with 6)" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" title="Enter 10 digit mobile number. Cannot start with 6." value="{{ $isAssigned && !is_numeric($issue->assigned_to) ? ($issue->assigned_to_contact ?? '') : '' }}">
+                            
+                        </div>
+                    </div>
+                    @endif
+                    @endif
+
+                    <div class="mb-3">
+                        <label for="remark" class="form-label">Remarks</label>
+                        <textarea name="remark" id="remark" class="form-control" rows="3" placeholder="Add remarks (optional)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">{{ $canOnlyReopen ? 'Reopen Issue' : 'Update Status' }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    @if($issue->assigned_to)
+    var currentAssignment = '{{ $issue->assigned_to ?? "" }}';
+    var currentContact = '{{ $issue->assigned_to_contact ?? "" }}';
+    $('#assigned_to_hidden').val(currentAssignment);
+    $('#assigned_to_contact_hidden').val(currentContact);
+    @php
+        if (is_numeric($issue->assigned_to)) {
+            $assignedEmployee = DB::table('employee_master')->where('pk', $issue->assigned_to)->first();
+            $assignmentText = $assignedEmployee
+                ? trim($assignedEmployee->first_name . ' ' . ($assignedEmployee->middle_name ?? '') . ' ' . $assignedEmployee->last_name) . ' (' . ($issue->assigned_to_contact ?? 'N/A') . ')'
+                : 'Unknown (' . ($issue->assigned_to_contact ?? 'N/A') . ')';
+        } else {
+            $assignmentText = $issue->assigned_to . ' (' . ($issue->assigned_to_contact ?? 'N/A') . ')';
+        }
+    @endphp
+    $('#current_assignment').val({!! json_encode($assignmentText) !!});
+    @endif
+
+    @if($canReassign && $isAssigned)
+    @if(is_numeric($issue->assigned_to))
+    $('#assigned_to_hidden').val('{{ $issue->assigned_to }}');
+    $('#assigned_to_contact_hidden').val('{{ $issue->assigned_to_contact ?? "" }}');
+    $('#display_phone').val('{{ $issue->assigned_to_contact ?? "N/A" }}');
+    $('#phoneNumberSection').show();
+    @else
+    $('#assign_to_type').val('other');
+    $('#otherFieldsSection').show();
+    $('#phoneNumberSection').hide();
+    @endif
+    @endif
+
+    // Handle assign_to_type change
+    $('#assign_to_type').change(function() {
+        var selectedValue = $(this).val();
+        
+        if (selectedValue === 'other') {
+            // Show other fields section, hide phone display
+            $('#otherFieldsSection').show();
+            $('#phoneNumberSection').hide();
+            $('#display_phone').val('');
+            // Clear hidden fields
+            $('#assigned_to_hidden').val('');
+            $('#assigned_to_contact_hidden').val('');
+        } else if (selectedValue !== '') {
+            // Hide other fields section, show phone display
+            $('#otherFieldsSection').hide();
+            $('#phoneNumberSection').show();
+            
+            // Get data from selected option
+            var selectedOption = $(this).find('option:selected');
+            var name = selectedOption.data('name');
+            var mobile = selectedOption.data('mobile');
+            
+            // Extract employee pk from value
+            var employeePk = selectedValue;
+            
+            // Display phone number
+            $('#display_phone').val(mobile || 'N/A');
+            
+            // Set hidden fields
+            $('#assigned_to_hidden').val(employeePk || '');
+            $('#assigned_to_contact_hidden').val(mobile || '');
+        } else {
+            // Hide both sections
+            $('#otherFieldsSection').hide();
+            $('#phoneNumberSection').hide();
+            $('#display_phone').val('');
+            // Clear hidden fields
+            $('#assigned_to_hidden').val('');
+            $('#assigned_to_contact_hidden').val('');
+        }
+    });
+
+    // Allow only digits in Other phone number
+    $('#other_phone').on('input', function() {
+        this.value = this.value.replace(/\D/g, '');
+        if (this.value.length > 10) this.value = this.value.slice(0, 10);
+    });
+
+    // Before form submit: when "other" selected, validate and set hidden; when empty and re-assign, keep current (controller will keep existing)
+    $('#updateStatusModal form').submit(function(e) {
+        var assignToType = $('#assign_to_type').val();
+        if (assignToType === 'other') {
+            var otherName = $('#other_name').val().trim();
+            var otherPhone = $('#other_phone').val().trim();
+            if (otherName === '') {
+                e.preventDefault();
+                alert('Please enter member name.');
+                return false;
+            }
+            if (otherPhone === '') {
+                e.preventDefault();
+                alert('Please enter phone number.');
+                return false;
+            }
+            if (!/^[0-9]{10}$/.test(otherPhone)) {
+                e.preventDefault();
+                alert('Phone number must be exactly 10 digits (numbers only).');
+                return false;
+            }
+            if (otherPhone.charAt(0) === '6') {
+                e.preventDefault();
+                alert('Mobile number cannot start with 6.');
+                return false;
+            }
+            $('#assigned_to_hidden').val('');
+            $('#assigned_to_contact_hidden').val(otherPhone);
+        }
+    });
+});
+</script>
 @endsection

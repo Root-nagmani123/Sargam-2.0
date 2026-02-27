@@ -57,6 +57,14 @@ class EmployeeMaster extends Model
         'Unmarried' => 'Unmarried'
     ];
 
+    /**
+     * Get the full name attribute (first_name + last_name)
+     */
+    public function getNameAttribute()
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
+    }
+
     
     public static function getDeputationEmployeeList()
     {
