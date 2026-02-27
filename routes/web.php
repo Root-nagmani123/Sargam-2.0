@@ -633,163 +633,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
-    //change password work here 
-    Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
-
-    Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
-
-
-
-
-
-
-
 
     // Report walal route
 
     Route::get('/faculty_view', function () {
-        return view('admin.feedback.faculty_view');
-    })->name('admin.feedback.faculty_view');
+     return view('admin.feedback.faculty_view');
+ })->name('admin.feedback.faculty_view');
 
-    Route::get('/feedback_details', function () {
-        return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details');
+  Route::get('/feedback_average', function () {
+     return view('admin.feedback.faculty_average');
+ })->name('admin.feedback.faculty_average');
 
-    //  dashboard page route
-
-    //   Route::get('/active-course', function () { DashboardController:}})->name('admin.dashboard.active_course');
-    Route::get('/active-course', [DashboardController::class, 'active_course'])->name('admin.dashboard.active_course');
-    Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
-    Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
-    Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
-    Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
-
-    Route::get('/upcoming-events', function () {
-        return view('admin.dashboard.upcoming_events');
-    })->name('admin.dashboard.upcoming_events');
-
-    //    Route::get('/guest-faculty', function () {
-    //      return view('admin.dashboard.guest_faculty');
-    //  })->name('admin.dashboard.guest_faculty');
-
-    //    Route::get('/inhouse-faculty', function () {
-    //      return view('admin.dashboard.inhouse_faculty');
-    //  })->name('admin.dashboard.inhouse_faculty');
-    // });
-    //course repository AJAX routes (MUST be before resource route)
-    Route::get('course-repository/courses', [CourseRepositoryController::class, 'getCourses'])->name('course-repository.courses');
-    Route::get('course-repository/subjects/{coursePk}', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
-    Route::get('course-repository/topics/{subjectPk}', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
-    Route::get('course-repository/session-dates', [CourseRepositoryController::class, 'getSessionDateByTopic'])->name('course-repository.session-dates');
-    Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
-    Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
-    Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
-    
-    // Custom routes for document operations
-    Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
-    Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
-    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
-
-    // Search route
-    Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
-    
-    // AJAX endpoints for course repository
-    Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
-    
-    //course repository resource routes (MUST be after AJAX routes)
-    Route::resource('course-repository', CourseRepositoryController::class, [
-    'parameters' => ['course-repository' => 'pk']
-]);
-
-// upload document route
-
-
-
-
-// User view routes
-Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
-Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');
-Route::get('/course-repository-user/foundation-course/{courseCode}', [CourseRepositoryController::class, 'foundationCourseDetail'])->name('admin.course-repository.user.foundation-course.detail');
-Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-subject-wise', [CourseRepositoryController::class, 'classMaterialSubjectWise'])->name('admin.course-repository.user.class-material-subject-wise');
-Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-week-wise', [CourseRepositoryController::class, 'classMaterialWeekWise'])->name('admin.course-repository.user.class-material-week-wise');
-Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNumber}', [CourseRepositoryController::class, 'weekDetail'])->name('admin.course-repository.user.week-detail');
-Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
-Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
-Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
-Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
-
-    // Feedback Database Routes
-    Route::prefix('faculty')->group(function () {
-        Route::get('/database', [FeedbackController::class, 'database'])->name('admin.feedback.database');
-        Route::get('/database/data', [FeedbackController::class, 'getDatabaseData'])->name('admin.feedback.database.data');
-        Route::get('/database/topics', [FeedbackController::class, 'getTopicsForCourse'])->name('admin.feedback.database.topics');
-        Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
-    });
-    Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'])->name('feedback.average');
-    Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
-    Route::get('/faculty_view/suggestions', [FeedbackController::class, 'getFacultySuggestions'])->name('feedback.faculty_suggestions');
-    Route::post('/faculty_view/export', [FeedbackController::class, 'exportFacultyFeedback'])->name('admin.feedback.faculty_view.export');
-    Route::get('/feedback_details', [FeedbackController::class, 'feedbackDetails'])->name('admin.feedback.feedback_details');
-    Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
-});
-
-Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
-Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
-// Change export routes to POST
-Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
-    ->name('admin.feedback.export.pdf');
-
-Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
-    ->name('admin.feedback.export.excel');
-
-// ============================================
-// Issue Management Module Routes (CENTCOM)
-// ============================================
-Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-
-    // Issue Management - Main Routes
-    Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
-    Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
-    Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
-    Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
-    Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
-    Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
-
-    // AJAX Routes (must come BEFORE parameterized routes like {id})
-    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
-    Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
-    Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
-    Route::get('issue-management/floors', [IssueManagementController::class, 'getFloors'])->name('issue-management.floors');
-    Route::get('issue-management/rooms', [IssueManagementController::class, 'getRooms'])->name('issue-management.rooms');
-
-    // Parameterized Routes (must come AFTER specific routes)
-    Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
-    Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
-    Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
-    Route::put('issue-management/{id}/status', [IssueManagementController::class, 'status_update'])->name('issue-management.status_update');
-
-    // AJAX Routes
-    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
-    Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
-
-    // Category Management
-    Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
-    Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
-    Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
-    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
-    Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
-    Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
-    Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
-    Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
-
-    // Priority Management
-    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
-    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
-    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
-    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
-
-    // Escalation Matrix (3-level hierarchy)
-    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
-    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
-    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+  Route::get('/faculty_database', function () {
+     return view('admin.feedback.feedback_database');
+ })->name('admin.feedback.feedback_database');
 });

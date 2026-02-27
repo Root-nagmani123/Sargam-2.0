@@ -21,13 +21,8 @@
                             @if (hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))
 
 
-                                <li class="nav-section" role="listitem">
-
-                                    <!-- Main Container with Improved Layout -->
-                                    <div class="d-flex align-items-center justify-content-between w-100">
-
-                                        <!-- Left Side: Collapse Button with Enhanced Accessibility -->
-                                        <div class="d-flex align-items-center mb-3">
+                                    <!-- Left Side: Collapse Button with Enhanced Accessibility -->
+                                    <div class="d-flex align-items-center mb-3">
 
                                             <!-- Section Title with Proper Semantic Markup -->
                                             <h2 class="section-title text-white m-0"
@@ -169,6 +164,45 @@
                                         </a></li>
                                 </ul>
                             </li>
+                            <ul class="collapse list-unstyled ps-3" id="feedbackCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.feedbackList') }}">
+                                        <span class="hide-menu">Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <span class="hide-menu">Student Feedback</span>
+                                    </a></li>
+
+                            </ul>
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#reportCollapse" role="button"
+                                    aria-expanded="false" aria-controls="reportCollapse">
+                                    <span class="hide-menu fw-bold">Report</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="reportCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.faculty_view') }}">
+                                        <span class="hide-menu">Faculty Feedback with Comments Admin View</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.faculty_average') }}">
+                                        <span class="hide-menu">Feedback With Average New</span>
+                                    </a></li>
+                                      <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.feedback_database') }}">
+                                        <span class="hide-menu">Faculty Feedback Database</span>
+                                    </a></li>
+
+                            </ul>
                           @endif
 
                             <!-- faculty menu start -->
