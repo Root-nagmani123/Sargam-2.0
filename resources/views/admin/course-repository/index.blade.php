@@ -374,7 +374,7 @@
                                         data-image="{{ $repo->category_image }}" aria-label="Edit category">
                                         <span class="material-icons material-symbols-rounded">edit</span>
                                     </a>
-                                    <a href="javascript:void(0)" class="delete-repo text-primary ms-2" data-pk="{{ $repo->pk }}" aria-label="Delete category">
+                                    <a class="delete-repo text-primary ms-2" data-pk="{{ $repo->pk }}" aria-label="Delete category">
                                         <span class="material-icons material-symbols-rounded">delete</span>
                                     </a>
                                 </div>

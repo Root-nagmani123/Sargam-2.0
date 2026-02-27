@@ -6,6 +6,98 @@
 .fallback-styles {
     /* This ensures basic styling even if external CSS fails to load */
 }
+
+/* Modal Scrolling Enhancement */
+#uploadModal .modal-dialog-scrollable .modal-body {
+    max-height: calc(100vh - 250px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 1.5rem;
+}
+
+#uploadModal .modal-dialog-scrollable .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background-color: white;
+    flex-shrink: 0;
+}
+
+#uploadModal .modal-dialog-scrollable .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1020;
+    background-color: white;
+    flex-shrink: 0;
+}
+
+#uploadModal .modal-dialog-scrollable {
+    max-height: calc(100vh - 1rem);
+}
+
+#uploadModal .modal-content {
+    max-height: calc(100vh - 1rem);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Custom scrollbar styling */
+#uploadModal .modal-body::-webkit-scrollbar {
+    width: 10px;
+}
+
+#uploadModal .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#uploadModal .modal-body::-webkit-scrollbar-thumb {
+    background: #0d6efd;
+    border-radius: 10px;
+}
+
+#uploadModal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #0b5ed7;
+}
+
+/* Attachments table container scrolling */
+#uploadModal #course_attachments_container,
+#uploadModal #other_attachments_container {
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    position: relative;
+}
+
+#uploadModal #course_attachments_container table,
+#uploadModal #other_attachments_container table {
+    margin-bottom: 0;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar,
+#uploadModal #other_attachments_container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar-track,
+#uploadModal #other_attachments_container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar-thumb,
+#uploadModal #other_attachments_container::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 10px;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar-thumb:hover,
+#uploadModal #other_attachments_container::-webkit-scrollbar-thumb:hover {
+    background: #5a6268;
+}
 </style>
 @endpush
 
@@ -298,6 +390,224 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="text-muted mt-3">No archived items found.</p>
                         </div>
                     </div>
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+
+                        <!-- Upload Documents (Secondary Action) -->
+                        <button type="button"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <span class="material-icons material-symbols-rounded fs-6">
+                                upload
+                            </span>
+                            <span>Upload Documents</span>
+                        </button>
+
+                        <!-- Add Category (Primary Action) -->
+                        <button type="button"
+                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift">
+                            <span class="material-icons material-symbols-rounded fs-6">
+                                add
+                            </span>
+                            <span>Add Category</span>
+                        </button>
+
+                    </div>
+
+                </div>
+
+                @if($repository->children->count() == 0 && $documents->count() == 0)
+                <!-- Empty State -->
+                <div class="text-center py-5 my-5">
+                    <div class="empty-state-icon mb-3">
+                        <span class="material-icons material-symbols-rounded"
+                            style="font-size: 64px; color: #dee2e6;">folder_off</span>
+                    </div>
+                    <h5 class="text-muted mb-2">No Content Found</h5>
+                    <p class="text-muted mb-4">Start by adding a category or uploading a document to get started.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded" data-bs-toggle="modal"
+                            data-bs-target="#createModal">
+                            Add Category
+                        </a>
+                        <a href="" class="btn btn-outline-primary btn-sm rounded">Upload Document
+                        </a>
+                    </div>
+                </div>
+                @else
+                <!-- Child Repositories Section -->
+                @if($repository->children->count() > 0)
+                <div class="mb-4">
+                    <div class="table-responsive">
+                        <table class="table" id="child_repositories">
+                            <thead>
+                                <tr>
+                                    <th class="col">#</th>
+                                    <th class="col">Image</th>
+                                    <th class="col">Sub Category Name</th>
+                                    <th class="col">Details</th>
+                                    <th class="col">Sub-Categories</th>
+                                    <th class="col">Documents</th>
+                                    <th class="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($repository->children as $index => $child)
+                                <tr>
+                                    <td>
+                                        {{ $loop->iteration }}
+                                    </td>
+                                    <td>
+                                        @if($child->category_image &&
+                                        \Storage::disk('public')->exists($child->category_image))
+                                        <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image"
+                                            class="rounded-2 shadow-sm"
+                                            style="width: 60px; height: 60px; object-fit: cover;">
+                                        @else
+                                        <div class="bg-light rounded-2 d-flex align-items-center justify-content-center"
+                                            style="width: 60px; height: 60px;">
+                                            <i class="material-icons material-symbols-rounded text-muted"
+                                                style="font-size: 24px;">image</i>
+                                        </div>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                            class="text-decoration-none fw-semibold text-dark hover-primary">
+                                            {{ $child->course_repository_name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="text-muted small">{{ Str::limit($child->course_repository_details ?? 'N/A', 50) }}</span>
+                                    </td>
+                                    <td>{{ $child->children->count() }} - sub-categories
+                                    </td>
+                                    <td>{{ $child->getDocumentCount() }} - documents
+                                    </td>
+                                    <td>
+                                        <div class="btn-group d-flex gap-2 text-primary" role="group">
+                                            <!-- <a href="{{ route('course-repository.show', $child->pk) }}"
+                                                class="text-primary"
+                                                data-bs-toggle="tooltip" title="View">
+                                                <span class="material-icons material-symbols-rounded">visibility</span>
+                                            </a> -->
+                                            <a href="javascript:void(0)" class="text-primary edit-repo"
+                                                data-pk="{{ $child->pk }}"
+                                                data-name="{{ $child->course_repository_name }}"
+                                                data-details="{{ $child->course_repository_details }}"
+                                                data-image="{{ $child->category_image }}" data-bs-toggle="tooltip"
+                                                title="Edit">
+                                                <span class=" material-icons material-symbols-rounded">edit</span>
+                                            </a>
+                                            <a href="javascript:void(0)" class="text-primary delete-repo"
+                                                data-pk="{{ $child->pk }}" data-bs-toggle="tooltip" title="Delete">
+                                                <span class="material-icons material-symbols-rounded">delete</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Documents Section -->
+                @if($documents->count() > 0)
+                <div class="table-responsive">
+                    <table class="table" id="documents">
+                        <thead>
+                            <tr>
+                                <th class="col text-center">S.No.</th>
+                                <th class="col text-center">Document Name</th>
+                                <th class="col text-center">File Title</th>
+                                <th class="col text-center">Course Name</th>
+                                <th class="col text-center">Subject</th>
+                                <th class="col text-center">Topic</th>
+                                <th class="col text-center">Session Date</th>
+                                <th class="col text-center">Sector</th>
+                                <th class="col text-center">Ministry</th>
+                                <th class="col text-center">Author</th>
+                                <th class="col text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($documents as $index => $doc)
+                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                <td>{{ $loop->iteration }}</td>
+                                <td>
+                                    <i class="fas fa-file-alt text-primary me-2"></i>
+                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                </td>
+                                <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                <td>
+                                    @if($doc->detail)
+                                    @if($doc->detail->course)
+                                    {{ $doc->detail->course->course_name }}
+                                    @elseif($doc->detail->course_master_pk)
+                                    {{ $doc->detail->course_master_pk }}
+                                    @else
+                                    N/A
+                                    @endif
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($doc->detail)
+                                    @if($doc->detail->subject)
+                                    {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                    @elseif($doc->detail->subject_pk)
+                                    {{ Str::limit($doc->detail->subject_pk, 20) }}
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($doc->detail)
+                                    @if($doc->detail->ministry)
+                                    {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
+                                    @elseif($doc->detail->ministry_master_pk)
+                                    {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                                <td>
+                                    @if($doc->detail)
+                                    @if($doc->detail->author)
+                                    {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                    @elseif($doc->detail->author_name)
+                                    {{ Str::limit($doc->detail->author_name, 15) }}
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}"
+                                            class="text-primary" data-bs-toggle="tooltip" title="Download">
+                                            <span class="material-icons material-symbols-rounded">download</span>
+                                        </a>
+                                        <a class="text-primary delete-doc" data-pk="{{ $doc->pk }}"
+                                            data-bs-toggle="tooltip" title="Delete">
+                                            <span class="material-icons material-symbols-rounded">delete</span>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
             @endif
@@ -433,40 +743,547 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <form id="uploadForm" method="POST" action="javascript:void(0);" enctype="multipart/form-data" novalidate>
                 @csrf
-                <div class="modal-body p-4">
-                    <!-- Category Selection -->
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold mb-3">Category Type</label>
-                        <div class="btn-group w-100" role="group" aria-label="Category selection">
-                            <input type="radio" class="btn-check category-radio" name="category" id="category_course" value="Course" checked>
-                            <label class="btn btn-outline-primary" for="category_course">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">menu_book</span>Course
-                            </label>
-                            
-                            <input type="radio" class="btn-check category-radio" name="category" id="category_other" value="Other">
-                            <label class="btn btn-outline-primary" for="category_other">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">description</span>Other
-                            </label>
-                            
-                            <input type="radio" class="btn-check category-radio" name="category" id="category_institutional" value="Institutional">
-                            <label class="btn btn-outline-primary" for="category_institutional">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">business</span>Institutional
-                            </label>
+                <div id="uploadFormErrors" class="alert alert-danger d-none mx-4 mt-3 mb-0" role="alert"></div>
+                <div class="modal-body p-4 bg-light"
+                    style="max-height: calc(100vh - 250px); overflow-y: auto; overflow-x: hidden;">
+                    <!-- Category Type Selection - Radio Buttons -->
+                    <div class="mb-3">
+                        <div class="d-flex gap-4 align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input category-radio" type="radio" name="category"
+                                    id="category_course" value="Course" checked>
+                                <label class="form-check-label fw-medium" for="category_course">
+                                    Course
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input category-radio" type="radio" name="category"
+                                    id="category_other" value="Other">
+                                <label class="form-check-label fw-medium" for="category_other">
+                                    Other
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input category-radio" type="radio" name="category"
+                                    id="category_institutional" value="Institutional">
+                                <label class="form-check-label fw-medium" for="category_institutional">
+                                    Institutional
+                                </label>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Category Name Display -->
-                    <div class="mb-4 p-3 bg-primary-subtle border-start border-primary border-4 rounded">
-                        <label class="form-label fw-semibold mb-2">Category Name</label>
-                        <div class="text-dark">
-                            @if (!empty($ancestors))
-                                <span class="text-muted">
-                                    @foreach ($ancestors as $ancestor)
-                                        {{ $ancestor->course_repository_name }} <span class="material-icons material-symbols-rounded mx-1" style="font-size: 14px;">arrow_forward</span>
-                                    @endforeach
-                                </span>
-                            @endif
-                            <span class="fw-semibold text-primary">{{ $repository->course_repository_name }}</span>
+                    <!-- Course Repository Form Card -->
+                    <div class="card border-0 shadow-sm rounded-3 mb-3">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="mb-0 fw-semibold text-dark">Course Repository of LBSNAA</h6>
+                        </div>
+                        <div class="card-body p-4 bg-white">
+
+                            <!-- Course Category Fields -->
+                            <div id="courseFields" class="category-fields">
+                                <!-- Row 1: Course Name & Major Subject Name -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="course_name" class="form-label">
+                                            Course Name <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- Active/Archive Toggle -->
+                                        <!-- Active/Archive Toggle -->
+                                        <div class="btn-group w-100 mb-3" role="group"
+                                            aria-label="Course Status Filter">
+                                            <input type="radio" class="btn-check" name="course_status"
+                                                id="btnActiveCourses" value="active" checked>
+                                            <label class="btn btn-outline-success" for="btnActiveCourses">
+                                                <span class="material-icons material-symbols-rounded me-1"
+                                                    style="font-size: 16px;">check_circle</span>Active Courses
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="course_status"
+                                                id="btnArchivedCourses" value="archived">
+                                            <label class="btn btn-outline-secondary" for="btnArchivedCourses">
+                                                <span class="material-icons material-symbols-rounded me-1"
+                                                    style="font-size: 16px;">archive</span>Archived Courses
+                                            </label>
+                                        </div>
+                                        <select class="form-select" id="course_name" name="course_name" required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($activeCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="active">
+                                                {{ $course->course_name }}</option>
+                                            @endforeach
+                                            @foreach(($archivedCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="archived"
+                                                style="display:none;">{{ $course->course_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Course Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="subject_name" class="form-label">
+                                            Major Subject Name <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="subject_name" name="subject_name" required>
+                                            <option value="" selected>Select</option>
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Major Subject Name
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Topic Name & Session Date -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="timetable_name" class="form-label">
+                                            Topic Name <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="timetable_name" name="timetable_name" required>
+                                            <option value="" selected>Select</option>
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Topic Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="session_date" class="form-label">
+                                            Session Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-select" id="session_date" name="session_date"
+                                            placeholder="ABCD12345" required>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Session Date
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Author Name & Keywords -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="author_name" class="form-label">
+                                            Author Name <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="author_name" name="author_name" required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($authors ?? []) as $author)
+                                            <option value="{{ $author->pk }}">{{ $author->full_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Author Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="keywords_course" class="form-label">
+                                            Keywords <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="keywords_course"
+                                            name="keywords_course" placeholder="ABCD12345" required>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Enter Keyword
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 4: Sector & Ministry -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="sector_master" class="form-label">
+                                            Sector <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="sector_master" name="sector_master" required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($sectors ?? []) as $sector)
+                                            <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="ministry_master" class="form-label">
+                                            Ministry <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="ministry_master" name="ministry_master"
+                                            required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($ministries ?? []) as $ministry)
+                                            <option value="{{ $ministry->pk }}"
+                                                data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">
+                                                {{ $ministry->ministry_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Video Link -->
+                                <div class="mb-4">
+                                    <label for="video_link_course" class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
+                                        Video Link
+                                    </label>
+                                    <input type="url" class="form-control" id="video_link_course"
+                                        name="video_link_course" placeholder="https://www.youtube.com/watch?v=...">
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
+                                    </small>
+                                </div>
+
+                                <!-- Attachments with Titles -->
+                                <div class="mb-4">
+                                    <label class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
+                                        Attachments <span class="text-danger">*</span>
+                                    </label>
+
+                                    <!-- Attachments Table -->
+                                    <div class="table-responsive" id="course_attachments_container"
+                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
+                                        <table class="table table-bordered table-hover mb-0">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th style="width: 5%;">S.No.</th>
+                                                    <th>Attachment Title</th>
+                                                    <th>Upload File</th>
+                                                    <th style="width: 8%;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="course_attachments_tbody">
+                                                <tr class="attachment-row">
+                                                    <td class="row-number">1</td>
+                                                    <td>
+                                                        <input type="text" class="form-control form-control-sm"
+                                                            name="attachment_titles[]" placeholder="e.g., Week-01">
+                                                    </td>
+                                                    <td>
+                                                        <input type="file" class="form-control form-control-sm"
+                                                            name="attachments[]" accept="*/*">
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-danger delete-attachment"
+                                                            style="display: none;">
+                                                            <span class="material-icons material-symbols-rounded"
+                                                                style="font-size: 16px;">delete</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Add More Button -->
+                                    <div class="mt-3">
+                                        <button type="button"
+                                            class="btn btn-outline-primary btn-sm add-attachment-course"
+                                            data-category="course">
+                                            <span class="material-icons material-symbols-rounded me-1"
+                                                style="font-size: 16px;">add_circle</span>
+                                            Add More Attachment
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other Category Fields -->
+                            <div id="otherFields" class="category-fields" style="display: none;">
+                                <!-- Row 1: Course Name & Major Subject Name -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="course_name_other" class="form-label">
+                                            Course Name <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- Active/Archive Toggle for Other Category -->
+                                        <div class="btn-group w-100 mb-2" role="group"
+                                            aria-label="Other Course Status Filter">
+                                            <input type="radio" class="btn-check" name="course_status_other"
+                                                id="btnActiveCoursesOther" value="active" checked>
+                                            <label class="btn btn-outline-success btn-sm" for="btnActiveCoursesOther">
+                                                <i class="bi bi-check-circle me-1"></i>Active Courses
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="course_status_other"
+                                                id="btnArchivedCoursesOther" value="archived">
+                                            <label class="btn btn-outline-secondary btn-sm"
+                                                for="btnArchivedCoursesOther">
+                                                <i class="bi bi-archive me-1"></i>Archived Courses
+                                            </label>
+                                        </div>
+                                        <select class="form-select" id="course_name_other" name="course_name_other">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($activeCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="active">
+                                                {{ $course->course_name }}</option>
+                                            @endforeach
+                                            @foreach(($archivedCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="archived"
+                                                style="display:none;">{{ $course->course_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Course Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="major_subject_other" class="form-label">
+                                            Major Subject Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="major_subject_other"
+                                            name="major_subject_other" placeholder="Select">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Major Subject Name
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Topic Name & Session Date -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="topic_name_other" class="form-label">
+                                            Topic Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="topic_name_other"
+                                            name="topic_name_other" placeholder="Select">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Topic Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="session_date_other" class="form-label">
+                                            Session Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-control" id="session_date_other"
+                                            name="session_date_other" placeholder="ABCD12345">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Session Date
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Author Name & Keywords -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="author_name_other" class="form-label">
+                                            Author Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="author_name_other"
+                                            name="author_name_other" placeholder="Select">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Author Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="keywords_other" class="form-label">
+                                            Keywords <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="keywords_other"
+                                            name="keywords_other" placeholder="ABCD12345">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Enter Keyword
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 4: Sector & Ministry -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="sector_master_other" class="form-label">
+                                            Sector <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="sector_master_other" name="sector_master_other">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($sectors ?? []) as $sector)
+                                            <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="ministry_master_other" class="form-label">
+                                            Ministry <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="ministry_master_other"
+                                            name="ministry_master_other">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($ministries ?? []) as $ministry)
+                                            <option value="{{ $ministry->pk }}"
+                                                data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">
+                                                {{ $ministry->ministry_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Video Link -->
+                                <div class="mb-4">
+                                    <label for="video_link_other" class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
+                                        Video Link
+                                    </label>
+                                    <input type="url" class="form-control" id="video_link_other" name="video_link_other"
+                                        placeholder="https://www.youtube.com/watch?v=...">
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
+                                    </small>
+                                </div>
+
+                                <!-- Attachments with Titles -->
+                                <div class="mb-4">
+                                    <label class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
+                                        Attachments <span class="text-danger">*</span>
+                                    </label>
+
+                                    <!-- Attachments Table -->
+                                    <div class="table-responsive" id="other_attachments_container"
+                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
+                                        <table class="table table-bordered table-hover mb-0">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th style="width: 5%;">S.No.</th>
+                                                    <th>Attachment Title</th>
+                                                    <th>Upload File</th>
+                                                    <th style="width: 8%;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="other_attachments_tbody">
+                                                <tr class="attachment-row">
+                                                    <td class="row-number">1</td>
+                                                    <td>
+                                                        <input type="text" class="form-control form-control-sm"
+                                                            name="attachment_titles_other[]"
+                                                            placeholder="e.g., Document-01">
+                                                    </td>
+                                                    <td>
+                                                        <input type="file" class="form-control form-control-sm"
+                                                            name="attachments_other[]" accept="*/*">
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-danger delete-attachment"
+                                                            style="display: none;">
+                                                            <span class="material-icons material-symbols-rounded"
+                                                                style="font-size: 16px;">delete</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Add More Button -->
+                                    <div class="mt-3">
+                                        <button type="button"
+                                            class="btn btn-outline-primary btn-sm add-attachment-other"
+                                            data-category="other">
+                                            <span class="material-icons material-symbols-rounded me-1"
+                                                style="font-size: 16px;">add_circle</span>
+                                            Add More Attachment
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Institutional Category Fields -->
+                            <div id="institutionalFields" class="category-fields" style="display: none;">
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <!-- Keywords -->
+                                        <div class="mb-3">
+                                            <label for="Key_words_institutional" class="form-label">
+                                                Add Key words <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="Key_words_institutional"
+                                                name="Key_words_institutional" placeholder="Enter Keywords">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- Keywords -->
+                                        <div class="mb-3">
+                                            <label for="Key_words_institutional" class="form-label">
+                                                Keywords <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="Key_words_institutional"
+                                                name="Key_words_institutional" placeholder="Enter Keywords">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- sector -->
+
+                                        <div class="mb-3">
+                                            <label for="sector_master_institutional" class="form-label">
+                                                Sector <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-select" id="sector_master_institutional"
+                                                name="sector_master_institutional">
+                                                <option value="" selected>Select</option>
+                                                @foreach(($sectors ?? []) as $sector)
+                                                <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- ministries -->
+
+                                        <div class="mb-3">
+                                            <label for="ministry_master_institutional" class="form-label">Ministry <span
+                                                    class="text-danger">*</span></label>
+                                            <select class="form-select" id="ministry_master_institutional"
+                                                name="ministry_master_institutional">
+                                                <option value="" selected>Select</option>
+                                                @foreach(($ministries ?? []) as $ministry)
+                                                <option value="{{ $ministry->pk }}"
+                                                    data-sector="{{ $ministry->sector_master_pk }}"
+                                                    style="display:none;">{{ $ministry->ministry_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <!-- Video Link -->
+                                <!-- <div class="mb-3">
+                                    <label for="keyword_institutional" class="form-label">Video Link</label>
+                                    <input type="text" class="form-control" id="keyword_institutional"
+                                        name="keyword_institutional" placeholder="Enter Video Link">
+                                </div> -->
+
+                                <!-- Upload Attachment -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Upload Attachment <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
+                                        style="border-style: dashed !important; cursor: pointer;">
+                                        <input type="file"
+                                            class="file-input-institutional position-absolute w-100 h-100 opacity-0"
+                                            name="attachments_institutional[]" accept="*/*" multiple
+                                            style="top: 0; left: 0; cursor: pointer;">
+                                        <div class="upload-icon mb-2">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                                <path
+                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
+                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round" />
+                                            </svg>
+                                        </div>
+                                        <p class="mb-1 text-primary fw-medium">Click to upload <span
+                                                class="text-muted">or drag and drop</span></p>
+                                        <div class="selected-files-institutional mt-2 text-start" style="display:none;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
@@ -1709,7 +2526,11 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadData.append('video_link', vi ? vi.value : '');
         }
 
-        var repositoryPk = {{ $repository->pk }};
+        var repositoryPk = {
+            {
+                $repository - > pk
+            }
+        };
         fetch('/course-repository/' + repositoryPk + '/upload-document', {
                 method: 'POST',
                 body: uploadData,
@@ -1782,6 +2603,118 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== DEFINE KEYWORDS FUNCTION FIRST =====
+    function updateKeywords() {
+        try {
+            // Get dropdown values (check both value and text to filter "Select")
+            const courseValue = $('#course_name').val()?.trim() || '';
+            const courseName = courseValue ? $('#course_name option:selected').text().trim() : '';
+
+            const subjectValue = $('#subject_name').val()?.trim() || '';
+            const subjectName = subjectValue ? $('#subject_name option:selected').text().trim() : '';
+
+            const topicValue = $('#timetable_name').val()?.trim() || '';
+            const topicName = topicValue ? $('#timetable_name option:selected').text().trim() : '';
+
+            const sessionDate = $('#session_date').val()?.trim() || '';
+
+            const facultyValue = $('#author_name').val()?.trim() || '';
+            const facultyName = facultyValue ? $('#author_name option:selected').text().trim() : '';
+
+            const sectorValue = $('#sector_master').val()?.trim() || '';
+            const sectorName = sectorValue ? $('#sector_master option:selected').text().trim() : '';
+
+            const ministryValue = $('#ministry_master').val()?.trim() || '';
+            const ministryName = ministryValue ? $('#ministry_master option:selected').text().trim() : '';
+
+            console.log('updateKeywords called:', {
+                courseName,
+                subjectName,
+                topicName,
+                sessionDate,
+                facultyName,
+                sectorName,
+                ministryName
+            });
+
+            // Build keywords string (comma-separated)
+            const keywordsParts = [];
+
+            // Only add non-empty, non-select values
+            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(
+                courseName);
+            if (subjectName && subjectName !== '-- Select Subject --' && subjectName !== 'Select') keywordsParts
+                .push(subjectName);
+            if (topicName && topicName !== '-- Select Topic --' && topicName !== 'Select') keywordsParts.push(
+                topicName);
+            if (sessionDate) keywordsParts.push(sessionDate);
+            if (facultyName && facultyName !== 'Select' && facultyName !== '-- Select --') keywordsParts.push(
+                facultyName);
+            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts
+                .push(sectorName);
+            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select')
+                keywordsParts.push(ministryName);
+
+            const keywords = keywordsParts.join(', '); // Comma-separated
+            console.log('Setting keywords:', keywords);
+            $('#keywords_course').val(keywords);
+        } catch (error) {
+            console.error('Error in updateKeywords:', error);
+        }
+    }
+
+    // Keywords function for Other category
+    function updateKeywordsOther() {
+        try {
+            // SELECT dropdowns - check value exists, then get text
+            const courseValue = $('#course_name_other').val()?.trim() || '';
+            const courseName = courseValue ? $('#course_name_other option:selected').text().trim() : '';
+
+            const sectorValue = $('#sector_master_other').val()?.trim() || '';
+            const sectorName = sectorValue ? $('#sector_master_other option:selected').text().trim() : '';
+
+            const ministryValue = $('#ministry_master_other').val()?.trim() || '';
+            const ministryName = ministryValue ? $('#ministry_master_other option:selected').text().trim() : '';
+
+            // TEXT INPUTS - just get their values directly
+            const subjectName = $('#major_subject_other').val()?.trim() || '';
+            const topicName = $('#topic_name_other').val()?.trim() || '';
+            const sessionDate = $('#session_date_other').val()?.trim() || '';
+            const facultyName = $('#author_name_other').val()?.trim() || '';
+
+            console.log('updateKeywordsOther called:', {
+                courseName,
+                subjectName,
+                topicName,
+                sessionDate,
+                facultyName,
+                sectorName,
+                ministryName
+            });
+
+            // Build keywords string (comma-separated)
+            const keywordsParts = [];
+
+            // Only add non-empty, non-select values
+            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(
+                courseName);
+            if (subjectName) keywordsParts.push(subjectName);
+            if (topicName) keywordsParts.push(topicName);
+            if (sessionDate) keywordsParts.push(sessionDate);
+            if (facultyName) keywordsParts.push(facultyName);
+            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts
+                .push(sectorName);
+            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select')
+                keywordsParts.push(ministryName);
+
+            const keywords = keywordsParts.join(', '); // Comma-separated
+            console.log('Setting keywords (Other):', keywords);
+            $('#keywords_other').val(keywords);
+        } catch (error) {
+            console.error('Error in updateKeywordsOther:', error);
+        }
+    }
+
     // Global error handler for unhandled promise rejections
     window.addEventListener('unhandledrejection', function(event) {
         console.warn('Unhandled promise rejection:', event.reason);
@@ -1795,7 +2728,372 @@ document.addEventListener('DOMContentLoaded', function() {
         // Don't prevent default handling for critical errors
     });
 
-    const repositoryPk = {{ $repository->pk }};
+    const repositoryPk = {
+        {
+            $repository - > pk
+        }
+    };
+
+    // ===== COURSE FILTERING LOGIC =====
+    const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
+    const courseSelect = document.getElementById('course_name');
+
+    if (courseStatusRadios.length > 0 && courseSelect) {
+        courseStatusRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const status = this.value;
+                const options = courseSelect.querySelectorAll('option');
+
+                options.forEach(option => {
+                    if (option.value === '') {
+                        // Always show the empty/select option
+                        option.style.display = 'block';
+                    } else {
+                        const optionStatus = option.getAttribute('data-status');
+                        option.style.display = (optionStatus === status) ? 'block' :
+                            'none';
+                    }
+                });
+
+                // Reset course selection when filter changes
+                courseSelect.value = '';
+                // Reset dependent dropdowns
+                resetSubjectDropdown();
+                resetTopicDropdown();
+                resetSessionDateInput();
+                resetAuthorDropdown();
+                // Clear keywords when radio filter changes
+                updateKeywords();
+            });
+        });
+    }
+
+    // ===== CASCADING DROPDOWNS AJAX =====
+
+    // Helper functions to reset dropdowns
+    function resetSubjectDropdown() {
+        const subjectSelect = document.getElementById('subject_name');
+        subjectSelect.innerHTML = '<option value="">Select</option>';
+    }
+
+    function resetTopicDropdown() {
+        const topicSelect = document.getElementById('timetable_name');
+        topicSelect.innerHTML = '<option value="">Select</option>';
+    }
+
+    function resetSessionDateInput() {
+        const sessionDate = document.getElementById('session_date');
+        if (sessionDate) {
+            sessionDate.value = '';
+        }
+    }
+
+    function resetAuthorDropdown() {
+        const authorSelect = document.getElementById('author_name');
+        authorSelect.value = '';
+    }
+
+    // Course change - load subjects via AJAX
+    if (courseSelect) {
+        courseSelect.addEventListener('change', function() {
+            const coursePk = this.value;
+            const subjectSelect = document.getElementById('subject_name');
+
+            resetTopicDropdown();
+            resetSessionDateInput();
+            resetAuthorDropdown();
+            updateKeywords(); // Update keywords when course changes
+
+            if (!coursePk) {
+                resetSubjectDropdown();
+                return;
+            }
+
+            // Fetch subjects for selected course
+            fetch(`/course-repository/subjects/${coursePk}`)
+                .then(response => response.json())
+                .then(data => {
+                    subjectSelect.innerHTML = '<option value="">Select</option>';
+                    // Handle response - data.data because API returns {success: true, data: [...]}
+                    const subjects = data.data || data || [];
+                    if (Array.isArray(subjects) && subjects.length > 0) {
+                        subjects.forEach(subject => {
+                            const option = document.createElement('option');
+                            option.value = subject.pk;
+                            option.textContent = subject.subject_name;
+                            subjectSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching subjects:', error);
+                    resetSubjectDropdown();
+                });
+        });
+    }
+
+    // Subject change - load topics via AJAX
+    const subjectSelect = document.getElementById('subject_name');
+    if (subjectSelect) {
+        subjectSelect.addEventListener('change', function() {
+            const subjectPk = this.value;
+            const coursePk = document.getElementById('course_name').value;
+            const topicSelect = document.getElementById('timetable_name');
+
+            resetSessionDateInput();
+            resetAuthorDropdown();
+            updateKeywords(); // Update keywords when subject changes
+
+            if (!subjectPk) {
+                resetTopicDropdown();
+                return;
+            }
+
+            // Fetch topics for selected subject with course parameter
+            fetch(`/course-repository/topics/${subjectPk}?course_master_pk=${coursePk}`)
+                .then(response => response.json())
+                .then(data => {
+                    topicSelect.innerHTML = '<option value="">Select</option>';
+                    // Handle response - data.data because API returns {success: true, data: [...]}
+                    const topics = data.data || data || [];
+                    if (Array.isArray(topics) && topics.length > 0) {
+                        topics.forEach(topic => {
+                            const option = document.createElement('option');
+                            option.value = topic.pk;
+                            option.textContent = topic.subject_topic || topic
+                                .course_repo_topic || topic.course_repo_sub_topic;
+                            topicSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching topics:', error);
+                    resetTopicDropdown();
+                });
+        });
+    }
+
+    // Topic change - load session dates and faculty via AJAX
+    const topicSelect = document.getElementById('timetable_name');
+    if (topicSelect) {
+        topicSelect.addEventListener('change', function() {
+            const topicPk = this.value;
+            const sessionDateInput = document.getElementById('session_date');
+            const authorSelect = document.getElementById('author_name');
+
+            updateKeywords(); // Update keywords when topic changes
+
+            if (!topicPk) {
+                resetSessionDateInput();
+                resetAuthorDropdown();
+                return;
+            }
+
+            // Fetch session dates for selected topic
+            fetch(`/course-repository/session-dates?topic_pk=${topicPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    const dates = data.data || data || [];
+                    if (Array.isArray(dates) && dates.length > 0) {
+                        // Set first session date automatically
+                        if (sessionDateInput && dates[0].session_date) {
+                            sessionDateInput.value = dates[0].session_date;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching session dates:', error));
+
+            // Fetch authors/faculty for selected topic
+            fetch(`/course-repository/authors-by-topic?topic_pk=${topicPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    authorSelect.innerHTML = '<option value="">Select</option>';
+                    const authors = data.data || data || [];
+                    if (Array.isArray(authors) && authors.length > 0) {
+                        authors.forEach(author => {
+                            const option = document.createElement('option');
+                            option.value = author.pk;
+                            option.textContent = author.full_name || author.author_name;
+                            authorSelect.appendChild(option);
+                        });
+                        // Auto-select first author if only one exists
+                        if (authors.length === 1) {
+                            authorSelect.value = authors[0].pk;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching authors:', error));
+        });
+    }
+
+    // Session Date change - update keywords
+    const sessionDateInput = document.getElementById('session_date');
+    if (sessionDateInput) {
+        sessionDateInput.addEventListener('change', function() {
+            updateKeywords(); // Update keywords when session date changes
+        });
+    }
+
+    // Faculty/Author change - update keywords
+    const authorSelect = document.getElementById('author_name');
+    if (authorSelect) {
+        authorSelect.addEventListener('change', function() {
+            updateKeywords(); // Update keywords when faculty changes
+        });
+    }
+
+    // Sector change - load ministries via AJAX and update keywords
+    const sectorSelect = document.getElementById('sector_master');
+    const ministrySelect = document.getElementById('ministry_master');
+
+    if (sectorSelect && ministrySelect) {
+        sectorSelect.addEventListener('change', function() {
+            const sectorPk = this.value;
+
+            // Reset ministry dropdown
+            ministrySelect.innerHTML = '<option value="">Select</option>';
+            updateKeywords(); // Update keywords when sector changes
+
+            if (!sectorPk) {
+                return;
+            }
+
+            // Fetch ministries for selected sector
+            fetch(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    const ministries = data.data || data || [];
+                    if (Array.isArray(ministries) && ministries.length > 0) {
+                        ministries.forEach(ministry => {
+                            const option = document.createElement('option');
+                            option.value = ministry.pk;
+                            option.textContent = ministry.ministry_name;
+                            ministrySelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching ministries:', error));
+        });
+    }
+
+    // Ministry change - update keywords
+    if (ministrySelect) {
+        ministrySelect.addEventListener('change', function() {
+            updateKeywords(); // Update keywords when ministry changes
+        });
+    }
+
+    // ===== OTHER CATEGORY KEYWORDS EVENT LISTENERS =====
+
+    // Course Name (Other) - dropdown change
+    const courseSelectOther = document.getElementById('course_name_other');
+    if (courseSelectOther) {
+        courseSelectOther.addEventListener('change', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Major Subject (Other) - text input
+    const subjectInputOther = document.getElementById('major_subject_other');
+    if (subjectInputOther) {
+        subjectInputOther.addEventListener('input', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Topic Name (Other) - text input
+    const topicInputOther = document.getElementById('topic_name_other');
+    if (topicInputOther) {
+        topicInputOther.addEventListener('input', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Session Date (Other) - date input
+    const sessionDateOther = document.getElementById('session_date_other');
+    if (sessionDateOther) {
+        sessionDateOther.addEventListener('change', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Author Name (Other) - text input
+    const authorInputOther = document.getElementById('author_name_other');
+    if (authorInputOther) {
+        authorInputOther.addEventListener('input', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Sector (Other) - dropdown with ministry AJAX
+    const sectorSelectOther = document.getElementById('sector_master_other');
+    const ministrySelectOther = document.getElementById('ministry_master_other');
+
+    if (sectorSelectOther && ministrySelectOther) {
+        sectorSelectOther.addEventListener('change', function() {
+            const sectorPk = this.value;
+
+            // Reset ministry dropdown
+            ministrySelectOther.innerHTML = '<option value="">Select</option>';
+            updateKeywordsOther();
+
+            if (!sectorPk) return;
+
+            // Fetch ministries for selected sector
+            fetch(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    const ministries = data.data || data || [];
+                    if (Array.isArray(ministries) && ministries.length > 0) {
+                        ministries.forEach(ministry => {
+                            const option = document.createElement('option');
+                            option.value = ministry.pk;
+                            option.textContent = ministry.ministry_name;
+                            ministrySelectOther.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching ministries (Other):', error));
+        });
+    }
+
+    // Ministry (Other) - dropdown change
+    if (ministrySelectOther) {
+        ministrySelectOther.addEventListener('change', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Active/Archived radio for Other category
+    const courseStatusRadiosOther = document.querySelectorAll('input[name="course_status_other"]');
+    if (courseStatusRadiosOther.length > 0 && courseSelectOther) {
+        courseStatusRadiosOther.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const status = this.value;
+                const options = courseSelectOther.querySelectorAll('option');
+
+                options.forEach(option => {
+                    if (option.value === '') {
+                        option.style.display = 'block';
+                        return;
+                    }
+
+                    const optionStatus = option.getAttribute('data-status');
+                    if (status === 'active' && optionStatus === 'active') {
+                        option.style.display = 'block';
+                    } else if (status === 'archived' && optionStatus === 'archived') {
+                        option.style.display = 'block';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+
+                // Reset selection
+                courseSelectOther.value = '';
+                updateKeywordsOther();
+            });
+        });
+    }
 
     // Initialize tooltips with error handling
     try {
@@ -1863,8 +3161,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Close offcanvas
                         const searchOffcanvasEl = document.getElementById('searchOffcanvas');
-                        if (searchOffcanvasEl && typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
-                            const offcanvas = bootstrap.Offcanvas.getInstance(searchOffcanvasEl);
+                        if (searchOffcanvasEl && typeof bootstrap !== 'undefined' && bootstrap
+                            .Offcanvas) {
+                            const offcanvas = bootstrap.Offcanvas.getInstance(
+                                searchOffcanvasEl);
                             if (offcanvas) {
                                 offcanvas.hide();
                             }
@@ -3126,6 +4426,127 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
+
+    // Modern loading state
+    submitBtn.disabled = true;
+
+    // Delete document
+    document.querySelectorAll('.delete-doc').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            try {
+                const pk = this.getAttribute('data-pk');
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const csrfToken = document.querySelector('[name="_token"]');
+                            if (!csrfToken) {
+                                console.warn('CSRF token not found');
+                                return;
+                            }
+
+                            fetch(`/course-repository/document/${pk}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-CSRF-TOKEN': csrfToken.value,
+                                        'Content-Type': 'application/json'
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Deleted!',
+                                            text: 'Document has been deleted.',
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        }).then(() => {
+                                            location.reload();
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error!',
+                                            text: data.error ||
+                                                'Delete failed'
+                                        });
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Delete error:', error);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error!',
+                                        text: 'Delete failed'
+                                    });
+                                });
+                        }
+                    });
+                } else {
+                    // Fallback if SweetAlert is not available
+                    if (confirm('Are you sure you want to delete this document?')) {
+                        showToast('success', 'Document deleted successfully');
+                        // Add actual delete logic here
+                    }
+                }
+            } catch (error) {
+                console.warn('Delete document error:', error);
+            }
+        });
+    });
+
+    // Delete category
+    document.querySelectorAll('.delete-repo').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const pk = this.getAttribute('data-pk');
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/course-repository/${pk}`;
+
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_token';
+                    csrfInput.value = document.querySelector('[name="_token"]').value;
+
+                    const methodInput = document.createElement('input');
+                    methodInput.type = 'hidden';
+                    methodInput.name = '_method';
+                    methodInput.value = 'DELETE';
+
+                    form.appendChild(csrfInput);
+                    form.appendChild(methodInput);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    });
+
     // Add new attachment row - Category Specific
     document.querySelectorAll('.addAttachmentRowBtn').forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -3292,21 +4713,139 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    // Handle missing image errors
-    document.querySelectorAll('img').forEach(img => {
-        img.addEventListener('error', function() {
-            // Create a placeholder for missing images
-            const placeholder = document.createElement('div');
-            placeholder.className = 'image-placeholder';
-            placeholder.textContent = 'No Image';
-            placeholder.style.width = this.width ? this.width + 'px' : '60px';
-            placeholder.style.height = this.height ? this.height + 'px' : '60px';
-            
-            if (this.parentNode) {
-                this.parentNode.replaceChild(placeholder, this);
-            }
-        });
+// Update Delete Button Visibility
+function updateDeleteButtons(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('.attachment-row');
+    const deleteButtons = tbody.querySelectorAll('.delete-attachment');
+
+    // Show delete buttons only if there's more than 1 row
+    deleteButtons.forEach((btn, index) => {
+        if (rows.length > 1) {
+            btn.style.display = 'inline-block';
+        } else {
+            btn.style.display = 'none';
+        }
     });
+}
+
+// Add More Attachment for Course Category
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.add-attachment-course');
+    if (btn) {
+        e.preventDefault();
+        console.log('Course Add More clicked');
+
+        const tbody = document.getElementById('course_attachments_tbody');
+        if (!tbody) {
+            console.error('course_attachments_tbody not found');
+            return;
+        }
+
+        const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
+
+        const newRow = document.createElement('tr');
+        newRow.className = 'attachment-row';
+        newRow.innerHTML = `
+            <td class="row-number">${rowCount}</td>
+            <td>
+                <input type="text" class="form-control form-control-sm" 
+                    name="attachment_titles[]" placeholder="e.g., Week-${rowCount}">
+            </td>
+            <td>
+                <input type="file" class="form-control form-control-sm" 
+                    name="attachments[]" accept="*/*">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-danger delete-attachment">
+                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(newRow);
+        updateDeleteButtons('course_attachments_tbody');
+        console.log('Added row to Course attachments. Total rows:', rowCount);
+    }
 });
 </script>
 
+// Add More Attachment for Other Category
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.add-attachment-other');
+    if (btn) {
+        e.preventDefault();
+        console.log('Other Add More clicked');
+
+        const tbody = document.getElementById('other_attachments_tbody');
+        if (!tbody) {
+            console.error('other_attachments_tbody not found');
+            return;
+        }
+
+        const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
+
+        const newRow = document.createElement('tr');
+        newRow.className = 'attachment-row';
+        newRow.innerHTML = `
+            <td class="row-number">${rowCount}</td>
+            <td>
+                <input type="text" class="form-control form-control-sm" 
+                    name="attachment_titles_other[]" placeholder="e.g., Document-${rowCount}">
+            </td>
+            <td>
+                <input type="file" class="form-control form-control-sm" 
+                    name="attachments_other[]" accept="*/*">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-danger delete-attachment">
+                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(newRow);
+        updateDeleteButtons('other_attachments_tbody');
+        console.log('Added row to Other attachments. Total rows:', rowCount);
+    }
+});
+
+// Delete Attachment Row
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.delete-attachment');
+    if (btn) {
+        e.preventDefault();
+        console.log('Delete clicked');
+
+        const row = btn.closest('.attachment-row');
+        const tbody = row.closest('tbody');
+        const tbodyId = tbody.id;
+
+        // Immediately remove the required attribute from inputs to prevent validation errors
+        const inputs = row.querySelectorAll('input[required]');
+        inputs.forEach(input => input.removeAttribute('required'));
+
+        // Remove the row with animation
+        row.style.opacity = '0';
+        row.style.transition = 'opacity 0.3s ease-out';
+
+        // Use requestAnimationFrame for smoother timing
+        setTimeout(() => {
+            // Completely remove the row from DOM
+            row.remove();
+
+            // Update row numbers
+            const rows = tbody.querySelectorAll('.attachment-row');
+            rows.forEach((r, index) => {
+                r.querySelector('.row-number').textContent = index + 1;
+            });
+
+            // Update delete button visibility
+            updateDeleteButtons(tbodyId);
+            console.log('Row deleted');
+        }, 300);
+    }
+});
+</script>
