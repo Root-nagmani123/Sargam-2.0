@@ -31,10 +31,15 @@
                     </span>
                 </div>
                 <div class="col-md-4">
-                    <strong>OT Code:</strong>
-                    <span class="text-primary">
-                        {{ $student->generated_OT_code ?? 'N/A' }}
-                    </span>
+                    <div class="info-badge h-100">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="small text-uppercase fw-semibold"
+                                style="letter-spacing: 0.5px;">OT / ParticipantCode</span>
+                        </div>
+                        <p class="mb-0 fw-bold text-muted">
+                            {{ $student->generated_OT_code ?? 'N/A' }}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -57,15 +62,12 @@
                 <input type="hidden" name="archive_mode" id="archive_mode_input" value="{{ $archiveMode ?? 'active' }}">
 
                 <div class="row mb-4">
-                    <div class="col-12 text-end">
-                        <label class="form-label d-block text-muted small fw-semibold">View Mode:</label>
-                        <div class="btn-group border border-1 border-primary rounded-pill overflow-hidden" role="group"
-                            aria-label="Attendance Status Filter">
-                            <button type="button"
-                                class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'active' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
-                                id="filterActive"
-                                aria-pressed="{{ ($archiveMode ?? 'active') === 'active' ? 'true' : 'false' }}">
-                                <i class="bi bi-check-circle me-1"></i> Active 
+                    <div class="col-12">
+                        <div class="btn-group border border-2 border-primary rounded-pill overflow-hidden w-100 w-md-auto"
+                            role="group" aria-label="Attendance Status Filter">
+                            <button type="button" class="btn btn-sm text-decoration-none px-4 py-2 fw-semibold"
+                                id="filterActive" aria-pressed="true"
+                                aria-label="Show active attendance records">Active Records
                             </button>
                             <button type="button"
                                 class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'archive' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
@@ -186,8 +188,7 @@
             }
 
             // Re-apply the current archive mode for context
-            archiveModeInput.value = '{{ $archiveMode ?? '
-            active ' }}';
+            archiveModeInput.value = '{{ $archiveMode ?? 'active' }}';
 
             // Submit the form with cleared filters
             form.submit();
@@ -397,7 +398,6 @@ $(function() {
             }
         }
         // Reset to active mode
-        setActiveButton($('#filterActive'));
         $('#archive_mode_input').val('active');
         $('#filterForm').submit();
     });
