@@ -2,103 +2,6 @@
 
 @section('title', 'Group Mapping')
 
-@section('css')
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<style>
-/* Fix Select2 dropdown cropping on Add Group Mapping page */
-.group-mapping-create .select2-container { width: 100% !important; }
-.group-mapping-create .select2-selection--single .select2-selection__rendered {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
-}
-/* Ensure Select2 dropdown is visible and above all content */
-.select2-container--open .select2-dropdown--below,
-.select2-container--open .select2-dropdown--above {
-    z-index: 99999 !important;
-    min-width: 280px !important;
-}
-body .select2-dropdown {
-    z-index: 99999 !important;
-}
-.group-mapping-create ~ .select2-container,
-body .select2-dropdown {
-    z-index: 99999 !important;
-}
-body:has(.group-mapping-create) .select2-dropdown {
-    min-width: 280px !important;
-    z-index: 99999 !important;
-}
-body:has(.group-mapping-create) .select2-results__option {
-    white-space: normal !important;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-}
-body:has(.group-mapping-create) .select2-results__options {
-    max-height: 300px;
-}
-/* Prevent parent overflow from clipping dropdown */
-.group-mapping-create,
-.group-mapping-create .card,
-.group-mapping-create .card-body {
-    overflow: visible !important;
-}
-
-/* Group Mapping Create - Bootstrap 5.3 enhanced */
-.group-mapping-create .group-mapping-card {
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-start: 4px solid #004a93;
-    transition: box-shadow 0.2s ease;
-}
-.group-mapping-create .group-mapping-card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-.group-mapping-create .form-label {
-    font-weight: 500;
-    color: #495057;
-}
-.group-mapping-create .form-control,
-.group-mapping-create .form-select,
-.group-mapping-create .select2-container .select2-selection--single {
-    border-radius: 0.5rem;
-    border: 1px solid #dee2e6;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.group-mapping-create .form-control:focus,
-.group-mapping-create .form-select:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
-}
-.group-mapping-create .btn-primary {
-    border-radius: 0.5rem;
-    font-weight: 600;
-    padding: 0.5rem 1.5rem;
-    transition: all 0.2s ease;
-}
-.group-mapping-create .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.3);
-}
-.group-mapping-create .btn-outline-secondary {
-    border-radius: 0.5rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-.group-mapping-create .btn-outline-secondary:hover {
-    transform: translateY(-1px);
-}
-@media (prefers-reduced-motion: reduce) {
-    .group-mapping-create .group-mapping-card,
-    .group-mapping-create .btn-primary,
-    .group-mapping-create .btn-outline-secondary { transition: none; }
-    .group-mapping-create .btn-primary:hover,
-    .group-mapping-create .btn-outline-secondary:hover { transform: none; }
-}
-</style>
-@endsection
-
 @section('setup_content')
 
 <div class="container-fluid group-mapping-create py-3">
@@ -132,7 +35,7 @@ body:has(.group-mapping-create) .select2-results__options {
                 <div class="col-12 col-md-6 col-lg-3">
                     <div class="mb-0">
                         <x-select name="course_id" label="Course name :" placeholder="Course name"
-                            formLabelClass="form-label" formSelectClass="select2 w-100" required="true"
+                            formLabelClass="form-label" formSelectClass=" w-100" required="true"
                             :options="$courses" :value="old('course_id', $groupMapping->course_name ?? '')" />
                     </div>
                 </div>
@@ -140,7 +43,7 @@ body:has(.group-mapping-create) .select2-results__options {
                 <div class="col-12 col-md-6 col-lg-3">
                     <div class="mb-0">
                         <x-select name="type_id" label="Group Type :" placeholder="Group Type"
-                            formLabelClass="form-label" formSelectClass="select2 w-100" required="true"
+                            formLabelClass="form-label" formSelectClass=" w-100" required="true"
                             :options="$courseGroupTypeMaster"
                             :value="old('type_name', $groupMapping->type_name ?? '')" />
                     </div>
@@ -157,7 +60,7 @@ body:has(.group-mapping-create) .select2-results__options {
                 <div class="col-12 col-md-6 col-lg-3">
                     <div class="mb-0">
                         <x-select name="facility_id" label="Faculty (Optional) :" placeholder="Select Faculty"
-                            formLabelClass="form-label" formSelectClass="select2 w-100"
+                            formLabelClass="form-label" formSelectClass=" w-100"
                             :options="$facilities ?? []"
                             :value="old('facility_id', $groupMapping->facility_id ?? '')" />
                     </div>
@@ -180,32 +83,63 @@ body:has(.group-mapping-create) .select2-results__options {
 
 </div>
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .group-mapping-create .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+            
+        }
+
+        .group-mapping-create .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .group-mapping-create .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .group-mapping-create .choices.is-focused .choices__inner,
+        .group-mapping-create .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-(function() {
-    function initGroupMappingSelect2() {
-        if (typeof $ === 'undefined' || !$.fn.select2) return;
-        $('.group-mapping-create select.select2').each(function() {
-            var $el = $(this);
-            if ($el.hasClass('select2-hidden-accessible')) {
-                try { $el.select2('destroy'); } catch (e) {}
-            }
-            $el.select2({
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('body'),
-                dropdownCssClass: 'select2-dropdown-group-mapping',
-                theme: 'default'
+    (function () {
+        function initGroupMappingChoices() {
+            if (typeof Choices === 'undefined') return;
+
+            document.querySelectorAll('.group-mapping-create select').forEach(function (el) {
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                new Choices(el, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!el.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.getAttribute('placeholder') || 'Select an option',
+                });
+
+                el.dataset.choicesInitialized = 'true';
             });
-        });
-    }
-    $(document).ready(function() {
-        initGroupMappingSelect2();
-        $(window).on('load', function() {
-            initGroupMappingSelect2();
-        });
-    });
-})();
+        }
+
+        document.addEventListener('DOMContentLoaded', initGroupMappingChoices);
+        window.addEventListener('load', initGroupMappingChoices);
+    })();
 </script>
 @endpush
 

@@ -84,12 +84,9 @@ class MDOEscrotExemptionDataTable extends DataTable
 
     <!-- Edit -->
     <a href="{$editUrl}"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2"
+       class="text-primary d-inline-flex align-items-center gap-1 px-2"
        aria-label="Edit record">
-        <span class="material-icons material-symbols-rounded"
-              style="font-size:20px;"
-              aria-hidden="true">edit</span>
-        <span class="d-none d-md-inline">Edit</span>
+        <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</span>
     </a>
 
     <!-- Delete -->
@@ -97,15 +94,12 @@ class MDOEscrotExemptionDataTable extends DataTable
         <input type="hidden" name="_token" value="{$csrf}">
         <input type="hidden" name="_method" value="DELETE">
 
-        <button type="submit"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2"
+        <a href="javascript:void(0)"
+                class="text-primary d-inline-flex align-items-center gap-1 px-2"
                 aria-label="Delete record"
                 onclick="return confirm('Are you sure you want to delete this record?');">
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:20px;"
-                  aria-hidden="true">delete</span>
-            <span class="d-none d-md-inline">Delete</span>
-        </button>
+            <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">delete</span>
+        </a>
     </form>
 
 </div>
@@ -193,7 +187,7 @@ public function html(): HtmlBuilder
         ->columns($this->getColumns())
         ->minifiedAjax()
         ->parameters([
-            'responsive' => false,
+            'responsive' => true,
             'autoWidth' => false,
             'ordering' => false,
             'searching' => true,
