@@ -56,488 +56,248 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <div class="container-fluid">
     <!-- Breadcrumb Navigation -->
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <nav aria-label="breadcrumb" class="flex-grow-1">
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted d-flex align-items-center">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">home</span> Academics
-                        </a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">MCTP</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course Repository Admin</a>
-                    </li>
+                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Academics</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">MCTP</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course Repository Admin</a></li>
                     @if (!empty($ancestors))
                         @foreach ($ancestors as $ancestor)
-                            <li class="breadcrumb-item">
-                                <a href="{{ route('course-repository.show', $ancestor->pk) }}" class="text-decoration-none text-muted">{{ $ancestor->course_repository_name }}</a>
-                            </li>
+                            <li class="breadcrumb-item"><a href="{{ route('course-repository.show', $ancestor->pk) }}" class="text-decoration-none text-muted">{{ $ancestor->course_repository_name }}</a></li>
                         @endforeach
                     @endif
-                    <li class="breadcrumb-item active" aria-current="page">
-                        <span class="fw-semibold text-primary">{{ $repository->course_repository_name }}</span>
-                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ $repository->course_repository_name }}</li>
                 </ol>
             </nav>
-            <!-- Advanced Search with Offcanvas -->
-            <button class="btn btn-outline-secondary btn-sm rounded-pill position-relative" aria-label="Search" type="button" data-bs-toggle="offcanvas" data-bs-target="#searchOffcanvas">
-                <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">search</span> Advanced Search
-                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary border border-light rounded-circle">
-                    <span class="visually-hidden">New alerts</span>
-                </span>
+            <button class="btn btn-link p-0" aria-label="Search">
+                <i class="bi bi-search fs-5"></i>
             </button>
         </div>
     </div>
 
     <div class="datatables">
-        <div class="card border-0 shadow-lg modern-card">
-            <div class="card-body p-4">
+        <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
                 <!-- Page Title and Actions -->
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
+                <div class="d-flex justify-content-between align-items-center mb-4">
                     <div class="d-flex align-items-center gap-3">
-                        <button type="button" onclick="window.history.back()" class="btn btn-outline-secondary btn-sm rounded-circle p-2 back-btn" style="width: 40px; height: 40px;">
-                            <span class="material-icons material-symbols-rounded">arrow_back</span>
+                        <button type="button" onclick="window.history.back()" class="btn btn-link p-0 text-decoration-none">
+                            <i class="bi bi-arrow-left fs-4 text-dark"></i>
                         </button>
-                        <div>
-                            <h4 class="mb-0 fw-bold text-dark">{{ $repository->course_repository_name }}</h4>
-                            <small class="text-muted">Manage categories and documents</small>
-                        </div>
+                        <h4 class="mb-0 fw-bold">{{ $repository->course_repository_name }}</h4>
                     </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm px-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">cloud_upload</span> Upload Documents
+                    <div class="d-flex gap-2">
+                        <a href="javascript:void(0)" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i class="bi bi-upload me-1"></i> Upload Documents
                         </a>
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm px-3 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createModal">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">add_circle</span> Add Category
+                        <a href="javascript:void(0)" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                            <i class="bi bi-plus-lg me-1"></i> Add Category
                         </a>
                     </div>
                 </div>
-                
-                @if($repository->children->count() == 0 && $documents->count() == 0)
-                    <!-- Empty State -->
-                    <div class="text-center py-5 my-5">
-                        <div class="empty-state-icon mb-3">
-                            <span class="material-icons material-symbols-rounded" style="font-size: 64px; color: #dee2e6;">folder_off</span>
-                        </div>
-                        <h5 class="text-muted mb-2">No Content Found</h5>
-                        <p class="text-muted mb-4">Start by adding a category or uploading a document to get started.</p>
-                        <div class="d-flex gap-2 justify-content-center">
-                            <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#createModal">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">add_circle</span> Add Category
-                            </a>
-                            <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">cloud_upload</span> Upload Document
-                            </a>
-                        </div>
-                    </div>
-                @else
-                    <!-- Child Repositories Section -->
-                    @if($repository->children->count() > 0)
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 fw-semibold">
-                                <span class="material-icons material-symbols-rounded text-primary me-2" style="font-size: 20px;">folder</span>Sub-Categories
-                                <span class="badge bg-primary-subtle text-primary ms-2">{{ $repository->children->count() }}</span>
-                            </h5>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table" id="child_repositories">
-                                <thead >
-                                    <tr>
-                                        <th class="text-center">#</th>
-                                        <th class="text-center">Image</th>
-                                        <th>Sub Category Name</th>
-                                        <th>Details</th>
-                                        <th class="text-center">Sub-Categories</th>
-                                        <th class="text-center">Documents</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($repository->children as $index => $child)
-                                    <tr>
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark fw-normal">{{ $loop->iteration }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            @if($child->category_image && \Storage::disk('public')->exists($child->category_image))
-                                                <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image" 
-                                                     class="rounded-2 shadow-sm" style="width: 60px; height: 60px; object-fit: cover;">
-                                            @else
-                                                <div class="bg-light rounded-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                                    <i class="material-icons material-symbols-rounded text-muted" style="font-size: 24px;">image</i>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" id="repositoryTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
+                            Active
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive" type="button" role="tab" aria-controls="archive" aria-selected="false">
+                            Archive
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="repositoryTabContent">
+                    <!-- Active Tab -->
+                    <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+                        @if($repository->children->count() == 0 && $documents->count() == 0)
+                            <!-- Empty State -->
+                            <div class="text-center py-5">
+                                <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
+                                <p class="text-muted mt-3">No sub-categories or documents found. Start by adding a category or uploading a document.</p>
+                            </div>
+                        @else
+                            <!-- Child Repositories Section -->
+                            @if($repository->children->count() > 0)
+                            <div class="table-responsive mb-4">
+                                <table class="table table-hover mb-0 align-middle" id="child_repositories">
+                                    <thead style="background-color: #dc3545; color: white;">
+                                        <tr>
+                                            <th class="text-center fw-bold">S.No.</th>
+                                            <th class="text-center fw-bold">Sub Category Name</th>
+                                            <th class="text-center fw-bold">Details</th>
+                                            <th class="text-center fw-bold">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($repository->children as $index => $child)
+                                        <tr class="{{ $loop->odd ? 'table-light' : '' }}">
+                                            <td class="text-center">{{ $loop->iteration }}</td>
+                                            <td class="text-center">
+                                                <a href="{{ route('course-repository.show', $child->pk) }}" class="text-decoration-none fw-semibold">
+                                                    {{ $child->course_repository_name }}
+                                                </a>
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="{{ route('course-repository.show', $child->pk) }}" class="text-decoration-none text-primary">
+                                                    {{ $child->children->count() }} sub-categories
+                                                </a>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-inline-flex align-items-center gap-2">
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-link p-1 edit-repo"
+                                                            data-pk="{{ $child->pk }}"
+                                                            data-name="{{ $child->course_repository_name }}"
+                                                            data-details="{{ $child->course_repository_details }}">
+                                                        <i class="bi bi-pencil-fill" style="font-size: 18px;"></i>
+                                                    </button>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-link p-1 delete-repo"
+                                                            data-pk="{{ $child->pk }}">
+                                                        <i class="bi bi-trash-fill" style="font-size: 18px;"></i>
+                                                    </button>
                                                 </div>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <a href="{{ route('course-repository.show', $child->pk) }}" class="text-decoration-none fw-semibold text-dark hover-primary">
-                                                {{ $child->course_repository_name }}
-                                            </a>
-                                        </td>
-                                        <td>
-                                            <span class="text-muted small">{{ Str::limit($child->course_repository_details ?? 'N/A', 50) }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-primary-subtle rounded-pill px-3 py-2 text-white">
-                                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">folder</span>{{ $child->children->count() }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 text-white">
-                                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">description</span>{{ $child->getDocumentCount() }}
-</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('course-repository.show', $child->pk) }}" 
-                                                   class="btn btn-sm btn-outline-success rounded-start" 
-                                                   data-bs-toggle="tooltip" 
-                                                   title="View">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">visibility</span>
-                                                    <span class="d-none d-lg-inline ms-1">View</span>
-                                                </a>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-primary edit-repo"
-                                                        data-pk="{{ $child->pk }}"
-                                                        data-name="{{ $child->course_repository_name }}"
-                                                        data-details="{{ $child->course_repository_details }}"
-                                                        data-image="{{ $child->category_image }}"
-                                                        data-bs-toggle="tooltip" 
-                                                        title="Edit">
-                                                    <span class=" material-icons material-symbols-rounded" style="font-size: 16px;">edit</span>
-                                                    <span class="d-none d-lg-inline ms-1">Edit</span>
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-danger rounded-end delete-repo"
-                                                        data-pk="{{ $child->pk }}"
-                                                        data-bs-toggle="tooltip" 
-                                                        title="Delete">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                                                    <span class="d-none d-lg-inline ms-1">Delete</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            @endif
+
+                            <!-- Documents Section -->
+                            @if($documents->count() > 0)
+                            <div class="table-responsive mt-4">
+                                <table class="table table-hover mb-0 align-middle" id="documents">
+                                    <thead style="background-color: #dc3545; color: white;">
+                                        <tr>
+                                            <th class="text-center fw-bold">S.No.</th>
+                                            <th class="text-center fw-bold">Document Name</th>
+                                            <th class="text-center fw-bold">File Title</th>
+                                            <th class="text-center fw-bold">Course Name</th>
+                                            <th class="text-center fw-bold">Subject</th>
+                                            <th class="text-center fw-bold">Topic</th>
+                                            <th class="text-center fw-bold">Session Date</th>
+                                            <th class="text-center fw-bold">Author</th>
+                                            <th class="text-center fw-bold">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($documents as $index => $doc)
+                                        <tr class="{{ $loop->odd ? 'table-light' : '' }}">
+                                            <td class="text-center">{{ $loop->iteration }}</td>
+                                            <td class="text-center">
+                                                <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>
+                                                <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                            </td>
+                                            <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                            <td class="text-center">
+                                                <small>
+                                                    @if($doc->detail)
+                                                        @if($doc->detail->course)
+                                                            {{ $doc->detail->course->course_name }}
+                                                        @elseif($doc->detail->program_structure_pk)
+                                                            {{ $doc->detail->program_structure_pk }}
+                                                        @else
+                                                            N/A
+                                                        @endif
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <small>
+                                                    @if($doc->detail)
+                                                        @if($doc->detail->subject)
+                                                            {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                                        @elseif($doc->detail->subject_pk)
+                                                            {{ Str::limit($doc->detail->subject_pk, 20) }}
+                                                        @else
+                                                            N/A
+                                                        @endif
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <small>
+                                                    @if($doc->detail)
+                                                        @if($doc->detail->topic)
+                                                            {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
+                                                        @elseif($doc->detail->topic_pk)
+                                                            {{ Str::limit($doc->detail->topic_pk, 15) }}
+                                                        @else
+                                                            N/A
+                                                        @endif
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <small>
+                                                    @if($doc->detail && $doc->detail->session_date)
+                                                        {{ $doc->detail->session_date->format('d-m-Y') }}
+                                                    @elseif($doc->detail && $doc->detail->session_date)
+                                                        {{ $doc->detail->session_date }}
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <small>
+                                                    @if($doc->detail)
+                                                        @if($doc->detail->author)
+                                                            {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                                        @elseif($doc->detail->author_name)
+                                                            {{ Str::limit($doc->detail->author_name, 15) }}
+                                                        @else
+                                                            N/A
+                                                        @endif
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-inline-flex align-items-center gap-2">
+                                                    <a href="{{ route('course-repository.document.download', $doc->pk) }}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-download"></i> Download
+                                                    </a>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-link p-1 delete-doc" 
+                                                            data-pk="{{ $doc->pk }}">
+                                                        <i class="bi bi-trash-fill" style="font-size: 18px;"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            @endif
+                        @endif
+                    </div>
+
+                    <!-- Archive Tab -->
+                    <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
+                        <div class="text-center py-5">
+                            <i class="bi bi-archive" style="font-size: 48px; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No archived items found.</p>
                         </div>
                     </div>
-                    @endif
-
-                    <!-- Documents Section -->
-                    @if($documents->count() > 0)
-                    <div class="">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 fw-semibold text-dark">
-                                <span class="material-icons material-symbols-rounded text-success me-2" style="font-size: 20px;">description</span>Documents
-                                <span class="badge bg-success-subtle text-success ms-2">{{ $documents->count() }}</span>
-                            </h5>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table" id="documents">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center" style="width: 60px;">#</th>
-                                        <th>Document Name</th>
-                                        <th>File Title</th>
-                                        <th>Course Name</th>
-                                        <th>Subject</th>
-                                        <th>Topic</th>
-                                        <th class="text-center" style="width: 120px;">Session Date</th>
-                                        <th>Sector</th>
-                                        <th>Ministry</th>
-                                        <th>Author</th>
-                                        <th class="text-center" style="width: 150px;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($documents as $index => $doc)
-                                    <tr class="table-row-hover">
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark fw-normal">{{ $loop->iteration }}</span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="material-icons material-symbols-rounded text-danger" style="font-size: 24px;">picture_as_pdf</span>
-                                                <span class="fw-semibold">{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="text-muted">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</span>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->course)
-                                                        {{ $doc->detail->course->course_name }}
-                                                    @elseif($doc->detail->program_structure_pk)
-                                                        {{ $doc->detail->program_structure_pk }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->subject)
-                                                        {{ Str::limit($doc->detail->subject->subject_name, 20) }}
-                                                    @elseif($doc->detail->subject_pk)
-                                                        {{ Str::limit($doc->detail->subject_pk, 20) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->topic)
-                                                        {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
-                                                    @elseif($doc->detail->topic_pk)
-                                                        {{ Str::limit($doc->detail->topic_pk, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td class="text-center">
-                                            <small class="badge bg-info-subtle text-info">
-                                                @if($doc->detail && $doc->detail->session_date)
-                                                    {{ $doc->detail->session_date->format('d-m-Y') }}
-                                                @elseif($doc->detail && $doc->detail->session_date)
-                                                    {{ $doc->detail->session_date }}
-                                                @else
-                                                    N/A
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->sector)
-                                                        {{ Str::limit($doc->detail->sector->sector_name, 15) }}
-                                                    @elseif($doc->detail->sector_master_pk)
-                                                        {{ Str::limit($doc->detail->sector_master_pk, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->ministry)
-                                                        {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
-                                                    @elseif($doc->detail->ministry_master_pk)
-                                                        {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail) 
-                                                    @if($doc->detail->author)
-                                                        {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                                    @elseif($doc->detail->author_name)
-                                                        {{ Str::limit($doc->detail->author_name, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('course-repository.document.download', $doc->pk) }}" 
-                                                   class="btn btn-sm btn-outline-info rounded-start"
-                                                   data-bs-toggle="tooltip" 
-                                                   title="Download">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">download</span>
-                                                    <span class="d-none d-lg-inline ms-1">Download</span>
-                                                </a>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-danger rounded-end delete-doc" 
-                                                        data-pk="{{ $doc->pk }}"
-                                                        data-bs-toggle="tooltip" 
-                                                        title="Delete">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                                                    <span class="d-none d-lg-inline ms-1">Delete</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    @endif
-                @endif
-
-                <!-- Documents Section -->
-                @if($documents->count() > 0)
-                <div class="table-responsive">
-                    <table class="table" id="documents">
-                        <thead>
-                            <tr>
-                                <th class="col text-center">S.No.</th>
-                                <th class="col text-center">Document Name</th>
-                                <th class="col text-center">File Title</th>
-                                <th class="col text-center">Course Name</th>
-                                <th class="col text-center">Subject</th>
-                                <th class="col text-center">Topic</th>
-                                <th class="col text-center">Session Date</th>
-                                <th class="col text-center">Sector</th>
-                                <th class="col text-center">Ministry</th>
-                                <th class="col text-center">Author</th>
-                                <th class="col text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($documents as $index => $doc)
-                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                <td>{{ $loop->iteration }}</td>
-                                <td>
-                                    <i class="fas fa-file-alt text-primary me-2"></i>
-                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
-                                </td>
-                                <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                <td>
-                                    @if($doc->detail)
-                                    @if($doc->detail->course)
-                                    {{ $doc->detail->course->course_name }}
-                                    @elseif($doc->detail->course_master_pk)
-                                    {{ $doc->detail->course_master_pk }}
-                                    @else
-                                    N/A
-                                    @endif
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->timetable)
-                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
-                                        @elseif($doc->detail->topic_pk)
-                                        {{ Str::limit($doc->detail->topic_pk, 20) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->timetable)
-                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
-                                        @elseif($doc->detail->topic_pk)
-                                        {{ Str::limit($doc->detail->topic_pk, 20) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small class="text-muted">
-                                        @if($doc->detail && $doc->detail->session_date)
-                                        {{ \Carbon\Carbon::parse($doc->detail->session_date)->format('d M Y') }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->sector)
-                                        {{ Str::limit($doc->detail->sector->sector_name, 15) }}
-                                        @elseif($doc->detail->sector_master_pk)
-                                        {{ Str::limit($doc->detail->sector_master_pk, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->ministry)
-                                        {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
-                                        @elseif($doc->detail->ministry_master_pk)
-                                        {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->author)
-                                        {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                        @elseif($doc->detail->author_name)
-                                        {{ Str::limit($doc->detail->author_name, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}"
-                                            class="text-primary" data-bs-toggle="tooltip" title="Download">
-                                            <span class="material-icons material-symbols-rounded">download</span>
-                                        </a>
-                                        <a class="text-primary delete-doc" data-pk="{{ $doc->pk }}"
-                                            data-bs-toggle="tooltip" title="Delete">
-                                            <span class="material-icons material-symbols-rounded">delete</span>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
                 </div>
             </div>
             @endif
@@ -3550,210 +3310,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-        // Check for missing DOM elements that might cause errors
-        const criticalElements = [
-            'createForm', 'editForm', 'uploadForm'
-        ];
-
-        criticalElements.forEach(id => {
-            const element = document.getElementById(id);
-            if (!element) {
-                console.warn(`Critical element missing: ${id}`);
-            }
-        });
-
-        // Initialize any remaining tooltips that might have been missed
-        setTimeout(() => {
-            try {
-                const tooltips = document.querySelectorAll(
-                    '[data-bs-toggle="tooltip"]:not([data-bs-original-title])');
-                tooltips.forEach(el => {
-                    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                        new bootstrap.Tooltip(el);
-                    }
-                });
-            } catch (tooltipError) {
-                console.warn('Additional tooltip initialization failed:', tooltipError);
-            }
-        }, 1000);
-
-        // Prevent common jQuery errors if jQuery is not loaded
-        if (typeof $ === 'undefined') {
-            // Create a basic jQuery-like function for compatibility
-            window.$ = function(selector) {
-                return {
-                    val: function(value) {
-                        const el = document.querySelector(selector);
-                        if (el) {
-                            if (value !== undefined) {
-                                el.value = value;
-                                return this;
-                            }
-                            return el.value;
-                        }
-                        return '';
-                    },
-                    html: function(html) {
-                        const el = document.querySelector(selector);
-                        if (el && html !== undefined) {
-                            el.innerHTML = html;
-                        }
-                        return this;
-                    },
-                    find: function(subselector) {
-                        const el = document.querySelector(selector);
-                        return el ? el.querySelectorAll(subselector) : [];
-                    },
-                    each: function(callback) {
-                        const els = document.querySelectorAll(selector);
-                        els.forEach(callback);
-                        return this;
-                    }
-                };
-            };
-        }
-
-    } catch (finalError) {
-        console.warn('Final initialization error:', finalError);
-    }
-
-    // Upload form submit is handled by document-level listener (see top of script)
-});
-
-// ===== ATTACHMENT ADD MORE FUNCTIONALITY - OUTSIDE DOMContentLoaded =====
-
-// Update Delete Button Visibility
-function updateDeleteButtons(tbodyId) {
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
-
-    const rows = tbody.querySelectorAll('.attachment-row');
-    const deleteButtons = tbody.querySelectorAll('.delete-attachment');
-
-    // Show delete buttons only if there's more than 1 row
-    deleteButtons.forEach((btn, index) => {
-        if (rows.length > 1) {
-            btn.style.display = 'inline-block';
-        } else {
-            btn.style.display = 'none';
-        }
-    });
-}
-
-// Add More Attachment for Course Category
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.add-attachment-course');
-    if (btn) {
-        e.preventDefault();
-        console.log('Course Add More clicked');
-
-        const tbody = document.getElementById('course_attachments_tbody');
-        if (!tbody) {
-            console.error('course_attachments_tbody not found');
-            return;
-        }
-
-        const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
-
-        const newRow = document.createElement('tr');
-        newRow.className = 'attachment-row';
-        newRow.innerHTML = `
-            <td class="row-number">${rowCount}</td>
-            <td>
-                <input type="text" class="form-control form-control-sm" 
-                    name="attachment_titles[]" placeholder="e.g., Week-${rowCount}">
-            </td>
-            <td>
-                <input type="file" class="form-control form-control-sm" 
-                    name="attachments[]" accept="*/*">
-            </td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger delete-attachment">
-                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                </button>
-            </td>
-        `;
-
-        tbody.appendChild(newRow);
-        updateDeleteButtons('course_attachments_tbody');
-        console.log('Added row to Course attachments. Total rows:', rowCount);
-    }
-});
-
-// Add More Attachment for Other Category
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.add-attachment-other');
-    if (btn) {
-        e.preventDefault();
-        console.log('Other Add More clicked');
-
-        const tbody = document.getElementById('other_attachments_tbody');
-        if (!tbody) {
-            console.error('other_attachments_tbody not found');
-            return;
-        }
-
-        const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
-
-        const newRow = document.createElement('tr');
-        newRow.className = 'attachment-row';
-        newRow.innerHTML = `
-            <td class="row-number">${rowCount}</td>
-            <td>
-                <input type="text" class="form-control form-control-sm" 
-                    name="attachment_titles_other[]" placeholder="e.g., Document-${rowCount}">
-            </td>
-            <td>
-                <input type="file" class="form-control form-control-sm" 
-                    name="attachments_other[]" accept="*/*">
-            </td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger delete-attachment">
-                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                </button>
-            </td>
-        `;
-
-        tbody.appendChild(newRow);
-        updateDeleteButtons('other_attachments_tbody');
-        console.log('Added row to Other attachments. Total rows:', rowCount);
-    }
-});
-
-// Delete Attachment Row
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.delete-attachment');
-    if (btn) {
-        e.preventDefault();
-        console.log('Delete clicked');
-
-        const row = btn.closest('.attachment-row');
-        const tbody = row.closest('tbody');
-        const tbodyId = tbody.id;
-
-        // Immediately remove the required attribute from inputs to prevent validation errors
-        const inputs = row.querySelectorAll('input[required]');
-        inputs.forEach(input => input.removeAttribute('required'));
-
-        // Remove the row with animation
-        row.style.opacity = '0';
-        row.style.transition = 'opacity 0.3s ease-out';
-
-        // Use requestAnimationFrame for smoother timing
-        setTimeout(() => {
-            // Completely remove the row from DOM
-            row.remove();
-
-            // Update row numbers
-            const rows = tbody.querySelectorAll('.attachment-row');
-            rows.forEach((r, index) => {
-                r.querySelector('.row-number').textContent = index + 1;
-            });
-
-            // Update delete button visibility
-            updateDeleteButtons(tbodyId);
-            console.log('Row deleted');
-        }, 300);
-    }
-});
-</script>
