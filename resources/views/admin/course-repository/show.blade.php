@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             data-bs-target="#createModal">
                             Add Category
                         </a>
-                        <a href="" class="btn btn-outline-primary btn-sm rounded">Upload Document
+                        <a href="" class="btn btn-outline-primary btn-sm rounded-pill">Upload Document
                         </a>
                     </div>
                 </div>
@@ -491,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 data-bs-toggle="tooltip" title="View">
                                                 <span class="material-icons material-symbols-rounded">visibility</span>
                                             </a> -->
-                                            <a href="javascript:void(0)" class="text-primary edit-repo"
+                                            <a href="javascript:void(0)" class="text-primary edit-repo" 
                                                 data-pk="{{ $child->pk }}"
                                                 data-name="{{ $child->course_repository_name }}"
                                                 data-details="{{ $child->course_repository_details }}"
@@ -1190,61 +1190,58 @@ document.addEventListener('DOMContentLoaded', function() {
                             <!-- Institutional Category Fields -->
                             <div id="institutionalFields" class="category-fields" style="display: none;">
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <!-- Keywords -->
-                                        <div class="mb-3">
-                                            <label for="Key_words_institutional" class="form-label">
-                                                Add Key words <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" id="Key_words_institutional"
-                                                name="Key_words_institutional" placeholder="Enter Keywords">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <!-- Keywords -->
-                                        <div class="mb-3">
-                                            <label for="Key_words_institutional" class="form-label">
-                                                Keywords <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" id="Key_words_institutional"
-                                                name="Key_words_institutional" placeholder="Enter Keywords">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <!-- sector -->
-
-                                        <div class="mb-3">
-                                            <label for="sector_master_institutional" class="form-label">
-                                                Sector <span class="text-danger">*</span>
-                                            </label>
-                                            <select class="form-select" id="sector_master_institutional"
-                                                name="sector_master_institutional">
-                                                <option value="" selected>Select</option>
-                                                @foreach(($sectors ?? []) as $sector)
-                                                <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <!-- ministries -->
-
-                                        <div class="mb-3">
-                                            <label for="ministry_master_institutional" class="form-label">Ministry <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="ministry_master_institutional"
-                                                name="ministry_master_institutional">
-                                                <option value="" selected>Select</option>
-                                                @foreach(($ministries ?? []) as $ministry)
-                                                <option value="{{ $ministry->pk }}"
-                                                    data-sector="{{ $ministry->sector_master_pk }}"
-                                                    style="display:none;">{{ $ministry->ministry_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
+                            <div class="row">
+                                <div class="col-md-6">
+<!-- Keywords -->
+                                <div class="mb-3">
+                                    <label for="Key_words_institutional" class="form-label">
+                                        Add Key words <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="Key_words_institutional"
+                                        name="Key_words_institutional" placeholder="Enter Keywords">
                                 </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- Keywords -->
+                                <div class="mb-3">
+                                    <label for="Key_words_institutional" class="form-label">
+                                        Keywords <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="Key_words_institutional"
+                                        name="Key_words_institutional" placeholder="Enter Keywords">
+                                </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- sector -->
+
+                                <div class="mb-3">
+                                    <label for="sector_master_institutional" class="form-label">
+                                        Sector <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="sector_master_institutional"
+                                        name="sector_master_institutional">
+                                        <option value="" selected>Select</option>
+                                        @foreach(($sectors ?? []) as $sector)
+                                        <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                        @endforeach
+                                    </select>   
+</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- ministries -->
+
+                                <div class="mb-3">
+                                    <label for="ministry_master_institutional" class="form-label">Ministry <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="ministry_master_institutional" name="ministry_master_institutional">
+                                        <option value="" selected>Select</option>
+                                        @foreach(($ministries ?? []) as $ministry)
+                                        <option value="{{ $ministry->pk }}" data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">{{ $ministry->ministry_name }}</option>
+                                        @endforeach
+                                    </select>
+</div>
+                                </div>
+                            </div>
+                                
 
 
                                 <!-- Video Link -->

@@ -4,17 +4,17 @@
 
 @section('content')
 <!-- Main Content -->
-<div class="container-fluid px-4 py-4" id="main-content">
-    <!-- Title Section with Back Button -->
+<!-- Title Section with Back Button -->
+<div class="container-fluid">
     <div class="title-section mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <button type="button" 
-                    onclick="window.history.back()" 
-                    class="btn-back btn btn-link p-0 text-decoration-none"
-                    aria-label="Go back">
-                <i class="bi bi-arrow-left fs-4 text-dark"></i>
-            </button>
-            <h1 class="h2 mb-0 fw-bold text-dark">{{ $repository->course_repository_name }}</h1>
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" onclick="window.history.back()"
+                    class="btn-back btn btn-link p-0 text-decoration-none" aria-label="Go back">
+                    <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
+                </button>
+                <h1 class="h2 mb-0 fw-bold text-dark">{{ $repository->course_repository_name }}</h1>
+            </div>
         </div>
     </div>
 
@@ -23,74 +23,85 @@
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('admin.course-repository.user.index') }}" class="text-decoration-none">Course Repository</a>
+                <a href="{{ route('admin.course-repository.user.index') }}" class="text-decoration-none">Course
+                    Repository</a>
             </li>
             @if (!empty($ancestors))
-                @foreach ($ancestors as $ancestor)
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('admin.course-repository.user.show', $ancestor->pk) }}" class="text-decoration-none">
-                            {{ $ancestor->course_repository_name }}
-                        </a>
-                    </li>
-                @endforeach
+            @foreach ($ancestors as $ancestor)
+            <li class="breadcrumb-item">
+                <a href="{{ route('admin.course-repository.user.show', $ancestor->pk) }}" class="text-decoration-none">
+                    {{ $ancestor->course_repository_name }}
+                </a>
+            </li>
+            @endforeach
             @endif
             <li class="breadcrumb-item active" aria-current="page">{{ $repository->course_repository_name }}</li>
         </ol>
     </nav>
     @endif
+</div>
+<div class="d-flex" id="main-content">
+    <!-- Left Sidebar -->
+    <aside class="course-sidebar-wrapper">
+        <x-course-sidebar />
+    </aside>
 
-    <!-- Repository Info Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-2"><strong>{{ $repository->course_repository_name }}</strong></h4>
-                    @if($repository->course_repository_details)
-                        <p class="text-muted mb-0">{{ $repository->course_repository_details }}</p>
-                    @endif
-                    <small class="text-muted">
-                        Created: {{ $repository->created_date ? $repository->created_date->format('d-m-Y H:i') : 'N/A' }}
-                    </small>
+    <!-- Main Content -->
+    <main class="flex-grow-1">
+        <div class="container-fluid px-4 py-4" id="main-content">
+            <!-- Filter Card -->
+            @if(isset($courses) && isset($subjects) && isset($faculties))
+            @include('admin.course-repository.user.partials.filter-card', [
+            'route' => route('admin.course-repository.user.show', $repository->pk),
+            'courses' => $courses,
+            'subjects' => $subjects,
+            'faculties' => $faculties,
+            'filters' => $filters ?? [],
+            ])
+            @endif
+
+            @if($repository->children->count() == 0 && $documents->count() == 0)
+            <!-- Empty State -->
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <span class="material-icons material-symbols-rounded"
+                        style="font-size: 48px; color: #ccc;">inbox</span>
+                    <p class="text-muted mt-3">No sub-categories or documents found in this repository.</p>
                 </div>
             </div>
-        </div>
-    </div>
-
-    @if($repository->children->count() == 0 && $documents->count() == 0)
-        <!-- Empty State -->
-        <div class="card shadow-sm">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
-                <p class="text-muted mt-3">No sub-categories or documents found in this repository.</p>
-            </div>
-        </div>
-    @else
-        <!-- Child Repositories Section -->
-        @if($repository->children->count() > 0)
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light">
-                <h5 class="mb-0 fw-bold">Sub-Categories ({{ $repository->children->count() }})</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
+            @else
+            <!-- Child Repositories Section -->
+            @if($repository->children->count() > 0)
+            <div class="course-cards-grid mb-4">
+                <div class="row g-4">
                     @foreach ($repository->children as $child)
                     <div class="col-md-4 col-lg-3">
-                        <div class="card h-100 border">
-                            <div class="card-body">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="bi bi-folder-fill text-primary fs-4"></i>
-                                    <div class="flex-grow-1">
-                                        <h6 class="card-title mb-1">
-                                            <a href="{{ route('admin.course-repository.user.show', $child->pk) }}" 
-                                               class="text-decoration-none text-dark fw-bold">
-                                                {{ Str::limit($child->course_repository_name, 40) }}
-                                            </a>
-                                        </h6>
-                                        <small class="text-muted">
-                                            <span class="badge bg-primary">{{ $child->children->count() }} Sub-categories</span>
-                                            <span class="badge bg-success ms-1">{{ $child->getDocumentCount() }} Documents</span>
-                                        </small>
-                                    </div>
+                        <div class="card course-card shadow-sm h-100"
+                            onclick="window.location='{{ route('admin.course-repository.user.show', $child->pk) }}'">
+                            <div class="card-img-wrapper">
+                                @php
+                                $imageUrl = null;
+                                if($child->category_image && \Storage::disk('public')->exists($child->category_image)) {
+                                $imageUrl = asset('storage/' . $child->category_image);
+                                }
+                                if(!$imageUrl) {
+                                $imageUrl = 'https://via.placeholder.com/400x200/004a93/ffffff?text=' .
+                                urlencode($child->course_repository_name);
+                                }
+                                @endphp
+                                <img src="{{ $imageUrl }}" alt="{{ $child->course_repository_name }}"
+                                    class="card-img-top" loading="lazy"
+                                    onerror="this.src='https://via.placeholder.com/400x200/004a93/ffffff?text={{ urlencode($child->course_repository_name) }}'">
+                            </div>
+                            <div class="card-body d-flex flex-column" style="background-color: #F2F2F2;">
+                                <h5 class="card-title text-center fw-bold mb-3">
+                                    {{ Str::limit($child->course_repository_name, 50) }}</h5>
+                                <div class="mt-auto">
+                                    <a href="{{ route('admin.course-repository.user.show', $child->pk) }}"
+                                        class="btn btn-outline-primary w-100 fw-semibold"
+                                        onclick="event.stopPropagation();">
+                                        Click Here
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -98,104 +109,109 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        @endif
+            @endif
 
-        <!-- Documents Section -->
-        @if($documents->count() > 0)
-        <div class="card shadow-sm">
-            <div class="card-header bg-light">
-                <h5 class="mb-0 fw-bold">Documents ({{ $documents->count() }})</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>S.No.</th>
-                                <th>Document Name</th>
-                                <th>File Title</th>
-                                <th>Course</th>
-                                <th>Subject</th>
-                                <th>Topic</th>
-                                <th>Session Date</th>
-                                <th>Author</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($documents as $index => $doc)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>
-                                    <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>
-                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
-                                </td>
-                                <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                <td>
-                                    <small>
-                                        @if($doc->detail && $doc->detail->course)
+            <!-- Documents Section -->
+            @if($documents->count() > 0)
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 fw-bold">Documents ({{ $documents->count() }})</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead style="background-color: #dc3545; color: white;">
+                                <tr>
+                                    <th class="text-center fw-bold">S.No.</th>
+                                    <th class="fw-bold">Document Name</th>
+                                    <th class="fw-bold">File Title</th>
+                                    <th class="fw-bold">Course</th>
+                                    <th class="fw-bold">Subject</th>
+                                    <th class="fw-bold">Topic</th>
+                                    <th class="fw-bold">Session Date</th>
+                                    <th class="fw-bold">Author</th>
+                                    <th class="text-center fw-bold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($documents as $index => $doc)
+                                <tr class="{{ $loop->odd ? 'table-light' : '' }}" style="cursor: pointer;"
+                                    onclick="window.location='{{ route('admin.course-repository.user.document-details', $doc->pk) }}'">
+                                    <td class="text-center">{{ $loop->iteration }}</td>
+                                    <td>
+                                        <span
+                                            class="material-icons material-symbols-rounded text-danger me-2">picture_as_pdf</span>
+                                        <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                    </td>
+                                    <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->course)
                                             {{ $doc->detail->course->course_name }}
-                                        @else
+                                            @else
                                             N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td>
-                                    <small>
-                                        @if($doc->detail && $doc->detail->subject)
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->subject)
                                             {{ Str::limit($doc->detail->subject->subject_name, 20) }}
-                                        @else
+                                            @else
                                             N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td>
-                                    <small>
-                                        @if($doc->detail && $doc->detail->topic)
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->topic)
                                             {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
-                                        @else
+                                            @else
                                             N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td>
-                                    <small>
-                                        @if($doc->detail && $doc->detail->session_date)
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->session_date)
                                             {{ $doc->detail->session_date->format('d-m-Y') }}
-                                        @else
+                                            @else
                                             N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td>
-                                    <small>
-                                        @if($doc->detail && $doc->detail->author)
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->author)
                                             {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                        @elseif($doc->detail && $doc->detail->author_name)
+                                            @elseif($doc->detail && $doc->detail->author_name)
                                             {{ Str::limit($doc->detail->author_name, 15) }}
-                                        @else
+                                            @else
                                             N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td>
-                                    <a href="{{ route('course-repository.document.download', $doc->pk) }}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-download"></i> Download
-                                    </a>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}"
+                                            class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                                            <span class="material-icons material-symbols-rounded me-1">download</span>
+                                            Download
+                                        </a>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+            @endif
+            @endif
         </div>
-        @endif
-    @endif
+    </main>
 </div>
 
 <!-- Link to CSS -->
 <link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
+
 @endsection

@@ -686,6 +686,11 @@ Route::middleware(['auth'])->group(function () {
     'parameters' => ['course-repository' => 'pk']
 ]);
 
+// upload document route
+
+
+
+
 // User view routes
 Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
 Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');

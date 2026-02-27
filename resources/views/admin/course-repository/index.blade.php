@@ -1,4 +1,4 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 
 @section('title', 'Course Repositories | Lal Bahadur')
 
@@ -6,12 +6,12 @@
 <style>
     /* Chevron-style divider */
     .breadcrumb-divider-chevron {
-        --bs-breadcrumb-divider: ">";
+        --bs-breadcrumb-divider: "â€º";
     }
 
     /* Accessible link styling */
     .breadcrumb-link {
-        color: #495057; 
+        color: #495057;
         text-decoration: none;
         font-weight: 500;
     }
@@ -133,139 +133,35 @@
     }
 </style>
 <div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <div class="mb-3">
-        <div class="d-flex justify-content-between align-items-center">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Academics</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">MCTP</a></li>
-                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course Repository Admin</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Course Repository</li>
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-3 px-4">
+                <ol class="breadcrumb mb-0 breadcrumb-divider-chevron">
+
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('course-repository.index') }}" class="breadcrumb-link">
+                            Academics
+                        </a>
+                    </li>
+
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('course-repository.index') }}" class="breadcrumb-link">
+                            MCTP
+                        </a>
+                    </li>
+
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('course-repository.index') }}" class="breadcrumb-link">
+                            Course Repository Admin
+                        </a>
+                    </li>
+
+                    <li class="breadcrumb-item active fw-semibold text-primary" aria-current="page">
+                        Course Repository
+                    </li>
+
                 </ol>
-            </nav>
-            <button class="btn btn-link p-0" aria-label="Search">
-                <i class="bi bi-search fs-5"></i>
-            </button>
-        </div>
-    </div>
-
-    <div class="datatables">
-        <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <!-- Page Title and Actions -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="d-flex align-items-center gap-3">
-                        <button type="button" onclick="window.history.back()" class="btn btn-link p-0 text-decoration-none">
-                            <i class="bi bi-arrow-left fs-4 text-dark"></i>
-                        </button>
-                        <h4 class="mb-0 fw-bold">Course Repository</h4>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="javascript:void(0)" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <i class="bi bi-upload me-1"></i> Upload Documents
-                        </a>
-                        <a href="javascript:void(0)" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-                            <i class="bi bi-plus-lg me-1"></i> Add Category
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Tabs -->
-                <ul class="nav nav-tabs mb-3" id="repositoryTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
-                            Active
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive" type="button" role="tab" aria-controls="archive" aria-selected="false">
-                            Archive
-                        </button>
-                    </li>
-                </ul>
-
-                <!-- Tab Content -->
-                <div class="tab-content" id="repositoryTabContent">
-                    <!-- Active Tab -->
-                    <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
-                        @if ($repositories->isEmpty())
-                            <div class="text-center py-5">
-                                <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
-                                <p class="text-muted mt-3">
-                                    No repositories found. <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal">Create your first repository</a>
-                                </p>
-                            </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0 align-middle">
-                                    <thead style="background-color: #dc3545; color: white;">
-                                        <tr>
-                                            <th class="text-center fw-bold">S.No.</th>
-                                            <th class="text-center fw-bold">Category Name</th>
-                                            <th class="text-center fw-bold">Details</th>
-                                            <th class="text-center fw-bold">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($repositories as $key => $repo)
-                                        <tr class="{{ $loop->odd ? 'table-light' : '' }}">
-                                            <td class="text-center">{{ $repositories->firstItem() + $key }}</td>
-                                            <td class="text-center">
-                                                <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-decoration-none fw-semibold">
-                                                    {{ $repo->course_repository_name }}
-                                                </a>
-                                            </td>
-                                            <td class="text-center">
-                                                <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-decoration-none text-primary">
-                                                    {{ $repo->children->count() }} sub-categories
-                                                </a>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="d-inline-flex align-items-center gap-2">
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-link p-1 edit-repo"
-                                                            data-pk="{{ $repo->pk }}"
-                                                            data-name="{{ $repo->course_repository_name }}"
-                                                            data-details="{{ $repo->course_repository_details }}"
-                                                            aria-label="Edit category">
-                                                        <i class="bi bi-pencil-fill" style="font-size: 18px;"></i>
-                                                    </button>
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-link p-1 delete-repo"
-                                                            data-pk="{{ $repo->pk }}"
-                                                            aria-label="Delete category">
-                                                        <i class="bi bi-trash-fill" style="font-size: 18px;"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Pagination -->
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div></div>
-                                <nav aria-label="Page navigation">
-                                    {{ $repositories->links('pagination::bootstrap-5') }}
-                                </nav>
-                                <div class="text-muted small">
-                                    Showing {{ $repositories->firstItem() }} to {{ $repositories->lastItem() }} of {{ $repositories->total() }} items
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-
-                    <!-- Archive Tab -->
-                    <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
-                        <div class="text-center py-5">
-                            <i class="bi bi-archive" style="font-size: 48px; color: #ccc;"></i>
-                            <p class="text-muted mt-3">No archived repositories found.</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </nav>
@@ -288,11 +184,11 @@
                 <div class="d-flex flex-wrap align-items-center gap-2">
 
                     <!-- Upload Documents -->
-                    <!-- <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center"
+                    <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center"
                         data-bs-toggle="modal" data-bs-target="#uploadModal" aria-label="Upload documents">
                         <span class="material-icons material-symbols-rounded me-1 fs-6" aria-hidden="true">upload</span>
                         Upload Documents
-                    </button> -->
+                    </button>
 
                     <!-- Add Category (Primary Action) -->
                     <button type="button" class="btn btn-primary btn-sm d-flex align-items-center"
@@ -368,13 +264,15 @@
                             </td>
                             <td class="pe-4">
                                 <div class="d-flex gap-1" role="group" aria-label="Category actions">
-                                    <a href="javascript:void(0)" class="edit-repo text-primary" data-pk="{{ $repo->pk }}"
+                                    <a href="javascript:void(0)" class="edit-repo" data-pk="{{ $repo->pk }}"
                                         data-name="{{ $repo->course_repository_name }}"
                                         data-details="{{ $repo->course_repository_details }}"
-                                        data-image="{{ $repo->category_image }}" aria-label="Edit category">
+                                        data-image="{{ $repo->category_image }}" aria-label="Edit category"
+                                        class="text-primary">
                                         <span class="material-icons material-symbols-rounded">edit</span>
                                     </a>
-                                    <a class="delete-repo text-primary ms-2" data-pk="{{ $repo->pk }}" aria-label="Delete category">
+                                    <a class="delete-repo" data-pk="{{ $repo->pk }}" aria-label="Delete category"
+                                        class="text-primary ms-2">
                                         <span class="material-icons material-symbols-rounded">delete</span>
                                     </a>
                                 </div>
@@ -422,11 +320,19 @@
 
 <!-- Create Category Modal -->
 <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                <h5 class="modal-title" id="createModalLabel"><i class="bi bi-plus-lg"></i> <strong>Create New Category *</strong></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+
+            <!-- Modal Header - Blue Gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="createModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">add_circle</span>
+                    </span>
+                    Create New Category
+                </h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
 
             <!-- Form -->
@@ -438,9 +344,22 @@
 
                     <!-- Category Name -->
                     <div class="mb-3">
-                        <label for="modal_course_repository_name" class="form-label"><strong>Category Name *</strong></label>
-                        <input type="text" class="form-control" id="modal_course_repository_name" name="course_repository_name" 
-                               required placeholder="Enter Name">
+                        <label for="modal_course_repository_name" class="form-label fw-medium text-dark mb-2">
+                            Category Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg"
+                            id="modal_course_repository_name" name="course_repository_name"
+                            placeholder="Enter category name" required>
+                    </div>
+
+                    <!-- Details (Optional) -->
+                    <div class="mb-3">
+                        <label for="modal_course_repository_details" class="form-label fw-medium text-dark mb-2">
+                            Details <span class="text-muted small">(Optional)</span>
+                        </label>
+                        <textarea class="form-control form-control-lg"
+                            id="modal_course_repository_details" name="course_repository_details" rows="3"
+                            placeholder="Enter category details"></textarea>
                     </div>
 
                     <!-- Category Image Section -->
@@ -476,10 +395,17 @@
                     </div>
 
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-lg"></i> Save
+
+                <!-- Modal Footer -->
+                <div class="modal-footer border-0 px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
+                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
+                            check_circle
+                        </span>
+                        Save Category
                     </button>
                 </div>
 
@@ -489,11 +415,19 @@
 </div>
 <!-- Edit Category Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                <h5 class="modal-title" id="editModalLabel"><i class="bi bi-pencil-fill"></i> <strong>Edit Category</strong></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+
+            <!-- Modal Header - Blue Gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="editModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">edit</span>
+                    </span>
+                    Edit Category
+                </h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
 
             <!-- Form -->
@@ -564,10 +498,17 @@
                     </div>
 
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-lg"></i> Save
+
+                <!-- Modal Footer -->
+                <div class="modal-footer border-0 px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
+                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
+                            check_circle
+                        </span>
+                        Save Category
                     </button>
                 </div>
 
@@ -577,12 +518,21 @@
 </div>
 
 <!-- Upload Modal -->
-<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background-color: #dc3545; color: white;">
-                <h5 class="modal-title" id="uploadModalLabel"><i class="bi bi-upload"></i> Upload Document</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true"
+    data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+
+            <!-- Header: blue gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="uploadModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">cloud_upload</span>
+                    </span>
+                    Upload Document
+                </h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
 
             <form id="uploadForm" enctype="multipart/form-data">
@@ -625,10 +575,17 @@
                     </div>
 
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-lg"></i> Save
+
+                <!-- Footer -->
+                <div class="modal-footer border-0 px-4 py-3 bg-light">
+                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
+                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
+                            check_circle
+                        </span>
+                        Save
                     </button>
                 </div>
 
@@ -714,9 +671,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Update form action (use Laravel route so URL is correct)
+            // Update form action
             const editForm = document.getElementById('editForm');
-            editForm.action = window.getCourseRepoUpdateUrl(pk);
+            editForm.action = `/course-repository/${pk}`;
 
             // Show modal
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -795,8 +752,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         const submitBtn = this.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
-        
+        submitBtn.innerHTML =
+            '<span class="material-icons material-symbols-rounded me-1">schedule</span> Saving...';
+
         fetch(this.action, {
                 method: 'POST',
                 body: formData,
@@ -836,19 +794,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: 'Failed to create category'
                 });
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: 'Failed to create category'
+                submitBtn.innerHTML =
+                    '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
             });
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
-        });
     });
 
     // Edit form submit with SweetAlert
@@ -858,8 +806,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         const submitBtn = this.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Updating...';
-        
+        submitBtn.innerHTML =
+            '<span class="material-icons material-symbols-rounded me-1">schedule</span> Updating...';
+
         fetch(this.action, {
                 method: 'POST',
                 body: formData,
@@ -868,70 +817,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json'
                 }
             })
-            .then(function(response) {
-                return response.text().then(function(text) {
-                    var data = null;
-                    try {
-                        data = text ? JSON.parse(text) : {};
-                    } catch (e) {
-                        return { ok: response.ok, status: response.status, message: text || 'Server error' };
-                    }
-                    return { ok: response.ok, status: response.status, data: data, raw: text };
-                });
-            })
-            .then(function(result) {
-                if (result.data && result.data.success) {
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: result.data.message || 'Category updated successfully',
+                        text: data.message || 'Category updated successfully',
                         showConfirmButton: false,
                         timer: 1500
-                    }).then(function() {
+                    }).then(() => {
                         location.reload();
                     });
-                    return;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message || 'Failed to update category'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML =
+                        '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
                 }
-                var errMsg = 'Failed to update category';
-                if (result.data) {
-                    if (result.data.message) errMsg = result.data.message;
-                    if (result.data.errors && typeof result.data.errors === 'object') {
-                        var first = Object.keys(result.data.errors).map(function(k) { return result.data.errors[k][0]; })[0];
-                        if (first) errMsg = first;
-                    }
-                } else if (result.status === 419) {
-                    errMsg = 'Session expired. Please refresh the page and try again.';
-                } else if (result.status === 422) {
-                    errMsg = 'Validation failed. Please check your input.';
-                } else if (result.message && result.message.length < 200) {
-                    errMsg = result.message;
-                }
-                Swal.fire({ icon: 'error', title: 'Error!', text: errMsg });
-                submitBtn.disabled = false;
-                submitBtn.innerHTML =
-                    '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
             })
-            .catch(function(error) {
+            .catch(error => {
                 console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: 'Failed to update category. Please try again.'
+                    text: 'Failed to update category'
                 });
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: 'Failed to update category'
+                submitBtn.innerHTML =
+                    '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
             });
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
-        });
     });
 
     // Delete button functionality with SweetAlert
@@ -953,14 +872,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Create a form and submit it (use Laravel route so URL is correct)
                     const form = document.createElement('form');
                     form.method = 'POST';
-                    form.action = window.getCourseRepoDestroyUrl(pk);
+                    form.action = `/course-repository/${pk}`;
 
-                    var csrfToken = (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content')) || (document.querySelector('[name="_token"]') && document.querySelector('[name="_token"]').value);
-                    if (!csrfToken) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Security token missing. Please refresh the page.' });
-                        return;
-                    }
-                    form.innerHTML = '<input type="hidden" name="_token" value="' + csrfToken + '"><input type="hidden" name="_method" value="DELETE">';
+                    const csrfToken = document.querySelector('[name="_token"]').value;
+
+                    form.innerHTML = `
+                        <input type="hidden" name="_token" value="${csrfToken}">
+                        <input type="hidden" name="_method" value="DELETE">
+                    `;
+
                     document.body.appendChild(form);
                     form.submit();
                 }
@@ -1043,12 +963,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const parentPk = '{{ $parentRepository->pk ?? 0 }}';
         const submitBtn = this.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
-        
-        const url = parentPk && parentPk != '0' 
-            ? `/course-repository/${parentPk}/upload-document`
-            : '/course-repository/0/upload-document';
-        
+        submitBtn.innerHTML =
+            '<span class="material-icons material-symbols-rounded me-1">schedule</span> Uploading...';
+
+        const url = parentPk && parentPk != '0' ?
+            `/course-repository/${parentPk}/upload-document` :
+            '/course-repository/0/upload-document';
+
         fetch(url, {
                 method: 'POST',
                 body: formData,
@@ -1087,19 +1008,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: 'Upload failed'
                 });
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: 'Upload failed'
+                submitBtn.innerHTML =
+                    '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
             });
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
-        });
     });
 });
 </script>
