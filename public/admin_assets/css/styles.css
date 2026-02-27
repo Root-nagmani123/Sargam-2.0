@@ -38959,6 +38959,12 @@ fieldset:disabled .btn {
         margin-right: 0px;
     }
 }
+@media (max-width: 480px) {
+    .body-wrapper {
+        margin-left: 0px;
+        margin-right: 0px;
+    }
+}
 
 .container-fluid,
 .container-lg,
