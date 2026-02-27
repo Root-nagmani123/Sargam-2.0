@@ -2,8 +2,38 @@
 
 @section('title', isset($discipline) ? 'Edit Discipline' : 'Add Discipline')
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .discipline-create-edit .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+        }
+
+        .discipline-create-edit .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .discipline-create-edit .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .discipline-create-edit .choices.is-focused .choices__inner,
+        .discipline-create-edit .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid discipline-create-edit">
 
     <x-breadcrum title="Discipline Master" />
     <x-session_message />
@@ -127,4 +157,28 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof Choices === 'undefined') return;
+
+    document.querySelectorAll('.discipline-create-edit select').forEach(function (el) {
+        if (el.dataset.choicesInitialized === 'true') return;
+
+        new Choices(el, {
+            allowHTML: false,
+            searchPlaceholderValue: 'Search...',
+            removeItemButton: !!el.multiple,
+            shouldSort: false,
+            placeholder: true,
+            placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+        });
+
+        el.dataset.choicesInitialized = 'true';
+    });
+});
+</script>
 @endsection
