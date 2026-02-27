@@ -1,7 +1,7 @@
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -15,7 +15,7 @@
 @section('setup_content')
 
 
-<div class="container-fluid">
+<div class="container-fluid peer-evaluation-admin-page">
      <x-breadcrum title="Peer Evaluation - Admin Panel" />
     <div class="card p-3" style="border-left: 4px solid #004a93;">
         <h4 class="mb-4">Peer Evaluation - Admin Panel 
@@ -257,7 +257,7 @@
 
         {{-- Manage Columns Section --}}
         <div class="mb-4">
-            <h5>Manage Evaluation Columns</h5>
+            <h5 class="text-dark fw-bold mb-3">Manage Evaluation Columns</h5>
             <div class="row mb-3">
                 <div class="col-md-3">
                     <label class="form-label">Course (Optional)</label>
@@ -285,7 +285,7 @@
 
             {{-- Columns List --}}
           <div class="mt-3">
-    <h6>Existing Columns:</h6>
+    <h6 class="text-dark fw-semibold mb-2">Existing Columns:</h6>
     <div class="table-responsive">
     <table class="table table-bordered align-middle" id="datatable-groups">
             <thead class="bg-primary text-white">
@@ -345,6 +345,11 @@
             </tbody>
         </table>
     </div>
+    @if ($groups->hasPages())
+        <div class="d-flex justify-content-center mt-3">
+            {{ $groups->onEachSide(1)->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
 </div>
 
         </div>

@@ -87,6 +87,10 @@
                                            class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye me-1"></i> View
                                         </a>
+                                        <a href="{{ route('admin.dashboard.students.history', encrypt($student->pk)) }}" 
+                                           class="btn btn-sm btn-info" title="Participant History">
+                                            <i class="fas fa-history me-1"></i> History
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -154,7 +158,7 @@
         // Initialize DataTable if there are students
         @if($students->isNotEmpty())
             dataTable = $('#studentListTable').DataTable({
-                "pageLength": 25,
+                "pageLength": 10,
                 "order": [[0, "asc"]],
                 "language": {
                     "search": "_INPUT_",

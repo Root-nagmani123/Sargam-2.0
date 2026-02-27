@@ -53,16 +53,16 @@ input:focus {
 }
 </style>
 
-<div class="container-fluid">
+<div class="container-fluid medical-exception-faculty-view">
     <x-breadcrum title="Medical Exception Faculty View"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row mb-3">
-                <div class="col-6">
+                <div class="col-12 col-md-6">
                     <h4>Medical Exception Faculty View</h4>
                 </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-center gap-2">
+                <div class="col-12 col-md-6">
+                    <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
                         <button type="button" class="btn btn-info d-flex align-items-center" onclick="window.print()">
                             <i class="material-icons menu-icon material-symbols-rounded"
                                 style="font-size: 24px;">print</i>
@@ -71,8 +71,8 @@ input:focus {
                     </div>
                 </div>
             </div>
-            <form class="row" role="search" aria-label="Medical exception filters">
-                <div class="col-3">
+            <form class="row" role="search" aria-label="Medical exception filters" method="GET" action="{{ route('medical.exception.faculty.view') }}">
+                <div class="col-12 col-md-5">
                     <div class="mb-3">
                         <label for="filter_course" class="form-label">Course Name</label>
                         <select name="course" id="filter_course" class="form-control"
@@ -85,47 +85,16 @@ input:focus {
                             records.</small>
                     </div>
                 </div>
-                <div class="col-4" aria-label="Date range">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="filter_date_from" class="form-label">Date From</label>
-                                <input type="date" name="date_from" id="filter_date_from" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="filter_date_to" class="form-label">Date To</label>
-                                <input type="date" name="date_to" id="filter_date_to" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-4" aria-label="Time range">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="filter_time_from" class="form-label">Time From</label>
-                                <input type="time" name="time_from" id="filter_time_from" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="filter_time_to" class="form-label">Time To</label>
-                                <input type="time" name="time_to" id="filter_time_to" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-1">
+                <div class="col-12 col-md-5">
                     <div class="mb-3">
-                        <label for="filter_ot" class="form-label">OT Code</label>
-                        <select name="ot_code" id="filter_ot" class="form-control" aria-describedby="filter_ot_help">
-                            <option value="">Select</option>
-                            <option value="A01">A01</option>
-                            <option value="A02">A02</option>
-                        </select>
-                        <small id="filter_ot_help" class="form-text text-muted">Filter by OT code.</small>
+                        <label for="filter_date_from" class="form-label">Date From</label>
+                        <input type="date" name="date_from" id="filter_date_from" class="form-control" value="{{ $dateFromFilter ?? '' }}">
+                    </div>
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="mb-3 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-success flex-fill">Filter</button>
+                        <a href="{{ route('medical.exception.faculty.view') }}" class="btn btn-primary flex-fill">Reset</a>
                     </div>
                 </div>
             </form>
@@ -148,20 +117,65 @@ input:focus {
                     <thead>
                         <tr>
                             <th scope="col">Course Name</th>
-                            <th scope="col">CC</th>
-                            <th scope="col">Total Students</th>
-                            <th scope="col">Students on Medical Exception</th>
+                            <th scope="col">Faculty Name</th>
+                            <th scope="col">Topics</th>
+                            <th scope="col">Student Name</th>
+                            <th scope="col">Medical Exception Date</th>
+                            <th scope="col">Medical Exception Time</th>
+                            <th scope="col">OT Code</th>
+                            <th scope="col">Medical Document</th>
+                            <th scope="col">Application Type</th>
+                           {{--<th scope="col">Exemption Count</th>--}}
+                            <th scope="col">Submitted On</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($coursePaginator as $course)
-                        <tr>
-                            <td>{{ $course['course_name'] }}</td>
-                            <td>{{ $course['cc_name'] ?? 'N/A' }}</td>
-                            <td>{{ $course['total_students'] }}</td>
-                            <td>{{ $course['total_exemption_count'] }}</td>
-                        </tr>
-                        @endforeach
+                    <tbody id="facultyAccordion">
+                        @forelse($data ?? [] as $index => $record)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $record->course_name ?? 'N/A' }}</td>
+                                <td>{{ $record->faculty_name ?? 'N/A' }}</td>
+                                <td>{{ $record->topics ?? 'N/A' }}</td>
+                                <td>{{ $record->student_name ?? 'N/A' }}</td>
+                                <td>
+                                    @if($record->from_date)
+                                        {{ \Carbon\Carbon::parse($record->from_date)->format('d-m-Y') }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($record->from_date)
+                                        {{ \Carbon\Carbon::parse($record->from_date)->format('h:i A') }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>{{ $record->ot_code ?? 'N/A' }}</td>
+                                <td>
+                                    @if($record->medical_document)
+                                        <a href="{{ asset('storage/' . $record->medical_document) }}" target="_blank" class="btn btn-sm btn-info">
+                                            <i class="material-icons" style="font-size: 18px;">visibility</i> View
+                                        </a>
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>{{ $record->application_type ?? 'N/A' }}</td>
+                                {{--<td>{{ $record->exemption_count ?? 0 }}</td>--}}
+                                <td>
+                                    @if($record->submitted_on)
+                                        {{ \Carbon\Carbon::parse($record->submitted_on)->format('d-m-Y h:i A') }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="12" class="text-center">No medical exception records found.</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -355,5 +369,14 @@ input:focus {
         </div>
     </div>
 </div>
+
+<style>
+    /* Mobile responsive - desktop unchanged */
+    @media (max-width: 767.98px) {
+        .medical-exception-faculty-view .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+</style>
 
 @endsection

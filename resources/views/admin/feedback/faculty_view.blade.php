@@ -7,9 +7,7 @@
     <!-- GIGW + LBSNAA / SARGAM THEME -->
     <style>
         :root {
-            /* LBSNAA / SARGAM inspired palette */
-            --primary: #af2910;
-            /* Deep institutional blue */
+            --primary: #004a93;
             --secondary: #f4f6f9;
             /* Neutral background */
             --accent: #f2b705;
@@ -72,9 +70,287 @@
             padding: 1rem;
         }
 
-        /* Accessibility */
-        label {
-            font-weight: 500;
+        .rating-header {
+            color: #004a93 !important;
+            font-weight: 600;
+        }
+
+        .percentage-cell {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Faculty suggestions */
+        .suggestions-container {
+            position: relative;
+        }
+
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .faculty-type-badge {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        /* Pagination styles */
+        .pagination-info {
+            font-size: 0.875rem;
+        }
+
+        /* Export button styles */
+        .export-btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .export-btn {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .export-btn i {
+            font-size: 0.875rem;
+        }
+
+        /* Responsive styles - tablet and below (desktop unchanged) */
+        @media (max-width: 991.98px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .content-card .card-header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header .page-title {
+                width: 100%;
+                font-size: 1.1rem;
+            }
+
+            .content-card .card-header .d-flex.align-items-center {
+                flex-wrap: wrap;
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header .btn-group {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header small.text-muted {
+                width: 100%;
+                margin-left: 0 !important;
+                font-size: 0.75rem;
+            }
+
+            .feedback-section .text-center.mb-4 {
+                text-align: start !important;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                font-size: 0.9rem;
+                word-break: break-word;
+                display: flex;
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 0 0.25rem;
+            }
+
+            .feedback-section .text-center.mb-4 p strong {
+                min-width: 7rem;
+                flex-shrink: 0;
+            }
+
+            .table-responsive {
+                margin-left: -0.5rem;
+                margin-right: -0.5rem;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .table-responsive .table {
+                font-size: 0.875rem;
+            }
+
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+
+            .remarks-list {
+                padding: 0.75rem;
+                font-size: 0.875rem;
+            }
+
+            .pagination-info {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .container-fluid .row.g-3 {
+                margin-left: -0.25rem;
+                margin-right: -0.25rem;
+            }
+
+            .content-card .card-header .page-title {
+                font-size: 1rem;
+            }
+
+            .content-card .card-header .btn-group .btn {
+                font-size: 0.8rem;
+                padding: 0.35rem 0.5rem;
+            }
+
+            .content-card .card-header .btn-group .btn i {
+                margin-right: 0.25rem !important;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                font-size: 0.85rem;
+            }
+
+            .feedback-section .text-center.mb-4 {
+                text-align: start !important;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                display: flex;
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 0 0.25rem;
+            }
+
+            .feedback-section .text-center.mb-4 p strong {
+                display: inline-block;
+                min-width: 7rem;
+                flex-shrink: 0;
+            }
+
+            .table-responsive .table {
+                font-size: 0.8rem;
+            }
+
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.4rem 0.35rem;
+            }
+
+            .d-flex.justify-content-between.align-items-center {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .d-flex.justify-content-between.align-items-center > div:first-child {
+                width: 100%;
+                order: 1;
+            }
+
+            .d-flex.justify-content-between.align-items-center > div:last-child {
+                width: 100%;
+                justify-content: center;
+                order: 2;
+            }
+
+            .d-flex.justify-content-between.align-items-center .btn-sm {
+                font-size: 0.8rem;
+            }
+
+            .filter-card .card-body .d-flex.gap-2 {
+                flex-direction: column;
+            }
+
+            .filter-card .card-body .d-flex.gap-2 .btn {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .content-card .card-header .btn-group {
+                flex-direction: column;
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header .btn-group .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .page-title {
+                font-size: 0.95rem;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                font-size: 0.8rem;
+            }
+
+            .remarks-title {
+                font-size: 0.9rem;
+                padding: 0.4rem 0.5rem;
+            }
+
+            .remarks-list {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .suggestions-list {
+                max-height: 150px;
+            }
         }
     </style>
     </head>
@@ -177,13 +453,68 @@
 
                         <div class="card-body">
 
-                            <!-- META INFO -->
-                            <div class="text-center mb-4">
-                                <p class="mb-1"><strong>Course:</strong> ITP-126 2025 MAR</p>
-                                <p class="mb-1"><strong>Faculty:</strong> Prof. Sunita Rani</p>
-                                <p class="mb-1"><strong>Topic:</strong> Leadership Module</p>
-                                <p class="mb-0"><strong>Lecture Date:</strong> 17-Feb-2025 (14:30 – 16:55)</p>
-                            </div>
+                                        <!-- FEEDBACK TABLE -->
+                                        <div class="table-responsive mb-4">
+                                            <table class="table table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">Rating</th>
+                                                        <th scope="col">Content <span class="text-dark">*</span></th>
+                                                        <th scope="col">Presentation <span class="text-dark">*</span>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="align-middle text-dark">
+                                                    <!-- Excellent -->
+                                                    <tr>
+                                                        <th class="rating-header" style="color:#004a93 !important;">
+                                                            Excellent</th>
+                                                        <td>{{ $data['content_counts']['5'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['5'] ?? 0 }}</td>
+                                                    </tr>
+                                                    <!-- Very Good -->
+                                                    <tr>
+                                                        <th class="rating-header" style="color:#004a93 !important;">Very
+                                                            Good</th>
+                                                        <td>{{ $data['content_counts']['4'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['4'] ?? 0 }}</td>
+                                                    </tr>
+                                                    <!-- Good -->
+                                                    <tr>
+                                                        <th class="rating-header" style="color:#004a93 !important;">Good
+                                                        </th>
+                                                        <td>{{ $data['content_counts']['3'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['3'] ?? 0 }}</td>
+                                                    </tr>
+                                                    <!-- Average -->
+                                                    <tr>
+                                                        <th class="rating-header" style="color:#004a93 !important;">
+                                                            Average</th>
+                                                        <td>{{ $data['content_counts']['2'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['2'] ?? 0 }}</td>
+                                                    </tr>
+                                                    <!-- Below Average -->
+                                                    <tr>
+                                                        <th class="rating-header" style="color:#004a93 !important;">Below
+                                                            Average</th>
+                                                        <td>{{ $data['content_counts']['1'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['1'] ?? 0 }}</td>
+                                                    </tr>
+                                                    <!-- Percentage -->
+                                                    <tr class="fw-semibold">
+                                                        <th class="rating-header" style="color:#004a93 !important;">
+                                                            Percentage</th>
+                                                        <td class="percentage-cell">
+                                                            {{ number_format($data['content_percentage'] ?? 0, 2) }}%</td>
+                                                        <td class="percentage-cell">
+                                                            {{ number_format($data['presentation_percentage'] ?? 0, 2) }}%
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                            {{-- <small>* is defined as Total Student Count:
+                                                {{ $data['participants'] ?? 0 }}</small> --}}
+                                        </div>
 
                             <!-- FEEDBACK TABLE -->
                             <div class="table-responsive mb-4">

@@ -57,9 +57,24 @@
                                         </a></li>
                                 </div>
                             </li>
+                            <ul class="collapse" id="generalMasterMenu">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('Venue-Master.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Venue
+                                            Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.class.session.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Class
+                                            Session</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('stream.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Stream</span>
+                                    </a></li>
+                            </ul>
 
                             <!-- HOSTEL -->
-                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2 d-none" style="background: #4077ad;
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -102,6 +117,36 @@
                                         </a></li>
                                 </div>
                             </li>
+                            <div class="collapse" id="hostelMenu">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.hostel.building.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Building Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
+                                <span class="hide-menu small small-sm-normal text-nowrap">Hostel
+                                    Room</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.hostel.floor.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">
+                                            Floor</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                                <span
+                                    class="hide-menu small small-sm-normal text-nowrap">Hostel
+                                    Floor Mapping</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('hostel.building.floor.room.map.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Building
+                                            Floor Room Mapping</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('hostel.building.map.assign.student') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Assign
+                                            Hostel</span>
+                                    </a></li>
+                            </div>
 
                             <!-- ADDRESS -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;

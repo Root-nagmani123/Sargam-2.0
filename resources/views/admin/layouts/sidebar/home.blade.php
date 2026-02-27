@@ -1,4 +1,4 @@
- <aside class="side-mini-panel with-vertical" id="mainSidebar">
+ <aside class="side-mini-panel with-vertical sidebar-google-style" id="mainSidebar">
      <div style="height: 100vh; display: flex; flex-direction: column;">
          <!-- ---------------------------------- -->
          <!-- Start Vertical Layout Sidebar -->
@@ -6,13 +6,13 @@
          <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column;">
              <div style="flex: 1 1 auto; display: flex; flex-direction: column;">
                  <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column;">
-                    <div class="d-flex align-items-center justify-content-end" style="margin-right: 0.5rem;">
+                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
     <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
-        data-bs-custom-class="custom-tooltip" data-bs-placement="right"ria-label="Toggle menu">
+        data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
 
-        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded text-dark"
-            style="font-size: 40px;">
-            keyboard_double_arrow_right
+        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded"
+            style="font-size: 24px;">
+            menu
         </i>
 
     </a>
@@ -28,28 +28,24 @@
                                          aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                          <div class="simplebar-content" style="padding: 0px;">
 
-                                             @include('components.profile')
-
-
-                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
-                                                 id="mini-1">
-                                                 <a href="javascript:void(0)"
-                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                     data-bs-placement="right" data-bs-title="General">
-
-                                                     <div class="d-flex align-items-center gap-2">
-                                                         <i class="material-icons menu-icon material-symbols-rounded"
-                                                             style="font-size: 32px;">apps</i>
-                                                     </div>
-                                                 </a>
-                                             </li>
+                                            <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
+                                                id="mini-1">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="General">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">apps</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">General</span>
+                                                </a>
+                                            </li>
 
                                          </div>
                                      </div>
                                  </div>
                              </div>
-                             <div class="simplebar-placeholder" style="width: 80px; height: 537px;"></div>
+                             <div class="simplebar-placeholder" style="width: 80px; min-width: 80px; height: 537px;"></div>
                          </div>
                          <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
                              <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
@@ -73,22 +69,108 @@
      </div>
  </aside>
 
- <script>
+<style>
+/* Google-style sidebar - home */
+#sidebar-home .sidebar-google-style.side-mini-panel {
+    width: 90px;
+}
+#sidebar-home .sidebar-google-style .mini-nav {
+    background: #F0F0F0 !important;
+    padding: 12px 0;
+    border-radius: 10px;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-hamburger {
+    padding: 16px 0;
+    margin: 0;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
+    color: #555 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item {
+    list-style: none;
+    display: flex !important;
+    justify-content: center !important;
+    width: 100%;
+}
+#sidebar-home .sidebar-google-style .mini-nav ul.mini-nav-ul {
+    padding-inline-start: 0 !important;
+    list-style: none !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 8px !important;
+    padding-left: 8px !important;
+    margin: 4px 8px !important;
+    background: transparent !important;
+    height: auto !important;
+    min-height: 56px;
+    width: 100%;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px;
+    text-align: center !important;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 48px;
+    height: 32px;
+    margin-inline: auto;
+    border-radius: 24px;
+    transition: background 0.2s;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
+    line-height: 1 !important;
+    vertical-align: middle !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
+    font-size: 24px !important;
+    color: #555 !important;
+}
+#sidebar-home .sidebar-google-style .sidebar-google-label {
+    font-size: 11px;
+    color: #555 !important;
+    font-weight: 400;
+    text-align: center;
+    line-height: 1.2;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
+    color: #333 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
+    background: #E0E0E0 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
+    color: #333 !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
+    display: none !important;
+}
+</style>
+
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Home sidebar script started');
-
-    // Wait a bit for sidebarmenu.js to finish
-    setTimeout(function() {
-        // Scope to ONLY the home tab
-        const homeTab = document.getElementById('home');
-        if (!homeTab) {
-            console.error('Home tab not found');
-            return;
-        }
+    const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
+    // Scope to home sidebar (in #sidebar-home tab pane)
+    const sidebarHome = document.getElementById('sidebar-home');
+    if (!sidebarHome) {
+        console.error('Home sidebar not found');
+        return;
+    }
 
         // Initialize mini-navbar functionality for home ONLY
-        const miniNavItems = homeTab.querySelectorAll('.mini-nav .mini-nav-item');
-        const sidebarMenus = homeTab.querySelectorAll('.sidebarmenu nav');
+        const miniNavItems = sidebarHome.querySelectorAll('.mini-nav .mini-nav-item');
+        const sidebarMenus = sidebarHome.querySelectorAll('.sidebarmenu nav');
 
         console.log('Found mini-nav items in home tab:', miniNavItems.length);
         console.log('Found sidebar menus in home tab:', sidebarMenus.length);

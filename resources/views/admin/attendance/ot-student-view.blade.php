@@ -2,11 +2,9 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
-<!-- Skip to main content - GIGW Accessibility Requirement -->
-<a href="#main-content" class="skip-to-main" aria-label="Skip to main content">Skip to main content</a>
-
-<div class="container-fluid" id="main-content" role="main">
+@section('content')
+<div class="container-fluid">
+     @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
     @endif

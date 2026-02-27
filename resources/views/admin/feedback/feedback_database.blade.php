@@ -69,12 +69,285 @@ body {
 
     <!-- HEADER -->
 
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <!-- HEADER -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width: 40px; height: 40px; background: var(--lbsnaa-blue); 
+        /* Filter dropdown styling */
+        .dynamic-filter-container {
+            transition: all 0.3s ease;
+        }
+
+        .dynamic-filter-container.hidden {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dynamic-filter-container.visible {
+            opacity: 1;
+            height: auto;
+        }
+
+        /* Responsive styles - only apply below desktop (992px), desktop view unchanged */
+        @media (max-width: 991px) {
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem;
+            }
+            .export-btn-group {
+                width: 100%;
+                display: flex;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+            }
+            .export-btn-group .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 0.75rem;
+            }
+            /* Ensure Show entries + Search controls use full width and align nicely */
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 > div {
+                width: 100%;
+            }
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 .form-select.d-inline-block,
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 .form-control.d-inline-block {
+                width: 100% !important;
+            }
+            .card-body .d-flex.justify-content-between.align-items-center.mb-3 label {
+                display: block;
+                margin-bottom: 0.25rem;
+            }
+            #tableContainer {
+                margin-left: -0.75rem;
+                margin-right: -0.75rem;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #feedbackTable {
+                font-size: 0.875rem;
+            }
+            #feedbackTable th,
+            #feedbackTable td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+            #paginationSection {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: center !important;
+                text-align: center;
+            }
+            #paginationSection .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .page-title {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            .card-body {
+                padding: 1rem;
+            }
+            .row.g-3 {
+                margin-left: -0.25rem;
+                margin-right: -0.25rem;
+            }
+            .row.g-3 > [class*="col-"] {
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
+            }
+            .export-btn-group {
+                flex-direction: column;
+            }
+            .export-btn-group .btn {
+                min-width: 100%;
+            }
+            #feedbackTable th,
+            #feedbackTable td {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.3rem;
+            }
+            .percentage-badge {
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+            /* Make comments modal fully visible & scrollable on small screens */
+            .modal-dialog.modal-lg {
+                max-width: 100%;
+                width: 100%;
+                margin: 0.5rem;
+            }
+            #commentsModal .modal-content {
+                max-height: 80vh;
+                display: flex;
+                flex-direction: column;
+            }
+            #commentsModal .modal-body {
+                overflow-y: auto;
+            }
+        }
+
+        /* Comments Modal - Bootstrap 5.3 enhanced UI/UX */
+        #commentsModal .modal-dialog {
+            max-width: 640px;
+        }
+        #commentsModal .modal-content {
+            border: none;
+            border-radius: var(--admin-radius-lg, 0.75rem);
+            box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 74, 147, 0.08);
+        }
+        #commentsModal .modal-header {
+            background: linear-gradient(135deg, rgba(0, 74, 147, 0.06) 0%, rgba(0, 74, 147, 0.02) 100%);
+            border-bottom: 1px solid rgba(0, 74, 147, 0.12);
+            padding: 1rem 1.25rem;
+            border-radius: var(--admin-radius-lg, 0.75rem) var(--admin-radius-lg, 0.75rem) 0 0;
+        }
+        #commentsModal .modal-title {
+            font-weight: 600;
+            color: var(--admin-primary, #004a93);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #commentsModal .modal-title .comments-count-badge {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.25em 0.6em;
+            background: rgba(0, 74, 147, 0.12);
+            color: var(--admin-primary, #004a93);
+            border-radius: 9999px;
+        }
+        #commentsModal .modal-body {
+            padding: 1.25rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        #commentsModal .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .comment-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            margin-bottom: 0.5rem;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .comment-item:last-child {
+            margin-bottom: 0;
+        }
+        .comment-item:hover {
+            background: #f1f5f9;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .comment-item .comment-icon {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 74, 147, 0.1);
+            color: var(--admin-primary, #004a93);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        .comment-item .comment-text {
+            flex: 1;
+            font-size: 0.9375rem;
+            line-height: 1.55;
+            color: #334155;
+        }
+        .comment-item .comment-index {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+            min-width: 1.5rem;
+        }
+        #commentsModal .comments-empty-state {
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+        }
+        #commentsModal .comments-empty-state .empty-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 74, 147, 0.08);
+            color: var(--admin-primary, #004a93);
+            border-radius: 50%;
+            font-size: 1.5rem;
+        }
+        #commentsModal .comments-empty-state p {
+            color: #64748b;
+            margin: 0;
+        }
+
+        /* Dark mode support for comments modal */
+        [data-bs-theme="dark"] .comment-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+        [data-bs-theme="dark"] .comment-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        [data-bs-theme="dark"] .comment-item .comment-text {
+            color: rgba(255, 255, 255, 0.85);
+        }
+        [data-bs-theme="dark"] .comment-item .comment-index {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        [data-bs-theme="dark"] #commentsModal .modal-body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        [data-bs-theme="dark"] #commentsModal .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        [data-bs-theme="dark"] #commentsModal .modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+
+    <div class="container-fluid">
+        <x-breadcrum title="Feedback Database"></x-breadcrum>
+
+
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
+                <!-- HEADER -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div
+                            style="width: 40px; height: 40px; background: var(--lbsnaa-blue); 
                        display: flex; align-items: center; justify-content: center; 
                        border-radius: 6px; color: white; font-weight: bold;">
                         S
@@ -239,20 +512,21 @@ body {
             </div>
         </div>
 
-        <!-- TABLE CONTROLS -->
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <div>
-                <label class="me-2">Show</label>
-                <select class="form-select d-inline-block w-auto">
-                    <option>10</option>
-                    <option>25</option>
-                    <option>50</option>
-                </select>
-                <label class="ms-2">entries</label>
-            </div>
-            <div>
-                <label class="me-2">Search within table:</label>
-                <input type="text" class="form-control d-inline-block w-auto">
+    <!-- Comments Modal - Bootstrap 5.3 enhanced -->
+    <div class="modal fade" id="commentsModal" tabindex="-1" aria-labelledby="commentsModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="commentsModalLabel">
+                        <i class="bi bi-chat-square-text me-2"></i>
+                        Feedback Comments
+                        <span class="comments-count-badge ms-2" id="commentsCountBadge" style="display: none;"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="commentsContent"></div>
+                </div>
             </div>
         </div>
 
@@ -320,4 +594,821 @@ body {
         </div>
 
     </div>
-    @endsection
+@endsection
+
+@section('css')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.min.css">
+@endsection
+
+@section('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Prevent duplicate execution
+            if (window.feedbackPageLoaded) {
+                console.log('Script already loaded, skipping');
+                return;
+            }
+            window.feedbackPageLoaded = true;
+
+            console.log('=== FEEDBACK PAGE INITIALIZATION ===');
+
+            let currentPage = 1;
+            let perPage = 10;
+            let totalRecords = 0;
+            let currentFilters = {
+                course_id: '',
+                search_param: 'all',
+                faculty_id: '',
+                topic_value: ''
+            };
+            let debounceTimer;
+
+            // Check if required elements exist
+            if (!checkRequiredElements()) {
+                console.error('Required elements not found');
+                return;
+            }
+
+            // Initialize
+            initializeEventListeners();
+            autoSelectFirstCourse();
+
+            function checkRequiredElements() {
+                const requiredElements = [
+                    '#courseSelect',
+                    '#searchParam',
+                    '#feedbackTableBody',
+                    '#loadingOverlay'
+                ];
+
+                for (const selector of requiredElements) {
+                    if (!$(selector).length) {
+                        console.error(`Required element not found: ${selector}`);
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            function autoSelectFirstCourse() {
+                const courseSelect = $('#courseSelect');
+                if (!courseSelect.length) return;
+
+                const firstCourseOption = courseSelect.find('option:not(:first):not([disabled])').first();
+
+                if (firstCourseOption.length > 0) {
+                    const courseId = firstCourseOption.val();
+                    const courseName = firstCourseOption.text();
+
+                    courseSelect.val(courseId);
+                    currentFilters.course_id = courseId;
+
+                    $('#feedbackTableBody').html(`
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-3">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        Loading feedback data for "${courseName}"...
+                    </td>
+                </tr>
+            `);
+
+                    loadFeedbackData();
+                } else {
+                    showInitialMessage();
+                }
+            }
+
+            function initializeEventListeners() {
+                // Safely bind events only if elements exist
+                safeBind('#courseSelect', 'change', function(e) {
+                    e.preventDefault();
+                    const courseId = $(this).val();
+                    if (courseId) {
+                        currentFilters.course_id = courseId;
+                        currentPage = 1;
+                        loadFeedbackData();
+                    } else {
+                        showInitialMessage();
+                    }
+                });
+
+                safeBind('#searchParam', 'change', function(e) {
+                    e.preventDefault();
+                    const searchParam = $(this).val();
+                    currentFilters.search_param = searchParam;
+
+                    $('.dynamic-filter-container').addClass('d-none').removeClass('d-block');
+
+                    if (searchParam === 'faculty') {
+                        showElement('#facultyFilterContainer');
+                        currentFilters.faculty_id = $('#facultyFilter').val();
+                        currentFilters.topic_value = '';
+                        $('#topicFilter').val('');
+                    } else if (searchParam === 'topic') {
+                        showElement('#topicFilterContainer');
+                        currentFilters.topic_value = $('#topicFilter').val();
+                        currentFilters.faculty_id = '';
+                        $('#facultyFilter').val('');
+                    } else {
+                        currentFilters.faculty_id = '';
+                        currentFilters.topic_value = '';
+                        $('#facultyFilter').val('');
+                        $('#topicFilter').val('');
+                    }
+
+                    if (currentFilters.course_id) {
+                        currentPage = 1;
+                        loadFeedbackData();
+                    }
+                });
+
+                safeBind('#facultyFilter', 'change', function(e) {
+                    e.preventDefault();
+                    currentFilters.faculty_id = $(this).val();
+                    if (currentFilters.course_id) {
+                        currentPage = 1;
+                        loadFeedbackData();
+                    }
+                });
+
+                safeBind('#topicFilter', 'input', function(e) {
+                    e.preventDefault();
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        currentFilters.topic_value = $(this).val();
+                        if (currentFilters.course_id && currentFilters.topic_value.length >= 2) {
+                            currentPage = 1;
+                            loadFeedbackData();
+                        }
+                    }, 500);
+                });
+
+                safeBind('#clearTopicBtn', 'click', function(e) {
+                    e.preventDefault();
+                    $('#topicFilter').val('');
+                    currentFilters.topic_value = '';
+                    if (currentFilters.course_id) {
+                        currentPage = 1;
+                        loadFeedbackData();
+                    }
+                });
+
+                safeBind('#clearFiltersBtn', 'click', function(e) {
+                    e.preventDefault();
+                    clearAllFilters();
+                });
+
+                safeBind('#perPageSelect', 'change', function(e) {
+                    e.preventDefault();
+                    perPage = $(this).val();
+                    currentPage = 1;
+                    if (currentFilters.course_id) {
+                        loadFeedbackData();
+                    }
+                });
+
+                safeBind('#tableSearch', 'keyup', function(e) {
+                    e.preventDefault();
+                    const searchText = $(this).val().toLowerCase();
+                    $('#feedbackTableBody tr').each(function() {
+                        const rowText = $(this).text().toLowerCase();
+                        $(this).toggle(rowText.includes(searchText));
+                    });
+                });
+
+                safeBind('#exportExcelBtn', 'click', function(e) {
+                    e.preventDefault();
+                    exportData('excel');
+                });
+
+                safeBind('#exportPdfBtn', 'click', function(e) {
+                    e.preventDefault();
+                    exportData('pdf');
+                });
+            }
+
+            // Helper function to safely bind events
+            function safeBind(selector, event, handler) {
+                const element = $(selector);
+                if (element.length) {
+                    element.off(event).on(event, handler);
+                } else {
+                    console.warn(`Element not found for binding: ${selector}`);
+                }
+            }
+
+            // Helper function to safely show elements
+            function showElement(selector) {
+                const element = $(selector);
+                if (element.length) {
+                    element.removeClass('d-none').addClass('d-block');
+                }
+            }
+
+            function clearAllFilters() {
+                $('#courseSelect').val('');
+                $('#searchParam').val('all');
+                $('#facultyFilter').val('');
+                $('#topicFilter').val('');
+
+                $('.dynamic-filter-container').addClass('d-none').removeClass('d-block');
+
+                currentFilters = {
+                    course_id: '',
+                    search_param: 'all',
+                    faculty_id: '',
+                    topic_value: ''
+                };
+                currentPage = 1;
+
+                showInitialMessage();
+            }
+
+            function showInitialMessage() {
+                const hasCourses = $('#courseSelect option').length > 1;
+
+                if (hasCourses) {
+                    $('#feedbackTableBody').html(`
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-5">
+                        <i class="bi bi-database me-2"></i>
+                        Select a program to view feedback data
+                    </td>
+                </tr>
+            `);
+                } else {
+                    $('#feedbackTableBody').html(`
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-5">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        No programs available. Please add courses first.
+                    </td>
+                </tr>
+            `);
+                }
+                $('#paginationSection').hide();
+            }
+
+            function loadFeedbackData() {
+                if (!currentFilters.course_id) {
+                    showInitialMessage();
+                    return;
+                }
+
+                showLoading(true);
+
+                const params = new URLSearchParams({
+                    ...currentFilters,
+                    page: currentPage,
+                    per_page: perPage
+                });
+
+                const apiUrl = `/faculty/database/data?${params.toString()}`;
+
+                fetch(apiUrl)
+                    .then(async (response) => {
+                        let data;
+                        try {
+                            data = await response.json();
+                        } catch (e) {
+                            console.error('Invalid JSON response for feedback data', e);
+                            throw new Error('Unexpected response from server.');
+                        }
+
+                        if (!response.ok || !data) {
+                            const message = (data && data.error) ? data.error : 'Error loading data from server.';
+                            throw new Error(message);
+                        }
+
+                        return data;
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            renderTable(data.data);
+                            updatePagination(data);
+                        } else {
+                            showErrorMessage(data.error || 'Error loading data.');
+                        }
+                        showLoading(false);
+                    })
+                    .catch(error => {
+                        console.error('Error loading feedback data:', error);
+                        showErrorMessage(error.message || 'Error loading data. Please try again.');
+                        showLoading(false);
+                    });
+            }
+
+            function renderTable(data) {
+                const tbody = $('#feedbackTableBody');
+                if (!tbody.length) return;
+
+                tbody.empty();
+
+                if (!data || data.length === 0) {
+                    showNoDataMessage();
+                    $('#paginationSection').hide();
+                    return;
+                }
+
+                data.forEach((item, index) => {
+                    const row = `
+                <tr class="table-row-hover">
+                    <td class="text-center">${((currentPage - 1) * perPage) + index + 1}</td>
+                    <td>
+                                    <a href="javascript:void(0)" class="link-primary faculty-link" 
+   data-faculty-id="${item.faculty_enc_id || ''}"
+   title="View faculty details">
+    ${item.faculty_name}
+</a>
+                    </td>
+                    <td>${item.course_name}</td>
+                    <td>
+                        <small>
+                            ${item.faculty_address || 'N/A'}
+                            ${item.faculty_email ? `<br><a href="mailto:${item.faculty_email}" class="text-muted">${item.faculty_email}</a>` : ''}
+                        </small>
+                    </td>
+                    <td>
+                        <small class="text-truncate" style="max-width: 200px; display: block;" 
+                               title="${item.subject_topic}">
+                            ${item.subject_topic}
+                        </small>
+                    </td>
+                    <td class="text-center">
+                        <span class="percentage-badge ${getPercentageClass(item.avg_content_percent)}">
+                            ${formatPercentage(item.avg_content_percent)}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="percentage-badge ${getPercentageClass(item.avg_presentation_percent)}">
+                            ${formatPercentage(item.avg_presentation_percent)}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-primary">${item.participant_count}</span>
+                    </td>
+                    <td class="text-center">
+                        <small>${formatDate(item.session_date)}</small>
+                    </td>
+                    <td class="text-center">
+                        ${item.all_comments ? 
+                            `<button class="btn btn-sm btn-outline-primary view-comments-btn" 
+                                                                                 data-comments="${escapeHtml(item.all_comments)}">
+                                                                            <i class="bi bi-chat-text"></i> View
+                                                                        </button>` : 
+                            '<span class="text-muted">No comments</span>'
+                        }
+                    </td>
+                </tr>
+            `;
+                    tbody.append(row);
+                });
+
+                // Safely bind comments modal
+                $('.view-comments-btn').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    const comments = $(this).data('comments');
+                    const modalElement = document.getElementById('commentsModal');
+                    if (modalElement) {
+                        const commentList = comments ? comments.split(' | ').filter(c => c && c.trim()) : [];
+                        const countBadge = $('#commentsCountBadge');
+                        if (commentList.length > 0) {
+                            countBadge.text(commentList.length + ' ' + (commentList.length === 1 ? 'comment' : 'comments')).show();
+                            $('#commentsContent').html(commentList.map((comment, i) => `
+                                <div class="comment-item">
+                                    <span class="comment-icon"><i class="bi bi-chat-quote"></i></span>
+                                    <p class="comment-text mb-0">${escapeHtml(comment.trim())}</p>
+                                    <span class="comment-index">#${i + 1}</span>
+                                </div>
+                            `).join(''));
+                        } else {
+                            countBadge.hide();
+                            $('#commentsContent').html(`
+                                <div class="comments-empty-state">
+                                    <div class="empty-icon"><i class="bi bi-chat-dots"></i></div>
+                                    <p>No feedback comments available for this session.</p>
+                                </div>
+                            `);
+                        }
+                        new bootstrap.Modal(modalElement).show();
+                    }
+                });
+
+                // Faculty link handlers
+                $('.faculty-link').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    const facultyId = $(this).data('faculty-id');
+                    if (facultyId) {
+                        window.open(`/faculty/show/${facultyId}`, '_blank');
+                    }
+                });
+            }
+
+            function updatePagination(data) {
+                const paginationSection = $('#paginationSection');
+                if (!paginationSection.length) return;
+
+                totalRecords = data.total;
+                const totalPages = Math.ceil(totalRecords / perPage);
+
+                $('#paginationInfo').text(
+                    `Showing ${((currentPage - 1) * perPage) + 1} to ${Math.min(currentPage * perPage, totalRecords)} of ${totalRecords} entries`
+                );
+
+                const paginationLinks = $('#paginationLinks');
+                if (!paginationLinks.length) return;
+
+                paginationLinks.empty();
+
+                if (totalPages <= 1) {
+                    paginationSection.hide();
+                    return;
+                }
+
+                paginationSection.show();
+
+                const prevLi = $(`<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="javascript:void(0)" data-page="${currentPage - 1}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>`);
+                paginationLinks.append(prevLi);
+
+                // Page numbers
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+                if (endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageLi = $(`<li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="javascript:void(0)" data-page="${i}">${i}</a>
+            </li>`);
+                    paginationLinks.append(pageLi);
+                }
+
+                // Next button
+                const nextLi = $(`<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="javascript:void(0)" data-page="${currentPage + 1}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>`);
+                paginationLinks.append(nextLi);
+
+                // Add click handlers
+                $('.page-link').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    const page = $(this).data('page');
+                    if (page && page >= 1 && page <= totalPages) {
+                        currentPage = page;
+                        loadFeedbackData();
+                    }
+                });
+            }
+
+            async function exportData(format) {
+                if (!currentFilters.course_id) {
+                    alert('Please select a program first');
+                    return;
+                }
+
+                showLoading(true);
+
+                try {
+                    const params = new URLSearchParams({
+                        ...currentFilters,
+                        export_type: format
+                    });
+
+                    const response = await fetch(`/faculty/database/export?${params.toString()}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        if (format === 'excel') {
+                            await exportToExcel(data.data, data.filename);
+                        } else if (format === 'pdf') {
+                            await exportToPdf(data.data, data.filename);
+                        }
+                    } else {
+                        alert('Error exporting data: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Export error:', error);
+                    alert('Error exporting data');
+                } finally {
+                    showLoading(false);
+                }
+            }
+
+            function exportToExcel(data, filename) {
+
+                const cleanText = value => {
+                    if (!value) return '';
+                    return value
+                        .toString()
+                        .replace(/[\r\n]+/g, ' ') 
+                        .replace(/\s+/g, ' ') 
+                        .trim();
+                };
+
+                const formattedData = data.map(row => ({
+                    ...row,
+                    'Faculty Address': cleanText(row['Faculty Address']),
+                    'Topic': cleanText(row['Topic']),
+                    'Comments': cleanText(row['Comments']) !== '' &&
+                        cleanText(row['Comments']).toLowerCase() !== 'null' ?
+                        cleanText(row['Comments']) :
+                        'NA'
+                }));
+
+                const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Feedback Database');
+
+                const range = XLSX.utils.decode_range(worksheet['!ref']);
+                const headers = Object.keys(formattedData[0]);
+
+                for (let C = range.s.c; C <= range.e.c; C++) {
+                    const addr = XLSX.utils.encode_cell({
+                        r: 0,
+                        c: C
+                    });
+                    if (!worksheet[addr]) continue;
+
+                    worksheet[addr].s = {
+                        font: {
+                            bold: true
+                        },
+                        fill: {
+                            patternType: "solid",
+                            fgColor: {
+                                rgb: "FFCC00"
+                            }
+                        },
+                        alignment: {
+                            horizontal: "center",
+                            vertical: "center"
+                        }
+                    };
+                }
+
+                for (let R = 1; R <= range.e.r; R++) {
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                        const addr = XLSX.utils.encode_cell({
+                            r: R,
+                            c: C
+                        });
+                        if (!worksheet[addr]) continue;
+
+                        worksheet[addr].s = worksheet[addr].s || {};
+                        worksheet[addr].s.alignment = {
+                            horizontal: ['Faculty Address', 'Topic', 'Comments'].includes(headers[C]) ?
+                                "left" :
+                                "center",
+                            vertical: "top",
+                            wrapText: false
+                        };
+                    }
+                }
+
+                worksheet['!cols'] = headers.map(h => {
+                    if (h === 'Faculty Address') return {
+                        wch: 65
+                    };
+                    if (h === 'Topic') return {
+                        wch: 60
+                    };
+                    if (h === 'Comments') return {
+                        wch: 70
+                    };
+                    return {
+                        wch: 22
+                    };
+                });
+
+                worksheet['!freeze'] = {
+                    ySplit: 1
+                };
+
+                XLSX.writeFile(workbook, `${filename}.xlsx`);
+            }
+
+
+
+
+            function exportToPdf(data, filename) {
+                const {
+                    jsPDF
+                } = window.jspdf;
+
+                const formattedData = data.map(row => ({
+                    ...row,
+                    'Comments': row['Comments'] && row['Comments'].toString().trim() !== '' && row[
+                            'Comments'].toString().toLowerCase() !== 'null' ?
+                        row['Comments'] : 'NA',
+                    'Content (%)': row['Content (%)'] != null && row['Content (%)'].toString()
+                        .toLowerCase() !== 'null' ?
+                        Number(row['Content (%)']).toFixed(2) : '0.00',
+                    'Presentation (%)': row['Presentation (%)'] != null && row['Presentation (%)']
+                        .toString().toLowerCase() !== 'null' ?
+                        Number(row['Presentation (%)']).toFixed(2) : '0.00',
+                    'Faculty Address': (row['Faculty Address'] || '').replace(/\n/g, ' ') // single line
+                }));
+
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a3'
+                });
+
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const today = new Date().toLocaleDateString('en-GB');
+                const totalRecords = formattedData.length;
+
+                // Title
+                doc.setFontSize(16);
+                doc.setTextColor(11, 79, 138);
+                doc.text('Feedback Database Report', pageWidth / 2, 15, {
+                    align: 'center'
+                });
+
+                doc.setFontSize(10);
+                doc.setTextColor(80, 80, 80);
+                const program = getFiltersSummary().replace(/^Filters:\s*/i, '');
+                doc.text(`Program: ${program}`, 10, 25);
+                doc.setFontSize(9);
+                doc.text(`Date: ${today}`, 10, 31);
+                doc.text(`Total Records: ${totalRecords}`, 10, 36);
+
+                const tableData = formattedData.map(row => [
+                    row['S.No.'],
+                    row['Faculty Name'],
+                    row['Course Name'],
+                    row['Faculty Address'],
+                    row['Topic'],
+                    row['Content (%)'],
+                    row['Presentation (%)'],
+                    row['No. of Participants'],
+                    row['Session Date'],
+                    row['Comments']
+                ]);
+
+                doc.autoTable({
+                    head: [
+                        [
+                            'S.No.', 'Faculty Name', 'Course', 'Faculty Address', 'Topic',
+                            'Content %', 'Pres. %', 'Participants', 'Session Date', 'Comments'
+                        ]
+                    ],
+                    body: tableData,
+                    startY: 42,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2,
+                        overflow: 'linebreak', 
+                        halign: 'center', 
+                        valign: 'middle'
+                    },
+                    headStyles: {
+                        fillColor: [255, 204, 0], 
+                        textColor: 0,
+                        fontSize: 8,
+                        halign: 'center',
+                        valign: 'middle'
+                    },
+                    columnStyles: {
+                        0: {
+                            cellWidth: 14,
+                            halign: 'center'
+                        }, // S.No.
+                        1: {
+                            cellWidth: 40
+                        }, // Faculty Name
+                        2: {
+                            cellWidth: 42
+                        }, // Course
+                        3: {
+                            cellWidth: 55
+                        }, // Faculty Address
+                        4: {
+                            cellWidth: 60
+                        }, // Topic
+                        5: {
+                            cellWidth: 20,
+                            halign: 'center'
+                        }, // Content %
+                        6: {
+                            cellWidth: 20,
+                            halign: 'center'
+                        }, // Presentation %
+                        7: {
+                            cellWidth: 25,
+                            halign: 'center'
+                        }, // Participants
+                        8: {
+                            cellWidth: 28,
+                            halign: 'center'
+                        }, // Session Date
+                        9: {
+                            cellWidth: 70
+                        } // Comments
+                    },
+                    margin: {
+                        left: 6,
+                        right: 6
+                    }
+                });
+
+                doc.save(`${filename}.pdf`);
+            }
+
+
+
+
+            function getFiltersSummary() {
+                let summary = [];
+                if (currentFilters.course_id) {
+                    const courseName = $('#courseSelect option:selected').text();
+                    summary.push(`Program: ${courseName}`);
+                }
+                if (currentFilters.search_param === 'faculty' && currentFilters.faculty_id) {
+                    const facultyName = $('#facultyFilter option:selected').text();
+                    summary.push(`Faculty: ${facultyName}`);
+                }
+                if (currentFilters.search_param === 'topic' && currentFilters.topic_value) {
+                    summary.push(`Topic: ${currentFilters.topic_value}`);
+                }
+                return summary.length > 0 ? `Filters: ${summary.join(' | ')}` : 'All Records';
+            }
+
+            function showLoading(show) {
+                if (show) {
+                    $('#loadingOverlay').fadeIn(200);
+                } else {
+                    $('#loadingOverlay').fadeOut(200);
+                }
+            }
+
+            function showNoDataMessage() {
+                $('#feedbackTableBody').html(`
+            <tr>
+                <td colspan="10" class="text-center text-muted py-5">
+                    <i class="bi bi-search me-2"></i>
+                    No feedback data found for the selected criteria
+                </td>
+            </tr>
+        `);
+            }
+
+            function showErrorMessage(message) {
+                $('#feedbackTableBody').html(`
+            <tr>
+                <td colspan="10" class="text-center text-danger py-5">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    ${message}
+                </td>
+            </tr>
+        `);
+            }
+
+            function formatPercentage(value) {
+                const num = parseFloat(value) || 0;
+                return num.toFixed(2) + '%';
+            }
+
+            function getPercentageClass(value) {
+                const num = parseFloat(value) || 0;
+                if (num >= 90) return 'percentage-excellent';
+                if (num >= 80) return 'percentage-good';
+                return 'percentage-average';
+            }
+
+            function formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        });
+    </script>
+@endsection

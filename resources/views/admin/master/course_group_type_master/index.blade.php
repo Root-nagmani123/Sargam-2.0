@@ -3,72 +3,45 @@
 @section('title', 'Course Group Type')
 
 @section('setup_content')
-<style>
-    .disabled-link {
-        pointer-events: none;
-        /* click बंद */
-        opacity: 0.5;
-        /* disabled look */
-        cursor: not-allowed;
-    }
-    .dropdown-item {
-    padding: 10px 14px;
-    font-size: 14px;
-    transition: background 0.2s ease;
-}
-
-.dropdown-item:hover {
-    background-color: #f5f6f8;
-}
-
-.dropdown-item i {
-    font-size: 18px;
-}
-
-</style>
-<div class="container-fluid">
+<div class="container-fluid px-3 px-md-4 px-lg-5 py-3 py-md-4 course-group-type-index">
     <x-breadcrum title="Course Group Type"></x-breadcrum>
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden border-start border-4 border-primary admin-card">
+            <div class="card-body p-4 p-lg-5">
+                <section class="row align-items-center mb-4 g-3 row-gap-2" role="region" aria-labelledby="courseGroupTypeHeading">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <h1 id="courseGroupTypeHeading" class="h4 fw-bold mb-2 mb-md-0 d-flex align-items-center gap-2">
+                            <span class="rounded-2 p-2 bg-primary bg-opacity-10">
+                                <i class="material-icons material-symbols-rounded text-primary fs-4">category</i>
+                            </span>
+                            <span>Course Group Type</span>
+                        </h1>
+                        <p class="mb-0 small text-body-secondary mt-1">Manage course group type configurations</p>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-8">
+                        <div class="d-flex flex-wrap justify-content-md-end">
+                            <button id="showAlert" type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold shadow-sm" aria-label="Add course group type">
+                                <i class="material-icons material-symbols-rounded fs-5">add</i>
+                                <span>Add Course Group Type</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                <div class="border-top pt-4 mt-2"></div>
                 <div class="table-responsive">
-                    <div class="row align-items-center">
-                        <div class="col-6">
-                            <h4 class="mb-0">Course Group Type</h4>
-                        </div>
-
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end gap-2 align-items-center">
-                                <button id="showAlert" class="btn btn-primary">Add Course Group Type</button>
-                                <!-- Add Button -->
-                                <!-- <a href="{{ route('master.course.group.type.create') }}" class="btn btn-primary">
-                                    <i class="material-icons menu-icon me-1">add</i> Add Course Group Type
-                                </a> -->
-
-
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="table-responsive">
-                        <table class="table" id="coursegrouptype">
-                            <thead>
-                                <!-- start row -->
-                                <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">Type Name</th>
-                                    <th class="col">Status</th>
-                                    <th class="col">Action</th>
-                                </tr>
-                                <!-- end row -->
-                            </thead>
-                        </table>
-                    </div>
+                    <table class="table align-middle mb-0" id="coursegrouptype">
+                        <thead>
+                            <tr>
+                                <th>S.No.</th>
+                                <th>Course group type name</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 <input type="hidden" id="pk" value="">
@@ -80,7 +53,8 @@
         let table = $('#coursegrouptype').DataTable({
             processing: true,
             serverSide: true,
-            searching: true, 
+            searching: true,
+            responsive: true,
             ajax: {
                 url: "{{ route('master.course.group.type.grouptypeview') }}",
                 data: function(d) {
@@ -94,23 +68,27 @@
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
                     orderable: false,
-                    searchable: false
+                    searchable: false,
+                    responsivePriority: 3
                 },
                 {
                     data: 'type_name',
-                    name: 'type_name'
+                    name: 'type_name',
+                    responsivePriority: 1
                 },
                 {
                     data: 'status',
                     name: 'status',
                     orderable: false,
-                    searchable: false
+                    searchable: false,
+                    responsivePriority: 4
                 },
                 {
                     data: 'action',
                     name: 'action',
                     orderable: false,
-                    searchable: false
+                    searchable: false,
+                    responsivePriority: 2
                 }
             ]
 
@@ -191,9 +169,6 @@
                         showConfirmButton: false
                     });
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Revert the checkbox state
-                    checkbox.prop('checked', !active_inactive);
-                    // Show cancel message
                     Swal.fire({
                         icon: 'danger',
                         title: 'Cancelled',
@@ -212,47 +187,37 @@
 document.getElementById('showAlert').addEventListener('click', function () {
 
     Swal.fire({
-        title: '<strong><small>Add Course Group Type</small></strong>',
+        title: '<strong class="text-body">Add Course Group Type</strong>',
         html: `
-        <form id="courseGroupTypeForm">
+        <form id="courseGroupTypeForm" class="text-start">
             <input type="hidden" name="_token" value="{{ csrf_token() }}">
-
-            <div class="row mb-1 align-items-center">
-                <label class="col-auto col-form-label fw-semibold">
+            <div class="mb-3">
+                <label class="form-label fw-semibold text-body">
                     Type Name <span class="text-danger">*</span>
                 </label>
-                <div class="col">
-                    <input type="text" 
-                           name="type_name" 
-                           id="type_name" 
-                           class="form-control">
-                    <small class="text-danger d-none" id="type_name_error">
-                        Type Name is required
-                    </small>
+                <input type="text" name="type_name" id="type_name"
+                       class="form-control form-control-lg rounded-2"
+                       placeholder="Enter type name">
+                <div class="invalid-feedback" id="type_name_error">
+                    Type Name is required
                 </div>
             </div>
         </form>
         `,
         showCancelButton: true,
         confirmButtonText: 'Submit',
+        cancelButtonText: 'Cancel',
+        customClass: { confirmButton: 'btn btn-primary px-4 rounded-2', cancelButton: 'btn btn-outline-secondary px-4 rounded-2' },
         focusConfirm: false,
 
         preConfirm: () => {
             const typeNameInput = Swal.getPopup().querySelector('#type_name');
-            const errorMsg = Swal.getPopup().querySelector('#type_name_error');
-
             typeNameInput.classList.remove('is-invalid');
-            errorMsg.classList.add('d-none');
-
             if (!typeNameInput.value.trim()) {
                 typeNameInput.classList.add('is-invalid');
-                errorMsg.classList.remove('d-none');
                 return false;
             }
-
-            return {
-                type_name: typeNameInput.value.trim()
-            };
+            return { type_name: typeNameInput.value.trim() };
         }
     }).then((result) => {
 
@@ -313,50 +278,38 @@ $(document).on('click', '.edit-btn', function () {
     let url = "{{ route('master.course.group.type.store') }}";
 
     Swal.fire({
-        title: '<strong><small>Edit Course Group Type</small></strong>',
+        title: '<strong class="text-body">Edit Course Group Type</strong>',
         html: `
-        <form id="courseGroupTypeEditForm">
+        <form id="courseGroupTypeEditForm" class="text-start">
             <input type="hidden" name="_token" value="{{ csrf_token() }}">
             <input type="hidden" name="id" value="${pk}">
-
-            <div class="row mb-1 align-items-center">
-                <label class="col-auto col-form-label fw-semibold">
+            <div class="mb-3">
+                <label class="form-label fw-semibold text-body">
                     Type Name <span class="text-danger">*</span>
                 </label>
-                <div class="col">
-                    <input type="text"
-                           name="type_name"
-                           id="type_name"
-                           class="form-control"
-                           value="${typeName}">
-                    <small class="text-danger d-none" id="type_name_error">
-                        Type Name is required
-                    </small>
+                <input type="text" name="type_name" id="type_name"
+                       class="form-control form-control-lg rounded-2"
+                       value="${typeName.replace(/"/g, '&quot;')}">
+                <div class="invalid-feedback" id="type_name_error">
+                    Type Name is required
                 </div>
             </div>
         </form>
         `,
         showCancelButton: true,
         confirmButtonText: 'Update',
+        cancelButtonText: 'Cancel',
+        customClass: { confirmButton: 'btn btn-primary px-4 rounded-2', cancelButton: 'btn btn-outline-secondary px-4 rounded-2' },
         focusConfirm: false,
 
         preConfirm: () => {
             const typeNameInput = Swal.getPopup().querySelector('#type_name');
-            const errorMsg = Swal.getPopup().querySelector('#type_name_error');
-
             typeNameInput.classList.remove('is-invalid');
-            errorMsg.classList.add('d-none');
-
             if (!typeNameInput.value.trim()) {
                 typeNameInput.classList.add('is-invalid');
-                errorMsg.classList.remove('d-none');
                 return false;
             }
-
-            return {
-                id: pk,
-                type_name: typeNameInput.value.trim()
-            };
+            return { id: pk, type_name: typeNameInput.value.trim() };
         }
     }).then((result) => {
 

@@ -120,6 +120,133 @@
         background-color: #fff3cd;
         color: #856404;
     }
+    
+    /* Responsive styles - only apply on smaller screens, desktop view unchanged */
+    @media (max-width: 991px) {
+        .student-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .record-count-badge {
+            font-size: 16px;
+            padding: 8px 16px;
+        }
+        
+        .record-details {
+            grid-template-columns: 1fr;
+        }
+        
+        .record-item .d-flex.justify-content-between.align-items-center {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .record-item .d-flex.justify-content-between.align-items-center > div {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .conversation-header {
+            flex-direction: column;
+            gap: 4px;
+        }
+    }
+    
+    @media (max-width: 767px) {
+        .student-card {
+            padding: 15px;
+        }
+        
+        .student-header h5 {
+            font-size: 1rem;
+        }
+        
+        .student-header h5 .material-symbols-rounded {
+            font-size: 20px !important;
+        }
+        
+        .record-count-badge {
+            font-size: 14px;
+            padding: 6px 12px;
+        }
+        
+        .record-item {
+            padding: 12px;
+        }
+        
+        .record-item h6 {
+            font-size: 0.95rem;
+        }
+        
+        .record-item h6 .material-symbols-rounded {
+            font-size: 18px !important;
+        }
+        
+        .detail-item {
+            font-size: 13px;
+        }
+        
+        .type-badge,
+        .status-badge {
+            font-size: 11px;
+            padding: 4px 10px;
+        }
+        
+        .conversation-item {
+            padding: 8px;
+        }
+        
+        .conversation-header {
+            font-size: 11px;
+        }
+        
+        .conversation-message {
+            font-size: 13px;
+        }
+        
+        .card-body .row.mb-3 .col-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        
+        .card-body .row.mb-3 .col-6:first-child {
+            margin-bottom: 10px;
+        }
+        
+        .card-body .row.mb-3 .d-flex.justify-content-end {
+            justify-content: flex-start !important;
+        }
+        
+        .card.bg-light .card-body .row .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+    
+    @media (max-width: 575px) {
+        .student-card {
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .record-count-badge .material-symbols-rounded {
+            font-size: 16px !important;
+        }
+        
+        .btn-info {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .student-header h5,
+        .detail-value,
+        .conversation-message {
+            word-break: break-word;
+        }
+    }
 </style>
 
 <div class="container-fluid">

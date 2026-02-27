@@ -29,7 +29,7 @@
                                 placeholder="Name" 
                                 formLabelClass="form-label"
                                 required="true"
-                                value="{{ old('department_name', $departmentMaster->department_name ?? '') }}"
+                                value="{{ old('department_name', optional($departmentMaster)->department_name ?? '') }}"
                                 />
                         </div>
                     </div>
@@ -41,7 +41,7 @@
                         <i class="material-icons menu-icon">save</i>
                         {{ !empty($departmentMaster) ? 'Update' : 'Save' }}
                     </button>
-                    <a href="{{ route('master.class.session.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+                    <a href="{{ route('master.department.master.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
                         <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>

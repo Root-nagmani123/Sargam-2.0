@@ -4,395 +4,483 @@
 
 @section('content')
 <style>
-    .student-info-table th {
-        color: #1a1a1a !important;
-        font-weight: 600;
-    }
-    .card table th {
-        color: #1a1a1a !important;
-        font-weight: 600;
-    }
+    .student-info-table th { color: #1a1a1a !important; font-weight: 600; }
+    .card table th { color: #1a1a1a !important; font-weight: 600; }
+    .student-hero { background: #004a93; }
+    .metric-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .metric-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1); }
+    .memo-card { border-left: 4px solid #fd7e14; }
+    .exemption-card .badge { font-size: 0.75rem; }
+    .cursor-pointer { cursor: pointer; }
 </style>
 <div class="container-fluid">
     <x-breadcrum title="Student Details"></x-breadcrum>
     <x-session_message />
 
-    <!-- Student Basic Information -->
-    <div class="card mb-4" style="border-left: 4px solid #004a93;">
-        <div class="card-header bg-primary text-white py-2">
-            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Student Information</h6>
-        </div>
-        <div class="card-body py-3">
-            <div class="row">
-                <div class="col-md-12">
-                    <table class="table table-borderless student-info-table mb-0">
-                        <tr>
-                            <th width="15%" class="py-1">Student Name:</th>
-                            <td class="py-1">{{ $student->display_name ?? ($student->first_name ?? '') . ' ' . ($student->last_name ?? '') }}</td>
-                            <th width="15%" class="py-1">OT Code:</th>
-                            <td class="py-1">{{ $student->generated_OT_code ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <th class="py-1">Email:</th>
-                            <td class="py-1">{{ $student->email ?? 'N/A' }}</td>
-                            <th class="py-1">Service:</th>
-                            <td class="py-1">{{ $student->service->service_name ?? 'N/A' }}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #dc3545; cursor: pointer;" onclick="scrollToSection('medicalExceptionsSection')">
-                <div class="card-body">
-                    <h3 class="text-danger">{{ $medicalExemptions->count() }}</h3>
-                    <p class="mb-0">Medical Exceptions</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #ffc107; cursor: pointer;" onclick="scrollToSection('dutiesSection')">
-                <div class="card-body">
-                    <h3 class="text-warning">{{ $duties->count() }}</h3>
-                    <p class="mb-0">Duties Assigned</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #17a2b8; cursor: pointer;" onclick="scrollToSection('noticesSection')">
-                <div class="card-body">
-                    <h3 class="text-info">{{ $notices->count() }}</h3>
-                    <p class="mb-0">Notices Received</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #6c757d; cursor: pointer;" onclick="scrollToSection('memosSection')">
-                <div class="card-body">
-                    <h3 class="text-secondary">{{ $memos->count() }}</h3>
-                    <p class="mb-0">Memos Issued</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Medical Exceptions -->
-    <div class="card mb-4" id="medicalExceptionsSection">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Medical Exceptions ({{ $medicalExemptions->count() }})</h5>
+    <!-- Student Hero Banner -->
+    <div class="student-hero rounded-3 shadow-sm mb-4 p-4 text-white">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('medicalExemptionsTable', 'Medical_Exceptions')">
-                    <i class="fas fa-file-excel me-1"></i>Export Excel
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('medicalExemptionsTable')">
-                    <i class="fas fa-print me-1"></i>Print
-                </button>
+                <small class="opacity-90 text-white d-block mb-1">Student Profile</small>
+                <h1 class="h3 mb-2 fw-bold text-white">{{ $student->display_name ?? ($student->first_name ?? '') . ' ' . ($student->last_name ?? '') }}</h1>
+                <p class="mb-0 small text-white">
+                    {{ $student->service->service_name ?? 'N/A' }}
+                    @if(isset($student->cadre) && $student->cadre)
+                        • {{ $student->cadre->cadre_name ?? 'N/A' }}
+                    @endif
+                    • {{ $student->generated_OT_code ?? 'N/A' }}
+                </p>
+            </div>
+            <div class="bg-dark bg-opacity-25 rounded-3 px-3 py-2 text-nowrap">
+                <small class="d-block text-white-50">Status</small>
+                <span class="fw-bold">Active Student</span>
             </div>
         </div>
-        <div class="card-body">
-            @if($medicalExemptions->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-hover" id="medicalExemptionsTable">
+    </div>
+
+    <!-- Key Metrics / Summary Cards -->
+    <div class="row g-3 mb-4">
+        @if($attendanceSummary && $attendanceSummary->total_sessions > 0)
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-success fw-bold">{{ $attendanceSummary->present_count ?? 0 }}</h4>
+                    <small class="text-body-primary">PRESENT</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-warning fw-bold">{{ $attendanceSummary->late_count ?? 0 }}</h4>
+                    <small class="text-body-primary">LATE</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-danger fw-bold">{{ $attendanceSummary->absent_count ?? 0 }}</h4>
+                    <small class="text-body-primary">ABSENT</small>
+                </div>
+            </div>
+        </div>
+        @endif
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('medicalExceptionsSection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-info fw-bold">{{ $medicalExemptions->count() }}</h4>
+                    <small class="text-body-primary">MEDICAL</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('dutiesSection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-primary fw-bold">{{ $duties->count() }}</h4>
+                    <small class="text-body-primary">DUTIES</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('noticesSection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-info fw-bold">{{ $notices->count() }}</h4>
+                    <small class="text-body-primary">NOTICES</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('memosSection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-secondary fw-bold">{{ $memos->count() }}</h4>
+                    <small class="text-body-primary">MEMOS</small>
+                </div>
+            </div>
+        </div>
+        @if($attendanceSummary && $attendanceSummary->total_sessions > 0)
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 metric-card text-center h-100 cursor-pointer" onclick="scrollToSection('attendanceSummarySection')" role="button" tabindex="0">
+                <div class="card-body py-3">
+                    <h4 class="mb-0 text-body-tertiary fw-bold">{{ $attendanceSummary->not_marked_count ?? 0 }}</h4>
+                    <small class="text-body-primary">NOT MARKED</small>
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Medical Exceptions -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4" id="medicalExceptionsSection">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-semibold"><i class="fas fa-heartbeat me-2 text-danger"></i>Medical Exceptions ({{ $medicalExemptions->count() }})</h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('medicalExemptionsTable', 'Medical_Exceptions')">
+                            <i class="fas fa-file-excel me-1"></i>Export Excel
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="printTable('medicalExemptionsTable')">
+                            <i class="fas fa-print me-1"></i>Print
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    @if($medicalExemptions->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="medicalExemptionsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>From Date</th>
+                                        <th>To Date</th>
+                                        <th>Category</th>
+                                        <th>Speciality</th>
+                                        <th>Description</th>
+                                        <th>Document</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($medicalExemptions as $exemption)
+                                        <tr>
+                                            <td>{{ $exemption->course->course_name ?? 'N/A' }}</td>
+                                            <td>{{ $exemption->from_date ? \Carbon\Carbon::parse($exemption->from_date)->format('d M Y h:i A') : 'N/A' }}</td>
+                                            <td>{{ $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y h:i A') : 'N/A' }}</td>
+                                            <td>{{ $exemption->category->exemp_category_name ?? 'N/A' }}</td>
+                                            <td>{{ $exemption->speciality->speciality_name ?? 'N/A' }}</td>
+                                            <td>{{ $exemption->Description ?? 'N/A' }}</td>
+                                            <td class="text-center">
+                                                @if($exemption->Doc_upload)
+                                                    <a href="{{ asset('storage/' . $exemption->Doc_upload) }}" target="_blank"
+                                                        class="btn btn-sm btn-info" title="View Document" data-bs-toggle="tooltip"
+                                                        data-bs-placement="top">
+                                                        <i class="fas fa-file-pdf"></i> View
+                                                    </a>
+                                                @else
+                                                    <span class="text-muted">N/A</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-muted mb-0">No medical exceptions found.</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Duties Assigned -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4" id="dutiesSection">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-semibold"><i class="fas fa-tasks me-2 text-primary"></i>Duties Assigned ({{ $duties->count() }})</h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('dutiesTable', 'Duties_Assigned')">
+                            <i class="fas fa-file-excel me-1"></i>Export Excel
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="printTable('dutiesTable')">
+                            <i class="fas fa-print me-1"></i>Print
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    @if($duties->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="dutiesTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Duty Type</th>
+                                        <th>Date</th>
+                                        <th>Time From</th>
+                                        <th>Time To</th>
+                                        <th>Faculty</th>
+                                        <th>Remark</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($duties as $duty)
+                                        <tr>
+                                            <td>{{ $duty->courseMaster->course_name ?? 'N/A' }}</td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    {{ $duty->mdoDutyTypeMaster->mdo_duty_type_name ?? 'N/A' }}
+                                                </span>
+                                            </td>
+                                            <td>{{ $duty->mdo_date ? \Carbon\Carbon::parse($duty->mdo_date)->format('d M Y h:i A') : 'N/A' }}</td>
+                                            <td>{{ $duty->Time_from ?? 'N/A' }}</td>
+                                            <td>{{ $duty->Time_to ?? 'N/A' }}</td>
+                                            <td>{{ $duty->facultyMaster->full_name ?? 'N/A' }}</td>
+                                            <td>{{ $duty->Remark ?? 'N/A' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-muted mb-0">No duties assigned.</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Notices Received -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4" id="noticesSection">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-semibold"><i class="fas fa-bell me-2 text-warning"></i>Notices Received ({{ $notices->count() }})</h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('noticesTable', 'Notices_Received')">
+                            <i class="fas fa-file-excel me-1"></i>Export Excel
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="printTable('noticesTable')">
+                            <i class="fas fa-print me-1"></i>Print
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    @if($notices->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="noticesTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Session Date</th>
+                                        <th>Topic</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($notices as $notice)
+                                        <tr>
+                                            <td>{{ $notice->course_name ?? 'N/A' }}</td>
+                                            <td>{{ $notice->session_date ? \Carbon\Carbon::parse($notice->session_date)->format('d M Y h:i A') : 'N/A' }}</td>
+                                            <td>{{ $notice->topic ?? 'N/A' }}</td>
+                                            <td>
+                                                @if($notice->status == 1)
+                                                    <span class="badge bg-warning text-dark">Pending</span>
+                                                @elseif($notice->status == 2)
+                                                    <span class="badge bg-danger">Escalated</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Unknown</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-muted mb-0">No notices received.</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Memos Issued -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4" id="memosSection">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-semibold"><i class="fas fa-file-alt me-2 text-secondary"></i>Memos Issued ({{ $memos->count() }})</h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('memosTable', 'Memos_Issued')">
+                            <i class="fas fa-file-excel me-1"></i>Export Excel
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="printTable('memosTable')">
+                            <i class="fas fa-print me-1"></i>Print
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    @if($memos->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="memosTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Session Date</th>
+                                        <th>Topic</th>
+                                        <th>Conclusion Type</th>
+                                        <th>Status</th>
+                                        <th>Response</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($memos as $memo)
+                                        <tr>
+                                            <td>{{ $memo->course_name ?? 'N/A' }}</td>
+                                            <td>{{ $memo->session_date ? \Carbon\Carbon::parse($memo->session_date)->format('d M Y h:i A') : 'N/A' }}</td>
+                                            <td>{{ $memo->topic ?? 'N/A' }}</td>
+                                            <td>{{ $memo->conclusion_type ?? 'N/A' }}</td>
+                                            <td>
+                                                @if($memo->status == 1)
+                                                    <span class="badge bg-warning text-dark">Pending</span>
+                                                @elseif($memo->status == 2)
+                                                    <span class="badge bg-success">Resolved</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Unknown</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $memo->response ?? 'N/A' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-muted mb-0">No memos issued.</p>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Attendance Summary -->
+            @if($attendanceSummary && $attendanceSummary->total_sessions > 0)
+            <div class="card border-0 shadow-sm rounded-3 mb-4" id="attendanceSummarySection">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-semibold"><i class="fas fa-calendar-check me-2 text-success"></i>Attendance Summary</h5>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('attendanceSummaryTable', 'Attendance_Summary')">
+                            <i class="fas fa-file-excel me-1"></i>Export Excel
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="printTable('attendanceSummaryTable')">
+                            <i class="fas fa-print me-1"></i>Print
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <!-- Hidden table for export/print -->
+                    <table class="table table-bordered d-none" id="attendanceSummaryTable">
                         <thead>
                             <tr>
-                                <th>Course</th>
-                                <th>From Date</th>
-                                <th>To Date</th>
-                                <th>Category</th>
-                                <th>Speciality</th>
-                                <th>Description</th>
-                                <th>Document</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($medicalExemptions as $exemption)
-                                <tr>
-                                    <td>{{ $exemption->course->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $exemption->from_date ? \Carbon\Carbon::parse($exemption->from_date)->format('d M Y h:i A') : 'N/A' }}</td>
-                                    <td>{{ $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y h:i A') : 'N/A' }}</td>
-                                    <td>{{ $exemption->category->exemp_category_name ?? 'N/A' }}</td>
-                                    <td>{{ $exemption->speciality->speciality_name ?? 'N/A' }}</td>
-                                    <td>{{ $exemption->Description ?? 'N/A' }}</td>
-                                    <td class="text-center">
-                                        @if($exemption->Doc_upload)
-                                            <a href="{{ asset('storage/' . $exemption->Doc_upload) }}" target="_blank"
-                                                class="btn btn-sm btn-info" title="View Document" data-bs-toggle="tooltip"
-                                                data-bs-placement="top">
-                                                <i class="fas fa-file-pdf"></i> View
-                                            </a>
-                                        @else
-                                            <span class="text-muted">N/A</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <p class="text-muted">No medical exceptions found.</p>
-            @endif
-        </div>
-    </div>
-
-    <!-- Duties Assigned -->
-    <div class="card mb-4" id="dutiesSection">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Duties Assigned ({{ $duties->count() }})</h5>
-            <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('dutiesTable', 'Duties_Assigned')">
-                    <i class="fas fa-file-excel me-1"></i>Export Excel
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('dutiesTable')">
-                    <i class="fas fa-print me-1"></i>Print
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            @if($duties->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-hover" id="dutiesTable">
-                        <thead>
-                            <tr>
-                                <th>Course</th>
-                                <th>Duty Type</th>
-                                <th>Date</th>
-                                <th>Time From</th>
-                                <th>Time To</th>
-                                <th>Faculty</th>
-                                <th>Remark</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($duties as $duty)
-                                <tr>
-                                    <td>{{ $duty->courseMaster->course_name ?? 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            {{ $duty->mdoDutyTypeMaster->mdo_duty_type_name ?? 'N/A' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $duty->mdo_date ? \Carbon\Carbon::parse($duty->mdo_date)->format('d M Y h:i A') : 'N/A' }}</td>
-                                    <td>{{ $duty->Time_from ?? 'N/A' }}</td>
-                                    <td>{{ $duty->Time_to ?? 'N/A' }}</td>
-                                    <td>{{ $duty->facultyMaster->full_name ?? 'N/A' }}</td>
-                                    <td>{{ $duty->Remark ?? 'N/A' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <p class="text-muted">No duties assigned.</p>
-            @endif
-        </div>
-    </div>
-
-    <!-- Notices Received -->
-    <div class="card mb-4" id="noticesSection">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notices Received ({{ $notices->count() }})</h5>
-            <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('noticesTable', 'Notices_Received')">
-                    <i class="fas fa-file-excel me-1"></i>Export Excel
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('noticesTable')">
-                    <i class="fas fa-print me-1"></i>Print
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            @if($notices->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-hover" id="noticesTable">
-                        <thead>
-                            <tr>
-                                <th>Course</th>
-                                <th>Session Date</th>
-                                <th>Topic</th>
                                 <th>Status</th>
+                                <th>Count</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($notices as $notice)
-                                <tr>
-                                    <td>{{ $notice->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $notice->session_date ? \Carbon\Carbon::parse($notice->session_date)->format('d M Y h:i A') : 'N/A' }}</td>
-                                    <td>{{ $notice->topic ?? 'N/A' }}</td>
-                                    <td>
-                                        @if($notice->status == 1)
-                                            <span class="badge bg-warning">Pending</span>
-                                        @elseif($notice->status == 2)
-                                            <span class="badge bg-danger">Escalated</span>
-                                        @else
-                                            <span class="badge bg-secondary">Unknown</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <p class="text-muted">No notices received.</p>
-            @endif
-        </div>
-    </div>
-
-    <!-- Memos Issued -->
-    <div class="card mb-4" id="memosSection">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Memos Issued ({{ $memos->count() }})</h5>
-            <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('memosTable', 'Memos_Issued')">
-                    <i class="fas fa-file-excel me-1"></i>Export Excel
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('memosTable')">
-                    <i class="fas fa-print me-1"></i>Print
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            @if($memos->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-hover" id="memosTable">
-                        <thead>
                             <tr>
-                                <th>Course</th>
-                                <th>Session Date</th>
-                                <th>Topic</th>
-                                <th>Conclusion Type</th>
-                                <th>Status</th>
-                                <th>Response</th>
+                                <td>Present</td>
+                                <td>{{ $attendanceSummary->present_count ?? 0 }}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($memos as $memo)
-                                <tr>
-                                    <td>{{ $memo->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $memo->session_date ? \Carbon\Carbon::parse($memo->session_date)->format('d M Y h:i A') : 'N/A' }}</td>
-                                    <td>{{ $memo->topic ?? 'N/A' }}</td>
-                                    <td>{{ $memo->conclusion_type ?? 'N/A' }}</td>
-                                    <td>
-                                        @if($memo->status == 1)
-                                            <span class="badge bg-warning">Pending</span>
-                                        @elseif($memo->status == 2)
-                                            <span class="badge bg-success">Resolved</span>
-                                        @else
-                                            <span class="badge bg-secondary">Unknown</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $memo->response ?? 'N/A' }}</td>
-                                </tr>
-                            @endforeach
+                            <tr>
+                                <td>Late</td>
+                                <td>{{ $attendanceSummary->late_count ?? 0 }}</td>
+                            </tr>
+                            <tr>
+                                <td>Absent</td>
+                                <td>{{ $attendanceSummary->absent_count ?? 0 }}</td>
+                            </tr>
+                            <tr>
+                                <td>Not Marked</td>
+                                <td>{{ $attendanceSummary->not_marked_count ?? 0 }}</td>
+                            </tr>
+                            <tr>
+                                <td>Marked Sessions</td>
+                                <td>{{ $attendanceSummary->total_sessions ?? 0 }}</td>
+                            </tr>
+                            <tr>
+                                <td>Total Sessions</td>
+                                <td>{{ $attendanceSummary->total_expected_sessions ?? 0 }}</td>
+                            </tr>
                         </tbody>
                     </table>
+                    <!-- Display cards -->
+                    <div class="row g-3">
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="text-center p-3 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25">
+                                <h4 class="text-success mb-0 fw-bold">{{ $attendanceSummary->present_count ?? 0 }}</h4>
+                                <small class="text-body-primary">Present</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="text-center p-3 bg-warning bg-opacity-10 rounded-3 border border-warning border-opacity-25">
+                                <h4 class="text-warning mb-0 fw-bold">{{ $attendanceSummary->late_count ?? 0 }}</h4>
+                                <small class="text-body-primary">Late</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="text-center p-3 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25">
+                                <h4 class="text-danger mb-0 fw-bold">{{ $attendanceSummary->absent_count ?? 0 }}</h4>
+                                <small class="text-body-primary">Absent</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="text-center p-3 bg-secondary bg-opacity-10 rounded-3 border border-secondary border-opacity-25">
+                                <h4 class="text-secondary mb-0 fw-bold">{{ $attendanceSummary->not_marked_count ?? 0 }}</h4>
+                                <small class="text-body-primary">Not Marked</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="text-center p-3 bg-info bg-opacity-10 rounded-3 border border-info border-opacity-25">
+                                <h4 class="text-info mb-0 fw-bold">{{ $attendanceSummary->total_sessions ?? 0 }}</h4>
+                                <small class="text-body-primary">Marked Sessions</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="text-center p-3 bg-primary bg-opacity-10 rounded-3 border border-primary border-opacity-25">
+                                <h4 class="text-primary mb-0 fw-bold">{{ $attendanceSummary->total_expected_sessions ?? 0 }}</h4>
+                                <small class="text-body-primary">Total Sessions</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            @else
-                <p class="text-muted">No memos issued.</p>
+            </div>
             @endif
         </div>
-    </div>
 
-    <!-- Attendance Summary -->
-    @if($attendanceSummary && $attendanceSummary->total_sessions > 0)
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Attendance Summary</h5>
-            <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('attendanceSummaryTable', 'Attendance_Summary')">
-                    <i class="fas fa-file-excel me-1"></i>Export Excel
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('attendanceSummaryTable')">
-                    <i class="fas fa-print me-1"></i>Print
-                </button>
+        <!-- Right Sidebar: Student Profile & Actions -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                    <h5 class="mb-0 fw-semibold"><i class="fas fa-user me-2 text-primary"></i>Student Profile</h5>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div class="d-flex flex-column gap-3">
+                        <div>
+                            <small class="text-body-primary text-uppercase small">Full Name</small>
+                            <p class="mb-0 fw-medium">{{ $student->display_name ?? ($student->first_name ?? '') . ' ' . ($student->last_name ?? '') }}</p>
+                        </div>
+                        <div>
+                            <small class="text-body-primary text-uppercase small">Email Address</small>
+                            <p class="mb-0 fw-medium">{{ $student->email ?? 'N/A' }}</p>
+                        </div>
+                        <div>
+                            <small class="text-body-primary text-uppercase small">OT Code</small>
+                            <p class="mb-0 fw-medium">{{ $student->generated_OT_code ?? 'N/A' }}</p>
+                        </div>
+                        <div>
+                            <small class="text-body-primary text-uppercase small">Service</small>
+                            <p class="mb-0 fw-medium">{{ $student->service->service_name ?? 'N/A' }}</p>
+                        </div>
+                        @if(isset($student->cadre) && $student->cadre)
+                        <div>
+                            <small class="text-body-primary text-uppercase small">Cadre</small>
+                            <p class="mb-0 fw-medium">{{ $student->cadre->cadre_name ?? 'N/A' }}</p>
+                        </div>
+                        @endif
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="card-body">
-            <!-- Hidden table for export/print -->
-            <table class="table table-bordered" id="attendanceSummaryTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Status</th>
-                        <th>Count</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Present</td>
-                        <td>{{ $attendanceSummary->present_count ?? 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Late</td>
-                        <td>{{ $attendanceSummary->late_count ?? 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Absent</td>
-                        <td>{{ $attendanceSummary->absent_count ?? 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Not Marked</td>
-                        <td>{{ $attendanceSummary->not_marked_count ?? 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Marked Sessions</td>
-                        <td>{{ $attendanceSummary->total_sessions ?? 0 }}</td>
-                    </tr>
-                    <tr>
-                        <td>Total Sessions</td>
-                        <td>{{ $attendanceSummary->total_expected_sessions ?? 0 }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <!-- Display cards -->
-            <div class="row">
-                <div class="col-md-2">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h4 class="text-success">{{ $attendanceSummary->present_count ?? 0 }}</h4>
-                        <small>Present</small>
-                    </div>
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                    <h5 class="mb-0 fw-semibold">Reports & Actions</h5>
                 </div>
-                <div class="col-md-2">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h4 class="text-warning">{{ $attendanceSummary->late_count ?? 0 }}</h4>
-                        <small>Late</small>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h4 class="text-danger">{{ $attendanceSummary->absent_count ?? 0 }}</h4>
-                        <small>Absent</small>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h4 class="text-secondary">{{ $attendanceSummary->not_marked_count ?? 0 }}</h4>
-                        <small>Not Marked</small>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h4 class="text-info">{{ $attendanceSummary->total_sessions ?? 0 }}</h4>
-                        <small>Marked Sessions</small>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h4 class="text-primary">{{ $attendanceSummary->total_expected_sessions ?? 0 }}</h4>
-                        <small>Total Sessions</small>
-                    </div>
+                <div class="card-body px-4 pb-4 d-flex flex-column gap-2">
+                    <a href="{{ route('admin.dashboard.students.history', encrypt($student->pk)) }}" class="btn btn-outline-secondary w-100 justify-content-start">
+                        <i class="fas fa-file-alt me-2"></i>Detailed Report
+                    </a>
+                    <a href="{{ route('admin.dashboard.students.history', encrypt($student->pk)) }}" class="btn btn-outline-secondary w-100 justify-content-start">
+                        <i class="fas fa-graduation-cap me-2"></i>Academic Transcript
+                    </a>
+                    <a href="mailto:{{ $student->email ?? '#' }}" class="btn btn-outline-secondary w-100 justify-content-start">
+                        <i class="fas fa-envelope me-2"></i>Contact Student
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-    @endif
 
     <!-- Back Button -->
-    <div class="mb-4">
+    <div class="mb-4 d-flex flex-wrap gap-2">
+        <a href="{{ route('admin.dashboard.students.history', encrypt($student->pk)) }}" class="btn btn-info">
+            <i class="fas fa-history me-2"></i>View Full Participant History
+        </a>
         <a href="{{ route('admin.dashboard.students') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left me-2"></i>Back to Student List
         </a>

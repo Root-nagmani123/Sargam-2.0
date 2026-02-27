@@ -2,12 +2,13 @@
 
 @section('title', 'User Management - Sargam | Lal Bahadur')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid users-index">
     <x-breadcrum title="Users"></x-breadcrum>
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
-                <div class="row">
+
+                <div class="row mb-2 users-header-row">
                     <div class="col-6">
                         <h4>Users</h4>
                     </div>

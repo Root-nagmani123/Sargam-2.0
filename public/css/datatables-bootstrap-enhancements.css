@@ -1,0 +1,549 @@
+/**
+ * Global DataTables enhancements – Bootstrap 5.3 (refined)
+ * Search, length, info, and pagination with clear hierarchy and polish.
+ */
+
+/* ========== Variables (align with Bootstrap 5.3) ========== */
+.datatables .dataTables_wrapper,
+.dataTables_wrapper {
+  --dt-toolbar-bg: var(--bs-tertiary-bg, #f8f9fa);
+  --dt-toolbar-border: var(--bs-border-color-translucent, rgba(0, 0, 0, 0.075));
+  --dt-input-height: 2.25rem;
+  --dt-input-radius: 0.375rem;
+  --dt-toolbar-radius: 0.5rem;
+  --dt-toolbar-padding-y: 0.75rem;
+  --dt-toolbar-padding-x: 1rem;
+}
+
+/* ========== Wrapper ========== */
+.datatables .dataTables_wrapper,
+.dataTables_wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ========== Top row – toolbar (length + search) ========== */
+.datatables .dataTables_wrapper .row:first-child,
+.datatables .dataTables_wrapper .dt-row:first-child,
+.dataTables_wrapper .row:first-child,
+.dataTables_wrapper .dt-row:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  padding: var(--dt-toolbar-padding-y) var(--dt-toolbar-padding-x);
+  background: var(--dt-toolbar-bg);
+  border: 1px solid var(--dt-toolbar-border);
+  border-radius: var(--dt-toolbar-radius);
+}
+
+.datatables .dataTables_wrapper .row:first-child > *,
+.datatables .dataTables_wrapper .dt-row:first-child > *,
+.dataTables_wrapper .row:first-child > *,
+.dataTables_wrapper .dt-row:first-child > * {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ========== Length (entries per page) ========== */
+.datatables .dataTables_length,
+.dataTables_length {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.datatables .dataTables_length label,
+.dataTables_length label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--bs-body-color);
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.datatables .dataTables_length select,
+.dataTables_length select {
+  display: inline-block;
+  width: auto;
+  min-width: 5rem;
+  height: var(--dt-input-height);
+  padding: 0.25rem 2rem 0.25rem 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--dt-input-radius);
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.datatables .dataTables_length select:hover,
+.dataTables_length select:hover {
+  border-color: var(--bs-primary);
+}
+
+.datatables .dataTables_length select:focus,
+.dataTables_length select:focus {
+  border-color: var(--bs-primary);
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* ========== Search ========== */
+.datatables .dataTables_filter,
+.dataTables_filter {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.datatables .dataTables_filter label,
+.dataTables_filter label {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  width: 100%;
+  max-width: 300px;
+}
+
+/* Search icon inside input (CSS-only) */
+.datatables .dataTables_filter input,
+.dataTables_filter input,
+.datatables .dataTables_filter input[type="search"],
+.dataTables_filter input[type="search"] {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236c757d' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='m21 21-5.2-5.2M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: left 0.65rem center;
+  background-size: 1.1rem;
+}
+
+.datatables .dataTables_filter input,
+.dataTables_filter input,
+.datatables .dataTables_filter input[type="search"],
+.dataTables_filter input[type="search"] {
+  display: block;
+  width: 100%;
+  min-width: 200px;
+  height: var(--dt-input-height);
+  padding: 0.35rem 0.85rem 0.35rem 2.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--dt-input-radius);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.datatables .dataTables_filter input::placeholder,
+.dataTables_filter input::placeholder {
+  color: var(--bs-secondary-color);
+}
+
+.datatables .dataTables_filter input:hover,
+.dataTables_filter input:hover {
+  border-color: var(--bs-primary);
+}
+
+.datatables .dataTables_filter input:focus,
+.dataTables_filter input:focus,
+.datatables .dataTables_filter input[type="search"]:focus,
+.dataTables_filter input[type="search"]:focus {
+  border-color: var(--bs-primary);
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* ========== Bottom row – info + pagination ========== */
+.datatables .dataTables_wrapper .row:last-child,
+.datatables .dataTables_wrapper .dt-row:last-child,
+.dataTables_wrapper .row:last-child,
+.dataTables_wrapper .dt-row:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-top: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0.75rem var(--dt-toolbar-padding-x) 0;
+  border-top: 1px solid var(--dt-toolbar-border);
+}
+
+.datatables .dataTables_wrapper .row:last-child > *,
+.datatables .dataTables_wrapper .dt-row:last-child > *,
+.dataTables_wrapper .row:last-child > *,
+.dataTables_wrapper .dt-row:last-child > * {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ========== Info text ========== */
+.datatables .dataTables_info,
+.dataTables_info {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--bs-secondary-color);
+  padding: 0.35rem 0.65rem;
+  background: var(--dt-toolbar-bg);
+  border-radius: var(--dt-input-radius);
+  border: 1px solid transparent;
+  order: 1;
+}
+
+/* ========== Pagination ========== */
+.datatables .dataTables_paginate,
+.dataTables_paginate {
+  margin-left: auto;
+  order: 2;
+}
+
+.datatables .dataTables_paginate .pagination,
+.dataTables_paginate .pagination {
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.datatables .dataTables_paginate .page-item,
+.dataTables_paginate .page-item {
+  margin: 0;
+}
+
+.datatables .dataTables_paginate .page-link,
+.dataTables_paginate .page-link {
+  min-width: 2.25rem;
+  height: var(--dt-input-height);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dt-input-radius);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.datatables .dataTables_paginate .page-item:not(.active) .page-link:hover,
+.dataTables_paginate .page-item:not(.active) .page-link:hover {
+  background-color: var(--bs-tertiary-bg);
+  border-color: var(--bs-border-color);
+}
+
+.datatables .dataTables_paginate .page-item.active .page-link,
+.dataTables_paginate .page-item.active .page-link {
+  font-weight: 600;
+}
+
+.datatables .dataTables_paginate .page-item.disabled .page-link,
+.dataTables_paginate .page-item.disabled .page-link {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Legacy paginate_button (non-Bootstrap markup) */
+.datatables .dataTables_paginate .paginate_button,
+.dataTables_paginate .paginate_button {
+  min-width: 2.25rem;
+  height: var(--dt-input-height);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0 0.1rem;
+  border-radius: var(--dt-input-radius);
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.datatables .dataTables_paginate .paginate_button:hover:not(.disabled),
+.dataTables_paginate .paginate_button:hover:not(.disabled) {
+  background: var(--bs-tertiary-bg);
+  border-color: var(--bs-border-color);
+}
+
+.datatables .dataTables_paginate .paginate_button.current,
+.dataTables_paginate .paginate_button.current {
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff !important;
+}
+
+.datatables .dataTables_paginate .paginate_button.disabled,
+.dataTables_paginate .paginate_button.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========== Responsive – all screen sizes ========== */
+/* Bootstrap 5.3 breakpoints: xs <576, sm 576, md 768, lg 992, xl 1200, xxl 1400 */
+
+/* ----- Large desktop (xl): cap search width ----- */
+@media (min-width: 1200px) {
+  .datatables .dataTables_filter label,
+  .dataTables_filter label {
+    max-width: 320px;
+  }
+}
+
+/* ----- Tablet landscape / small desktop (below lg) ----- */
+@media (max-width: 991.98px) {
+  .datatables .dataTables_wrapper .row:first-child,
+  .datatables .dataTables_wrapper .dt-row:first-child,
+  .dataTables_wrapper .row:first-child,
+  .dataTables_wrapper .dt-row:first-child {
+    padding: 0.65rem 0.85rem;
+    gap: 0.6rem 1rem;
+  }
+
+  .datatables .dataTables_filter label,
+  .dataTables_filter label {
+    max-width: 260px;
+  }
+
+  .datatables .dataTables_wrapper .row:last-child,
+  .dataTables_wrapper .dt-row:last-child,
+  .dataTables_wrapper .row:last-child,
+  .dataTables_wrapper .dt-row:last-child {
+    padding-top: 0.65rem;
+    gap: 0.6rem;
+  }
+}
+
+/* ----- Tablet portrait / large phone (below md): stack toolbar ----- */
+@media (max-width: 767.98px) {
+  .datatables .dataTables_wrapper,
+  .dataTables_wrapper {
+    --dt-input-height: 2.5rem; /* touch-friendly */
+    --dt-toolbar-padding-x: 0.75rem;
+    --dt-toolbar-padding-y: 0.65rem;
+  }
+
+  .datatables .dataTables_wrapper .row:first-child,
+  .datatables .dataTables_wrapper .dt-row:first-child,
+  .dataTables_wrapper .row:first-child,
+  .dataTables_wrapper .dt-row:first-child {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: var(--dt-toolbar-padding-y) var(--dt-toolbar-padding-x);
+  }
+
+  .datatables .dataTables_length,
+  .dataTables_length {
+    width: 100%;
+  }
+
+  .datatables .dataTables_length label,
+  .dataTables_length label {
+    width: 100%;
+    font-size: 0.8125rem;
+  }
+
+  .datatables .dataTables_length select,
+  .dataTables_length select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .datatables .dataTables_filter,
+  .dataTables_filter {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .datatables .dataTables_filter label,
+  .dataTables_filter label {
+    max-width: none;
+    width: 100%;
+  }
+
+  .datatables .dataTables_filter input,
+  .dataTables_filter input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .datatables .dataTables_wrapper .row:last-child,
+  .datatables .dataTables_wrapper .dt-row:last-child,
+  .dataTables_wrapper .row:last-child,
+  .dataTables_wrapper .dt-row:last-child {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding: 0.65rem var(--dt-toolbar-padding-x) 0;
+    gap: 0.75rem;
+  }
+
+  .datatables .dataTables_info,
+  .dataTables_info {
+    text-align: center;
+    font-size: 0.8125rem;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .datatables .dataTables_paginate,
+  .dataTables_paginate {
+    margin-left: 0;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .datatables .dataTables_paginate .pagination,
+  .dataTables_paginate .pagination {
+    justify-content: center;
+  }
+
+  .datatables .dataTables_paginate .page-link,
+  .dataTables_paginate .page-link {
+    min-width: 2.5rem;
+    height: var(--dt-input-height);
+  }
+
+  .datatables .dataTables_paginate .paginate_button,
+  .dataTables_paginate .paginate_button {
+    min-width: 2.5rem;
+    height: var(--dt-input-height);
+  }
+}
+
+/* ----- Small phone (below sm) ----- */
+@media (max-width: 575.98px) {
+  .datatables .dataTables_wrapper,
+  .dataTables_wrapper {
+    --dt-input-height: 2.75rem; /* larger touch targets */
+    --dt-toolbar-padding-x: 0.5rem;
+    --dt-toolbar-padding-y: 0.5rem;
+    --dt-toolbar-radius: 0.375rem;
+  }
+
+  .datatables .dataTables_wrapper .row:first-child,
+  .datatables .dataTables_wrapper .dt-row:first-child,
+  .dataTables_wrapper .row:first-child,
+  .dataTables_wrapper .dt-row:first-child {
+    padding: var(--dt-toolbar-padding-y) var(--dt-toolbar-padding-x);
+    margin-bottom: 0.75rem;
+  }
+
+  .datatables .dataTables_length label,
+  .dataTables_length label {
+    font-size: 0.75rem;
+  }
+
+  .datatables .dataTables_length select,
+  .dataTables_length select {
+    font-size: 0.8125rem;
+    padding: 0.35rem 1.75rem 0.35rem 0.5rem;
+  }
+
+  .datatables .dataTables_filter input,
+  .dataTables_filter input {
+    font-size: 0.8125rem;
+    padding-left: 2.25rem;
+  }
+
+  .datatables .dataTables_wrapper .row:last-child,
+  .datatables .dataTables_wrapper .dt-row:last-child,
+  .dataTables_wrapper .row:last-child,
+  .dataTables_wrapper .dt-row:last-child {
+    padding: 0.5rem var(--dt-toolbar-padding-x) 0;
+    margin-top: 0.75rem;
+  }
+
+  .datatables .dataTables_info,
+  .dataTables_info {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
+    line-height: 1.4;
+  }
+
+  .datatables .dataTables_paginate .pagination,
+  .dataTables_paginate .pagination {
+    gap: 0.15rem;
+  }
+
+  .datatables .dataTables_paginate .page-link,
+  .dataTables_paginate .page-link {
+    min-width: 2.25rem;
+    height: 2.5rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .datatables .dataTables_paginate .paginate_button,
+  .dataTables_paginate .paginate_button {
+    min-width: 2.25rem;
+    height: 2.5rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* ----- Extra small (very narrow) ----- */
+@media (max-width: 383.98px) {
+  .datatables .dataTables_wrapper,
+  .dataTables_wrapper {
+    --dt-toolbar-padding-x: 0.4rem;
+  }
+
+  .datatables .dataTables_info,
+  .dataTables_info {
+    font-size: 0.6875rem;
+    word-break: break-word;
+  }
+
+  .datatables .dataTables_paginate .page-link,
+  .dataTables_paginate .page-link {
+    min-width: 2rem;
+    height: 2.25rem;
+    font-size: 0.75rem;
+  }
+
+  .datatables .dataTables_paginate .paginate_button,
+  .dataTables_paginate .paginate_button {
+    min-width: 2rem;
+    height: 2.25rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* ========== Table inside .table-responsive (common layout) ========== */
+.table-responsive .dataTables_wrapper,
+.table-responsive .dataTables_wrapper .row:first-child,
+.table-responsive .dataTables_wrapper .dt-row:first-child,
+.table-responsive .dataTables_wrapper .row:last-child,
+.table-responsive .dataTables_wrapper .dt-row:last-child {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Prevent wrapper from overflowing in narrow containers */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive .dataTables_wrapper {
+  min-width: 0;
+}

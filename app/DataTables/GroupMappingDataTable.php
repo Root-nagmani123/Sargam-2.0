@@ -34,12 +34,16 @@ class GroupMappingDataTable extends DataTable
                     if (!empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
                         $exportUrl = route('group.mapping.export.student.list', $id);
                         $html = <<<HTML
-    <a href="javascript:void(0)" class="view-student" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">visibility</i>
-    </a>
-    <a href="{$exportUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">download</i>
-    </a>
+    <div class="d-inline-flex align-items-center gap-2">
+        <a href="javascript:void(0)" class="view-student btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 py-1" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students" aria-label="View Students">
+            <i class="bi bi-eye-fill"></i>
+            <span class="d-none d-md-inline">View</span>
+        </a>
+        <a href="{$exportUrl}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 px-2 py-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List" aria-label="Download Student List">
+            <i class="bi bi-download"></i>
+            <span class="d-none d-md-inline">Download</span>
+        </a>
+    </div>
     HTML;
                     return $html;
                 }
@@ -64,8 +68,7 @@ class GroupMappingDataTable extends DataTable
             class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
             aria-label="Edit group name mapping"
         >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
+            <span class="material-icons material-symbols-rounded fs-6"
                   aria-hidden="true">
                 edit
             </span>
@@ -81,8 +84,7 @@ class GroupMappingDataTable extends DataTable
                 aria-disabled="true"
                 title="Cannot delete active group mapping"
             >
-                <span class="material-icons material-symbols-rounded"
-                      style="font-size:18px;"
+                <span class="material-icons material-symbols-rounded fs-6"
                       aria-hidden="true">
                     delete
                 </span>
@@ -138,81 +140,110 @@ HTML;
                 });
             })
             ->filterColumn('group_name', function ($query, $keyword) {
-              
+
                 $query->where('group_name', 'like', "%{$keyword}%");
             })
 
-            ->filter(function ($query) {
-    $searchValue = request()->input('search.value');
+           ->filter(function ($query) {
+
+    $searchValue = request('search.value');
 
     if (!empty($searchValue)) {
-        $query->where(function ($subQuery) use ($searchValue) {
 
-            $subQuery->where('group_name', 'like', "%{$searchValue}%")
+        $query->where(function ($q) use ($searchValue) {
 
-                ->orWhereHas('courseGroup', function ($courseQuery) use ($searchValue) {
-                    $courseQuery->where('course_name', 'like', "%{$searchValue}%");
-                })
+            $q->where('group_name', 'like', "%{$searchValue}%")
 
-                        ->orWhereExists(function ($existsQuery) use ($searchValue) {
-                            $existsQuery->select(DB::raw(1))
-                                ->from('course_group_type_master')
-                                ->where('type_name', 'like', "%{$searchValue}%");
-                        });
-                });
-            }
-        })
+            ->orWhereHas('courseGroup', function ($cq) use ($searchValue) {
+                $cq->where('course_name', 'like', "%{$searchValue}%");
+            })
+
+            ->orWhereHas('courseGroupType', function ($tq) use ($searchValue) {
+                $tq->where('type_name', 'like', "%{$searchValue}%");
+            })
+
+            ->orWhereHas('Faculty', function ($fq) use ($searchValue) {
+                $fq->where('full_name', 'like', "%{$searchValue}%");
+            });
+
+        });
+    }
+})
 
         ->rawColumns(['course_name', 'group_name', 'type_name', 'view_download', 'action', 'status']);
     }
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
     {
-        $statusFilter = request('status_filter');
+        $statusFilter = request('status_filter', 'active');
         $courseFilter = request('course_filter');
         $groupTypeFilter = request('group_type_filter');
-        $currentDate = Carbon::now()->format('Y-m-d');
+        $currentDate      = now()->toDateString();
 
         // Check if any filter is explicitly set
-        $hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter);
-        
+        /*$hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter);
+
         // If no filters are applied, show active courses by default
         if (!$hasAnyFilter) {
             $statusFilter = 'active'; // Set default to active
         }
+            */
 
         $data_course_id =  get_Role_by_course();
-        
+
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
                 ->with(['courseGroup', 'courseGroupType', 'Faculty'])
-                ->when($statusFilter === 'active', function ($query) use ($currentDate) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->where(function ($q) use ($currentDate) {
-                            $q->whereNull('end_date')              // end date NULL ho (kabhi khatam nahi)
-                              ->orWhereDate('end_date', '>=', $currentDate); // ya abhi ya future me active
-                        });
-                    });
-                })
-                
-                ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->whereNotNull('end_date')
-                            ->whereDate('end_date', '<', $currentDate);
-                    });
-                })
-                ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($data_course_id) {
-                        $courseQuery->whereIn('pk', $data_course_id);
-                    });
-                })
-                ->when(!empty($courseFilter), function ($query) use ($courseFilter) {
-                    $query->where('course_name', $courseFilter);
-                })
-                ->when(!empty($groupTypeFilter), function ($query) use ($groupTypeFilter) {
-                    $query->where('type_name', $groupTypeFilter);
-                })
-                ->orderBy('pk', 'desc');
+
+         /*
+        |--------------------------------------------------------------------------
+        | Always exclude inactive master courses
+        |--------------------------------------------------------------------------
+        */
+        ->whereHas('courseGroup', function ($q) {
+            $q->where('active_inactive', 1);
+        })
+
+        ->when($statusFilter === 'active', function ($query) use ($currentDate) {
+            $query->whereHas('courseGroup', function ($q) use ($currentDate) {
+                $q->where(function ($sub) use ($currentDate) {
+                    $sub->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $currentDate);
+                });
+            });
+            })
+
+            //By Dhananjay
+
+            ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
+            $query->whereHas('courseGroup', function ($q) use ($currentDate) {
+                $q->whereNotNull('end_date')
+                  ->whereDate('end_date', '<', $currentDate);
+            });
+             })
+
+              /*
+        |--------------------------------------------------------------------------
+        | Course Dropdown Filter
+        |--------------------------------------------------------------------------
+        */
+
+        ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+            $query->whereHas('courseGroup', function ($courseQuery) use ($data_course_id) {
+                $courseQuery->whereIn('pk', $data_course_id);
+            });
+        })
+            //By Dhananjay
+        ->when(!empty($courseFilter), function ($query) use ($courseFilter) {
+                $query->whereHas('courseGroup', function ($q) use ($courseFilter) {
+                    $q->where('pk', $courseFilter);
+                });
+            })
+
+           ->when(!empty($groupTypeFilter), function ($query) use ($groupTypeFilter) {
+            $query->where('type_name', $groupTypeFilter);
+        })
+        ->orderBy('pk', 'desc');
 
         return $query;
     }
@@ -225,12 +256,13 @@ public function html(): HtmlBuilder
         ->columns($this->getColumns())
         ->minifiedAjax()
         ->orderBy(1)
-        ->responsive(true)
+        ->responsive(false)
         ->selectStyleSingle()
-        ->addTableClass('table table-bordered table-hover align-middle custom-mapping-table')
+        ->addTableClass('table table-bordered table-hover align-middle text-nowrap')
         ->parameters([
-            'responsive' => true,
+            'responsive' => false,
             'scrollX' => true,
+            'scrollCollapse' => true,
             'autoWidth' => false,
             'ordering' => false,
             'searching' => true,
@@ -259,7 +291,7 @@ public function html(): HtmlBuilder
                 ->searchable(true)
                 ->orderable(false),
             Column::make('type_name')
-                ->title('Group Type')
+                ->title('Course group type name')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false),
@@ -284,7 +316,7 @@ public function html(): HtmlBuilder
                 ->orderable(false)
                 ->exportable(false)
                 ->printable(false),
-                Column::computed('status')
+            Column::computed('status')
                 ->addClass('text-center')
                 ->exportable(false)
                 ->printable(false),

@@ -2,7 +2,15 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+@section('content')
+
+@php
+    // Debug: Check if courseMaster is available
+    if (!isset($courseMaster) || $courseMaster->isEmpty()) {
+        \Log::error('Calendar view: courseMaster is empty or not set');
+    }
+@endphp
+
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <style>
         :root {
@@ -18,8 +26,9 @@
         background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         color: #fff;
         padding: 2.75rem 1.5rem;
-        border-radius: 1rem 1rem 1rem 1rem;
+        border-radius: 1rem;
         text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 74, 147, 0.25), 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     .course-header h1 {
@@ -29,8 +38,10 @@
     }
 
     .course-header .badge {
-        background: #ffffff;
-        color: #000;
+        background: rgba(255, 255, 255, 0.95);
+        color: #1a1a1a;
+        padding: 0.35rem 0.75rem;
+        font-weight: 600;
     }
 
     /* Responsive Design for Smaller Screens */
@@ -217,9 +228,22 @@
     border: 0;
 }
 
+/* Responsive images and media */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+.logo-wrapper img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
 /* Calendar styling */
 .fc {
     font-size: 0.95rem;
+    max-width: 100%;
 }
 
 .fc-daygrid-day {
@@ -984,6 +1008,653 @@
     }
 }
 
+/* Mobile view: FullCalendar - better small screen experience */
+@media (max-width: 767.98px) {
+    .fc .fc-toolbar-chunk .fc-button {
+        margin-left: 0.5rem !important;
+        margin-right: 0.5rem !important;
+    }
+    .fc .fc-toolbar-chunk .fc-button:first-child {
+        margin-left: 0 !important;
+    }
+    /* Toolbar: stack and wrap on narrow screens */
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+    }
+    .fc .fc-toolbar-title {
+        font-size: 1rem !important;
+        margin: 0.25rem 0;
+        text-align: center;
+        word-break: break-word;
+    }
+    .fc .fc-toolbar-chunk {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.35rem;
+        width: 100%;
+    }
+    .fc .fc-toolbar-chunk .fc-button {
+        padding: 0.4rem 0.6rem !important;
+        font-size: 0.8rem !important;
+        flex: 0 0 auto;
+        min-width: 44px;
+    }
+    
+    /* Better button text handling */
+    .fc .fc-button-group .fc-button {
+        white-space: nowrap;
+    }
+    
+    /* Ensure calendar doesn't overflow */
+    .fc-scroller-liquid-absolute {
+        overflow-x: hidden !important;
+    }
+    
+    .fc-scroller {
+        overflow-x: hidden !important;
+    }
+    /* Month view: more compact day cells */
+    .fc .fc-daygrid-day-frame {
+        min-height: 60px !important;
+    }
+    .fc .fc-daygrid-day-number {
+        font-size: 0.75rem !important;
+        padding: 0.25rem !important;
+    }
+    .fc .fc-daygrid-day-events {
+        min-height: 0;
+    }
+    /* List view: better mobile layout */
+    .fc .fc-list {
+        border-width: 1px;
+        font-size: 0.9rem;
+    }
+    .fc .fc-list-event:hover td {
+        background: rgba(0, 74, 147, 0.06);
+    }
+    .fc .fc-list-day-cushion {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem;
+    }
+    .fc .fc-list-event-dot {
+        width: 8px;
+        height: 8px;
+    }
+    .fc .fc-list-event-time {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.5rem;
+    }
+    .fc .fc-list-event-title {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.5rem;
+    }
+    /* Week view: narrower time column */
+    .fc .fc-timegrid-slot-label {
+        font-size: 0.7rem !important;
+    }
+    .fc .fc-timegrid-axis-cushion {
+        font-size: 0.7rem !important;
+    }
+    /* Calendar container: reduce padding on mobile */
+    .calendar-container .card-body {
+        padding: 0.75rem !important;
+    }
+}
+
+/* Extra small screens: further compact */
+@media (max-width: 575.98px) {
+    .fc .fc-toolbar-title {
+        font-size: 0.9rem !important;
+    }
+    .fc .fc-toolbar-chunk .fc-button {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+    .fc .fc-daygrid-day-frame {
+        min-height: 50px !important;
+    }
+    .fc .fc-list-day-cushion,
+    .fc .fc-list-event-time,
+    .fc .fc-list-event-title {
+        font-size: 0.8rem !important;
+    }
+}
+
+/* Mobile view: Add Event & Event Details modals - prevent cropping */
+@media (max-width: 767.98px) {
+    .modal {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    
+    #eventModal .modal-dialog,
+    #eventDetails .modal-dialog,
+    .modal-dialog {
+        margin: 0 !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
+        max-height: 100vh !important;
+        height: 100vh !important;
+        display: flex !important;
+        align-items: stretch !important;
+    }
+    
+    #eventModal .modal-content,
+    #eventDetails .modal-content,
+    .modal-content {
+        max-height: 100vh !important;
+        height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    #eventModal .modal-body,
+    #eventDetails .modal-body,
+    .modal-body {
+        flex: 1 1 auto !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 1rem 0.75rem !important;
+        max-height: none !important;
+        min-height: 0 !important;
+    }
+    
+    #eventModal .modal-header,
+    #eventModal .modal-footer,
+    #eventDetails .modal-header,
+    #eventDetails .modal-footer,
+    .modal-header,
+    .modal-footer {
+        flex-shrink: 0 !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .modal-header .btn-close {
+        margin: 0 !important;
+        padding: 0.5rem !important;
+        z-index: 1051 !important;
+    }
+    
+    .modal-footer .btn {
+        flex: 1 !important;
+        min-width: 0 !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* Ensure modal backdrop doesn't interfere */
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.5) !important;
+    }
+}
+
+/* Extra small devices - further adjustments */
+@media (max-width: 575.98px) {
+    #eventModal .modal-dialog,
+    #eventDetails .modal-dialog {
+        margin: 0 !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
+    }
+    
+    #eventModal .modal-header,
+    #eventDetails .modal-header {
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    #eventModal .modal-body,
+    #eventDetails .modal-body {
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    #eventModal .modal-footer,
+    #eventDetails .modal-footer {
+        padding: 0.5rem !important;
+        flex-direction: column !important;
+    }
+    
+    .modal-footer .btn {
+        width: 100% !important;
+        margin: 0.25rem 0 !important;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 767.98px) and (orientation: landscape) {
+    #eventModal .modal-dialog,
+    #eventDetails .modal-dialog {
+        margin: 0.25rem !important;
+        max-width: calc(100vw - 0.5rem) !important;
+        width: calc(100vw - 0.5rem) !important;
+        max-height: calc(100vh - 0.5rem) !important;
+        height: calc(100vh - 0.5rem) !important;
+    }
+    
+    #eventModal .modal-content,
+    #eventDetails .modal-content {
+        max-height: calc(100vh - 0.5rem) !important;
+        height: calc(100vh - 0.5rem) !important;
+        border-radius: 0.5rem !important;
+    }
+    
+    #eventModal .modal-body,
+    #eventDetails .modal-body {
+        max-height: calc(100vh - 180px) !important;
+        padding: 0.75rem !important;
+    }
+    
+    #eventModal .modal-header,
+    #eventDetails .modal-header {
+        padding: 0.75rem !important;
+    }
+}
+
+/* Mobile view: List of events - proper layout */
+@media (max-width: 767.98px) {
+    .timetable-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+        width: 100%;
+    }
+    .timetable-container .table {
+        min-width: 100%;
+        width: max-content;
+    }
+    
+    /* Ensure table-responsive wrapper works properly */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+        width: 100%;
+        position: relative;
+    }
+    .week-cards .row {
+        flex-direction: column !important;
+    }
+    .week-cards .row > * {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Improved list event card mobile layout */
+    .list-event-card {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        padding: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    .list-event-card .title {
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+        margin-bottom: 0.5rem !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    .list-event-card .group-badge {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+        margin-bottom: 0.4rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+    }
+    
+    .list-event-card .meta {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.4rem 0.5rem !important;
+        margin-top: 0.25rem !important;
+        font-size: 0.8rem !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    .list-event-card .meta.d-flex {
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 0.35rem !important;
+    }
+    
+    .list-event-card .meta i {
+        font-size: 0.9rem !important;
+        margin-right: 0.4rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .list-event-card .event-tooltip {
+        min-width: calc(100vw - 2rem) !important;
+        max-width: calc(100vw - 2rem) !important;
+        left: 0 !important;
+        right: 0 !important;
+        font-size: 0.8rem !important;
+        padding: 0.75rem !important;
+    }
+    
+    /* Prevent hover effects on touch devices */
+    .list-event-card:hover {
+        transform: none !important;
+    }
+    
+    /* Table cell adjustments */
+    .timetable-grid td {
+        padding: 0.4rem 0.25rem !important;
+        vertical-align: top !important;
+    }
+    
+    .timetable-grid th {
+        padding: 0.5rem 0.35rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .timetable-grid .time-column {
+        min-width: 60px !important;
+        font-size: 0.7rem !important;
+        padding: 0.4rem 0.25rem !important;
+    }
+}
+
+/* Mobile Event Cards - Full Detail View */
+.mobile-event-cards-container {
+    padding: 0;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    min-height: 200px;
+}
+
+@media (max-width: 767.98px) {
+    .mobile-event-cards-container {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .timetable-container {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .mobile-event-cards-container {
+        display: none !important;
+    }
+    
+    .timetable-container {
+        display: block !important;
+    }
+}
+
+.mobile-day-section {
+    margin-bottom: 2rem;
+}
+
+.mobile-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #003366 100%);
+    border-radius: 0.75rem 0.75rem 0 0;
+    margin-bottom: 0;
+}
+
+.mobile-day-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.mobile-day-title i {
+    font-size: 1.2rem;
+}
+
+.mobile-day-date {
+    font-size: 0.85rem;
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.mobile-day-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.35rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+.mobile-events-list {
+    background: #f8f9fa;
+    border-radius: 0 0 0.75rem 0.75rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mobile-event-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid var(--primary-color);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.mobile-event-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.mobile-event-card:active,
+.mobile-event-card:focus {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    transform: scale(0.98);
+}
+
+.mobile-event-card:active::before {
+    opacity: 1;
+}
+
+.mobile-card-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #003366 100%);
+    color: white;
+    padding: 0.4rem 0.85rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 6px rgba(0, 74, 147, 0.3);
+}
+
+.mobile-card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.mobile-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.mobile-card-time {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.mobile-card-time i {
+    font-size: 1.1rem;
+}
+
+.mobile-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.mobile-card-detail {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.65rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    transition: background 0.2s ease;
+}
+
+.mobile-card-detail i {
+    font-size: 1.2rem;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.mobile-card-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.mobile-card-detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mobile-card-detail-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1f2937;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* Responsive adjustments for mobile cards */
+@media (max-width: 575.98px) {
+    .mobile-day-header {
+        padding: 0.65rem 0.85rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .mobile-day-title {
+        font-size: 1rem;
+        width: 100%;
+    }
+
+    .mobile-day-badge {
+        align-self: flex-end;
+        font-size: 0.8rem;
+        padding: 0.3rem 0.65rem;
+    }
+
+    .mobile-event-card {
+        padding: 1rem;
+    }
+
+    .mobile-card-title {
+        font-size: 1rem;
+    }
+
+    .mobile-card-time {
+        font-size: 0.9rem;
+    }
+
+    .mobile-card-detail {
+        padding: 0.55rem;
+    }
+
+    .mobile-card-detail i {
+        font-size: 1.1rem;
+    }
+
+    .mobile-card-detail-label {
+        font-size: 0.7rem;
+    }
+
+    .mobile-card-detail-value {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 399.98px) {
+    .mobile-events-list {
+        padding: 0.75rem;
+        gap: 0.75rem;
+    }
+
+    .mobile-event-card {
+        padding: 0.85rem;
+    }
+
+    .mobile-card-title {
+        font-size: 0.95rem;
+    }
+
+    .mobile-card-detail {
+        padding: 0.5rem;
+        gap: 0.6rem;
+    }
+}
+
 /* Empty State Styling */
 .empty-state {
     padding: 3rem 2rem;
@@ -1385,7 +2056,905 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 }
 
+/* ========== COMPREHENSIVE RESPONSIVE DESIGN ========== */
+
+/* Extra Small Devices (< 576px) */
+@media (max-width: 575.98px) {
+    /* General Layout */
+    .container-fluid {
+        padding: 0.5rem;
+    }
+
+    /* Course Header */
+    .course-header {
+        padding: 1rem 0.75rem;
+        margin-bottom: 1rem !important;
+    }
+
+    .course-header h1 {
+        font-size: 1.15rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .course-header p {
+        font-size: 0.8rem;
+    }
+
+    .course-header .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Control Panel */
+    .control-panel {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 1rem 0.75rem !important;
+        gap: 0.75rem !important;
+    }
+
+    .view-toggle-section {
+        flex-direction: column !important;
+        width: 100%;
+        gap: 0.75rem !important;
+    }
+
+    .view-toggle-section .text-muted {
+        display: none !important;
+    }
+
+    .btn-group {
+        display: flex;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.5rem;
+    }
+
+    .btn-group .btn i {
+        margin-right: 0.25rem;
+    }
+
+    .density-toggle {
+        width: 100%;
+    }
+
+    .density-toggle .btn {
+        width: 100%;
+        font-size: 0.8rem;
+    }
+
+    #courseFilter {
+        width: 100% !important;
+        min-width: unset !important;
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+
+    #createEventButton {
+        width: 100%;
+        font-size: 0.85rem;
+        padding: 0.6rem !important;
+    }
+
+    /* Calendar Container */
+    .card {
+        border-left-width: 3px !important;
+    }
+
+    .card-body {
+        padding: 1rem !important;
+    }
+
+    /* FullCalendar Adjustments */
+    .fc {
+        font-size: 0.8rem;
+    }
+
+    .fc-col-header-cell {
+        padding: 0.5rem 0.25rem !important;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 0.75rem;
+        padding: 0.35rem;
+    }
+
+    .fc-event-card {
+        padding: 0.35rem 0.4rem !important;
+        border-radius: 0.3rem;
+        margin: 0.15rem 0 !important;
+        font-size: 0.7rem;
+        background: #fff !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .fc-event-card .event-title {
+        font-size: 0.75rem !important;
+        line-height: 1.2 !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+
+    .fc-event-card .event-meta {
+        gap: 0.3rem 0.5rem !important;
+        margin-top: 0.15rem;
+        flex-wrap: wrap;
+    }
+
+    .fc-event-card .meta-item {
+        font-size: 0.7rem !important;
+        display: none !important;
+        white-space: nowrap;
+    }
+
+    .fc-event-card .event-badge {
+        font-size: 0.65rem !important;
+        padding: 0.1rem 0.35rem !important;
+        white-space: nowrap;
+    }
+
+    .fc-daygrid-day-more-link {
+        font-size: 0.8rem !important;
+        padding: 0.3rem 0.5rem !important;
+    }
+
+    /* List View / Timetable */
+    .timetable-header {
+        padding: 1rem !important;
+        border-radius: 0.75rem !important;
+    }
+
+    .timetable-header .row {
+        gap: 1rem !important;
+    }
+
+    .timetable-header .col-md-2,
+    .timetable-header .col-md-6,
+    .timetable-header .col-md-4 {
+        text-align: center !important;
+    }
+
+    .logo-wrapper {
+        padding: 0.5rem !important;
+    }
+
+    .logo-wrapper img {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    .timetable-header h1 {
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .timetable-header p {
+        font-size: 0.75rem;
+    }
+
+    .week-controls {
+        padding: 0.75rem !important;
+    }
+
+    .week-controls .btn-group {
+        margin-bottom: 0.75rem;
+        gap: 0.25rem;
+    }
+
+    .week-controls .btn {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.5rem;
+    }
+
+    .week-badge .badge {
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.75rem !important;
+    }
+
+    /* Week Cards */
+    .week-cards .row {
+        gap: 0.75rem !important;
+    }
+
+    .week-cards .row > * {
+        flex: 0 0 calc(33.333% - 0.5rem);
+    }
+
+    .week-card {
+        padding: 0.75rem !important;
+    }
+
+    .week-card-date {
+        font-size: 0.8rem;
+    }
+
+    .week-card-day {
+        font-size: 0.7rem;
+    }
+
+    /* Timetable Grid */
+    .timetable-container {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.5rem 0.35rem !important;
+        font-size: 0.75rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 70px;
+        font-size: 0.7rem;
+    }
+
+    .timetable-grid td {
+        max-height: 200px;
+    }
+
+    /* List Event Cards */
+    .list-event-card {
+        padding: 0.65rem !important;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .list-event-card .title {
+        font-size: 0.85rem;
+    }
+
+    .list-event-card .meta {
+        font-size: 0.75rem;
+    }
+
+    .list-event-card .event-tooltip {
+        min-width: 200px;
+        font-size: 0.75rem;
+        padding: 0.65rem;
+    }
+
+    .list-event-card .group-badge {
+        font-size: 0.65rem;
+        padding: 0.1rem 0.35rem;
+    }
+
+    /* Form Elements */
+    .form-label {
+        font-size: 0.85rem;
+    }
+
+    .form-control,
+    .form-select {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.65rem;
+    }
+
+    .form-check-input {
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+
+    /* Modal */
+    .modal-dialog {
+        margin: 0.5rem !important;
+    }
+
+    .modal-content {
+        border-radius: 0.75rem;
+    }
+
+    .modal-header {
+        padding: 1rem !important;
+    }
+
+    .modal-header .modal-title {
+        font-size: 1rem;
+    }
+
+    .modal-body {
+        padding: 1rem !important;
+        font-size: 0.85rem;
+    }
+
+    .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .modal-footer .btn {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Buttons */
+    .btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .btn-lg {
+        padding: 0.6rem 0.9rem;
+        font-size: 0.9rem;
+    }
+
+    /* Badges */
+    .badge {
+        font-size: 0.65rem;
+    }
+
+    /* Utility Classes */
+    .p-3 {
+        padding: 0.75rem !important;
+    }
+
+    .p-4 {
+        padding: 1rem !important;
+    }
+
+    .p-md-4 {
+        padding: 1rem !important;
+    }
+
+    .mb-3 {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+
+    .gap-3 {
+        gap: 0.75rem !important;
+    }
+
+    .gap-4 {
+        gap: 1rem !important;
+    }
+}
+
+/* Small Devices (576px to 767px) */
+@media (max-width: 767.98px) {
+    .course-header {
+        padding: 1.5rem 1rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.35rem;
+    }
+
+    .control-panel {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .view-toggle-section {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-group {
+        width: 100%;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+        font-size: 0.85rem;
+    }
+
+    #courseFilter {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    #createEventButton {
+        width: 100%;
+    }
+
+    .fc {
+        font-size: 0.85rem;
+    }
+
+    .fc-col-header-cell {
+        padding: 0.75rem 0.4rem !important;
+        font-size: 0.8rem;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 0.8rem;
+        padding: 0.4rem;
+    }
+
+    .fc-event-card {
+        padding: 0.65rem 0.75rem !important;
+        border-radius: 0.625rem;
+        margin: 0.3rem 0 !important;
+        font-size: 0.8rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+        overflow: visible;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
+        min-height: fit-content;
+    }
+
+    .fc-event-card .event-title {
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+        overflow: visible;
+        -webkit-line-clamp: 3;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        margin-bottom: 0.45rem !important;
+        word-break: break-word;
+    }
+
+    .fc-event-card .event-meta {
+        gap: 0.4rem 0.6rem !important;
+        margin-top: 0.35rem;
+        padding-top: 0.4rem;
+        flex-wrap: wrap;
+        border-top-width: 1px;
+    }
+
+    .fc-event-card .meta-item {
+        font-size: 0.75rem !important;
+        padding: 0.2rem 0.4rem !important;
+        gap: 0.3rem;
+    }
+    
+    .fc-event-card .meta-item--time {
+        display: inline-flex !important;
+    }
+    
+    .fc-event-card .meta-item--venue {
+        display: inline-flex !important;
+    }
+    
+    .fc-event-card .meta-item--faculty {
+        display: none !important;
+    }
+
+    .fc-event-card .event-badge {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+        white-space: nowrap;
+    }
+
+    .timetable-header .row {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .timetable-header .col-md-2,
+    .timetable-header .col-md-6,
+    .timetable-header .col-md-4 {
+        flex: 0 0 100%;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.65rem 0.4rem;
+        font-size: 0.8rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 90px;
+    }
+
+    .list-event-card {
+        padding: 0.75rem;
+    }
+
+    .list-event-card .title {
+        font-size: 0.9rem;
+    }
+
+    .list-event-card .event-tooltip {
+        min-width: 220px;
+    }
+}
+
+/* Medium Devices (768px to 991px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .course-header {
+        padding: 2rem 1.25rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .fc {
+        font-size: 0.9rem;
+    }
+
+    .fc-event-card {
+        padding: 0.75rem 0.875rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+        overflow: visible;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+        min-height: fit-content;
+    }
+
+    .fc-event-card .event-title {
+        overflow: visible;
+        -webkit-line-clamp: 3;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        font-size: 0.98rem;
+        line-height: 1.45;
+        word-break: break-word;
+    }
+
+    .fc-event-card .event-meta {
+        flex-wrap: wrap;
+        gap: 0.5rem 0.8rem;
+    }
+    
+    .fc-event-card .meta-item {
+        font-size: 0.82rem;
+        padding: 0.25rem 0.45rem;
+    }
+    
+    .fc-event-card .meta-item--time,
+    .fc-event-card .meta-item--venue {
+        display: inline-flex !important;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 100px;
+    }
+
+    .list-event-card {
+        padding: 0.75rem;
+    }
+}
+
+/* Desktop Devices (992px and up) - Keep Original Styling */
+@media (min-width: 992px) {
+    .course-header {
+        padding: 2.75rem 1.5rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.85rem;
+    }
+
+    .control-panel {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .view-toggle-section {
+        flex-direction: row;
+    }
+
+    #courseFilter {
+        min-width: 200px;
+    }
+
+    .fc {
+        font-size: 0.95rem;
+    }
+
+    .fc-event-card {
+        padding: 1rem 1.1rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+        min-height: fit-content;
+    }
+
+    .fc-event-card .event-title {
+        white-space: normal;
+        font-size: 1.05rem;
+        overflow: visible;
+        word-break: break-word;
+        -webkit-line-clamp: 3;
+        line-height: 1.5;
+    }
+
+    .fc-event-card .event-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem 1.1rem;
+    }
+    
+    .fc-event-card .meta-item {
+        font-size: 0.875rem;
+        display: inline-flex !important;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.75rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 120px;
+    }
+
+    .list-event-card {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .control-panel,
+    #createEventButton,
+    .btn,
+    button {
+        display: none !important;
+    }
+
+    .calendar-container {
+        box-shadow: none;
+    }
+
+    .fc {
+        font-size: 0.95rem;
+    }
+}
+.control-panel:focus-within {
+    outline: 2px solid #004a93;
+    outline-offset: 2px;
+}
+
+.btn:focus-visible,
+.form-select:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+}
+
 </style>
+
+<!-- Debug: Page is loading -->
+<script>console.log('Calendar view is rendering...', {
+    courseMasterExists: {{ isset($courseMaster) ? 'true' : 'false' }},
+    courseMasterCount: {{ isset($courseMaster) ? $courseMaster->count() : 0 }}
+});</script>
+
+<div class="container-fluid">
+    @if(!isset($courseMaster) || $courseMaster->isEmpty())
+        <div class="alert alert-warning m-4">
+            <h4><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
+            <p>No active courses found. Please contact the administrator.</p>
+        </div>
+    @endif
+    
+    <!-- Page Header with ARIA landmark -->
+    @if(hasRole('Admin'))
+        <header aria-label="Page header">
+            <x-breadcrum title="Academic TimeTable" />
+        </header>
+    @endif
+        <div class="course-header mb-3">
+            <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
+            <p class="mb-0 text-white fw-medium">
+                <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
+                | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
+            </p>
+        </div>
+
+    <!-- Main Content Area -->
+    <main id="main-content" role="main">
+        <!-- Action Controls with proper semantics -->
+         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
+        <section
+    class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
+    role="region"
+    aria-labelledby="controlPanelHeading"
+    style="border-left: 4px solid #004a93;"
+>
+    <h2 id="controlPanelHeading" class="visually-hidden">
+        Calendar Control Panel
+    </h2>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
+
+        <!-- Filters & View Controls -->
+        <fieldset class="d-flex flex-wrap align-items-center gap-3 mb-0">
+            <legend class="visually-hidden">View and Filter Controls</legend>
+
+            <!-- Density Toggle -->
+            <div class="btn-group" role="group" aria-label="Toggle calendar density">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary d-flex align-items-center gap-2"
+                    id="toggleDensityBtn"
+                    aria-pressed="false"
+                    aria-expanded="false"
+                >
+                    <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
+                    <span class="fw-medium">Compact View</span>
+                </button>
+            </div>
+
+            <!-- Course Filter -->
+            <div class="form-floating">
+                <select
+                    class="form-select"
+                    id="courseFilter"
+                    aria-describedby="courseFilterHelp"
+                >
+                    <option value="">All Courses</option>
+                    @foreach($courseMaster as $course)
+                        <option value="{{ $course->pk }}"
+                            {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
+                            {{ $course->course_name }} ({{ $course->couse_short_name }})
+                        </option>
+                    @endforeach
+                </select>
+                <label for="courseFilter">Filter by Course</label>
+            </div>
+        </fieldset>
+
+        <!-- Primary Actions -->
+        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP'))
+        <div class="d-flex align-items-center gap-2">
+            <button
+                type="button"
+                class="btn btn-primary px-4 d-flex align-items-center gap-2"
+                id="createEventButton"
+                data-bs-toggle="modal"
+                data-bs-target="#eventModal"
+            >
+                <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                <span>Add New Event</span>
+            </button>
+        </div>
+        @endif
+
+    </div>
+</section>
+
+        @endif
+
+        <!-- Calendar Container -->
+        <section class="calendar-container" aria-label="Academic calendar">
+            <div class="card border-start-4 border-primary shadow-sm">
+                <div class="card-body p-3 p-md-4 position-relative">
+                    
+                    <!-- Loading overlay -->
+                    <div id="calendarLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="min-height: 400px; z-index: 100;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading calendar...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Loading calendar...</p>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        // IMMEDIATE fallback - hide loader after 3 seconds
+                        (function() {
+                            console.log('Inline script: Setting up emergency timeout');
+                            setTimeout(function() {
+                                var overlay = document.getElementById('calendarLoadingOverlay');
+                                if (overlay) {
+                                    console.log('EMERGENCY TIMEOUT: Hiding loader');
+                                    overlay.style.display = 'none';
+                                } else {
+                                    console.error('Overlay element not found in timeout');
+                                }
+                            }, 3000);
+                        })();
+                    </script>
+
+                    <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
+                    <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
+
+                    <!-- List View -->
+                    <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
+                        <div class="timetable-wrapper">
+                            <!-- Timetable Header -->
+                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
+                                <div class="row align-items-center g-4">
+                                    <div class="col-md-2 text-center text-md-start">
+                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
+                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
+                                                class="img-fluid" width="70" height="70">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 text-center">
+                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
+                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
+                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
+                                        </p>
+                                    </div>
+
+                                    <div class="col-md-4 text-center text-md-end">
+                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
+                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
+                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
+                                                    aria-label="Previous week">
+                                                    <i class="bi bi-chevron-left"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
+                                                    aria-label="Current week">
+                                                    <i class="bi bi-calendar-check me-2"></i>Today
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
+                                                    aria-label="Next week">
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="week-badge">
+                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
+                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Week Cards (Accessible, GIGW-friendly) -->
+                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
+                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
+                                <div class="row g-3" role="list" aria-label="Days of the week">
+                                    <!-- JS will render day cards here -->
+                                </div>
+                            </div>
+
+                            <!-- Timetable table -->
+                            <div class="timetable-container border rounded-3 overflow-hidden">
+                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
+                                    <table class="table table-bordered timetable-grid" id="timetableTable"
+                                        aria-describedby="timetableDescription">
+                                        <caption class="visually-hidden" id="timetableDescription">
+                                            Weekly academic timetable showing events
+                                        </caption>
+                                        <thead id="timetableHead">
+                                            <tr>
+                                                <th scope="col" class="time-column">Time</th>
+                                                <th scope="col">Monday</th>
+                                                <th scope="col">Tuesday</th>
+                                                <th scope="col">Wednesday</th>
+                                                <th scope="col">Thursday</th>
+                                                <th scope="col">Friday</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody id="timetableBody">
+                                            <!-- JS will populate body -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+@include('admin.calendar.partials.add_edit_events')
+@include('admin.calendar.partials.events_details')
+@include('admin.calendar.partials.confirmation')
+
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
@@ -1538,8 +3107,8 @@ class CalendarManager {
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
-            eventDidMount: this.setEventAccessibility.bind(this)
-            ,dayCellDidMount: this.setDayCellAccessibility.bind(this)
+            eventDidMount: this.setEventAccessibility.bind(this),
+            dayCellDidMount: this.setDayCellAccessibility.bind(this)
         });
 
         this.calendar.render();
@@ -1773,12 +3342,31 @@ class CalendarManager {
         document.getElementById('eventgroupname').textContent = data.group_name || '';
         document.getElementById('internal_faculty_name_show').textContent = data.internal_faculty || '';
 
-        // Set edit/delete button data
+        // Set edit/delete button data and ensure event listeners
         const editBtn = document.getElementById('editEventBtn');
         const deleteBtn = document.getElementById('deleteEventBtn');
 
-        if (editBtn) editBtn.dataset.id = data.id;
-        if (deleteBtn) deleteBtn.dataset.id = data.id;
+        if (editBtn) {
+            editBtn.dataset.id = data.id;
+            // Remove any existing listeners and add new one
+            editBtn.onclick = null;
+            editBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.loadEventForEdit();
+            });
+        }
+        
+        if (deleteBtn) {
+            deleteBtn.dataset.id = data.id;
+            // Remove any existing listeners and add new one
+            deleteBtn.onclick = null;
+            deleteBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.confirmDelete();
+            });
+        }
 
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
@@ -1881,9 +3469,33 @@ class CalendarManager {
             this.toggleFeedbackDependencies();
         });
 
-        // Edit/Delete buttons
-        document.getElementById('editEventBtn')?.addEventListener('click', () => this.loadEventForEdit());
-        document.getElementById('deleteEventBtn')?.addEventListener('click', () => this.confirmDelete());
+        // Edit/Delete buttons - Use event delegation for reliability
+        const eventDetailsModal = document.getElementById('eventDetails');
+        if (eventDetailsModal) {
+            eventDetailsModal.addEventListener('click', (e) => {
+                if (e.target.closest('#editEventBtn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.loadEventForEdit();
+                } else if (e.target.closest('#deleteEventBtn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.confirmDelete();
+                }
+            });
+        }
+        
+        // Also attach direct listeners as backup
+        document.getElementById('editEventBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.loadEventForEdit();
+        });
+        document.getElementById('deleteEventBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.confirmDelete();
+        });
 
         // Create event button
         document.getElementById('createEventButton')?.addEventListener('click', () => {
@@ -1909,8 +3521,43 @@ class CalendarManager {
             }
         });
 
+        // Mobile event cards: open details on click/keyboard
+        const mobileCardsContainer = document.getElementById('mobileEventCards');
+        if (mobileCardsContainer) {
+            mobileCardsContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.mobile-event-card');
+                if (card?.dataset?.eventId) {
+                    this.loadEventDetails(card.dataset.eventId);
+                }
+            });
+
+            mobileCardsContainer.addEventListener('keydown', (e) => {
+                const card = e.target.closest('.mobile-event-card');
+                if (!card) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (card.dataset?.eventId) {
+                        this.loadEventDetails(card.dataset.eventId);
+                    }
+                }
+            });
+        }
+
         // Density toggle
         document.getElementById('toggleDensityBtn')?.addEventListener('click', () => this.toggleDensity());
+
+        // Handle window resize to switch between mobile and desktop views
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const listViewEl = document.getElementById('eventListView');
+                if (listViewEl && !listViewEl.classList.contains('d-none')) {
+                    // Reload list view to switch between mobile cards and desktop table
+                    this.loadListView();
+                }
+            }, 250);
+        });
 
         // Course filter change
         document.getElementById('courseFilter')?.addEventListener('change', (e) => {
@@ -2387,28 +4034,75 @@ class CalendarManager {
     }
 
     async loadEventForEdit() {
-        const eventId = document.getElementById('editEventBtn').dataset.id;
+         const editBtn = document.getElementById('editEventBtn');
+        
+        if (!editBtn) {
+            console.error('Edit button not found');
+            this.showNotification('Edit button not found', 'danger');
+            return;
+        }
+        
+        const eventId = editBtn.dataset.id;
+        
+        if (!eventId) {
+            console.error('Event ID not found on edit button. Button dataset:', editBtn.dataset);
+            this.showNotification('Event ID not found. Please try again.', 'danger');
+            return;
+        }
+        
+        console.log('Loading event for edit, ID:', eventId);
 
         try {
-            const response = await fetch(`/calendar/event-edit/${eventId}`);
+            const response = await fetch(`/calendar/event-edit/${eventId}`, {
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const event = await response.json();
 
             await this.populateEditForm(event);
 
             // Update modal for edit
-            document.getElementById('eventModalTitle').textContent = 'Edit Event';
-            document.querySelector('.btn-text').textContent = 'Update Event';
-            document.getElementById('submitEventBtn').dataset.action = 'edit';
-            document.getElementById('start_datetime').removeAttribute('readonly');
+            const modalTitle = document.getElementById('eventModalTitle');
+            if (modalTitle) {
+                modalTitle.textContent = 'Edit Event';
+            }
+            
+            const btnText = document.querySelector('.btn-text');
+            if (btnText) {
+                btnText.textContent = 'Update Event';
+            }
+            
+            const submitBtn = document.getElementById('submitEventBtn');
+            if (submitBtn) {
+                submitBtn.dataset.action = 'edit';
+                submitBtn.dataset.eventId = eventId;
+            }
+            
+            const startDateInput = document.getElementById('start_datetime');
+            if (startDateInput) {
+                startDateInput.removeAttribute('readonly');
+            }
 
-            // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
-            modal.show();
+            // Hide event details modal and show edit modal
+            const eventDetailsModal = bootstrap.Modal.getInstance(document.getElementById('eventDetails'));
+            if (eventDetailsModal) {
+                eventDetailsModal.hide();
+            }
+            
+            const editModal = new bootstrap.Modal(document.getElementById('eventModal'));
+            editModal.show();
 
         } catch (error) {
-            this.showNotification('Error loading event for editing', 'danger');
             console.error('Edit load error:', error);
+            this.showNotification('Error loading event for editing: ' + error.message, 'danger');
         }
     }
 
@@ -2764,6 +4458,7 @@ async setInternalFaculty(internalFacultyIds) {
             // Filter and render events
             const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
             console.log('Filtered events for this week:', filteredEvents.length);
+            console.log('Sample event structure:', filteredEvents.length > 0 ? filteredEvents[0] : 'No events');
             this.renderListView(filteredEvents);
             this.renderWeekCards(events, weekStart);
             this.updateWeekRangeText(weekStart);
@@ -2802,6 +4497,8 @@ async setInternalFaculty(internalFacultyIds) {
 
     renderListView(events) {
         const tbody = document.getElementById('timetableBody');
+        const mobileCardsContainer = document.getElementById('mobileEventCards');
+        const isMobile = window.innerWidth <= 767;
 
         if (!events.length) {
             tbody.innerHTML = `
@@ -2814,27 +4511,59 @@ async setInternalFaculty(internalFacultyIds) {
                     </td>
                 </tr>
             `;
+            if (mobileCardsContainer) {
+                mobileCardsContainer.innerHTML = `
+                    <div class="empty-state text-center p-5">
+                        <i class="bi bi-calendar-x display-5 text-muted mb-3"></i>
+                        <p class="text-muted mb-3">No events scheduled</p>
+                    </div>
+                `;
+            }
             return;
         }
 
-        // Group events by time slot
-        const timeSlots = this.groupEventsByTime(events);
+        // On mobile, render cards instead of table
+        if (isMobile && mobileCardsContainer) {
+            console.log('Rendering mobile cards view. Events count:', events.length);
+            this.renderMobileEventCards(events, mobileCardsContainer);
+            // Hide table on mobile
+            const tableContainer = document.querySelector('.timetable-container');
+            if (tableContainer) {
+                tableContainer.style.display = 'none';
+            }
+            mobileCardsContainer.style.display = 'block';
+            mobileCardsContainer.classList.remove('d-none');
+        } else {
+            // Desktop: render table
+            if (mobileCardsContainer) {
+                mobileCardsContainer.style.display = 'none';
+                mobileCardsContainer.classList.add('d-none');
+            }
+            const tableContainer = document.querySelector('.timetable-container');
+            if (tableContainer) {
+                tableContainer.style.display = 'block';
+            }
 
-        let html = '';
-        Object.entries(timeSlots).forEach(([time, dayEvents]) => {
-            html += `
-                <tr>
-                    <th scope="row" class="time-slot">${time}</th>
-                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
-                        <td class="event-cell">
-                            ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
-                        </td>
-                    `).join('')}
-                </tr>
-            `;
-        });
+            // Group events by time slot
+            const timeSlots = this.groupEventsByTime(events);
+
+            let html = '';
+            Object.entries(timeSlots).forEach(([time, dayEvents]) => {
+                html += `
+                    <tr>
+                        <th scope="row" class="time-slot">${time}</th>
+                        ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
+                            <td class="event-cell">
+                                ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
+                            </td>
+                        `).join('')}
+                    </tr>
+                `;
+            });
 
         tbody.innerHTML = html;
+        this.applyBreakLunchRowStyles();
+        this.initializeScrollIndicators();
     }
 
     renderWeekCards(events, weekStart) {

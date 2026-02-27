@@ -71,8 +71,12 @@
                                             <span class="hide-menu">Course Group Mapping</span>
                                         </a></li>
                                 </ul>
-                            </li>
-                            <li class="sidebar-item" style="background: #4077ad;
+
+
+
+                                @if (!hasRole('Training-MCTP') && ! hasRole('IST'))
+                                    <li class="sidebar-item"
+                                        style="background: #4077ad;
                             border-radius: 30px 0px 0px 30px;
                             width: 100%;
                             box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -101,6 +105,32 @@
                                             <i class="material-icons menu-icon material-symbols-rounded"
                                                 style="font-size: 24px;">keyboard_arrow_down</i>
                                         </a>
+                                    </li>
+
+                                    <ul class="collapse list-unstyled ps-3" id="exemptionmasterCollapse">
+                                        <li class="sidebar-item"><a class="sidebar-link"
+                                                href="{{ route('student.medical.exemption.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Student Medical Exemption (Doctor)</span>
+                                            </a></li>
+                                        @if (hasRole('Training-MCTP') || hasRole('IST'))
+                                            <li class="sidebar-item"><a class="sidebar-link"
+                                                    href="{{ route('mdo-escrot-exemption.index') }}">
+                                                    <span class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator Duty</span>
+                                                </a></li>
+                                        @endif
+                                        <li class="sidebar-item"><a class="sidebar-link"
+                                                href="{{ route('mdo-escrot-exemption.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator Duty</span>
+                                            </a></li>
+                                        <li class="sidebar-item">
+                                            <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                                data-bs-toggle="collapse" href="#exemptionCollapse" role="button"
+                                                aria-expanded="false" aria-controls="exemptionCollapse">
+                                                <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Exemption Master</span>
+                                                <i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                            </a>
+                                        </li>
                                         <ul class="collapse list-unstyled ps-3" id="exemptionCollapse">
                                             <li class="sidebar-item"><a class="sidebar-link"
                                                     href="{{ route('master.exemption.category.master.index') }}">

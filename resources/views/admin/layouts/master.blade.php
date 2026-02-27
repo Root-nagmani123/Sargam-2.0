@@ -1,136 +1,21 @@
 <!DOCTYPE html>
-<html lang="zxx" data-bs-theme="light">
+<html lang="en" data-bs-theme="light">
 
 <head>
-    <!-- Force light mode - prevent system theme detection -->
+    <!-- Set initial theme from localStorage before paint (avoids flash) -->
     <script>
-        // CRITICAL: This must run BEFORE Bootstrap loads to prevent dark mode detection
         (function() {
             'use strict';
-            
-            // Set light theme immediately
-            document.documentElement.setAttribute('data-bs-theme', 'light');
-            
-            // Override matchMedia to prevent Bootstrap from detecting dark mode preference
-            if (window.matchMedia) {
-                const originalMatchMedia = window.matchMedia.bind(window);
-                window.matchMedia = function(query) {
-                    const result = originalMatchMedia(query);
-                    
-                    // Intercept prefers-color-scheme queries
-                    if (query && query.includes('prefers-color-scheme')) {
-                        // Create a fake MediaQueryList that always returns false for dark mode
-                        const fakeResult = {
-                            matches: false,
-                            media: query,
-                            onchange: null,
-                            addListener: function() {},
-                            removeListener: function() {},
-                            addEventListener: function() {},
-                            removeEventListener: function() {},
-                            dispatchEvent: function() { return false; }
-                        };
-                        
-                        // If query is for dark mode, return false
-                        if (query.includes('dark')) {
-                            return fakeResult;
-                        }
-                    }
-                    
-                    return result;
-                };
-            }
-            
-            // Monitor and prevent theme changes on html element
-            const htmlObserver = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && 
-                        mutation.attributeName === 'data-bs-theme') {
-                        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                        if (currentTheme !== 'light') {
-                            document.documentElement.setAttribute('data-bs-theme', 'light');
-                            // Force reapply light mode styles
-                            document.documentElement.style.colorScheme = 'light';
-                        }
-                    }
-                });
-            });
-            
-            // Start observing html element immediately
-            htmlObserver.observe(document.documentElement, {
-                attributes: true,
-                attributeFilter: ['data-bs-theme']
-            });
-            
-            // Also monitor body element
-            if (document.body) {
-                const bodyObserver = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                        if (mutation.type === 'attributes' && 
-                            mutation.attributeName === 'data-bs-theme') {
-                            const currentTheme = document.body.getAttribute('data-bs-theme');
-                            if (currentTheme && currentTheme !== 'light') {
-                                document.body.setAttribute('data-bs-theme', 'light');
-                            }
-                        }
-                    });
-                });
-                
-                bodyObserver.observe(document.body, {
-                    attributes: true,
-                    attributeFilter: ['data-bs-theme']
-                });
-            }
-            
-            // Periodic check as fallback
-            setInterval(function() {
-                if (document.documentElement.getAttribute('data-bs-theme') !== 'light') {
-                    document.documentElement.setAttribute('data-bs-theme', 'light');
-                    document.documentElement.style.colorScheme = 'light';
+            try {
+                var saved = localStorage.getItem('bsTheme');
+                if (saved === 'dark' || saved === 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', saved);
                 }
-                if (document.body && document.body.getAttribute('data-bs-theme') && 
-                    document.body.getAttribute('data-bs-theme') !== 'light') {
-                    document.body.setAttribute('data-bs-theme', 'light');
-                }
-            }, 250);
+            } catch (e) {}
         })();
     </script>
     @include('admin.layouts.pre_header')
-    <!-- Inject CSS to override Bootstrap dark mode immediately -->
-    <script>
-        // Inject critical CSS override immediately
-        (function() {
-            const style = document.createElement('style');
-            style.id = 'bootstrap-dark-mode-override';
-            style.textContent = `
-                /* Force light mode - override Bootstrap's dark mode completely */
-                @media (prefers-color-scheme: dark) {
-                    html, html[data-bs-theme], html[data-bs-theme="light"], html[data-bs-theme="dark"],
-                    body, body[data-bs-theme], body[data-bs-theme="light"], body[data-bs-theme="dark"],
-                    :root, [data-bs-theme], [data-bs-theme="light"], [data-bs-theme="dark"] {
-                        color-scheme: light !important;
-                        --bs-body-bg: #fff !important;
-                        --bs-body-color: #212529 !important;
-                        --bs-emphasis-color: #000 !important;
-                        --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
-                        --bs-secondary-bg: #e9ecef !important;
-                        --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
-                        --bs-tertiary-bg: #f8f9fa !important;
-                        --bs-border-color: #dee2e6 !important;
-                        background-color: #fff !important;
-                        color: #212529 !important;
-                    }
-                }
-                html, html[data-bs-theme], html[data-bs-theme="light"], html[data-bs-theme="dark"] {
-                    color-scheme: light !important;
-                    --bs-body-bg: #fff !important;
-                    --bs-body-color: #212529 !important;
-                }
-            `;
-            document.head.appendChild(style);
-        })();
-    </script>
-    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
+    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
     @section('css')
     <style>
     .nav-item .tab-item .active {
@@ -396,13 +281,7 @@
         }
     }
 
-    .pagination .page-link {
-        border: none !important;
-        padding: 4px 10px;
-        font-size: 14px;
-        color: #3a3a3a;
-        background: transparent;
-    }
+ }
 
     .pagination .page-item.active .page-link.current-page {
         border: 2px solid #0d6efd !important;
@@ -445,85 +324,168 @@
         padding: .375rem .75rem;
     }
 
-    .alphabet-loader {
+    /* Advanced Sargam 2.0 Loader - Bootstrap 5 */
+    .sargam-loader {
         position: fixed;
         inset: 0;
-        background: #ffffff;
+        background: radial-gradient(ellipse at center, #ffffff 0%, #f0f7ff 50%, #e8f0fa 100%);
+        z-index: 9999;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+        overflow: hidden;
+    }
+
+    .sargam-loader.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    /* Floating particles */
+    .sargam-loader-particles {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
+
+    .sargam-loader-particle {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        background: linear-gradient(135deg, #004a93, #0d6efd);
+        border-radius: 50%;
+        opacity: 0.4;
+        animation: sargamFloat 4s ease-in-out infinite;
+    }
+
+    .sargam-loader-particle:nth-child(1) { left: 15%; top: 20%; animation-delay: 0s; }
+    .sargam-loader-particle:nth-child(2) { left: 85%; top: 25%; animation-delay: 0.5s; }
+    .sargam-loader-particle:nth-child(3) { left: 75%; top: 75%; animation-delay: 1s; }
+    .sargam-loader-particle:nth-child(4) { left: 20%; top: 80%; animation-delay: 1.5s; }
+    .sargam-loader-particle:nth-child(5) { left: 50%; top: 15%; animation-delay: 2s; }
+    .sargam-loader-particle:nth-child(6) { left: 10%; top: 50%; animation-delay: 2.5s; }
+    .sargam-loader-particle:nth-child(7) { left: 90%; top: 55%; animation-delay: 3s; }
+    .sargam-loader-particle:nth-child(8) { left: 45%; top: 85%; animation-delay: 3.5s; }
+
+    @keyframes sargamFloat {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+        25% { transform: translate(15px, -20px) scale(1.2); opacity: 0.7; }
+        50% { transform: translate(-10px, 15px) scale(0.9); opacity: 0.5; }
+        75% { transform: translate(-20px, -10px) scale(1.1); opacity: 0.6; }
+    }
+
+    /* Rotating rings container */
+    .sargam-loader-rings {
+        position: relative;
+        width: 140px;
+        height: 140px;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 9999;
     }
 
-    .alphabet-loader .letters {
+    .sargam-loader-ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 3px solid transparent;
+    }
+
+    .sargam-loader-ring-outer {
+        width: 100%;
+        height: 100%;
+        border-top-color: #004a93;
+        border-right-color: #0d6efd;
+        border-bottom-color: #004a93;
+        border-left-color: transparent;
+        animation: sargamSpin 1.2s linear infinite;
+    }
+
+    .sargam-loader-ring-mid {
+        width: 100px;
+        height: 100px;
+        border-top-color: transparent;
+        border-right-color: #0d6efd;
+        border-bottom-color: transparent;
+        border-left-color: #004a93;
+        animation: sargamSpin 1s linear infinite reverse;
+    }
+
+    .sargam-loader-ring-inner {
+        width: 60px;
+        height: 60px;
+        border-top-color: #0d6efd;
+        border-right-color: transparent;
+        border-bottom-color: #004a93;
+        border-left-color: transparent;
+        animation: sargamSpin 0.8s linear infinite;
+    }
+
+    @keyframes sargamSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Brand text with letter-by-letter animation */
+    .sargam-loader-brand {
+        display: inline-flex;
+        gap: 2px;
+        font-size: clamp(1.75rem, 5vw, 3rem);
+        font-weight: 800;
+        font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+        letter-spacing: 0.02em;
+    }
+
+    .sargam-loader-brand span {
+        display: inline-block;
+        color: #004a93;
+        background: linear-gradient(135deg, #004a93 0%, #0066cc 40%, #0d6efd 70%, #004a93 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: sargamLetterPop 2s ease-in-out infinite;
+        text-shadow: 0 0 30px rgba(0, 74, 147, 0.2);
+    }
+
+    .sargam-loader-brand span:nth-child(1) { animation-delay: 0s; }
+    .sargam-loader-brand span:nth-child(2) { animation-delay: 0.05s; }
+    .sargam-loader-brand span:nth-child(3) { animation-delay: 0.1s; }
+    .sargam-loader-brand span:nth-child(4) { animation-delay: 0.15s; }
+    .sargam-loader-brand span:nth-child(5) { animation-delay: 0.2s; }
+    .sargam-loader-brand span:nth-child(6) { animation-delay: 0.25s; }
+    .sargam-loader-brand span:nth-child(7) { animation-delay: 0.3s; min-width: 0.25em; }
+    .sargam-loader-brand span:nth-child(8) { animation-delay: 0.35s; }
+    .sargam-loader-brand span:nth-child(9) { animation-delay: 0.4s; }
+    .sargam-loader-brand span:nth-child(10) { animation-delay: 0.45s; }
+
+    @keyframes sargamLetterPop {
+        0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
+        50% { transform: translateY(-4px) scale(1.05); opacity: 0.9; }
+    }
+
+    /* Segmented progress dots */
+    .sargam-loader-dots {
         display: flex;
         gap: 8px;
+        align-items: center;
+        justify-content: center;
     }
 
-    .alphabet-loader .letters span {
-        font-size: 32px;
-        font-weight: 700;
-        font-family: 'Poppins', sans-serif;
-        color: #004a93;
-        opacity: 0.2;
-        animation: pulseText 1.2s infinite ease-in-out;
+    .sargam-loader-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(0, 74, 147, 0.2);
+        animation: sargamDotPulse 1.4s ease-in-out infinite;
     }
 
-    .alphabet-loader .letters span:nth-child(1) {
-        animation-delay: 0s;
-    }
+    .sargam-loader-dot:nth-child(1) { animation-delay: 0s; }
+    .sargam-loader-dot:nth-child(2) { animation-delay: 0.2s; }
+    .sargam-loader-dot:nth-child(3) { animation-delay: 0.4s; }
+    .sargam-loader-dot:nth-child(4) { animation-delay: 0.6s; }
+    .sargam-loader-dot:nth-child(5) { animation-delay: 0.8s; }
 
-    .alphabet-loader .letters span:nth-child(2) {
-        animation-delay: 0.1s;
-    }
-
-    .alphabet-loader .letters span:nth-child(3) {
-        animation-delay: 0.2s;
-    }
-
-    .alphabet-loader .letters span:nth-child(4) {
-        animation-delay: 0.3s;
-    }
-
-    .alphabet-loader .letters span:nth-child(5) {
-        animation-delay: 0.4s;
-    }
-
-    .alphabet-loader .letters span:nth-child(6) {
-        animation-delay: 0.5s;
-    }
-
-    .alphabet-loader .letters span:nth-child(7) {
-        animation-delay: 0.6s;
-    }
-
-    .alphabet-loader .letters span:nth-child(8) {
-        animation-delay: 0.7s;
-    }
-
-    .alphabet-loader .letters span:nth-child(9) {
-        animation-delay: 0.8s;
-    }
-
-    .alphabet-loader .letters span:nth-child(10) {
-        animation-delay: 0.9s;
-    }
-
-    @keyframes pulseText {
-        0% {
-            opacity: 0.2;
-            transform: translateY(0);
-        }
-
-        50% {
-            opacity: 1;
-            transform: translateY(-6px);
-        }
-
-        100% {
-            opacity: 0.2;
-            transform: translateY(0);
-        }
+    @keyframes sargamDotPulse {
+        0%, 100% { transform: scale(0.8); background: rgba(0, 74, 147, 0.2); }
+        50% { transform: scale(1.2); background: #0d6efd; }
     }
 
     /* Sidebar toggle icon rotation */
@@ -539,19 +501,34 @@
 </head>
 
 <body data-sidebartype="full">
-    <!-- Preloader -->
-    <div class="alphabet-loader" id="alphabetLoader">
-        <div class="letters">
-            <span>S</span>
-            <span>A</span>
-            <span>R</span>
-            <span>G</span>
-            <span>A</span>
-            <span>M</span>
-            <span>&nbsp;</span>
-            <span>2</span>
-            <span>.</span>
-            <span>0</span>
+    <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
+    <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
+        <div class="sargam-loader-particles">
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+            <span class="sargam-loader-particle"></span>
+        </div>
+        <div class="sargam-loader-inner d-flex flex-column align-items-center gap-4 position-relative">
+            <div class="sargam-loader-rings">
+                <span class="sargam-loader-ring sargam-loader-ring-outer"></span>
+                <span class="sargam-loader-ring sargam-loader-ring-mid"></span>
+                <span class="sargam-loader-ring sargam-loader-ring-inner"></span>
+            </div>
+            <span class="sargam-loader-brand">
+                <span>S</span><span>A</span><span>R</span><span>G</span><span>A</span><span>M</span><span> </span><span>2</span><span>.</span><span>0</span>
+            </span>
+            <div class="sargam-loader-dots">
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+                <span class="sargam-loader-dot" role="presentation"></span>
+            </div>
         </div>
     </div>
 
@@ -561,33 +538,88 @@
 
             @include('admin.layouts.sidebar')
             <div class="body-wrapper">
+                @if(session('low_stock_alert') && is_array(session('low_stock_alert')) && count(session('low_stock_alert')) > 0)
+                    <div class="low-stock-alert-overlay" id="lowStockAlertOverlay" role="dialog" aria-modal="true" aria-labelledby="lowStockAlertTitle">
+                        <div class="low-stock-alert-box">
+                            <div class="low-stock-alert-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold" id="lowStockAlertTitle">Low Stock Alert!</h5>
+                                <button type="button" class="btn-close" onclick="document.getElementById('lowStockAlertOverlay').style.display='none'" aria-label="Close"></button>
+                            </div>
+                            <div class="low-stock-alert-body">
+                                <ul class="mb-0 ps-3">
+                                    @foreach(session('low_stock_alert') as $row)
+                                        <li class="mb-2">
+                                            <strong>Item:</strong> {{ $row['item_name'] ?? '—' }}
+                                            &nbsp;|&nbsp;
+                                            <strong>Available:</strong> {{ number_format($row['remaining_quantity'] ?? 0, 2) }} {{ $row['unit'] ?? 'Unit' }}
+                                            &nbsp;|&nbsp;
+                                            <strong>Minimum Required:</strong> {{ number_format($row['alert_quantity'] ?? 0, 2) }} {{ $row['unit'] ?? 'Unit' }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-danger mt-3">View Stock Balance</a>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        .low-stock-alert-overlay {
+                            position: fixed;
+                            inset: 0;
+                            z-index: 9999;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: rgba(0,0,0,0.4);
+                            padding: 1rem;
+                        }
+                        .low-stock-alert-box {
+                            background: #fff;
+                            border-radius: 12px;
+                            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                            max-width: 480px;
+                            width: 100%;
+                            overflow: hidden;
+                        }
+                        .low-stock-alert-header {
+                            background: #dc3545;
+                            color: #fff;
+                            padding: 1rem 1.25rem;
+                        }
+                        .low-stock-alert-body {
+                            padding: 1.25rem 1.5rem;
+                            background: #fff5f5;
+                        }
+                    </style>
+                @endif
+                <main id="main-content" tabindex="-1" role="main">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
                     <!-- Home Tab -->
-                    <div class="tab-pane fade show active" id="home" role="tabpanel">
-                                @yield('content')
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#home' ? 'show active' : '' }}" id="home" role="tabpanel">
+                        @yield('content')
                     </div>
 
                     <!-- Setup Tab -->
-                    <div class="tab-pane fade" id="tab-setup" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}" id="tab-setup" role="tabpanel">
                         @yield('setup_content')
                     </div>
 
                     <!-- Communications Tab -->
-                    <div class="tab-pane fade" id="tab-communications" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}" id="tab-communications" role="tabpanel">
                         @yield('communications_content')
                     </div>
 
                     <!-- Academics Tab -->
-                    <div class="tab-pane fade" id="tab-academics" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}" id="tab-academics" role="tabpanel">
                         @yield('academics_content')
                     </div>
 
                     <!-- Material Management Tab -->
-                    <div class="tab-pane fade" id="tab-material-management" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}" id="tab-material-management" role="tabpanel">
                         @yield('material_management_content')
                     </div>
                 </div>
+                </main>
             </div>
         </div>
     </div>
@@ -600,6 +632,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');
     const input  = document.getElementById('searchInput');
+    if (!toggle || !input) return;
 
     toggle.addEventListener('click', () => {
         input.classList.toggle('active');
@@ -618,10 +651,10 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <script>
     window.addEventListener('load', function () {
-        const loader = document.getElementById('alphabetLoader');
+        const loader = document.getElementById('sargamLoader');
         if (loader) {
-            loader.style.opacity = "0";
-            setTimeout(() => loader.style.display = "none", 300);
+            loader.classList.add('hidden');
+            setTimeout(function () { loader.style.display = 'none'; }, 500);
         }
     });
 </script>
@@ -629,6 +662,7 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.getElementById("main-wrapper");
     const toggleBtn = document.getElementById("headerCollapse");
+    if (!sidebar || !toggleBtn) return;
     // Query all icons across all tabs (multiple instances due to tab structure)
     const icons = document.querySelectorAll("#sidebarToggleIcon");
     const body = document.body;

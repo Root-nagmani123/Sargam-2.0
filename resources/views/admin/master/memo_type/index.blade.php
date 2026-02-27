@@ -3,38 +3,36 @@
 @section('title', 'Memo Type Master')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid px-3 px-md-4 px-lg-5 py-3 py-md-4 memo-type-index">
+    <x-breadcrum title="Memo Type Master" />
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Memo Type Master</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <!-- Add Group Mapping -->
-                                <!-- <a href="javascript:void(0);" id="showMemoAlert"
-                                    class="btn btn-primary d-flex align-items-center">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">add</i>
-                                    Add Memo Type
-                                </a> -->
-                                <button id="showMemoAlert" class="btn btn-primary">
-                                    Add Memo Type
-                                </button>
-                            </div>
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden border-start border-4 border-primary admin-card">
+            <div class="card-body p-4 p-lg-5">
+                <section class="row align-items-center mb-4 g-3 row-gap-2" role="region" aria-labelledby="memoTypeHeading">
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <h1 id="memoTypeHeading" class="h4 fw-bold mb-2 mb-md-0 d-flex align-items-center gap-2">
+                            <span class="rounded-2 p-2 bg-primary bg-opacity-10">
+                                <i class="material-icons material-symbols-rounded text-primary fs-4">category</i>
+                            </span>
+                            <span>Memo Type Master</span>
+                        </h1>
+                        <p class="mb-0 small text-body-secondary mt-1">Manage memo type configurations</p>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-8">
+                        <div class="d-flex flex-wrap justify-content-md-end">
+                            <button id="showMemoAlert" type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold shadow-sm" aria-label="Add memo type">
+                                <i class="material-icons material-symbols-rounded fs-5">add</i>
+                                <span>Add Memo Type</span>
+                            </button>
                         </div>
                     </div>
-                    <hr>
-
-                    {!! $dataTable->table(['class' => 'table']) !!}
+                </section>
+                <div class="border-top pt-4 mt-2"></div>
+                <div class="table-responsive overflow-x-auto">
+                    {!! $dataTable->table(['class' => 'table table-striped table-hover align-middle mb-0 w-100']) !!}
                 </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
@@ -42,8 +40,28 @@
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
-
-
+<script>
+(function() {
+    // Ensure memo type table shows all data in single row (no responsive child rows)
+    $(function() {
+        var $t = $('#memotypemaster-table');
+        if ($.fn.DataTable && $t.length) {
+            var check = setInterval(function() {
+                if ($.fn.DataTable.isDataTable($t)) {
+                    clearInterval(check);
+                    try {
+                        var api = $t.DataTable();
+                        if (api.responsive && typeof api.responsive.disable === 'function') {
+                            api.responsive.disable();
+                        }
+                    } catch (e) {}
+                }
+            }, 50);
+            setTimeout(function() { clearInterval(check); }, 3000);
+        }
+    });
+})();
+</script>
 <script>
 document.getElementById('showMemoAlert').addEventListener('click', function () {
 
@@ -54,35 +72,35 @@ document.getElementById('showMemoAlert').addEventListener('click', function () {
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
                 <!-- Memo Type Name -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Memo Type Name <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
-                        <input type="text" name="memo_type_name" id="memo_type_name" class="form-control">
+                    <div class="col-12 col-sm">
+                        <input type="text" name="memo_type_name" id="memo_type_name" class="form-control form-control-sm">
                         <small class="text-danger d-none" id="memo_type_name_error">Required</small>
                     </div>
                 </div>
 
                 <!-- Upload Document -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Upload Document
                     </label>
-                    <div class="col">
+                    <div class="col-12 col-sm">
                         <input type="file" name="memo_doc_upload" id="memo_doc_upload"
-                               class="form-control" accept=".pdf,.doc,.docx">
+                               class="form-control form-control-sm" accept=".pdf,.doc,.docx">
                         <small class="text-danger d-none" id="memo_doc_upload_error"></small>
                     </div>
                 </div>
 
                 <!-- Status -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Status <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
-                        <select name="active_inactive" id="active_inactive" class="form-control">
+                    <div class="col-12 col-sm">
+                        <select name="active_inactive" id="active_inactive" class="form-select form-select-sm">
                             <option value="">Select</option>
                             <option value="1">Active</option>
                             <option value="2">Inactive</option>
@@ -177,7 +195,6 @@ $(document).on('click', '.editMemo', function () {
     const name    = $(this).data('name');
     const status  = $(this).data('status');
     const fileUrl = $(this).data('file');
-    const BASE_URL = "{{ url('/') }}";
 
     Swal.fire({
         title: '<strong>Edit Memo Type</strong>',
@@ -187,39 +204,35 @@ $(document).on('click', '.editMemo', function () {
                 <input type="hidden" name="pk" value="${pk}">
 
                 <!-- Memo Type Name -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Memo Type Name <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
+                    <div class="col-12 col-sm">
                         <input type="text" name="memo_type_name" id="memo_type_name"
-                               class="form-control" value="${name}">
+                               class="form-control form-control-sm" value="${name}">
                         <small class="text-danger d-none" id="memo_type_name_error">Required</small>
                     </div>
                 </div>
 
                 <!-- Upload Document -->
-                <div class="row mb-2">
-                <label class="col-auto fw-semibold">Replace Document</label>
-                <div class="col">
-                    <input type="file" name="memo_doc_upload" id="memo_doc_upload"
-                           class="form-control" accept=".pdf,.doc,.docx">
-                    
-                    <small class="text-danger d-none" id="memo_doc_upload_error"></small>
-                    ${fileUrl ? `<div class="mt-1">
-                                    <a href="${BASE_URL}/${fileUrl}" target="_blank" class="text-primary">
-                                        View Existing Document
-                                    </a>
-                                  </div>` : ''}
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">Replace Document</label>
+                    <div class="col-12 col-sm">
+                        <input type="file" name="memo_doc_upload" id="memo_doc_upload"
+                               class="form-control form-control-sm" accept=".pdf,.doc,.docx">
+                        <small class="text-danger d-none" id="memo_doc_upload_error"></small>
+                        ${fileUrl ? `<div class="mt-1"><a href="${fileUrl}" target="_blank" class="text-primary text-decoration-none">View Existing Document</a></div>` : ''}
+                    </div>
                 </div>
-        
+
                 <!-- Status -->
-                <div class="row mb-2">
-                    <label class="col-auto fw-semibold">
+                <div class="row g-2 mb-2 align-items-center">
+                    <label class="col-12 col-sm-auto form-label fw-semibold mb-0">
                         Status <span class="text-danger">*</span>
                     </label>
-                    <div class="col">
-                        <select name="active_inactive" id="active_inactive" class="form-control">
+                    <div class="col-12 col-sm">
+                        <select name="active_inactive" id="active_inactive" class="form-select form-select-sm">
                             <option value="">Select</option>
                             <option value="1" ${status == 1 ? 'selected' : ''}>Active</option>
                             <option value="2" ${status == 2 ? 'selected' : ''}>Inactive</option>

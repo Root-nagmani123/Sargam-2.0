@@ -30,28 +30,31 @@ class GroupMappingController extends Controller
 
     public function index(GroupMappingDataTable $dataTable)
     {
-        $data_course_id =  get_Role_by_course();
+    $data_course_id = get_Role_by_course();
+    $today = now()->toDateString();
 
-        $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now());
+    // ✅ Only ACTIVE courses by default
+    $courses = CourseMaster::where('active_inactive', 1)
+        ->where(function ($q) use ($today) {
+            $q->whereNull('end_date')
+              ->orWhereDate('end_date', '>=', $today);
+        });
 
-        if(!empty($data_course_id))
-        {
-            $courses = $courses->whereIn('pk',$data_course_id);
-        }
-
-        $courses = $courses->orderBy('course_name')
-            ->pluck('course_name', 'pk')
-            ->toArray();
-
-        $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
-                ->orderBy('type_name')
-                ->pluck('type_name', 'pk')
-                ->toArray();
-
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
+    if (!empty($data_course_id)) {
+        $courses->whereIn('pk', $data_course_id);
     }
 
+    $courses = $courses->orderBy('course_name')
+        ->pluck('course_name', 'pk')
+        ->toArray();
+
+    $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
+        ->orderBy('type_name')
+        ->pluck('type_name', 'pk')
+        ->toArray();
+
+    return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
+    }
 
     /**
      * Show the form for creating a new group mapping.
@@ -61,9 +64,17 @@ class GroupMappingController extends Controller
     function create()
     {
         $data_course_id =  get_Role_by_course();
-          
-        $courses = CourseMaster::where('active_inactive', '1');
+
+       /* $courses = CourseMaster::where('active_inactive', '1');
            $courses->where('end_date', '>', now());
+           */
+
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                ->orWhere('end_date', '>=', now());
+            });
+
               if(!empty($data_course_id))
             {
                 $courses = CourseMaster::whereIn('pk',$data_course_id);
@@ -90,7 +101,7 @@ class GroupMappingController extends Controller
     {
         $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($id));
         $data_course_id =  get_Role_by_course();
-        
+
         // Get active courses (active_inactive = '1' and end_date > now())
         $activeCourses = CourseMaster::where('active_inactive', '1');
         if(!empty($data_course_id))
@@ -101,7 +112,7 @@ class GroupMappingController extends Controller
             ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();
-        
+
         // If editing and the current course is archived, include it in the list
         $courses = $activeCourses;
         if ($groupMapping && $groupMapping->course_name) {
@@ -110,7 +121,7 @@ class GroupMappingController extends Controller
                 $courses = [$currentCourse->pk => $currentCourse->course_name] + $courses;
             }
         }
-        
+
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
 
         $facilities = FacultyMaster::where('active_inactive', 1)
@@ -180,7 +191,7 @@ class GroupMappingController extends Controller
 
             // Handle notifications - convert faculty PKs to user_ids and handle all scenarios
             $notificationService = app(NotificationService::class);
-            
+
             // Convert faculty PKs to user_ids (employee_master_pk from FacultyMaster)
             $oldFacilityUserId = $oldFacilityId ? $this->convertFacultyPkToUserId((int)$oldFacilityId) : null;
             $newFacilityUserId = $newFacilityId ? $this->convertFacultyPkToUserId((int)$newFacilityId) : null;
@@ -296,19 +307,19 @@ class GroupMappingController extends Controller
         try {
             $groupMappingID = decrypt($request->groupMappingID);
             $groupMapping = GroupTypeMasterCourseMasterMap::with(['Faculty', 'courseGroup'])->findOrFail($groupMappingID);
-            
+
             // Get the course ID from the group mapping
             $courseId = $groupMapping->course_name;
-            
+
             // Get search query
             $searchQuery = $request->input('search', '');
-            
+
             // Filter students by:
             // 1. Group mapping (group_type_master_course_master_map_pk)
             // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
             $query = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,generated_OT_code,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk);
-            
+
             // Apply search filter if search query is provided
             if (!empty($searchQuery)) {
                 $query->whereHas('studentsMaster', function($q) use ($searchQuery) {
@@ -318,9 +329,9 @@ class GroupMappingController extends Controller
                       ->orWhere('generated_OT_code', 'like', '%' . $searchQuery . '%');
                 });
             }
-            
+
             $students = $query->paginate(10, ['*'], 'page', $request->page);
-            
+
             // Render the HTML partial
             $groupMappingPk = $groupMapping->pk;
             $courseName = $groupMapping->courseGroup->course_name ?? 'N/A';
@@ -431,10 +442,10 @@ class GroupMappingController extends Controller
             ]);
 
             $groupTypeId = $request->group_type_id;
-            
+
             // Get group type name
             $groupType = CourseGroupTypeMaster::findOrFail($groupTypeId);
-            
+
             // Get all group names for this group type
             $groupNames = GroupTypeMasterCourseMasterMap::where('type_name', $groupTypeId)
                 ->where('active_inactive', 1)
@@ -482,7 +493,7 @@ class GroupMappingController extends Controller
             // Lookup: StudentMaster by OT code (case-insensitive)
             $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
                 ->select('pk')->first();
-                
+
 
             if (!$studentMaster) {
                 return response()->json([
@@ -603,11 +614,11 @@ class GroupMappingController extends Controller
     function delete(string $id)
     {
         try {
-            
+
             $groupMapping = GroupTypeMasterCourseMasterMap::findOrFail(decrypt($id));
             $groupMapping->studentCourseGroupMap()->delete();
             $groupMapping->delete();
-            
+
             return redirect()->route('group.mapping.index')->with('success', 'Group Mapping deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
@@ -731,7 +742,7 @@ class GroupMappingController extends Controller
 
     /**
      * Convert faculty PK to user_id (employee_master_pk)
-     * 
+     *
      * @param int|null $facultyPk
      * @return int|null
      */
@@ -740,12 +751,37 @@ class GroupMappingController extends Controller
         if (empty($facultyPk)) {
             return null;
         }
-        
+
         $faculty = FacultyMaster::find($facultyPk);
         if (!$faculty || !$faculty->employee_master_pk) {
             return null;
         }
-        
+
         return (int) $faculty->employee_master_pk;
     }
+
+
+
+public function getCoursesByStatus(Request $request)
+{
+    $status = $request->status;
+    $today = now()->toDateString();
+
+    $query = CourseMaster::where('active_inactive', 1);
+
+    if ($status == 'archive') {
+        $query->whereNotNull('end_date')
+              ->whereDate('end_date', '<', $today);
+    } else {
+        $query->where(function ($q) use ($today) {
+            $q->whereNull('end_date')
+              ->orWhereDate('end_date', '>=', $today);
+        });
+    }
+
+    return response()->json($query->get());
+}
+
+
+
 }

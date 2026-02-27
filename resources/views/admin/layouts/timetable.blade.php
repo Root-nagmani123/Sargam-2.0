@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" style="height: 100%;">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-   <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
+    <!-- Bootstrap 5.3.8 (latest v5) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
     <!-- Favicon icon-->
     <link rel="shortcut icon" type="image/ico" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
@@ -18,9 +19,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.min.js"></script>
     <!-- Favicon -->
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
-    <!-- unified bootstrap include -->
     <!-- Icon library (Bootstrap Icons or Lucide) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Admin UI enhancements (Bootstrap 5 polish) -->
+    <link href="{{ asset('css/admin-ui-enhancements.css') }}" rel="stylesheet">
     <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,65 +33,64 @@
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #ffffff;">
+<body class="min-vh-100 d-flex flex-column bg-white">
     <!-- Top Blue Bar (Govt of India) -->
-<!-- Government Header Strips -->
-<div class="govt-header">
-    <!-- Dark Blue Strip -->
-    <div class="govt-header-top bg-primary text-white py-2">
-        <div class="container-fluid">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <div class="d-flex align-items-center gap-2">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png" 
-                             alt="India Emblem" 
-                             height="20" 
-                             class="d-inline-block">
-                        <span class="fw-semibold">भारत सरकार | Government of India</span>
+    <!-- Government Header Strips (GIGW: clear government identity + skip link) -->
+    <div class="govt-header d-none d-lg-block" role="banner" aria-label="Government of India identity bar">
+        <!-- Dark Blue Strip -->
+        <div class="govt-header-top bg-primary text-white py-2">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                                 alt="National Flag of India"
+                                 height="20"
+                                 class="d-inline-block">
+                            <span class="fw-semibold">भारत सरकार | Government of India</span>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="d-flex align-items-center justify-content-end gap-3">
-                        <a href="#main-content" class="text-white text-decoration-none small">Skip to content</a>
-                        <div class="d-flex align-items-center gap-1">
-                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Increase font size">A+</button>
-                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Normal font size">A</button>
-                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Decrease font size">A-</button>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center justify-content-end gap-3">
+                            <a href="#main-content" class="text-white text-decoration-none small">Skip to main content</a>
+                            <div class="d-flex align-items-center gap-1" aria-label="Font size controls">
+                                <button class="btn btn-sm btn-link text-white p-0" type="button" aria-label="Increase font size">A+</button>
+                                <button class="btn btn-sm btn-link text-white p-0" type="button" aria-label="Normal font size">A</button>
+                                <button class="btn btn-sm btn-link text-white p-0" type="button" aria-label="Decrease font size">A-</button>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-link text-white dropdown-toggle p-0"
+                                        type="button"
+                                        id="languageDropdown"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    English
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                                    <li><a class="dropdown-item" href="#">English</a></li>
+                                    <li><a class="dropdown-item" href="#">हिंदी</a></li>
+                                </ul>
+                            </div>
                         </div>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-link text-white dropdown-toggle p-0" 
-                                    type="button" 
-                                    id="languageDropdown" 
-                                    data-bs-toggle="dropdown" 
-                                    aria-expanded="false">
-                                English
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
-                                <li><a class="dropdown-item" href="#">English</a></li>
-                                <li><a class="dropdown-item" href="#">हिंदी</a></li>
-                            </ul>
-                        </div>
-                        <button class="btn btn-sm btn-link text-white p-0" aria-label="Search">
-                            <i class="bi bi-search"></i>
-                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
     <!-- Sticky Header -->
-    <div class="header sticky-top bg-white shadow-sm mb-4">
+    <div class="header sticky-top bg-white shadow-sm mb-4" role="banner">
         <div class="container-fluid p-1">
-            <nav class="navbar navbar-expand-lg">
-                 <a class="navbar-brand me-2" href="#">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-                            alt="Logo 1" height="80">
-                    </a>
-                    <span class="vr mx-2"></span>
-                    <a class="navbar-brand" href="#">
-                        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="80">
-                    </a>
+            <nav class="navbar navbar-expand-lg navbar-light" aria-label="Primary navigation">
+                 <div class="d-flex flex-nowrap align-items-center">
+                        <a class="navbar-brand me-2 py-0 d-flex align-items-center" href="#">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                                alt="Ashoka Emblem" class="header-logo-ashoka" height="80">
+                        </a>
+                        <span class="vr mx-1 mx-lg-2 flex-shrink-0"></span>
+                        <a class="navbar-brand py-0 d-flex align-items-center" href="#">
+                            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" class="header-logo-lbsnaa" height="80">
+                        </a>
+                    </div>
 
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -114,26 +115,26 @@
 
 
     <!-- Main Content -->
-    @yield('content')
+    <main id="main-content" class="flex-grow-1" role="main" tabindex="-1">
+        @yield('content')
+    </main>
 
     <!-- Footer -->
-    <footer class="mt-auto text-white py-2" style="background-color: #004a93;">
+    <footer class="mt-auto text-white py-2 bg-primary" role="contentinfo">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-8">
-                    <p class="mb-0 text-white" style="font-size: 14px;">&copy; {{ date('Y') }} Lal Bahadur Shastri
+                    <p class="mb-0 text-white small">&copy; {{ date('Y') }} Lal Bahadur Shastri
                         National Academy
                         of Administration, Mussoorie, Uttarakhand</p>
                 </div>
-                <div class="col-md-4 text-end">
-                    <ul class="list-unstyled d-flex justify-content-end mb-0">
+                <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                    <ul class="list-unstyled d-flex justify-content-md-end justify-content-start mb-0 gap-3" aria-label="Footer navigation">
                         <li class="me-3">
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                            <a href="#" class="text-white text-decoration-none small">Privacy Policy</a>
                         </li>
                         <li>
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                            <a href="#" class="text-white text-decoration-none small">Need Help</a>
                         </li>
                     </ul>
                 </div>
@@ -141,8 +142,8 @@
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS (local, latest 5.3.8 bundle) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 
     <!-- JavaScript for Tab Functionality -->
     <script>

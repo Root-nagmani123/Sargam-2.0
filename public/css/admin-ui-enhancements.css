@@ -1,0 +1,606 @@
+/* ============================================
+   Admin UI Enhancements - Bootstrap 5.3
+   Modern, polished look without changing logic
+   ============================================ */
+
+:root {
+    --admin-primary: #004a93;
+    --admin-primary-hover: #003d7a;
+    --admin-primary-subtle: rgba(0, 74, 147, 0.08);
+    --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --admin-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --admin-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+    --admin-radius: 0.5rem;
+    --admin-radius-lg: 0.75rem;
+    --admin-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cards - Bootstrap 5.3 enhanced */
+.admin-card,
+.course-group-type-index .card,
+.idcard-index-card,
+.idcard-create-form-card,
+.idcard-create-type-card,
+.stream-create-card {
+    border-radius: var(--admin-radius-lg) !important;
+    box-shadow: var(--admin-shadow) !important;
+    transition: box-shadow var(--admin-transition), transform var(--admin-transition);
+}
+
+.admin-card:hover,
+.course-group-type-index .card:hover,
+.idcard-index-card:hover {
+    box-shadow: var(--admin-shadow-lg) !important;
+}
+
+/* Nav pills/tabs - Bootstrap 5.3 nav-underline style */
+.nav-pills.idcard-index-tabs .nav-link {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all var(--admin-transition);
+}
+
+.nav-pills.idcard-index-tabs .nav-link:not(.active):hover {
+    background: rgba(0, 74, 147, 0.06) !important;
+    color: var(--admin-primary) !important;
+}
+
+/* Table enhancements */
+.table.idcard-index-table thead th {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.table.idcard-index-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+/* Form controls - Bootstrap 5.3 focus ring */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+
+.btn-outline-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.2);
+}
+
+/* Badges - Bootstrap 5.3 text-bg-* style */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    letter-spacing: 0.02em;
+}
+
+/* Dropdown - modern styling */
+.dropdown-menu {
+    border-radius: var(--admin-radius-lg);
+    box-shadow: var(--admin-shadow-lg);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dropdown-item {
+    border-radius: 0.375rem;
+    margin: 0 0.25rem;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.15s ease;
+}
+
+/* Modal enhancements */
+.modal-content {
+    border-radius: var(--admin-radius-lg);
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.15);
+    border: none;
+}
+
+.modal-header {
+    border-radius: var(--admin-radius-lg) var(--admin-radius-lg) 0 0;
+}
+
+/* Upload zones - enhanced */
+.idcard-upload-zone {
+    transition: all var(--admin-transition);
+}
+
+.idcard-upload-zone:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.1);
+}
+
+/* Empty states */
+.table-empty-state {
+    padding: 3rem 2rem;
+}
+
+.table-empty-state .material-icons {
+    opacity: 0.5;
+}
+
+/* Pagination */
+.pagination .page-link {
+    border-radius: 0.375rem !important;
+    transition: all 0.15s ease;
+}
+
+.pagination .page-item.active .page-link {
+    font-weight: 600;
+}
+
+/* Action buttons in tables */
+.idcard-index-table .btn-link,
+.idcard-index-table a {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.idcard-index-table .btn-link:hover,
+.idcard-index-table a:hover {
+    opacity: 0.85;
+    transform: scale(1.05);
+}
+
+/* Sidebar - subtle enhancements */
+#sidebar-setup .sidebar-google-style .mini-nav,
+#sidebar-home .sidebar-google-style .mini-nav {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Override base styles.css - force icon center alignment */
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a,
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+    align-items: center !important;
+    justify-content: center !important;
+    padding-left: 8px !important;
+}
+#sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap,
+#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+    margin-inline: auto !important;
+}
+
+/* Sidebar invisible scroll - when content exceeds max height, scroll works but scrollbar is hidden */
+
+/* Expanded menu (sidebar-nav) - hide Simplebar track, keep scroll working */
+.side-mini-panel .sidebarmenu .sidebar-nav {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.side-mini-panel .sidebarmenu .sidebar-nav::-webkit-scrollbar {
+    display: none;
+}
+/* Hide Simplebar's custom scrollbar track for expanded menu */
+.side-mini-panel .sidebarmenu .sidebar-nav .simplebar-track.simplebar-vertical,
+.side-mini-panel .sidebarmenu .sidebar-nav .simplebar-track.simplebar-horizontal {
+    visibility: hidden !important;
+    display: none !important;
+}
+
+/* Icon bar (mini-nav) - hide Simplebar track when scrolling */
+.side-mini-panel .mini-nav .mini-nav-ul .simplebar-track.simplebar-vertical,
+.side-mini-panel .mini-nav .mini-nav-ul .simplebar-track.simplebar-horizontal,
+.side-mini-panel .mini-nav .simplebar-track.simplebar-vertical,
+.side-mini-panel .mini-nav .simplebar-track.simplebar-horizontal {
+    visibility: hidden !important;
+    display: none !important;
+}
+
+/* Ensure Simplebar content wrapper can scroll (fallback if Simplebar overrides) */
+.side-mini-panel .sidebar-nav .simplebar-content-wrapper {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.side-mini-panel .sidebar-nav .simplebar-content-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+/* Form labels - consistent spacing */
+.form-label {
+    font-weight: 500;
+}
+
+/* Disabled link/button - Bootstrap 5.3 utilities */
+.disabled-link {
+    pointer-events: none;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Course Group Type - DataTables & responsive (DOM generated by plugin) */
+.course-group-type-index #coursegrouptype_wrapper .dataTables_filter input,
+.course-group-type-index #coursegrouptype_wrapper .dataTables_length select {
+    border-radius: var(--admin-radius);
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--bs-border-color);
+}
+
+.course-group-type-index #coursegrouptype_wrapper .dataTables_filter input:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+
+.course-group-type-index #coursegrouptype tbody tr:hover {
+    background-color: var(--admin-primary-subtle);
+}
+
+.course-group-type-index .dtr-details li {
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.course-group-type-index .dtr-details li:last-child {
+    border-bottom: none;
+}
+
+/* Table column widths */
+.w-5rem { width: 5rem; }
+.w-8rem { width: 8rem; }
+.w-12rem { width: 12rem; }
+
+@media (max-width: 991.98px) {
+    .course-group-type-index .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    .course-group-type-index #coursegrouptype { min-width: 480px; }
+}
+
+@media (max-width: 767.98px) {
+    .course-group-type-index #coursegrouptype_wrapper .dataTables_wrapper .row { flex-direction: column; gap: 0.5rem; }
+    .course-group-type-index #coursegrouptype_wrapper .dataTables_length,
+    .course-group-type-index #coursegrouptype_wrapper .dataTables_filter { text-align: start !important; }
+    .course-group-type-index #coursegrouptype_wrapper .dataTables_filter input { width: 100%; max-width: 100%; }
+}
+
+@media (max-width: 575.98px) {
+    .course-group-type-index .btn-primary { width: 100%; justify-content: center; }
+    .course-group-type-index #coursegrouptype { min-width: 420px; }
+}
+
+@media (max-width: 375px) {
+    .course-group-type-index #coursegrouptype { min-width: 360px; }
+}
+
+/* Memo Type Master - Bootstrap 5.3, single-row table, no responsive child rows */
+.memo-type-index .card { border-radius: var(--admin-radius-lg) !important; box-shadow: var(--admin-shadow) !important; }
+.memo-type-index .card:hover { box-shadow: var(--admin-shadow-lg) !important; }
+.memo-type-index .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+.memo-type-index #memotypemaster-table { min-width: 520px; table-layout: auto; }
+.memo-type-index #memotypemaster-table th,
+.memo-type-index #memotypemaster-table td { vertical-align: middle !important; }
+.memo-type-index #memotypemaster-table tbody tr:hover { background-color: var(--admin-primary-subtle); }
+.memo-type-index #memotypemaster-table_wrapper .dataTables_filter input,
+.memo-type-index #memotypemaster-table_wrapper .dataTables_length select {
+    border-radius: var(--admin-radius);
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--bs-border-color);
+}
+.memo-type-index #memotypemaster-table_wrapper .dataTables_filter input:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+/* Hide responsive child row control (down arrow) if it appears */
+.memo-type-index .dtr-control,
+.memo-type-index .dtr-expandable { display: none !important; }
+.memo-type-index .dtr-details { display: none !important; }
+.memo-type-index .child { display: none !important; }
+
+/* Employee ID card index - hide DataTables responsive child toggle (down arrow) */
+.idcard-index-page .dtr-control,
+.idcard-index-page .dtr-expandable {
+    display: none !important;
+}
+.idcard-index-page .dtr-details,
+.idcard-index-page .child {
+    display: none !important;
+}
+
+@media (max-width: 767.98px) {
+    .memo-type-index .btn-primary { width: 100%; justify-content: center; }
+    .memo-type-index #memotypemaster-table_wrapper .dataTables_wrapper .row { flex-direction: column; gap: 0.5rem; }
+    .memo-type-index #memotypemaster-table_wrapper .dataTables_length,
+    .memo-type-index #memotypemaster-table_wrapper .dataTables_filter { text-align: start !important; }
+    .memo-type-index #memotypemaster-table_wrapper .dataTables_filter input { width: 100%; max-width: 100%; }
+}
+
+@media (max-width: 575.98px) {
+    .memo-type-index #memotypemaster-table { min-width: 480px; }
+}
+
+@media (max-width: 375px) {
+    .memo-type-index #memotypemaster-table { min-width: 420px; }
+}
+
+/* ========== SIDEBAR MOBILE RESPONSIVE ========== */
+@media (max-width: 991.98px) {
+    /* Hide scrollbars on mobile - scrollable but invisible */
+    .side-mini-panel,
+    .side-mini-panel .sidebar-nav,
+    .side-mini-panel .sidebarmenu .sidebar-nav,
+    .side-mini-panel .sidebar-nav .simplebar-content-wrapper,
+    .side-mini-panel .mini-nav .mini-nav-ul,
+    .side-mini-panel .mini-nav .mini-nav-ul .simplebar-content-wrapper {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .side-mini-panel::-webkit-scrollbar,
+    .side-mini-panel .sidebar-nav::-webkit-scrollbar,
+    .side-mini-panel .sidebarmenu .sidebar-nav::-webkit-scrollbar,
+    .side-mini-panel .sidebar-nav .simplebar-content-wrapper::-webkit-scrollbar,
+    .side-mini-panel .mini-nav .mini-nav-ul::-webkit-scrollbar,
+    .side-mini-panel .mini-nav .mini-nav-ul .simplebar-content-wrapper::-webkit-scrollbar {
+        display: none !important;
+    }
+    .side-mini-panel .simplebar-track {
+        display: none !important;
+    }
+
+    /* Ensure collapse triggers are touch-friendly and responsive on mobile */
+    .side-mini-panel [data-bs-toggle="collapse"] {
+        cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(0, 74, 147, 0.1);
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+    }
+
+    /* Main content area - hide scrollbar on mobile, keep scrollable */
+    .body-wrapper,
+    .page-wrapper,
+    .tab-content {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .body-wrapper::-webkit-scrollbar,
+    .page-wrapper::-webkit-scrollbar,
+    .tab-content::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    /* Horizontal layout on mobile: mini-nav left, menu right */
+    .side-mini-panel .iconbar > div,
+    .side-mini-panel .iconbar {
+        flex-direction: row !important;
+    }
+
+    /* Compact mini-nav on mobile - narrow strip on left */
+    #sidebar-setup .sidebar-google-style .mini-nav,
+    #sidebar-home .sidebar-google-style .mini-nav {
+        padding: 8px 0 !important;
+        width: 56px !important;
+        min-width: 56px !important;
+        flex: 0 0 56px !important;
+    }
+
+    /* Reposition sidebar-nav to align with compact mini-nav */
+    .side-mini-panel .sidebarmenu .sidebar-nav {
+        left: 56px !important;
+        top: 60px !important;
+        width: calc(100% - 56px) !important;
+        height: calc(100vh - 60px) !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
+        padding: 8px 4px !important;
+        min-height: 48px !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap,
+    #sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+        width: 40px !important;
+        height: 28px !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
+        font-size: 20px !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .sidebar-google-label,
+    #sidebar-home .sidebar-google-style .sidebar-google-label {
+        font-size: 10px !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    /* Extra compact on small phones */
+    #sidebar-setup .sidebar-google-style .mini-nav,
+    #sidebar-home .sidebar-google-style .mini-nav {
+        width: 52px !important;
+        min-width: 52px !important;
+        flex: 0 0 52px !important;
+    }
+
+    .side-mini-panel .sidebarmenu .sidebar-nav {
+        left: 52px !important;
+        top: 125px !important;
+        width: calc(100% - 52px) !important;
+        height: calc(100vh - 56px) !important;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .admin-card,
+    .course-group-type-index .card,
+    .idcard-index-card,
+    .btn-primary,
+    .btn-outline-primary,
+    .idcard-upload-zone,
+    .pagination .page-link {
+        transition: none;
+    }
+
+    .btn-primary:hover,
+    .btn-outline-primary:hover,
+    .idcard-upload-zone:hover {
+        transform: none;
+    }
+}
+
+/* ============================================
+   Timetable layout & programme view refinements
+   Centralised so Blade views use Bootstrap only
+   ============================================ */
+
+/* Govt header strip */
+.govt-header-top {
+    background-color: var(--admin-primary);
+}
+
+/* Timetable header logos - responsive */
+.header .header-logo-ashoka,
+.header .header-logo-lbsnaa {
+    object-fit: contain;
+}
+
+@media (min-width: 992px) {
+    .header .header-logo-ashoka,
+    .header .header-logo-lbsnaa {
+        height: 80px !important;
+        width: auto;
+        max-width: none;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .header .header-logo-ashoka,
+    .header .header-logo-lbsnaa {
+        height: 44px !important;
+        max-width: 90px;
+        width: auto;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .header .header-logo-ashoka,
+    .header .header-logo-lbsnaa {
+        height: 38px !important;
+        max-width: 75px;
+        width: auto;
+    }
+}
+
+/* Print: prevent sticky header/logo from overlapping content */
+@media print {
+    .header.sticky-top {
+        position: static !important;
+    }
+    .header {
+        break-inside: avoid;
+    }
+}
+
+/* Programme view: subtle image sizing & hover lift */
+.programme-coordinator-img {
+    width: 7.5rem;
+    height: 7.5rem;
+}
+
+.programme-assistant-img {
+    width: 5.5rem;
+    height: 5.5rem;
+}
+
+.programme-assistant-card {
+    border: 1px solid var(--bs-border-color-translucent);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.programme-assistant-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 74, 147, 0.08) !important;
+    border-color: rgba(0, 74, 147, 0.2) !important;
+}
+
+.programme-back-top {
+    transition: background-color 0.2s ease;
+}
+
+.programme-back-top:hover {
+    background-color: var(--admin-primary-subtle);
+}
+
+/* Accessible focus outline using Bootstrap primary */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid var(--admin-primary);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   Global DataTables UI polish (Bootstrap 5)
+   ============================================ */
+.body-wrapper .dataTables_wrapper .dataTables_length label,
+.body-wrapper .dataTables_wrapper .dataTables_filter label,
+.body-wrapper .dt-container .dt-length label,
+.body-wrapper .dt-container .dt-search label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+    margin-bottom: 0;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_filter input,
+.body-wrapper .dt-container .dt-search input {
+    min-width: 16rem;
+    border-radius: 0.5rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_length select,
+.body-wrapper .dt-container .dt-length select {
+    min-width: 5.5rem;
+    border-radius: 0.5rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_info,
+.body-wrapper .dt-container .dt-info {
+    font-size: 0.875rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_paginate .pagination,
+.body-wrapper .dt-container .dt-paging .pagination {
+    gap: 0.25rem;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_paginate .page-link,
+.body-wrapper .dt-container .dt-paging .page-link {
+    border-radius: 0.5rem !important;
+    border-color: var(--bs-border-color);
+    min-width: 2rem;
+    text-align: center;
+}
+
+.body-wrapper .dataTables_wrapper .dataTables_paginate .page-item.active .page-link,
+.body-wrapper .dt-container .dt-paging .page-item.active .page-link {
+    background-color: var(--admin-primary);
+    border-color: var(--admin-primary);
+    box-shadow: 0 0.25rem 0.6rem rgba(0, 74, 147, 0.22);
+}
+
+@media (max-width: 767.98px) {
+    .body-wrapper .dataTables_wrapper .dataTables_filter input,
+    .body-wrapper .dt-container .dt-search input {
+        min-width: 0;
+        width: 100%;
+    }
+}

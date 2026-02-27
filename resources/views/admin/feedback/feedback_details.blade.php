@@ -1,238 +1,51 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty Feedback with Comments All Details - Sargam | Lal Bahadur')
+@section('title', 'Faculty Feedback with Comments All Details')
 
 @section('setup_content')
-    <style>
-        :root {
-            --primary: #af2910;
-            --secondary: #f4f6f9;
-            --accent: #f2b705;
-            --success: #198754;
-            --border: #d0d7de;
-            --text-dark: #1f2937;
-        }
-
-        body {
-            background: var(--secondary);
-            color: var(--text-dark);
-            font-size: 14px;
-        }
-
-        .page-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .filter-card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: #fff;
-        }
-
-        .filter-card .card-header {
-            background: var(--primary);
-            color: #fff;
-            font-weight: 600;
-        }
-
-        .content-card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: #fff;
-        }
-
-        .content-card .card-header {
-            background: #eef4fb;
-            font-weight: 600;
-        }
-
-        .rating-badge {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            line-height: 24px;
-            text-align: center;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-
-        .rating-5 {
-            background: #198754;
-            color: white;
-        }
-
-        .rating-4 {
-            background: #20c997;
-            color: white;
-        }
-
-        .rating-3 {
-            background: #ffc107;
-            color: #000;
-        }
-
-        .rating-2 {
-            background: #fd7e14;
-            color: white;
-        }
-
-        .rating-1 {
-            background: #dc3545;
-            color: white;
-        }
-
-        .faculty-type-badge {
-            font-size: 0.75rem;
-            padding: 2px 6px;
-            border-radius: 10px;
-            background: #e9ecef;
-            color: #495057;
-        }
-
-        .session-badge {
-            font-size: 0.75rem;
-            padding: 2px 6px;
-            border-radius: 10px;
-            background: #e7f1ff;
-            color: #0d6efd;
-        }
-
-        /* Faculty suggestions */
-        .suggestions-container {
-            position: relative;
-        }
-
-        .suggestions-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .suggestion-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f1f1f1;
-        }
-
-        .suggestion-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        .suggestion-item:last-child {
-            border-bottom: none;
-        }
-
-        /* Loading spinner */
-        #loadingSpinner {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Pagination */
-        .pagination .page-link {
-            color: var(--primary);
-            border-color: var(--border);
-        }
-
-        .pagination .page-item.active .page-link {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #6c757d;
-        }
-
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            color: #dee2e6;
-        }
-
-        /* Tabs styling */
-        .nav-tabs .nav-link {
-            color: var(--text-dark);
-            border: none;
-            border-bottom: 3px solid transparent;
-            font-weight: 500;
-            padding: 12px 24px;
-        }
-
-        .nav-tabs .nav-link:hover {
-            border-color: transparent;
-            background-color: #f8f9fa;
-        }
-
-        .nav-tabs .nav-link.active {
-            color: var(--primary);
-            background-color: transparent;
-            border-bottom-color: var(--primary);
-        }
-    </style>
-
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <div class="container-fluid py-3">
         <x-breadcrum title="Faculty Feedback with Comments All Details"></x-breadcrum>
 
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" style="display: none;">
-            <div class="d-flex justify-content-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
+        <!-- Loading Spinner (hidden by default; JS toggles d-none) -->
+        <div id="loadingSpinner" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center gap-3 bg-white bg-opacity-90">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2 text-center">Loading feedback data...</p>
+            <p class="mb-0 small text-body-secondary">Loading feedback data...</p>
         </div>
 
         <!-- FILTER PANEL -->
-        <div class="card filter-card mb-3">
-            <div class="card-header">Feedback Details</div>
-            <div class="card-body">
-                <div class="row">
+        <div class="card shadow rounded-3 mb-4 border-0 overflow-hidden">
+            <div class="card-header bg-primary text-white fw-semibold py-3 px-4 d-flex align-items-center gap-2 border-0">
+                <i class="fas fa-filter"></i>
+                <span>Feedback Details</span>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
                     <!-- Course Status -->
-                    <div class="col-lg-2 col-md-6 mb-3">
-                        <fieldset>
-                            <legend class="fs-6 fw-semibold mb-2">Course Status</legend>
-                            <div class="form-check">
+                    <div class="col-lg-2 col-md-6">
+                        <fieldset class="mb-0">
+                            <legend class="fs-6 fw-semibold mb-2 text-body-secondary">Course Status</legend>
+                            <div class="form-check form-check-inline">
                                 <input class="form-check-input course-type-radio" type="radio" name="course_type"
                                     value="current" id="current"
                                     {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
-                                <label class="form-check-label" for="current">Current Courses</label>
+                                <label class="form-check-label" for="current">Current</label>
                             </div>
-                            <div class="form-check">
+                            <div class="form-check form-check-inline">
                                 <input class="form-check-input course-type-radio" type="radio" name="course_type"
                                     value="archived" id="archived"
                                     {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
-                                <label class="form-check-label" for="archived">Archived Courses</label>
+                                <label class="form-check-label" for="archived">Archived</label>
                             </div>
                         </fieldset>
                     </div>
 
                     <!-- Program Name -->
-                    <div class="col-lg-2 col-md-6 mb-3">
-                        <label for="programSelect" class="form-label">Program Name</label>
+                    <div class="col-lg-2 col-md-6">
+                        <label for="programSelect" class="form-label fw-medium">Program Name</label>
                         <select class="form-select" id="programSelect" name="program_id">
                             <option value="">All Programs</option>
                             @foreach ($programs as $key => $program)
@@ -244,30 +57,30 @@
                     </div>
 
                     <!-- Date Range -->
-                    <div class="col-lg-2 col-md-6 mb-3">
-                        <label for="fromDate" class="form-label">From Date</label>
+                    <div class="col-lg-2 col-md-6">
+                        <label for="fromDate" class="form-label fw-medium">From Date</label>
                         <input type="date" id="fromDate" class="form-control" name="from_date"
                             value="{{ $fromDate ?? '' }}" />
                     </div>
 
-                    <div class="col-lg-2 col-md-6 mb-3">
-                        <label for="toDate" class="form-label">To Date</label>
+                    <div class="col-lg-2 col-md-6">
+                        <label for="toDate" class="form-label fw-medium">To Date</label>
                         <input type="date" id="toDate" class="form-control" name="to_date"
                             value="{{ $toDate ?? '' }}" />
                     </div>
 
                     <!-- Faculty Type -->
                     @if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty'))
-                        <div class="col-lg-2 col-md-6 mb-3">
-                            <fieldset>
-                                <legend class="fs-6 fw-semibold mb-2">Faculty Type</legend>
-                                <div class="form-check">
+                        <div class="col-lg-2 col-md-6">
+                            <fieldset class="mb-0">
+                                <legend class="fs-6 fw-semibold mb-2 text-body-secondary">Faculty Type</legend>
+                                <div class="form-check form-check-inline">
                                     <input class="form-check-input faculty-type-checkbox" type="checkbox"
                                         name="faculty_type[]" value="2" id="faculty_type_guest"
                                         {{ in_array('2', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="faculty_type_guest">Guest</label>
                                 </div>
-                                <div class="form-check">
+                                <div class="form-check form-check-inline">
                                     <input class="form-check-input faculty-type-checkbox" type="checkbox"
                                         name="faculty_type[]" value="1" id="faculty_type_internal"
                                         {{ in_array('1', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
@@ -276,97 +89,66 @@
                             </fieldset>
                         </div>
 
-
                         <!-- Faculty Name -->
-                        <div class="col-lg-2 col-md-6 mb-3 suggestions-container">
-                            <label for="facultySearch" class="form-label">Faculty Name</label>
+                        <div class="col-lg-2 col-md-6 position-relative">
+                            <label for="facultySearch" class="form-label fw-medium">Faculty Name</label>
                             <input type="text" id="facultySearch" class="form-control" name="faculty_name"
                                 value="{{ $currentFaculty ?? '' }}" placeholder="Type to search..." autocomplete="off" />
 
                             <!-- Suggestions dropdown -->
-                            <div class="suggestions-list" id="facultySuggestions">
+                            <div class="position-absolute top-100 start-0 w-100 mt-1 list-group list-group-flush border rounded shadow overflow-auto d-none" id="facultySuggestions">
                                 @if ($facultySuggestions->isNotEmpty())
                                     @foreach ($facultySuggestions as $faculty)
-                                        <div class="suggestion-item" data-value="{{ $faculty->full_name }}">
+                                        <div class="list-group-item list-group-item-action suggestion-item" data-value="{{ $faculty->full_name }}" role="button">
                                             {{ $faculty->full_name }}
                                             @php
                                                 $typeMap = ['1' => 'Internal', '2' => 'Guest'];
                                                 $typeDisplay =
                                                     $typeMap[$faculty->faculty_type] ?? ucfirst($faculty->faculty_type);
                                             @endphp
-                                            <span class="faculty-type-badge ms-2">{{ $typeDisplay }}</span>
+                                            <span class="badge bg-secondary ms-2">{{ $typeDisplay }}</span>
                                         </div>
                                     @endforeach
                                 @else
-                                    <div class="suggestion-item text-muted">No faculty found</div>
+                                    <div class="list-group-item text-muted">No faculty found</div>
                                 @endif
                             </div>
                         </div>
                     @endif
                 </div>
 
-                <div class="d-flex align-items-center">
-                    <div class="btn-group ms-2" role="group">
-                        <button type="button" class="btn btn-sm btn-success" onclick="exportToExcel()">
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-4 pt-3 border-top">
+                    <div class="btn-group flex-wrap" role="group">
+                        <button type="button" class="btn btn-success rounded-2" onclick="exportToExcel()">
                             <i class="fas fa-file-excel me-1"></i> Export Excel
                         </button>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="exportToPDF()">
+                        <button type="button" class="btn btn-danger rounded-2" onclick="exportToPDF()">
                             <i class="fas fa-file-pdf me-1"></i> Export PDF
                         </button>
                     </div>
-
-                    <!-- Reset Button -->
-                    <div class="d-flex justify-content-end ms-3">
-                        <button type="button" class="btn btn-outline-secondary" id="resetButton">
-                            <i class="fas fa-redo me-1"></i> Reset Filters
-                        </button>
-                    </div>
-                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-sm btn-warning ms-2">
-                        <i class="fas fa-user-clock me-1"></i>
-                        Pending Feedback (Students)
+                    <button type="button" class="btn btn-outline-secondary rounded-2" id="resetButton">
+                        <i class="fas fa-redo me-1"></i> Reset Filters
+                    </button>
+                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning rounded-2">
+                        <i class="fas fa-user-clock me-1"></i> Pending Feedback (Students)
                     </a>
-
                 </div>
-
             </div>
 
-            <!-- TABS -->
-            <div class="card content-card mt-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span class="page-title">Faculty Feedback with Comments All Details</span>
-                    <small class="text-muted">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
+            <!-- Content card -->
+            <div class="card shadow-sm border-0 rounded-0 mt-0">
+                <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-4 border-bottom fw-semibold">
+                    <span class="mb-0 text-primary fs-6">Faculty Feedback with Comments All Details</span>
+                    <small class="text-body-secondary"><i class="fas fa-sync-alt me-1"></i> {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
                 </div>
 
-                <div class="card-body">
-                    <!-- Tab Navigation -->
-                    <ul class="nav nav-tabs" id="feedbackTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="feedback-tab" data-bs-toggle="tab" 
-                                data-bs-target="#feedback-content" type="button" role="tab" 
-                                aria-controls="feedback-content" aria-selected="true">
-                                <i class="fas fa-comments me-1"></i> Feedback
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="not-given-tab" data-bs-toggle="tab" 
-                                data-bs-target="#not-given-content" type="button" role="tab" 
-                                aria-controls="not-given-content" aria-selected="false">
-                                <i class="fas fa-clipboard-list me-1"></i> Feedback Not Given
-                            </button>
-                        </li>
-                    </ul>
-
-                    <!-- Tab Content -->
-                    <div class="tab-content mt-3" id="feedbackTabContent">
-                        <!-- Feedback Tab -->
-                        <div class="tab-pane fade show active" id="feedback-content" role="tabpanel" 
-                            aria-labelledby="feedback-tab">
-                            <div id="contentContainer">
+                <div class="card-body p-4">
+                    <div id="contentContainer">
                     @if ($groupedData->isEmpty())
-                        <div class="empty-state">
-                            <i class="fas fa-clipboard-list"></i>
-                            <h5>No feedback data found</h5>
-                            <p class="text-muted">Try adjusting your filters to see results.</p>
+                        <div class="text-center rounded-3 bg-light py-5 px-3 text-body-secondary">
+                            <i class="fas fa-clipboard-list display-4 text-secondary mb-3 d-block"></i>
+                            <h5 class="fw-semibold mt-2 text-dark">No feedback data found</h5>
+                            <p class="text-body-secondary mb-0">Try adjusting your filters to see results.</p>
                         </div>
                     @else
                         @foreach ($groupedData as $groupKey => $group)
@@ -376,75 +158,94 @@
                             @endphp
 
                             <!-- Session Header -->
-                            <div class="session-header mb-4 p-3 border rounded bg-light">
-                                <div class="row">
+                            <div class="border rounded bg-light shadow-sm mb-4 p-4">
+                                <div class="row g-3 align-items-start">
                                     <div class="col-md-4">
-                                        <h6 class="mb-1"><strong>Course:</strong> {{ $programName }}</h6>
-                                        <small class="text-muted d-block">
-                                            <span
-                                                class="session-badge">{{ $firstRecord['course_status'] ?? 'Unknown' }}</span>
-                                        </small>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="fas fa-book-open text-primary"></i>
+                                            <span class="fw-semibold text-body-secondary small">Course</span>
+                                        </div>
+                                        <h6 class="mb-0 fw-semibold">{{ $programName }}</h6>
+                                        <span class="badge bg-primary rounded-pill mt-1">{{ $firstRecord['course_status'] ?? 'Unknown' }}</span>
                                     </div>
                                     <div class="col-md-4">
-                                        <h6 class="mb-1"><strong>Faculty:</strong> {{ $facultyName }}</h6>
-                                        <small class="text-muted d-block">
-                                            <span
-                                                class="faculty-type-badge">{{ $firstRecord['faculty_type'] ?? '' }}</span>
-                                        </small>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="fas fa-chalkboard-teacher text-primary"></i>
+                                            <span class="fw-semibold text-body-secondary small">Faculty</span>
+                                        </div>
+                                        <h6 class="mb-0 fw-semibold">{{ $facultyName }}</h6>
+                                        <span class="badge bg-secondary rounded-pill mt-1">{{ $firstRecord['faculty_type'] ?? '' }}</span>
                                     </div>
                                     <div class="col-md-4">
-                                        <h6 class="mb-1"><strong>Topic:</strong> {{ $topicName }}</h6>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="fas fa-tag text-primary"></i>
+                                            <span class="fw-semibold text-body-secondary small">Topic</span>
+                                        </div>
+                                        <h6 class="mb-0 fw-semibold">{{ $topicName }}</h6>
                                         @if (!empty($firstRecord['start_date']))
-                                            <small class="text-muted d-block">
-                                                <strong>Session:</strong> {{ $firstRecord['start_date'] }}
+                                            <small class="text-body-secondary d-block mt-1">
+                                                Session: {{ $firstRecord['start_date'] }}
                                                 @if (!empty($firstRecord['end_date']))
-                                                    - {{ $firstRecord['end_date'] }}
+                                                    – {{ $firstRecord['end_date'] }}
                                                 @endif
                                             </small>
                                         @endif
                                     </div>
                                 </div>
                             </div>
-
                             <!-- Feedback Table -->
-                            <div class="table-responsive mb-5">
-                                <table class="table table-hover table-bordered">
+                            <div class="table-responsive mb-5 rounded-3 overflow-hidden border">
+                                <table class="table table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th width="5%">#</th>
-                                            <th width="20%">OT Name</th>
-                                            <th width="10%">OT Code</th>
-                                            <th width="10%">Content</th>
-                                            <th width="10%">Presentation</th>
-                                            <th width="35%">Remarks</th>
-                                            <th width="10%">Feedback Date</th>
+                                            <th>#</th>
+                                            <th>OT Name</th>
+                                            <th>OT Code</th>
+                                            <th>Content</th>
+                                            <th>Presentation</th>
+                                            <th>Remarks</th>
+                                            <th>Feedback Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($group as $index => $item)
+                                            @php
+                                                $ratingClass = match((int)($item['content'] ?? 0)) {
+                                                    5 => 'bg-success',
+                                                    4 => 'bg-info',
+                                                    3 => 'bg-warning text-dark',
+                                                    2 => 'bg-secondary',
+                                                    1 => 'bg-danger',
+                                                    default => 'bg-secondary',
+                                                };
+                                                $presClass = match((int)($item['presentation'] ?? 0)) {
+                                                    5 => 'bg-success',
+                                                    4 => 'bg-info',
+                                                    3 => 'bg-warning text-dark',
+                                                    2 => 'bg-secondary',
+                                                    1 => 'bg-danger',
+                                                    default => 'bg-secondary',
+                                                };
+                                            @endphp
                                             <tr>
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $item['ot_name'] }}</td>
                                                 <td>{{ $item['ot_code'] }}</td>
-                                                <td class="text-center">
-                                                    <span class="rating-badge rating-{{ $item['content'] }}">
-                                                        {{ $item['content'] }}
-                                                    </span>
+                                                <td>
+                                                    <span class="badge {{ $ratingClass }}">{{ $item['content'] }}</span>
                                                 </td>
-                                                <td class="text-center">
-                                                    <span class="rating-badge rating-{{ $item['presentation'] }}">
-                                                        {{ $item['presentation'] }}
-                                                    </span>
+                                                <td>
+                                                    <span class="badge {{ $presClass }}">{{ $item['presentation'] }}</span>
                                                 </td>
                                                 <td>
                                                     @if (!empty($item['remark']))
-                                                        <div class="remark-text">{{ $item['remark'] }}</div>
+                                                        <div>{{ $item['remark'] }}</div>
                                                     @else
                                                         <span class="text-muted fst-italic">No remarks</span>
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    <small class="text-muted">{{ $item['feedback_date'] }}</small>
+                                                    <small class="text-body-secondary">{{ $item['feedback_date'] }}</small>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -457,62 +258,35 @@
 
                         <!-- Pagination -->
                         @if ($totalRecords > 10)
-                            <nav aria-label="Feedback pagination">
-                                <ul class="pagination justify-content-center">
-                                    <!-- First Page -->
-                                    <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
-                                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)"
-                                            aria-label="First">
-                                            <i class="fas fa-angle-double-left"></i>
-                                        </a>
-                                    </li>
-
-                                    <!-- Previous Page -->
-                                    <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
-                                        <a class="page-link" href="javascript:void(0)"
-                                            onclick="goToPage({{ $currentPage - 1 }})" aria-label="Previous">
-                                            <i class="fas fa-angle-left"></i>
-                                        </a>
-                                    </li>
-
-                                    <!-- Page Numbers -->
-                                    @php
-                                        $startPage = max(1, $currentPage - 2);
-                                        $endPage = min($totalPages, $currentPage + 2);
-                                    @endphp
-
-                                    @for ($i = $startPage; $i <= $endPage; $i++)
-                                        <li class="page-item {{ $i == $currentPage ? 'active' : '' }}">
-                                            <a class="page-link" href="javascript:void(0)"
-                                                onclick="goToPage({{ $i }})">{{ $i }}</a>
+                            <div class="border rounded bg-light p-3 mt-4">
+                                <div class="small text-center d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3 mb-2">
+                                    <span><strong>Page {{ $currentPage }}</strong> of {{ $totalPages }}</span>
+                                    <span class="text-body-secondary">·</span>
+                                    <span>Showing {{ ($currentPage - 1) * 10 + 1 }}–{{ min($currentPage * 10, $totalRecords) }} of <strong>{{ $totalRecords }}</strong> records</span>
+                                </div>
+                                <nav aria-label="Feedback pagination">
+                                    <ul class="pagination pagination-sm justify-content-center flex-wrap mb-0 gap-1">
+                                        <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
+                                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage({{ $currentPage - 1 }})" aria-label="Previous page" title="Previous">
+                                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_left</span>
+                                            </a>
                                         </li>
-                                    @endfor
-
-                                    <!-- Next Page -->
-                                    <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
-                                        <a class="page-link" href="javascript:void(0)"
-                                            onclick="goToPage({{ $currentPage + 1 }})" aria-label="Next">
-                                            <i class="fas fa-angle-right"></i>
-                                        </a>
-                                    </li>
-
-                                    <!-- Last Page -->
-                                    <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
-                                        <a class="page-link" href="javascript:void(0)"
-                                            onclick="goToPage({{ $totalPages }})" aria-label="Last">
-                                            <i class="fas fa-angle-double-right"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </nav>
-
-                            <!-- Pagination Info -->
-                            <div class="text-center text-muted mt-2">
-                                <small>
-                                    Showing {{ ($currentPage - 1) * 10 + 1 }} to
-                                    {{ min($currentPage * 10, $totalRecords) }}
-                                    of {{ $totalRecords }} records
-                                </small>
+                                        @php
+                                            $startPage = max(1, $currentPage - 2);
+                                            $endPage = min($totalPages, $currentPage + 2);
+                                        @endphp
+                                        @for ($i = $startPage; $i <= $endPage; $i++)
+                                            <li class="page-item {{ $i == $currentPage ? 'active' : '' }}">
+                                                <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage({{ $i }})" aria-label="Page {{ $i }}" aria-current="{{ $i == $currentPage ? 'page' : 'false' }}">{{ $i }}</a>
+                                            </li>
+                                        @endfor
+                                        <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
+                                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage({{ $currentPage + 1 }})" aria-label="Next page" title="Next">
+                                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_right</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
                             </div>
                         @endif
                     @endif
@@ -572,8 +346,9 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <script>
+    <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const loadingSpinner = document.getElementById('loadingSpinner');
                 const contentContainer = document.getElementById('contentContainer');
@@ -593,46 +368,43 @@
                     facultySearch
                 ];
 
+                function showLoader() {
+                    if (loadingSpinner) loadingSpinner.classList.remove('d-none');
+                    if (contentContainer) contentContainer.classList.add('opacity-50');
+                }
+                function hideLoader() {
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
+                    if (contentContainer) contentContainer.classList.remove('opacity-50');
+                }
+
                 // Function to load feedback data with current filters
                 function loadFeedbackData(page = 1) {
                     currentPage = page;
+                    showLoader();
 
-                    // Show loading spinner
-                    loadingSpinner.style.display = 'block';
-                    contentContainer.style.opacity = '0.5';
+                    try {
+                        // Collect filter values (facultySearch may be null for Internal/Guest Faculty)
+                        const params = new URLSearchParams();
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                        if (csrfToken) params.append('_token', csrfToken);
 
-                    // Collect filter values
-                    const params = new URLSearchParams();
+                        const programSelect = document.getElementById('programSelect');
+                        const fromDate = document.getElementById('fromDate');
+                        const toDate = document.getElementById('toDate');
+                        params.append('program_id', programSelect ? programSelect.value || '' : '');
+                        params.append('faculty_name', facultySearch ? facultySearch.value || '' : '');
+                        params.append('from_date', fromDate ? fromDate.value || '' : '');
+                        params.append('to_date', toDate ? toDate.value || '' : '');
+                        params.append('page', page);
 
-                    // Add CSRF token
-                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                    if (csrfToken) {
-                        params.append('_token', csrfToken);
-                    }
+                        const courseType = document.querySelector('input[name="course_type"]:checked');
+                        if (courseType) params.append('course_type', courseType.value);
 
-                    // Add all filter values
-                    params.append('program_id', document.getElementById('programSelect').value || '');
-                    params.append('faculty_name', facultySearch.value || '');
-                    params.append('from_date', document.getElementById('fromDate').value || '');
-                    params.append('to_date', document.getElementById('toDate').value || '');
-                    params.append('page', page);
+                        document.querySelectorAll('.faculty-type-checkbox:checked').forEach(cb => {
+                            params.append('faculty_type[]', cb.value);
+                        });
 
-                    // Course type
-                    const courseType = document.querySelector('input[name="course_type"]:checked');
-                    if (courseType) {
-                        params.append('course_type', courseType.value);
-                    }
-
-                    // Faculty type (checkboxes)
-                    const facultyTypeCheckboxes = document.querySelectorAll('.faculty-type-checkbox:checked');
-                    facultyTypeCheckboxes.forEach(cb => {
-                        params.append('faculty_type[]', cb.value);
-                    });
-
-                    console.log('Loading data with params:', params.toString()); // Debug log
-
-                    // Make AJAX request - GET with query parameters
-                    fetch('{{ route('admin.feedback.feedback_details') }}?' + params.toString(), {
+                        fetch('{{ route('admin.feedback.feedback_details') }}?' + params.toString(), {
                             method: 'GET',
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
@@ -640,13 +412,10 @@
                             }
                         })
                         .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
+                            if (!response.ok) throw new Error('HTTP ' + response.status);
                             return response.json();
                         })
                         .then(data => {
-                            console.log('Data received:', data); // Debug log
                             if (data.success) {
                                 updateContent(data);
                                 updateFilters(data);
@@ -658,10 +427,12 @@
                             console.error('Error loading feedback data:', error);
                             showError('Error loading data. Please try again.');
                         })
-                        .finally(() => {
-                            loadingSpinner.style.display = 'none';
-                            contentContainer.style.opacity = '1';
-                        });
+                        .finally(() => { hideLoader(); });
+                    } catch (err) {
+                        console.error('Error preparing request:', err);
+                        hideLoader();
+                        if (contentContainer) showError('Error loading data. Please try again.');
+                    }
                 }
 
                 // Function to update content with new data
@@ -670,78 +441,79 @@
                     if (data.groupedData && Object.keys(data.groupedData).length > 0) {
                         let html = '';
 
+                        function ratingClass(r) {
+                            const n = parseInt(r, 10);
+                            if (n === 5) return 'bg-success';
+                            if (n === 4) return 'bg-info';
+                            if (n === 3) return 'bg-warning text-dark';
+                            if (n === 2) return 'bg-secondary';
+                            if (n === 1) return 'bg-danger';
+                            return 'bg-secondary';
+                        }
                         Object.entries(data.groupedData).forEach(([groupKey, group]) => {
                             const [programName, facultyName, topicName] = groupKey.split('|');
                             const firstRecord = group[0];
 
                             html += `
-                    <div class="session-header mb-4 p-3 border rounded bg-light">
-                        <div class="row">
+                    <div class="border rounded bg-light shadow-sm mb-4 p-4">
+                        <div class="row g-3 align-items-start">
                             <div class="col-md-4">
-                                <h6 class="mb-1"><strong>Course:</strong> ${programName}</h6>
-                                <small class="text-muted d-block">
-                                    <span class="session-badge">${firstRecord.course_status || 'Unknown'}</span>
-                                </small>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="fas fa-book-open text-primary"></i>
+                                    <span class="fw-semibold text-body-secondary small">Course</span>
+                                </div>
+                                <h6 class="mb-0 fw-semibold">${programName}</h6>
+                                <span class="badge bg-primary rounded-pill mt-1">${firstRecord.course_status || 'Unknown'}</span>
                             </div>
                             <div class="col-md-4">
-                                <h6 class="mb-1"><strong>Faculty:</strong> ${facultyName}</h6>
-                                <small class="text-muted d-block">
-                                    <span class="faculty-type-badge">${firstRecord.faculty_type || ''}</span>
-                                </small>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="fas fa-chalkboard-teacher text-primary"></i>
+                                    <span class="fw-semibold text-body-secondary small">Faculty</span>
+                                </div>
+                                <h6 class="mb-0 fw-semibold">${facultyName}</h6>
+                                <span class="badge bg-secondary rounded-pill mt-1">${firstRecord.faculty_type || ''}</span>
                             </div>
                             <div class="col-md-4">
-                                <h6 class="mb-1"><strong>Topic:</strong> ${topicName}</h6>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="fas fa-tag text-primary"></i>
+                                    <span class="fw-semibold text-body-secondary small">Topic</span>
+                                </div>
+                                <h6 class="mb-0 fw-semibold">${topicName}</h6>
                                 ${firstRecord.start_date ? `
-                                                                    <small class="text-muted d-block">
-                                                                        <strong>Session:</strong> ${firstRecord.start_date}
-                                                                        ${firstRecord.end_date ? `- ${firstRecord.end_date}` : ''}
-                                                                    </small>
-                                                                ` : ''}
+                                    <small class="text-body-secondary d-block mt-1">
+                                        Session: ${firstRecord.start_date}
+                                        ${firstRecord.end_date ? `– ${firstRecord.end_date}` : ''}
+                                    </small>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
 
-                    <div class="table-responsive mb-5">
-                        <table class="table table-hover table-bordered">
-                            <thead class="#">
+                    <div class="table-responsive mb-5 rounded-3 overflow-hidden border">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
                                 <tr>
-                                    <th width="5%">#</th>
-                                    <th width="20%">OT Name</th>
-                                    <th width="10%">OT Code</th>
-                                    <th width="10%">Content</th>
-                                    <th width="10%">Presentation</th>
-                                    <th width="35%">Remarks</th>
-                                    <th width="10%">Feedback Date</th>
+                                    <th>#</th>
+                                    <th>OT Name</th>
+                                    <th>OT Code</th>
+                                    <th>Content</th>
+                                    <th>Presentation</th>
+                                    <th>Remarks</th>
+                                    <th>Feedback Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${group.map((item, index) => `
-                                                                    <tr>
-                                                                        <td>${index + 1}</td>
-                                                                        <td>${item.ot_name || ''}</td>
-                                                                        <td>${item.ot_code || ''}</td>
-                                                                        <td class="text-center">
-                                                                            <span class="rating-badge rating-${item.content}">
-                                                                                ${item.content}
-                                                                            </span>
-                                                                        </td>
-                                                                        <td class="text-center">
-                                                                            <span class="rating-badge rating-${item.presentation}">
-                                                                                ${item.presentation}
-                                                                            </span>
-                                                                        </td>
-                                                                        <td>
-                                                                            ${item.remark ? `
-                                                <div class="remark-text">${item.remark}</div>
-                                            ` : `
-                                                <span class="text-muted fst-italic">No remarks</span>
-                                            `}
-                                                                        </td>
-                                                                        <td>
-                                                                            <small class="text-muted">${item.feedback_date || ''}</small>
-                                                                        </td>
-                                                                    </tr>
-                                                                `).join('')}
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>${item.ot_name || ''}</td>
+                                        <td>${item.ot_code || ''}</td>
+                                        <td><span class="badge ${ratingClass(item.content)}">${item.content}</span></td>
+                                        <td><span class="badge ${ratingClass(item.presentation)}">${item.presentation}</span></td>
+                                        <td>${item.remark ? `<div>${item.remark}</div>` : `<span class="text-muted fst-italic">No remarks</span>`}</td>
+                                        <td><small class="text-body-secondary">${item.feedback_date || ''}</small></td>
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -757,75 +529,62 @@
                         contentContainer.innerHTML = html;
 
                         // Update refresh time
-                        const refreshElement = document.querySelector('.card-header small');
+                        const refreshElement = document.querySelector('.content-card .card-header small');
                         if (refreshElement && data.refreshTime) {
-                            refreshElement.textContent = `Data refreshed: ${data.refreshTime}`;
+                            refreshElement.innerHTML = `<i class="fas fa-sync-alt me-1"></i> ${data.refreshTime}`;
                         }
                     } else {
                         contentContainer.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-clipboard-list"></i>
-                    <h5>No feedback data found</h5>
-                    <p class="text-muted">Try adjusting your filters to see results.</p>
+                <div class="text-center rounded-3 bg-light py-5 px-3 text-body-secondary">
+                    <i class="fas fa-clipboard-list display-4 text-secondary mb-3 d-block"></i>
+                    <h5 class="fw-semibold mt-2 text-dark">No feedback data found</h5>
+                    <p class="text-body-secondary mb-0">Try adjusting your filters to see results.</p>
                 </div>
             `;
                     }
                 }
 
-                // Function to generate pagination HTML
+                // Function to generate pagination HTML (matches Blade structure)
                 function generatePagination(currentPage, totalPages, totalRecords) {
+                    const startRec = ((currentPage - 1) * 10) + 1;
+                    const endRec = Math.min(currentPage * 10, totalRecords);
+
                     let pagination = `
-            <nav aria-label="Feedback pagination">
-                <ul class="pagination justify-content-center">
-                    <!-- First Page -->
-                    <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First">
-                            <i class="fas fa-angle-double-left"></i>
-                        </a>
-                    </li>
-                    
-                    <!-- Previous Page -->
-                    <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous">
-                            <i class="fas fa-angle-left"></i>
-                        </a>
-                    </li>
+            <div class="border rounded bg-light p-3 mt-4">
+                <div class="small text-center d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3 mb-2">
+                    <span><strong>Page ${currentPage}</strong> of ${totalPages}</span>
+                    <span class="text-body-secondary">·</span>
+                    <span>Showing ${startRec}–${endRec} of <strong>${totalRecords}</strong> records</span>
+                </div>
+                <nav aria-label="Feedback pagination">
+                    <ul class="pagination pagination-sm justify-content-center flex-wrap mb-0 gap-1">
+                        <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous page" title="Previous">
+                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_left</span>
+                            </a>
+                        </li>
         `;
 
-                    // Calculate page range
                     const startPage = Math.max(1, currentPage - 2);
                     const endPage = Math.min(totalPages, currentPage + 2);
 
                     for (let i = startPage; i <= endPage; i++) {
+                        const ariaCurrent = i === currentPage ? ' aria-current="page"' : ' aria-current="false"';
                         pagination += `
-                <li class="page-item ${i == currentPage ? 'active' : ''}">
-                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${i})">${i}</a>
-                </li>
-            `;
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage(${i})" aria-label="Page ${i}"${ariaCurrent}>${i}</a>
+                        </li>
+        `;
                     }
 
                     pagination += `
-                    <!-- Next Page -->
-                    <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next">
-                            <i class="fas fa-angle-right"></i>
-                        </a>
-                    </li>
-                    
-                    <!-- Last Page -->
-                    <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last">
-                            <i class="fas fa-angle-double-right"></i>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-            
-            <div class="text-center text-muted mt-2">
-                <small>
-                    Showing ${((currentPage - 1) * 10) + 1} to ${Math.min(currentPage * 10, totalRecords)} 
-                    of ${totalRecords} records
-                </small>
+                        <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                            <a class="page-link rounded" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next page" title="Next">
+                                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chevron_right</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         `;
 
@@ -855,9 +614,9 @@
                         let suggestions = '';
                         data.facultySuggestions.forEach(faculty => {
                             suggestions += `
-                    <div class="suggestion-item" data-value="${faculty.full_name}">
+                    <div class="list-group-item list-group-item-action suggestion-item" data-value="${faculty.full_name}" role="button">
                         ${faculty.full_name}
-                        <span class="faculty-type-badge ms-2">${faculty.faculty_type_display}</span>
+                        <span class="badge bg-secondary ms-2">${faculty.faculty_type_display}</span>
                     </div>
                 `;
                         });
@@ -882,7 +641,7 @@
                         .map(cb => cb.value);
 
                     if (selectedTypes.length === 0) {
-                        suggestionsList.style.display = 'none';
+                        if (suggestionsList) suggestionsList.classList.add('d-none');
                         return;
                     }
 
@@ -908,11 +667,11 @@
                             `;
                                     });
                                     suggestionsList.innerHTML = suggestions;
-                                    suggestionsList.style.display = 'block';
+                                    suggestionsList.classList.remove('d-none');
                                 } else {
                                     suggestionsList.innerHTML =
-                                        '<div class="suggestion-item text-muted">No faculty found</div>';
-                                    suggestionsList.style.display = 'block';
+                                        '<div class="list-group-item text-muted">No faculty found</div>';
+                                    suggestionsList.classList.remove('d-none');
                                 }
                             })
                             .catch(error => {
@@ -951,42 +710,45 @@
                     }
                 });
 
-                // Faculty search with suggestions
-                facultySearch.addEventListener('focus', fetchFacultySuggestions);
-                facultySearch.addEventListener('input', fetchFacultySuggestions);
+                // Faculty search with suggestions (only if faculty search exists)
+                if (facultySearch) {
+                    facultySearch.addEventListener('focus', fetchFacultySuggestions);
+                    facultySearch.addEventListener('input', fetchFacultySuggestions);
+                }
 
                 // Hide suggestions when clicking outside
                 document.addEventListener('click', function(event) {
-                    if (!facultySearch.contains(event.target) && !suggestionsList.contains(event.target)) {
-                        suggestionsList.style.display = 'none';
+                    if (suggestionsList && facultySearch && !facultySearch.contains(event.target) && !suggestionsList.contains(event.target)) {
+                        suggestionsList.classList.add('d-none');
                     }
                 });
 
-                // Suggestion click
-                suggestionsList.addEventListener('click', function(event) {
-                    if (event.target.classList.contains('suggestion-item')) {
-                        facultySearch.value = event.target.getAttribute('data-value');
-                        suggestionsList.style.display = 'none';
-                        loadFeedbackData(1);
-                    }
-                });
+                // Suggestion click (support clicking on child elements like badge)
+                if (suggestionsList) {
+                    suggestionsList.addEventListener('click', function(event) {
+                        const item = event.target.closest('.suggestion-item');
+                        if (item && facultySearch) {
+                            facultySearch.value = item.getAttribute('data-value') || '';
+                            suggestionsList.classList.add('d-none');
+                            loadFeedbackData(1);
+                        }
+                    });
+                }
 
                 // Reset button
-                resetButton.addEventListener('click', function() {
-                    console.log('Resetting filters');
-                    // Reset all filters
-                    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-                    document.querySelectorAll('input[type="radio"]').forEach(rb => {
-                        if (rb.value === 'current') rb.checked = true;
+                if (resetButton) {
+                    resetButton.addEventListener('click', function() {
+                        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                        document.querySelectorAll('input[type="radio"]').forEach(rb => {
+                            if (rb.value === 'current') rb.checked = true;
+                        });
+                        document.querySelectorAll('select').forEach(select => select.value = '');
+                        document.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
+                        if (facultySearch) facultySearch.value = '';
+                        if (suggestionsList) suggestionsList.classList.add('d-none');
+                        loadFeedbackData(1);
                     });
-                    document.querySelectorAll('select').forEach(select => select.value = '');
-                    document.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
-                    facultySearch.value = '';
-                    suggestionsList.style.display = 'none';
-
-                    // Load data with reset filters
-                    loadFeedbackData(1);
-                });
+                }
 
                 // Initialize with current page
                 window.goToPage = function(page) {
@@ -1003,17 +765,15 @@
 
             function exportToExcel() {
                 const loadingSpinner = document.getElementById('loadingSpinner');
-
-                // Show loading
-                loadingSpinner.style.display = 'block';
+                if (loadingSpinner) loadingSpinner.classList.remove('loading-hidden');
 
                 // Collect current filter values
                 const params = new URLSearchParams();
                 params.append('export_type', 'excel');
 
-                // Add all current filter values
-                params.append('program_id', document.getElementById('programSelect').value || '');
-                params.append('faculty_name', document.getElementById('facultySearch').value || '');
+                const facultySearchEl = document.getElementById('facultySearch');
+                params.append('program_id', document.getElementById('programSelect')?.value || '');
+                params.append('faculty_name', facultySearchEl ? facultySearchEl.value || '' : '');
                 params.append('from_date', document.getElementById('fromDate').value || '');
                 params.append('to_date', document.getElementById('toDate').value || '');
                 params.append('course_type', document.querySelector('input[name="course_type"]:checked')?.value || 'current');
@@ -1033,7 +793,7 @@
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '{{ route('admin.feedback.feedback_details.export') }}';
-                form.style.display = 'none';
+                form.classList.add('d-none');
 
                 // Add all parameters as hidden inputs
                 params.forEach((value, key) => {
@@ -1047,25 +807,22 @@
                 document.body.appendChild(form);
                 form.submit();
 
-                // Hide loading after a delay
                 setTimeout(() => {
-                    loadingSpinner.style.display = 'none';
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
                 }, 2000);
             }
 
             function exportToPDF() {
                 const loadingSpinner = document.getElementById('loadingSpinner');
-
-                // Show loading
-                loadingSpinner.style.display = 'block';
+                if (loadingSpinner) loadingSpinner.classList.remove('loading-hidden');
 
                 // Collect current filter values
                 const params = new URLSearchParams();
                 params.append('export_type', 'pdf');
 
-                // Add all current filter values
-                params.append('program_id', document.getElementById('programSelect').value || '');
-                params.append('faculty_name', document.getElementById('facultySearch').value || '');
+                const facultySearchEl = document.getElementById('facultySearch');
+                params.append('program_id', document.getElementById('programSelect')?.value || '');
+                params.append('faculty_name', facultySearchEl ? facultySearchEl.value || '' : '');
                 params.append('from_date', document.getElementById('fromDate').value || '');
                 params.append('to_date', document.getElementById('toDate').value || '');
                 params.append('course_type', document.querySelector('input[name="course_type"]:checked')?.value || 'current');
@@ -1085,7 +842,7 @@
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '{{ route('admin.feedback.feedback_details.export') }}';
-                form.style.display = 'none';
+                form.classList.add('d-none');
 
                 // Add all parameters as hidden inputs
                 params.forEach((value, key) => {
@@ -1099,9 +856,8 @@
                 document.body.appendChild(form);
                 form.submit();
 
-                // Hide loading after a delay
                 setTimeout(() => {
-                    loadingSpinner.style.display = 'none';
+                    if (loadingSpinner) loadingSpinner.classList.add('d-none');
                 }, 2000);
             }
         </script>

@@ -208,17 +208,17 @@
                     </a>
                 </li>
 
-                <!-- Material Management -->
+                <!-- Purchase Order -->
                 <li class="nav-item" role="none">
-                    <a href="#tab-material-management" 
+                    <a href="#tab-purchase-order" 
                        class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
                        data-bs-toggle="tab" 
                        role="tab"
                        aria-selected="false"
-                       aria-controls="material-management-panel"
-                       id="material-management-tab">
+                       aria-controls="purchase-order-panel"
+                       id="purchase-order-tab">
                         <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">inventory</i>
-                        <span>Material Management</span>
+                        <span>Purchase Order</span>
                     </a>
                 </li>
 

@@ -3,31 +3,23 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Submit and view session feedback - Lal Bahadur Shastri National Academy of Administration" />
+    <meta name="theme-color" content="#004a93" />
     <title>Feedback Form - Sargam | Lal Bahadur Shastri National Academy of Administration</title>
     <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
-    <!-- Favicon icon-->
     <link rel="shortcut icon" type="image/ico" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-    <!-- jQuery Validation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
-
-    <!-- jQuery Steps -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.min.js"></script>
-    <!-- Favicon -->
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    <!-- Icon library (Bootstrap Icons or Lucide) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
     <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
 
@@ -48,12 +40,12 @@
         }
 
         .star-rating input[type="radio"]:checked~label {
-            color: #af2910;
+            color: #004a93;
         }
 
         .star-rating label:hover,
         .star-rating label:hover~label {
-            color: #af2910;
+            color: #004a93;
         }
 
         /* Star Rating Style */
@@ -72,14 +64,14 @@
             cursor: pointer;
             transition: color 0.2s ease-in-out;
             padding: 0 1px;
-            -webkit-text-stroke: 2px #af2910;
-            text-stroke: 2px #af2910;
+            -webkit-text-stroke: 2px #004a93;
+            text-stroke: 2px #004a93;
         }
 
         .star-rating input:not(:checked)~label {
             color: transparent;
-            -webkit-text-stroke: 2px #af2910;
-            text-stroke: 2px #af2910;
+            -webkit-text-stroke: 2px #004a93;
+            text-stroke: 2px #004a93;
         }
 
         .table td,
@@ -123,7 +115,10 @@
         }
 
         .tab-content {
-            min-height: 400px;
+            min-height: 280px;
+        }
+        @media (min-width: 768px) {
+            .tab-content { min-height: 400px; }
         }
 
         /* Bulk Submit Button */
@@ -222,7 +217,7 @@
         }
 
         .rating-legend .stars {
-            color: #af2910;
+            color: #004a93;
             letter-spacing: 1px;
             font-size: 0.95rem;
         }
@@ -231,68 +226,158 @@
             color: #374151;
             font-weight: 500;
         }
+
+        /* Touch target min 44px (GIGW/WCAG) */
+        .min-h-44 { min-height: 44px; }
+        /* GIGW / WCAG: Focus visible for keyboard users */
+        .nav-link:focus-visible,
+        .btn:focus-visible,
+        .form-control:focus-visible,
+        .form-select:focus-visible,
+        .star-rating label:focus-within,
+        .individual-feedback-submit-btn:focus-visible,
+        .bulk-feedback-submit-btn:focus-visible {
+            outline: 3px solid #004A93;
+            outline-offset: 2px;
+        }
+        .skip-link {
+            position: absolute;
+            left: -9999px;
+            z-index: 9999;
+            padding: 0.75rem 1rem;
+            background: #004A93;
+            color: #fff;
+            font-weight: 500;
+        }
+        .skip-link:focus {
+            left: 0.5rem;
+            top: 0.5rem;
+        }
+        /* Responsive: touch targets min 44px (GIGW) */
+        @media (max-width: 767.98px) {
+            .star-rating label { font-size: 1.5rem; padding: 0.25rem; min-width: 2.75rem; min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; }
+            .individual-feedback-submit-btn, .bulk-feedback-submit-btn { min-height: 44px; padding: 12px 20px; }
+            .nav-tabs .nav-link { padding: 0.75rem 1rem; font-size: 0.9rem; }
+            .rating-legend .legend-item { padding: 8px 12px; }
+        }
+        /* Table responsive wrapper */
+        .table-responsive-cards { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        @media (max-width: 991.98px) {
+            .table-responsive-cards { margin-left: -0.75rem; margin-right: -0.75rem; padding-left: 0.75rem; padding-right: 0.75rem; }
+        }
+        .card-header-tabs .nav-link { white-space: nowrap; }
+        @media (max-width: 575.98px) {
+            .card-header-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+            .card-header-tabs .nav-item { flex: 0 0 auto; }
+        }
+        /* Header: Digital India + Developed by NeGD */
+        .header-digital-negd {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem 0.75rem;
+            padding: 0.35rem 0.75rem;
+            background: linear-gradient(135deg, rgba(0, 74, 147, 0.08) 0%, rgba(0, 74, 147, 0.04) 100%);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(0, 74, 147, 0.2);
+        }
+        .header-digital-negd img { height: 32px; width: auto; }
+        .header-digital-negd .negd-badge { font-size: 0.7rem; color: #004a93; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        @media (max-width: 991.98px) {
+            .header-digital-negd .negd-badge { font-size: 0.65rem; }
+            .header-digital-negd img { height: 28px; }
+        }
+        @media (max-width: 575.98px) {
+            .header-digital-negd .negd-badge { display: none; }
+            .header-digital-negd img { height: 26px; }
+        }
+        /* Footer: NeGD credit bar */
+        .footer-negd-credit {
+            background: rgba(0, 26, 61, 0.95);
+            padding: 0.5rem 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .footer-negd-credit a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            font-size: 0.8125rem;
+            transition: opacity 0.2s;
+        }
+        .footer-negd-credit a:hover { color: #fff; opacity: 0.95; }
+        .footer-negd-credit img { height: 22px; width: auto; }
     </style>
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column;">
-    <!-- Top Blue Bar (Govt of India) -->
-    <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block py-2"
-        style="background-color: #004a93;">
+<body style="min-height: 100vh; display: flex; flex-direction: column;" class="d-flex flex-column">
+    <a href="#content" class="skip-link text-decoration-none">Skip to main content</a>
+    <!-- Top Blue Bar (Govt of India) - GIGW compliant -->
+    <header class="top-header d-flex justify-content-between align-items-center d-none d-md-flex py-2" style="background-color: #004a93;" role="banner">
         <div class="container-fluid">
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col-md-3 d-flex align-items-center">
                     <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
-                        alt="GoI Logo" height="30">
-                    <span class="ms-2 text-white" style="font-size: 14px;">Government of India</span>
+                        alt="Government of India emblem" height="30" width="45" loading="lazy">
+                    <span class="ms-2 text-white small">Government of India</span>
                 </div>
-                <div class="col-md-9 text-end d-flex justify-content-end align-items-center">
-                    <ul class="nav justify-content-end align-items-center">
-                        <li class="nav-item"><a href="#content" class="text-white text-decoration-none"
-                                style=" font-size: 12px;">Skip to Main Content</a></li>
+                <div class="col-md-9 text-md-end d-flex justify-content-end align-items-center">
+                    <nav aria-label="Utility navigation">
+                        <ul class="nav justify-content-end align-items-center list-unstyled mb-0">
+                        <li class="nav-item"><a href="#content" class="text-white text-decoration-none small"
+                                id="skip-content-link">Skip to Main Content</a></li>
                         <span class="text-muted me-3 ms-3">|</span>
                         <li class="nav-item"><a class="text-decoration-none" id="uw-widget-custom-trigger"
                                 contenteditable="false" style="cursor: pointer;"><img
                                     src="{{ asset('images/accessible.png') }}" alt="" width="20">
-                                <span class="text-white ms-1" style=" font-size: 12px;">
-                                    More
-                                </span>
+                                <span class="text-white ms-1 small">More</span>
                             </a>
                         </li>
-                    </ul>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Sticky Header -->
-    <div class="header sticky-top bg-white shadow-sm">
-        <div class="container-fluid py-3    ">
+    <!-- Sticky Header: GoI Emblem | LBSNAA | Digital India (Developed by NeGD) -->
+    <div class="header sticky-top bg-white shadow-sm" role="banner">
+        <div class="container-fluid py-2 py-md-3">
             <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid px-0">
-                    <a class="navbar-brand me-2" href="#">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-                            alt="Logo 1" height="80">
+                <div class="container-fluid px-0 flex-wrap">
+                    <div class="d-flex align-items-center flex-grow-1 flex-lg-grow-0">
+                        <a class="navbar-brand me-2" href="https://www.lbsnaa.gov.in/" target="_blank" rel="noopener noreferrer" aria-label="State Emblem of India">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                                alt="State Emblem of India" height="56" width="56" class="d-none d-sm-block" loading="lazy">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                                alt="State Emblem of India" height="40" width="40" class="d-block d-sm-none" loading="lazy">
+                        </a>
+                        <span class="vr mx-1 mx-md-2 d-none d-sm-inline" aria-hidden="true"></span>
+                        <a class="navbar-brand py-0" href="https://www.lbsnaa.gov.in/" target="_blank" rel="noopener noreferrer" aria-label="LBSNAA - Lal Bahadur Shastri National Academy of Administration">
+                            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA" height="56" width="auto" class="d-none d-sm-block" style="max-height: 64px;" loading="lazy">
+                            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA" height="40" width="auto" class="d-block d-sm-none" style="max-height: 48px;" loading="lazy">
+                        </a>
+                    </div>
+                    <a href="https://digitalindia.gov.in/" target="_blank" rel="noopener noreferrer" class="header-digital-negd text-decoration-none order-2 order-lg-2 mt-2 mt-lg-0 ms-lg-auto me-lg-2 flex-shrink-0" aria-label="Digital India - Website developed by NeGD">
+                        <img src="{{ asset('images/digital.png') }}" alt="Digital India" loading="lazy"
+                            onerror="this.src='https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/400px-Digital_India_logo.svg.png'">
+                        <span class="negd-badge">Developed by NeGD</span>
                     </a>
-                    <span class="vr mx-2"></span>
-                    <a class="navbar-brand" href="#">
-                        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="80">
-                    </a>
-
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
+                    <button class="navbar-toggler border-2 order-first order-lg-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Open main menu">
+                        <span class="navbar-toggler-icon" aria-hidden="true"></span>
                     </button>
 
-                    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                    <div class="collapse navbar-collapse justify-content-end" id="navbarNav" role="navigation" aria-label="Main navigation">
                         <ul class="navbar-nav align-items-center">
                             <li class="nav-item">
-                                <a class="nav-link ms-4 me-4" href="https://www.lbsnaa.gov.in/menu/about-lbsnaa"
-                                    target="_blank">About Us</a>
+                                <a class="nav-link ms-2 ms-md-4 me-2 me-md-4 py-2" href="https://www.lbsnaa.gov.in/menu/about-lbsnaa"
+                                    target="_blank" rel="noopener noreferrer">About Us</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link ms-4 me-4" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
-                                    target="_blank">Contact</a>
+                                <a class="nav-link ms-2 ms-md-4 me-2 me-md-4 py-2" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
+                                    target="_blank" rel="noopener noreferrer">Contact</a>
                             </li>
                         </ul>
                     </div>
@@ -347,67 +432,66 @@
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="container-fluid my-5">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-header text-center rounded-top-4 mb-2" style="background-color: #591512;">
-                <h4 class="mb-0 text-white" style="font-family:Inter;font-weight:700;">Session Feedbacks</h4>
+    <!-- Main Content - GIGW: landmark and skip target -->
+    <main id="content" class="container-fluid my-3 my-md-4 my-lg-5 px-3 px-md-4" role="main" tabindex="-1">
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="card-header text-center rounded-0 py-3 py-md-4" style="background-color: #591512;">
+                <h1 class="h4 mb-0 text-white fw-bold" style="font-family:Inter;">Session Feedbacks</h1>
             </div>
 
-            <!-- Date Filter -->
-            <div class="card-header bg-light border-bottom-0 px-4 py-3">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <label for="date-filter" class="form-label mb-0 fw-semibold">
-                            <i class="bi bi-calendar-event me-2"></i>Filter by Date:
+            <!-- Date Filter - responsive -->
+            <div class="card-header bg-light border-bottom px-3 px-md-4 py-3">
+                <div class="row align-items-end g-2 g-md-3">
+                    <div class="col-12 col-sm-auto">
+                        <label for="date-filter" class="form-label mb-0 fw-semibold small text-body-secondary">
+                            <i class="bi bi-calendar-event me-1" aria-hidden="true"></i>Filter by date
                         </label>
-                        <input type="date" class="form-control form-control-sm mt-2" id="date-filter"
-                            style="max-width: 200px;">
+                        <input type="date" class="form-control mt-1 w-100" id="date-filter"
+                            style="max-width: 220px;" aria-describedby="date-filter-desc">
+                        <span id="date-filter-desc" class="visually-hidden">Select a date to show only feedback for that day</span>
                     </div>
-                    <div class="col-md-6 text-end">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-date-filter"
-                            style="display: none;">
-                            <i class="bi bi-x-circle me-1"></i>Clear Filter
+                    <div class="col-12 col-sm-auto ms-sm-auto text-start text-sm-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary min-h-44" id="clear-date-filter"
+                            style="display: none;" aria-label="Clear date filter">
+                            <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Clear filter
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabs Navigation -->
-            <div class="card-header bg-light border-bottom-0">
-                <ul class="nav nav-tabs nav-fill border-0" id="feedbackTabs" role="tablist">
+            <!-- Tabs Navigation - scrollable on small screens -->
+            <div class="card-header bg-light border-bottom-0 px-0">
+                <ul class="nav nav-tabs card-header-tabs border-0 nav-fill px-3 px-md-4" id="feedbackTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="pending-tab" data-bs-toggle="tab"
+                        <button class="nav-link active rounded-0 py-3" id="pending-tab" data-bs-toggle="tab"
                             data-bs-target="#pending-tab-pane" type="button" role="tab"
                             aria-controls="pending-tab-pane" aria-selected="true">
-                            <i class="bi bi-clock me-2"></i>Pending Feedback
-                            <span class="badge bg-danger ms-2" id="pending-count">{{ $pendingData->count() }}</span>
+                            <i class="bi bi-clock me-1 me-md-2" aria-hidden="true"></i><span class="d-none d-sm-inline">Pending </span>Feedback
+                            <span class="badge bg-danger ms-1 ms-md-2" id="pending-count" aria-live="polite">{{ $pendingData->count() }}</span>
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="submitted-tab" data-bs-toggle="tab"
+                        <button class="nav-link rounded-0 py-3" id="submitted-tab" data-bs-toggle="tab"
                             data-bs-target="#submitted-tab-pane" type="button" role="tab"
                             aria-controls="submitted-tab-pane" aria-selected="false">
-                            <i class="bi bi-check-circle me-2"></i>Submitted Feedback
-                            <span class="badge bg-success ms-2"
-                                id="submitted-count">{{ $submittedData->count() }}</span>
+                            <i class="bi bi-check-circle me-1 me-md-2" aria-hidden="true"></i><span class="d-none d-sm-inline">Submitted </span>Feedback
+                            <span class="badge bg-success ms-1 ms-md-2" id="submitted-count" aria-live="polite">{{ $submittedData->count() }}</span>
                         </button>
                     </li>
                 </ul>
             </div>
 
             <!-- Tabs Content -->
-            <div class="tab-content" id="feedbackTabsContent">
-                <!-- Pending Feedback Tab -->
+            <div class="tab-content bg-white" id="feedbackTabsContent">
                 <!-- Pending Feedback Tab -->
                 <div class="tab-pane fade show active" id="pending-tab-pane" role="tabpanel"
                     aria-labelledby="pending-tab" tabindex="0">
                     @if ($pendingData->count() > 0)
-                        <form id="vertical-wizard" method="POST" action="{{ route('feedback.submit.feedback') }}">
+                        <form id="vertical-wizard" method="POST" action="{{ route('feedback.submit.feedback') }}" novalidate>
                             @csrf
-                            <div class="card-body mb-4 p-0">
-                                <div class="table-responsive">
-                                    <div class="rating-legend d-flex flex-wrap gap-3 align-items-center mt-2 mb-3">
+                            <div class="card-body mb-0 mb-md-4 p-3 p-md-4">
+                                <div class="rating-legend d-flex flex-wrap gap-2 gap-md-3 align-items-center mt-2 mb-3 px-0" role="group" aria-label="Rating scale legend">
+                                    <span class="visually-hidden">Rating scale: 5 stars Excellent, 4 Very Good, 3 Good, 2 Average, 1 Below Average</span>
                                         <span class="legend-item">
                                             <span class="stars">★★★★★</span>
                                             <span class="text">Excellent</span>
@@ -428,20 +512,19 @@
                                             <span class="stars">★</span>
                                             <span class="text">Below Average</span>
                                         </span>
-                                    </div>
-                                    <table class="table rounded">
+                                </div>
+                                <div class="table-responsive table-responsive-cards">
+                                    <table class="table table-hover align-middle mb-0 rounded" role="grid" aria-label="Pending feedback sessions">
                                         <thead class="bg-danger text-white">
                                             <tr>
-                                                <th class="text-center text-white">S.No.</th>
-                                                <th class="text-center text-white">Date &amp; Time</th>
-                                                <th class="text-center text-white">Topic Detail</th>
-                                                <th class="text-center text-white">Faculty Name</th>
-                                                <th class="text-center text-white">Q. How did you like the Content?
-                                                </th>
-                                                <th class="text-center text-white">Q. How did you like the
-                                                    Presentation?</th>
-                                                <th class="text-center text-white" style="width: 20%">Remarks</th>
-                                                <th class="text-center text-white">Action</th>
+                                                <th scope="col" class="text-center text-white">S.No.</th>
+                                                <th scope="col" class="text-center text-white">Date &amp; Time</th>
+                                                <th scope="col" class="text-center text-white">Topic</th>
+                                                <th scope="col" class="text-center text-white">Faculty</th>
+                                                <th scope="col" class="text-center text-white">Content rating</th>
+                                                <th scope="col" class="text-center text-white">Presentation rating</th>
+                                                <th scope="col" class="text-center text-white">Remarks</th>
+                                                <th scope="col" class="text-center text-white">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody id="pending-feedback-body">
@@ -463,16 +546,15 @@
                                                         {{-- Content Rating --}}
                                                         <td>
                                                             @if ($feedback->Ratting_checkbox == 1)
-                                                                <div
-                                                                    class="star-rating d-inline-flex flex-row-reverse">
+                                                                <div class="star-rating d-inline-flex flex-row-reverse" role="group" aria-label="Rate content for row {{ $pendingIndex }}">
                                                                     @for ($i = 5; $i >= 1; $i--)
                                                                         <input type="radio"
                                                                             id="content-{{ $i }}-{{ $loop->index }}"
                                                                             name="content[{{ $loop->index }}]"
                                                                             value="{{ $i }}"
+                                                                            aria-label="Content rating {{ $i }} star{{ $i > 1 ? 's' : '' }}"
                                                                             {{ old('content.' . $loop->index) == $i ? 'checked' : '' }}>
-                                                                        <label
-                                                                            for="content-{{ $i }}-{{ $loop->index }}">&#9733;</label>
+                                                                        <label for="content-{{ $i }}-{{ $loop->index }}">&#9733;</label>
                                                                     @endfor
                                                                 </div>
                                                             @endif
@@ -481,32 +563,33 @@
                                                         {{-- Presentation Rating --}}
                                                         <td>
                                                             @if ($feedback->Ratting_checkbox == 1)
-                                                                <div
-                                                                    class="star-rating d-inline-flex flex-row-reverse">
+                                                                <div class="star-rating d-inline-flex flex-row-reverse" role="group" aria-label="Rate presentation for row {{ $pendingIndex }}">
                                                                     @for ($i = 5; $i >= 1; $i--)
                                                                         <input type="radio"
                                                                             id="presentation-{{ $i }}-{{ $loop->index }}"
                                                                             name="presentation[{{ $loop->index }}]"
                                                                             value="{{ $i }}"
+                                                                            aria-label="Presentation rating {{ $i }} star{{ $i > 1 ? 's' : '' }}"
                                                                             {{ old('presentation.' . $loop->index) == $i ? 'checked' : '' }}>
-                                                                        <label
-                                                                            for="presentation-{{ $i }}-{{ $loop->index }}">&#9733;</label>
+                                                                        <label for="presentation-{{ $i }}-{{ $loop->index }}">&#9733;</label>
                                                                     @endfor
                                                                 </div>
                                                             @endif
                                                         </td>
 
                                                         {{-- Remarks --}}
-                                                        <td style="min-width: 180px;">
+                                                        <td style="min-width: 160px;">
                                                             @if ($feedback->Remark_checkbox == 1)
-                                                                <textarea class="form-control form-control-sm" name="remarks[{{ $loop->index }}]" rows="2"
-                                                                    placeholder="Enter remarks...">{{ old('remarks.' . $loop->index) }}</textarea>
+                                                                <label for="remarks-{{ $loop->index }}" class="visually-hidden">Remarks for this session</label>
+                                                                <textarea class="form-control form-control-sm" id="remarks-{{ $loop->index }}" name="remarks[{{ $loop->index }}]" rows="2"
+                                                                    placeholder="Enter remarks (optional)">{{ old('remarks.' . $loop->index) }}</textarea>
                                                             @endif
                                                         </td>
                                                         <td>
                                                             <button type="button"
                                                                 onclick="submitIndividual({{ $loop->index }})"
-                                                                class="individual-feedback-submit-btn">
+                                                                class="individual-feedback-submit-btn"
+                                                                aria-label="Submit feedback for row {{ $pendingIndex }}">
                                                                 Submit
                                                             </button>
                                                         </td>
@@ -533,60 +616,46 @@
                                             @endforeach
                                         </tbody>
                                     </table>
-                                    <div id="table-loader"
-                                        style="
-                                display: none;
-                                position: absolute;
-                                top: 0;
-                                left: 0;
-                                width: 100%;
-                                height: 100%;
-                                background: rgba(255, 255, 255, 0.7);
-                                justify-content: center;
-                                align-items: center;
-                                z-index: 10;
-                                ">
-                                        <div style="text-align:center;">
-                                            <svg class="spinner" width="32" height="32" viewBox="0 0 50 50">
-                                                <circle cx="25" cy="25" r="20" stroke="#004A93"
-                                                    stroke-width="5" fill="rgba(255,255,255,0)" />
+                                    <div id="table-loader" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex justify-content-center align-items-center" style="display: none; z-index: 10;" role="status" aria-live="polite" aria-label="Submitting feedback">
+                                        <div class="text-center">
+                                            <svg class="spinner" width="32" height="32" viewBox="0 0 50 50" aria-hidden="true">
+                                                <circle cx="25" cy="25" r="20" stroke="#004A93" stroke-width="5" fill="transparent" />
                                             </svg>
-                                            <p style="margin-top:10px; font-weight:500;">Submitting...</p>
+                                            <p class="mt-2 fw-medium">Submitting...</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="text-end mt-3 mb-4 me-4">
-                                <button type="submit" class="bulk-feedback-submit-btn">
-                                    Submit All Feedback
+                            <div class="d-flex justify-content-end mt-3 mb-3 mb-md-4 me-0 me-md-4 px-3 px-md-0">
+                                <button type="submit" class="bulk-feedback-submit-btn w-100 w-sm-auto min-h-44" aria-label="Submit all feedback">
+                                    <i class="bi bi-send me-1" aria-hidden="true"></i>Submit All Feedback
                                 </button>
                             </div>
                         </form>
                     @else
-                        <div class="text-center py-5">
-                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
-                            <h5 class="mt-3">No pending feedback</h5>
-                            <p class="text-muted">All feedback has been submitted.</p>
+                        <div class="text-center py-5 px-3">
+                            <i class="bi bi-check-circle text-success display-4" aria-hidden="true"></i>
+                            <h2 class="h5 mt-3">No pending feedback</h2>
+                            <p class="text-body-secondary mb-0">All feedback has been submitted.</p>
                         </div>
                     @endif
                 </div>
 
                 <!-- Submitted Feedback Tab -->
-                <div class="tab-pane fade" id="submitted-tab-pane" role="tabpanel" aria-labelledby="submitted-tab"
-                    tabindex="0">
-                    <div class="card-body mb-4 p-0">
-                        <div class="table-responsive">
-                            <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered">
+                <div class="tab-pane fade" id="submitted-tab-pane" role="tabpanel" aria-labelledby="submitted-tab" tabindex="0">
+                    <div class="card-body mb-0 mb-md-4 p-3 p-md-4">
+                        <div class="table-responsive table-responsive-cards">
+                            <table class="table table-bordered align-middle mb-0" role="grid" aria-label="Submitted feedback history">
                                 <thead class="bg-success text-white">
                                     <tr>
-                                        <th class="text-center text-white">S.No.</th>
-                                        <th class="text-center text-white">Date &amp; Time</th>
-                                        <th class="text-center text-white">Topic Detail</th>
-                                        <th class="text-center text-white">Faculty Name</th>
-                                        <th class="text-center text-white">Content Rating</th>
-                                        <th class="text-center text-white">Presentation Rating</th>
-                                        <th class="text-center text-white">Remarks</th>
-                                        <th class="text-center text-white">Submitted On</th>
+                                        <th scope="col" class="text-center text-white">S.No.</th>
+                                        <th scope="col" class="text-center text-white">Date &amp; Time</th>
+                                        <th scope="col" class="text-center text-white">Topic</th>
+                                        <th scope="col" class="text-center text-white">Faculty</th>
+                                        <th scope="col" class="text-center text-white">Content</th>
+                                        <th scope="col" class="text-center text-white">Presentation</th>
+                                        <th scope="col" class="text-center text-white">Remarks</th>
+                                        <th scope="col" class="text-center text-white">Submitted On</th>
                                     </tr>
                                 </thead>
                                 <tbody id="submitted-feedback-body">
@@ -668,10 +737,10 @@
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="8" class="text-center py-5">
-                                                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
-                                                <h5 class="mt-3">No submitted feedback yet</h5>
-                                                <p class="text-muted">Your submitted feedback will appear here.</p>
+                                            <td colspan="8" class="text-center py-5 px-3">
+                                                <i class="bi bi-inbox text-body-secondary display-4" aria-hidden="true"></i>
+                                                <h2 class="h5 mt-3">No submitted feedback yet</h2>
+                                                <p class="text-body-secondary mb-0">Your submitted feedback will appear here.</p>
                                             </td>
                                         </tr>
                                     @endif
@@ -680,31 +749,36 @@
                         </div>
                     </div>
                 </div>
-            </div>
         </div>
     </div>
+    </main>
 
-    <!-- Footer -->
-    <footer class="mt-auto text-white py-3" style="background-color: #004a93;">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-8">
-                    <p class="mb-0" style="font-size: 14px;">&copy; {{ date('Y') }} Lal Bahadur Shastri
-                        National Academy
-                        of Administration, Mussoorie, Uttarakhand</p>
+    <!-- Footer - responsive and GIGW -->
+    <footer class="mt-auto text-white" style="background-color: #004a93;" role="contentinfo">
+        <div class="container-fluid px-3 px-md-4 py-3 py-md-4">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-md-8 order-2 order-md-1 text-center text-md-start">
+                    <p class="mb-0 small">&copy; {{ date('Y') }} Lal Bahadur Shastri National Academy of Administration, Mussoorie, Uttarakhand</p>
                 </div>
-                <div class="col-md-4 text-end">
-                    <ul class="list-unstyled d-flex justify-content-end mb-0">
-                        <li class="me-3">
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Privacy Policy</a>
+                <div class="col-12 col-md-4 order-1 order-md-2">
+                    <ul class="list-unstyled d-flex flex-wrap justify-content-center justify-content-md-end gap-2 gap-md-3 mb-0">
+                        <li>
+                            <a href="#" class="text-white text-decoration-none small">Privacy Policy</a>
                         </li>
                         <li>
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px; font-family: Inter;">Need Help</a>
+                            <a href="#" class="text-white text-decoration-none small">Need Help</a>
                         </li>
                     </ul>
                 </div>
+            </div>
+        </div>
+        <!-- NeGD credit - Developed by National e-Governance Division -->
+        <div class="footer-negd-credit">
+            <div class="container-fluid px-3 px-md-4 text-center">
+                <a href="https://negd.gov.in/" target="_blank" rel="noopener noreferrer" aria-label="Powered by National e-Governance Division, MeitY">
+                    <img src="{{ asset('images/negd.png') }}" alt="NeGD - National e-Governance Division" loading="lazy" onerror="this.style.display='none'">
+                    <span>Powered by <strong>National e-Governance Division (NeGD)</strong>, MeitY</span>
+                </a>
             </div>
         </div>
     </footer>
@@ -741,7 +815,7 @@
             },
             submitHandler: function(form) {
                 // Show loader centered inside table
-                $('#table-loader').show();
+                $('#table-loader').css('display', 'flex').show();
 
                 // Disable all buttons while submitting
                 $(form).find('button[type="submit"], .individual-feedback-submit-btn').prop('disabled', true);
@@ -781,7 +855,7 @@
         {{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>`;
-            $('.container.my-5').prepend(successAlert);
+            $('#content').prepend(successAlert);
 
             setTimeout(function() {
                 const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
@@ -799,7 +873,7 @@
         {{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>`;
-            $('.container.my-5').prepend(errorAlert);
+            $('#content').prepend(errorAlert);
         @endif
 
         // Prevent double form submission
@@ -910,7 +984,7 @@
     // Individual row submission
     function submitIndividual(index) {
         // Show loader inside table
-        $('#table-loader').show();
+        $('#table-loader').css('display', 'flex').show();
         
         // Disable all buttons
         $('.individual-feedback-submit-btn, .bulk-feedback-submit-btn').prop('disabled', true);
