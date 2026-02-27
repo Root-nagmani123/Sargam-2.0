@@ -2,17 +2,22 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
-<div class="container-fluid">
-     @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
+@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+
+<div class="container-fluid" id="main-content" role="main">
+    @if(hasRole('Admin'))
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
     @endif
 
-    {{-- Student Information Header --}}
-    <div class="card shadow mb-4" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <div class="row g-3">
+    @endif
+
+    {{-- Modern Student Information Header --}}
+    <div class="card mb-4" style="border-left: 4px solid #004a93;">
+        <div class="card-body p-4">
+            <h5 class="mb-0 fw-bold d-flex align-items-center">Student Information</h5>
+            <hr class="my-2">
+            <div class="row g-4">
                 <div class="col-md-4">
                     <strong>Course Name:</strong>
                     <span class="text-primary">
