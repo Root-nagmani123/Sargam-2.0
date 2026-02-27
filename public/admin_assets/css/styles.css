@@ -39157,8 +39157,8 @@ pre.code-view code.hljs {
 /* MAIN SIDEBAR */
 .side-mini-panel .sidebarmenu .sidebar-nav {
     position: absolute;
-    top: 130px;
-    left: 65px;
+    top: 90px;
+    left: 220px;
     width: 280px;
     height: calc(100vh - 72px);
 

@@ -28,6 +28,9 @@
                                          aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                          <div class="simplebar-content" style="padding: 0px;">
 
+                                             @include('components.profile')
+
+
                                              <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                  id="mini-1">
                                                  <a href="javascript:void(0)"
@@ -70,16 +73,18 @@
      </div>
  </aside>
 
-<script>
+ <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Home sidebar script started');
-    const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
-    // Scope to ONLY the home tab
-    const homeTab = document.getElementById('home');
-    if (!homeTab) {
-        console.error('Home tab not found');
-        return;
-    }
+
+    // Wait a bit for sidebarmenu.js to finish
+    setTimeout(function() {
+        // Scope to ONLY the home tab
+        const homeTab = document.getElementById('home');
+        if (!homeTab) {
+            console.error('Home tab not found');
+            return;
+        }
 
         // Initialize mini-navbar functionality for home ONLY
         const miniNavItems = homeTab.querySelectorAll('.mini-nav .mini-nav-item');
@@ -207,8 +212,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mark active links first
         markActiveLinks();
 
-        // Note: Mini-nav click handling is done globally by sidebar-navigation-fixed.js
-        // No need to add event listeners here to avoid duplicate handlers
+        // Add click handlers to mini-nav items
+        miniNavItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                showSidebarMenu(this.id);
+            });
+        });
 
         // Function to restore sidebar menu visibility
         function restoreSidebarMenu() {
