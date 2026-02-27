@@ -10,32 +10,32 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center transition-opacity" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-panel" type="button" role="tab" aria-controls="active-panel" aria-selected="true">
                     Active
-                    @if($activeRequests->total() > 0)
-                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis ms-2">{{ $activeRequests->total() }}</span>
+                    @if($activeRequests->count() > 0)
+                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis ms-2">{{ $activeRequests->count() }}</span>
                     @endif
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center" id="duplication-tab" data-bs-toggle="tab" data-bs-target="#duplication-panel" type="button" role="tab" aria-controls="duplication-panel" aria-selected="false">
                     Duplication
-                    @if($duplicationRequests->total() > 0)
-                        <span class="badge rounded-pill text-bg-warning ms-2">{{ $duplicationRequests->total() }}</span>
+                    @if($duplicationRequests->count() > 0)
+                        <span class="badge rounded-pill text-bg-warning ms-2">{{ $duplicationRequests->count() }}</span>
                     @endif
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center" id="extension-tab" data-bs-toggle="tab" data-bs-target="#extension-panel" type="button" role="tab" aria-controls="extension-panel" aria-selected="false">
                     Extension
-                    @if($extensionRequests->total() > 0)
-                        <span class="badge rounded-pill text-bg-info ms-2">{{ $extensionRequests->total() }}</span>
+                    @if($extensionRequests->count() > 0)
+                        <span class="badge rounded-pill text-bg-info ms-2">{{ $extensionRequests->count() }}</span>
                     @endif
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-inline-flex align-items-center" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-panel" type="button" role="tab" aria-controls="archive-panel" aria-selected="false">
                     Archive
-                    @if($archivedRequests->total() > 0)
-                        <span class="badge rounded-pill text-bg-secondary ms-2">{{ $archivedRequests->total() }}</span>
+                    @if($archivedRequests->count() > 0)
+                        <span class="badge rounded-pill text-bg-secondary ms-2">{{ $archivedRequests->count() }}</span>
                     @endif
                 </button>
             </li>
@@ -114,9 +114,6 @@
             </a>
         </div>
     </div>
-
-    <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
-        <div class="card-body p-0">
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                     <div class="table-responsive">
@@ -140,7 +137,7 @@
                             <tbody class="table-group-divider">
                                 @forelse($activeRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ $activeRequests->firstItem() + $index }}</td>
+                                        <td class="fw-medium ps-4">{{ $index + 1 }}</td>
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
@@ -202,9 +199,9 @@
                                                       onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Archive">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                                    </button>
+                                                    <a href="javascript:void(0)" class="text-primary rounded-end-2 px-2 py-1" title="Archive">
+                                                        <i class="material-icons material-symbols-rounded">delete</i>
+                                                    </a>
                                                 </form>
                                             </div>
                                         </td>
@@ -226,15 +223,6 @@
                                 @endforelse
                             </tbody>
                         </table>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-body-tertiary flex-wrap gap-2">
-                        <div class="small text-body-secondary">
-                            Showing <strong class="text-body-emphasis">{{ $activeRequests->firstItem() ?? 0 }}</strong> to <strong class="text-body-emphasis">{{ $activeRequests->lastItem() ?? 0 }}</strong> of <strong class="text-body-emphasis">{{ $activeRequests->total() }}</strong> requests
-                        </div>
-                        <nav aria-label="Active requests pagination">
-                            {{ $activeRequests->links('pagination::bootstrap-5', ['pageName' => 'active_page']) }}
-                        </nav>
                     </div>
                 </div>
 
@@ -258,7 +246,7 @@
                             <tbody class="table-group-divider">
                                 @forelse($duplicationRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ $duplicationRequests->firstItem() + $index }}</td>
+                                        <td class="fw-medium ps-4">{{ $index + 1 }}</td>
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
@@ -327,15 +315,6 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-body-tertiary flex-wrap gap-2">
-                        <div class="small text-body-secondary">
-                            Showing <strong class="text-body-emphasis">{{ $duplicationRequests->firstItem() ?? 0 }}</strong> to <strong class="text-body-emphasis">{{ $duplicationRequests->lastItem() ?? 0 }}</strong> of <strong class="text-body-emphasis">{{ $duplicationRequests->total() }}</strong> duplication requests
-                        </div>
-                        <nav aria-label="Duplication requests pagination">
-                            {{ $duplicationRequests->links('pagination::bootstrap-5', ['pageName' => 'duplication_page']) }}
-                        </nav>
-                    </div>
                 </div>
 
                 <div class="tab-pane fade" id="extension-panel" role="tabpanel" aria-labelledby="extension-tab">
@@ -358,7 +337,7 @@
                             <tbody class="table-group-divider">
                                 @forelse($extensionRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ $extensionRequests->firstItem() + $index }}</td>
+                                        <td class="fw-medium ps-4">{{ $index + 1 }}</td>
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
@@ -424,15 +403,6 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-body-tertiary flex-wrap gap-2">
-                        <div class="small text-body-secondary">
-                            Showing <strong class="text-body-emphasis">{{ $extensionRequests->firstItem() ?? 0 }}</strong> to <strong class="text-body-emphasis">{{ $extensionRequests->lastItem() ?? 0 }}</strong> of <strong class="text-body-emphasis">{{ $extensionRequests->total() }}</strong> extension requests
-                        </div>
-                        <nav aria-label="Extension requests pagination">
-                            {{ $extensionRequests->links('pagination::bootstrap-5', ['pageName' => 'extension_page']) }}
-                        </nav>
-                    </div>
                 </div>
 
                 <div class="tab-pane fade" id="archive-panel" role="tabpanel" aria-labelledby="archive-tab">
@@ -452,7 +422,7 @@
                             <tbody class="table-group-divider">
                                 @forelse($archivedRequests as $index => $request)
                                     <tr data-request-id="{{ $request->id }}" class="align-middle">
-                                        <td class="fw-medium ps-4">{{ $archivedRequests->firstItem() + $index }}</td>
+                                        <td class="fw-medium ps-4">{{ $index + 1 }}</td>
                                         <td>
                                             @if($request->photo)
                                                 <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
@@ -521,15 +491,6 @@
                                 @endforelse
                             </tbody>
                         </table>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-body-tertiary flex-wrap gap-2">
-                        <div class="small text-body-secondary">
-                            Showing <strong class="text-body-emphasis">{{ $archivedRequests->firstItem() ?? 0 }}</strong> to <strong class="text-body-emphasis">{{ $archivedRequests->lastItem() ?? 0 }}</strong> of <strong class="text-body-emphasis">{{ $archivedRequests->total() }}</strong> archived requests
-                        </div>
-                        <nav aria-label="Archived requests pagination">
-                            {{ $archivedRequests->links('pagination::bootstrap-5', ['pageName' => 'archive_page']) }}
-                        </nav>
                     </div>
                 </div>
             </div>
@@ -694,6 +655,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (window.location.hash) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+
+    // DataTables: init only when table has data rows (no empty-state colspan row)
+    var dtDefaults = {
+        order: [[0, 'asc']],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        language: {
+            search: 'Search:',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+            infoEmpty: 'Showing 0 to 0 of 0 entries',
+            infoFiltered: '(filtered from _MAX_ total entries)',
+            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' },
+            emptyTable: 'No data available'
+        },
+        columnDefs: [
+            { orderable: false, targets: [0, 1, -1] }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        autoWidth: false
+    };
+    if (typeof $ !== 'undefined' && $.fn.DataTable) {
+        ['#activeIdcardTable', '#duplicationIdcardTable', '#extensionIdcardTable', '#archiveIdcardTable'].forEach(function(id) {
+            var $t = $(id);
+            if ($t.length && $t.find('tbody tr td[colspan]').length === 0) {
+                if ($.fn.DataTable.isDataTable(id)) $t.DataTable().destroy();
+                $t.DataTable(dtDefaults);
+            }
+        });
+        // Adjust DataTables when tab is shown (hidden tables may have wrong width)
+        var panelToTable = { '#active-panel': '#activeIdcardTable', '#duplication-panel': '#duplicationIdcardTable', '#extension-panel': '#extensionIdcardTable', '#archive-panel': '#archiveIdcardTable' };
+        document.querySelectorAll('#active-tab, #duplication-tab, #extension-tab, #archive-tab').forEach(function(tab) {
+            tab.addEventListener('shown.bs.tab', function() {
+                var target = this.getAttribute('data-bs-target');
+                var tableId = panelToTable[target];
+                if (tableId && $(tableId).length && $.fn.DataTable.isDataTable(tableId)) {
+                    $(tableId).DataTable().columns().adjust();
+                }
+            });
+        });
     }
 
     function openViewAmendModal(btn) {

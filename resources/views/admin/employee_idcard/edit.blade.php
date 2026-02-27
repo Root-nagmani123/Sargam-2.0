@@ -49,6 +49,7 @@
                         <label for="sub_type" class="form-label">Sub Type <span class="text-danger">*</span></label>
                         <select name="sub_type" id="sub_type" class="form-select @error('sub_type') is-invalid @enderror" required>
                             <option value="">Select Sub Type</option>
+                            <?php print_r($request->sub_type); exit; ?>
                             @if(!empty($request->sub_type))
                                 <option value="{{ $request->sub_type }}" selected>{{ $request->sub_type }}</option>
                             @endif
