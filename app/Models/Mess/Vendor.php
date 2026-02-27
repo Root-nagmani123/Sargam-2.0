@@ -20,5 +20,6 @@ class Vendor extends Model
         'bank_name',
         'ifsc_code',
         'account_number',
+        'licence_document',
     ];
 }
