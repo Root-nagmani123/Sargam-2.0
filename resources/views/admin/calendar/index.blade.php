@@ -580,6 +580,112 @@
     box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
 }
 
+/* Dense mode for days with many events */
+.fc-daygrid-day.dense-day .fc-event-card {
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.25rem;
+    box-shadow: none;
+}
+
+.fc-daygrid-day.dense-day .fc-event-card .fw-bold {
+    font-size: 0.8rem;
+}
+
+.fc-daygrid-day.dense-day .fc-event-card .small {
+    display: none; /* show only title to keep compact */
+}
+
+/* Popover styling for "+ more" */
+.fc-popover {
+    border-radius: 12px !important;
+    box-shadow: var(--shadow) !important;
+    border: 1px solid var(--border-color) !important;
+    overflow: hidden;
+}
+
+.fc-popover .fc-popover-title {
+    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
+    font-weight: 600;
+}
+
+.fc-popover .fc-popover-body .fc-event-card {
+    margin: 0.25rem 0;
+    padding: 0.5rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+/* Ensure default popover events look like cards */
+.fc-popover .fc-popover-body .fc-event {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    border-left: 3px solid var(--primary-color);
+}
+
+/* Event badges within cards */
+.fc-event-card .event-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* Optional type-based accents */
+.fc-event-card[data-event-type="lecture"] {
+    border-left-color: #4e73df;
+}
+
+.fc-event-card[data-event-type="exam"] {
+    border-left-color: #e74a3b;
+}
+
+.fc-event-card[data-event-type="meeting"] {
+    border-left-color: #1cc88a;
+}
+
+.fc-event-card[data-event-type="workshop"] {
+    border-left-color: #f6c23e;
+}
+/* Improved stacking for multiple events in same day */
+.fc-daygrid-day-frame .fc-event-card {
+    margin: 0.25rem 0;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.fc-daygrid-day-frame .fc-event-card .fw-bold {
+    font-size: 0.85rem;
+}
+
+.fc-daygrid-day-frame .fc-event-card .small {
+    font-size: 0.75rem;
+}
+
+/* TimeGrid overlapping events */
+.fc-timegrid-event .fc-event-main {
+    border-left: 3px solid var(--primary-color);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.fc-timegrid-event:hover .fc-event-main {
+    box-shadow: var(--shadow);
+}
+
+/* Focus visibility on events (GIGW) */
+.fc-event-card:focus-visible,
+.fc-timegrid-event:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
 /* Timetable styling */
 .timetable-grid {
     border-collapse: separate;
@@ -1334,10 +1440,10 @@ class CalendarManager {
             contentHeight: 'auto',
             editable: true,
             selectable: true,
-            dayMaxEvents: false,
+            dayMaxEvents: true,
+            dayMaxEventRows: 4,
             moreLinkClick: 'popover',
             eventOrder: 'start,title',
-            displayEventTime: true,
             eventTimeFormat: {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -1372,148 +1478,6 @@ class CalendarManager {
         
         this.styleMoreLinks();
         this.applyDenseMode();
-        
-        // Fallback: Hide loading overlay after calendar renders (in case loading callback doesn't fire)
-        setTimeout(() => {
-            const loadingOverlay = document.getElementById('calendarLoadingOverlay');
-            if (loadingOverlay) {
-                console.log('Timeout fallback: hiding loading overlay');
-                loadingOverlay.style.display = 'none';
-            }
-        }, 2000); // Give calendar 2 seconds to load
-    }
-
-    fetchEvents(info, successCallback, failureCallback) {
-        // Build URL with course filter
-        let url = CalendarConfig.api.events;
-        const params = new URLSearchParams();
-        
-        if (info.start) {
-            params.append('start', info.start.toISOString().split('T')[0]);
-        }
-        if (info.end) {
-            params.append('end', info.end.toISOString().split('T')[0]);
-        }
-        if (this.selectedCourseId) {
-            params.append('course_id', this.selectedCourseId);
-        }
-        
-        if (params.toString()) {
-            url += '?' + params.toString();
-        }
-
-        console.log('Fetching events from:', url);
-
-        fetch(url, {
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Events loaded:', data.length);
-            // Filter out holidays and restricted holidays
-            const filteredData = data.filter(event => {
-                const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
-                return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
-            });
-            console.log('Events after filtering:', filteredData.length);
-            successCallback(filteredData);
-        })
-        .catch(error => {
-            console.error('Error fetching events:', error);
-            this.showNotification('Failed to load calendar events. Please refresh the page.', 'danger');
-            failureCallback(error);
-        });
-    }
-
-    handleWeekendVisibility(events) {
-        // Wait for calendar to be fully rendered before adjusting days
-        if (!this.calendar || !events || events.length === 0) {
-            // If no events yet, just mark as loaded and don't hide days
-            this.eventsLoaded = true;
-            return;
-        }
-        
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6; // 6 = Saturday
-        });
-
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const hiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        
-        // Use setTimeout to ensure calendar is fully rendered
-        setTimeout(() => {
-            this.calendar.setOption('hiddenDays', hiddenDays);
-            this.eventsLoaded = true;
-        }, 50);
-    }
-
-    updateWeekendVisibility() {
-        // Get all events currently in the calendar
-        const events = this.calendar.getEvents();
-        
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6;
-        });
-
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const newHiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        const currentHiddenDays = this.calendar.getOption('hiddenDays') || [];
-        
-        // Only update if changed to prevent unnecessary re-renders
-        if (JSON.stringify(newHiddenDays.sort()) !== JSON.stringify(currentHiddenDays.sort())) {
-            this.calendar.setOption('hiddenDays', newHiddenDays);
-        }
-    }
-
-    updateCourseHeader() {
-        const headerTitle = document.querySelector('.course-header h1');
-        const headerBadge = document.querySelector('.course-header .badge');
-        const headerYear = document.querySelector('.course-header p');
-        
-        if (!this.selectedCourseId) {
-            // If "All Courses" selected, show default message
-            if (headerTitle) {
-                headerTitle.textContent = 'All Courses';
-            }
-            if (headerBadge) {
-                headerBadge.textContent = 'All';
-            }
-            if (headerYear) {
-                headerYear.innerHTML = `
-                    <span class="badge">All</span>
-                    | <strong>Year:</strong> ${new Date().getFullYear()}
-                `;
-            }
-            return;
-        }
-
-        const selectedCourse = this.courses.find(c => c.pk == this.selectedCourseId);
-        if (selectedCourse) {
-            if (headerTitle) {
-                headerTitle.textContent = selectedCourse.course_name || 'Course Name';
-            }
-            if (headerBadge) {
-                headerBadge.textContent = selectedCourse.couse_short_name || 'Course Code';
-            }
-            if (headerYear) {
-                headerYear.innerHTML = `
-                    <span class="badge">${selectedCourse.couse_short_name || 'Course Code'}</span>
-                    | <strong>Year:</strong> ${selectedCourse.course_year || new Date().getFullYear()}
-                `;
-            }
-        }
     }
 
     styleMoreLinks() {
@@ -1579,8 +1543,6 @@ class CalendarManager {
     }
 
     applyDenseMode() {
-        // Only apply dense mode when compact mode is active
-        if (!document.body.classList.contains('compact-mode')) return;
         // Add/remove dense-day class based on number of events in day cells
         const dayCells = document.querySelectorAll('.fc-daygrid-day');
         dayCells.forEach(cell => {
@@ -1615,19 +1577,20 @@ class CalendarManager {
                      style="border-left-color: ${cardColor};"
                      tabindex="0"
                      role="button"
-                     aria-labelledby="${titleId}"
-                     aria-describedby="${descId}"
+                     aria-label="${topic} at ${venue} with ${faculty}"
                      ${type ? `data-event-type="${typeAttr}"` : ''}>
-                    <div class="d-flex align-items-start justify-content-between gap-2" style="margin-bottom: 0.65rem;">
-                        <div class="event-title flex-grow-1" id="${titleId}" style="color: ${cardColor}; flex: 1; min-width: 0;">
-                            ${topic}
-                        </div>
-                        ${type ? `<span class="event-badge flex-shrink-0" style="margin-left: 0.5rem;">${type}</span>` : ''}
+                    <div class="fw-bold mb-1 text-truncate" style="color: ${cardColor};">
+                        ${topic}
                     </div>
-                    <div class="event-meta" style="width: 100%;">
-                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"bi bi-clock-fill\" aria-hidden=\"true\"></i><span>${arg.timeText}</span></span>` : ''}
-                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"bi bi-geo-alt-fill\" aria-hidden=\"true\"></i><span>${venue}</span></span>` : ''}
-                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"bi bi-person-fill\" aria-hidden=\"true\"></i><span>${faculty}</span></span>` : ''}
+                    ${type ? `<div class="mb-1"><span class="event-badge">${type}</span></div>` : ''}
+                    <div class="small text-muted text-truncate d-flex align-items-center">
+                        <i class="bi bi-clock me-1" aria-hidden="true"></i>${arg.timeText || ''}
+                    </div>
+                    <div class="small text-muted text-truncate d-flex align-items-center">
+                        <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>${venue}
+                    </div>
+                    <div class="small text-muted text-truncate d-flex align-items-center">
+                        <i class="bi bi-person me-1" aria-hidden="true"></i>${faculty}
                     </div>
                     <span class="visually-hidden" id="${descId}">${type ? `${type} ` : ''}${arg.timeText ? `${arg.timeText} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
                 </div>
