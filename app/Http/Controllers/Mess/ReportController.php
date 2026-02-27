@@ -39,14 +39,14 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetails(Request $request)
     {
+        // Use request dates when provided, otherwise default to today (so default filter applies on first load)
+        $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
+        $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+
         $baseQuery = PurchaseOrder::with(['vendor', 'store', 'items.itemSubcategory']);
 
-        if ($request->filled('from_date')) {
-            $baseQuery->whereDate('po_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $baseQuery->whereDate('po_date', '<=', $request->to_date);
-        }
+        $baseQuery->whereDate('po_date', '>=', $fromDate);
+        $baseQuery->whereDate('po_date', '<=', $toDate);
         if ($request->filled('store_id')) {
             $baseQuery->where('store_id', $request->store_id);
         }
@@ -72,9 +72,6 @@ class ReportController extends Controller
         if ($request->filled('vendor_id')) {
             $selectedVendor = Vendor::find($request->vendor_id);
         }
-
-        $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
-        $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
 
         return view('admin.mess.reports.stock-purchase-details', compact(
             'purchaseOrders',
@@ -216,6 +213,7 @@ class ReportController extends Controller
                 ->avg('unit_price');
             $rate = $avgRate ?? $item->standard_cost ?? 0;
             $reportData[] = [
+                'item_code' => $item->item_code ?? $item->subcategory_code ?? '—',
                 'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
                 'unit' => $item->unit_measurement ?? 'Unit',
                 'remaining_qty' => $remainingQty,
@@ -865,6 +863,7 @@ class ReportController extends Controller
                     $alertQty = $item->alert_quantity;
                 }
                 $reportData[] = [
+                    'item_code' => $item->item_code ?? $item->subcategory_code ?? '—',
                     'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
                     'unit' => $item->unit_measurement ?? 'Unit',
                     'remaining_qty' => $remainingQty,

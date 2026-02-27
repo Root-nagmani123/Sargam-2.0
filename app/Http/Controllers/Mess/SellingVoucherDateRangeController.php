@@ -39,8 +39,8 @@ class SellingVoucherDateRangeController extends Controller
             $query->where('status', $request->status);
         }
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->where('date_from', '<=', $request->end_date)
-                  ->where('date_to', '>=', $request->start_date);
+            // Filter strictly by Request Date (date_from) falling within the selected range
+            $query->whereBetween('date_from', [$request->start_date, $request->end_date]);
         }
 
         // DataTables handles pagination/search on the client; return full filtered set.
@@ -172,7 +172,6 @@ class SellingVoucherDateRangeController extends Controller
                 }
             }],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
-            'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
             'order_by' => 'nullable|string|max:100',
@@ -227,7 +226,7 @@ class SellingVoucherDateRangeController extends Controller
 
             // storeId + storeType already normalized above
 
-            $issueDate = $request->issue_date;
+            $issueDate = now()->toDateString();
             $report = SellingVoucherDateRangeReport::create([
                 'date_from' => $issueDate,
                 'date_to' => $issueDate,
@@ -429,7 +428,6 @@ class SellingVoucherDateRangeController extends Controller
                 }
             }],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
-            'issue_date' => 'required|date',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
             'order_by' => 'nullable|string|max:100',
@@ -645,6 +643,19 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function getStoreItems($storeIdentifier)
     {
+        try {
+            return response()->json($this->getStoreItemsData($storeIdentifier));
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array>
+     */
+    private function getStoreItemsData($storeIdentifier)
+    {
         $items = collect();
         $storeType = 'store';
         $storeId = (int) $storeIdentifier;
@@ -796,6 +807,6 @@ class SellingVoucherDateRangeController extends Controller
             }
         }
 
-        return response()->json($items->values());
+        return $items->values();
     }
 }

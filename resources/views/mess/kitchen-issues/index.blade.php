@@ -807,6 +807,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function getBaseAvailableForItem(itemId) {
+        if (!itemId) return 0;
+        const item = filteredItems.find(function(i) { return String(i.id) === String(itemId); });
+        return item ? (parseFloat(item.available_quantity) || 0) : 0;
+    }
+
+    function refreshAllAvailable() {
+        const rows = document.querySelectorAll('#modalItemsBody .sv-item-row');
+        const usedByItem = {};
+
+        rows.forEach(function(row) {
+            const select = row.querySelector('.sv-item-select');
+            const itemId = select ? select.value : '';
+            const availInp = row.querySelector('.sv-avail');
+            const leftInp = row.querySelector('.sv-left');
+            if (!itemId || !availInp) return;
+
+            const base = getBaseAvailableForItem(itemId);
+            const alreadyUsed = usedByItem[itemId] || 0;
+            const availableForRow = Math.max(0, base - alreadyUsed);
+
+            availInp.value = availableForRow.toFixed(2);
+
+            const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
+            if (leftInp) {
+                leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
+            }
+
+            usedByItem[itemId] = alreadyUsed + qty;
+            enforceQtyWithinAvailable(row);
+        });
+    }
+
     function fetchStoreItems(storeId, callback) {
         if (!storeId) {
             filteredItems = itemSubcategories;
@@ -889,6 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
+        refreshAllAvailable();
         enforceQtyWithinAvailable(row);
     }
 
@@ -992,6 +1026,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const modalItemsBody = document.getElementById('modalItemsBody');
+    const addSvModal = document.getElementById('addSellingVoucherModal');
     if (modalItemsBody) {
         modalItemsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sv-item-select')) {
@@ -1003,7 +1038,12 @@ document.addEventListener('DOMContentLoaded', function() {
         modalItemsBody.addEventListener('input', function(e) {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateGrandTotal(); }
+                if (row) {
+                    refreshAllAvailable();
+                    enforceQtyWithinAvailable(row);
+                    calcRow(row);
+                    updateGrandTotal();
+                }
             }
         });
 
@@ -1012,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const row = e.target.closest('.sv-item-row');
                 if (row && document.querySelectorAll('#modalItemsBody .sv-item-row').length > 1) {
                     row.remove();
+                    refreshAllAvailable();
                     updateGrandTotal();
                     updateRemoveButtons();
                 }
@@ -1019,8 +1060,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
+    // Delegate input/change from modal so qty/rate updates always run (Left Qty + Total)
+    if (addSvModal) {
+        function onAddModalQtyOrRateInput(e) {
+            if (!e.target.matches('.sv-avail, .sv-qty, .sv-rate')) return;
+            const row = e.target.closest('.sv-item-row');
+            if (!row) return;
+            refreshAllAvailable();
     const addSvModal = document.getElementById('addSellingVoucherModal');
+            calcRow(row);
+            updateGrandTotal();
+        }
+        addSvModal.addEventListener('input', onAddModalQtyOrRateInput);
+        addSvModal.addEventListener('change', onAddModalQtyOrRateInput);
+    }
+
+    // Enter key inside Item Details table triggers Add Item (and prevents form submit)
     const svItemsTable = document.getElementById('svItemsTable');
     if (addSvModal && svItemsTable) {
         addSvModal.addEventListener('keydown', function(e) {
@@ -1084,12 +1139,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (courseSelect) { setAddModalWrap('wrapModalCourseSelect', false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
             if (courseNameSelect) { setAddModalWrap('wrapModalCourseNameSelect', false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
-            setAddModalWrap('wrapModalClientNameInput', false);
-            nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setAddModalWrap(sel.id === 'modalFacultySelect' ? 'wrapModalFacultySelect' : (sel.id === 'modalAcademyStaffSelect' ? 'wrapModalAcademyStaffSelect' : 'wrapModalMessStaffSelect'), false); sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { setAddModalWrap('wrapModalOtStudentSelect', false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            setAddModalWrap('wrapModalCourseSelect', true);
-            setAddModalWrap('wrapModalCourseNameSelect', true);
+            // Course: Name field is manual text input (like Section), not dropdown
+            nameInput.style.display = 'block';
+            nameInput.placeholder = 'Course name';
+            nameInput.setAttribute('required', 'required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            if (courseSelect) { courseSelect.style.display = 'block'; }
+            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
         } else {
             setAddModalWrap('wrapModalClientNameInput', !showAny);
             nameInput.removeAttribute('required');
@@ -1144,18 +1201,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 setAddModalWrap('wrapModalClientNameInput', false);
                 if (nameInput) { nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                setAddModalWrap('wrapModalClientNameSelect', false);
-                if (clientSelect) { clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                setAddModalWrap('wrapModalOtCourseSelect', false);
-                if (otCourseSelect) { otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                setAddModalWrap('wrapModalOtStudentSelect', false);
-                if (otStudentSelect) { otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                setAddModalWrap('wrapModalCourseSelect', true);
-                if (courseSelect) { courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
-                setAddModalWrap('wrapModalCourseNameSelect', true);
-                if (courseNameSelect) { courseNameSelect.setAttribute('required', 'required'); courseNameSelect.value = ''; }
-                setAddModalWrap('wrapModalClientNameInput', false);
-                if (nameInput) { nameInput.value = ''; nameInput.removeAttribute('required'); }
+                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                if (courseSelect) { courseSelect.style.display = 'block'; courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
+                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.value = ''; nameInput.placeholder = 'Course name'; nameInput.setAttribute('required', 'required'); }
             } else {
                 /* Employee: show Client Name dropdown; Name column is set entirely by updateModalNameField() from Client Name selection */
                 setAddModalWrap('wrapModalClientNameSelect', true);
@@ -1214,23 +1265,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalCourseSelect = document.getElementById('modalCourseSelect');
     if (modalCourseSelect) {
         modalCourseSelect.addEventListener('change', function() {
-            const pk = this.value || '';
-            const courseNameSelect = document.getElementById('modalCourseNameSelect');
             const inp = document.getElementById('modalClientNameInput');
             const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (courseNameSelect) courseNameSelect.value = pk;
-            if (inp) inp.value = courseName;
-        });
-    }
-    
-    const modalCourseNameSelect = document.getElementById('modalCourseNameSelect');
-    if (modalCourseNameSelect) {
-        modalCourseNameSelect.addEventListener('change', function() {
-            const pk = this.value || '';
-            const courseSelect = document.getElementById('modalCourseSelect');
-            const inp = document.getElementById('modalClientNameInput');
-            const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (courseSelect) courseSelect.value = pk;
             if (inp) inp.value = courseName;
         });
     }
@@ -1283,13 +1319,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const showAcademyStaff = isEmployee && isAcademyStaff;
         const showMessStaff = isEmployee && isMessStaff;
         const showAny = showFaculty || showAcademyStaff || showMessStaff;
-        if (isOt || isCourse) {
+        if (isOt) {
             nameInput.style.display = 'block';
             nameInput.readOnly = true;
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelect2Visibility(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
-            if (editCourseSelect) { setSelect2Visibility(editCourseSelect, isCourse); if (!isCourse) editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); if (!isCourse) editCourseSelect.removeAttribute('name'); }
-            if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, isCourse); if (!isCourse) editCourseNameSelect.value = ''; editCourseNameSelect.removeAttribute('required'); }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
+            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
+            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+        } else if (isCourse) {
+            nameInput.style.display = 'block';
+            nameInput.placeholder = 'Course name';
+            nameInput.removeAttribute('readonly');
+            nameInput.readOnly = false;
+            nameInput.setAttribute('required', 'required');
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
+            if (editCourseSelect) { editCourseSelect.style.display = 'block'; }
+            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
@@ -1321,11 +1366,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = true; nameInput.placeholder = 'Select course above'; nameInput.value = nameInput.value || ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                if (clientSelect) { setSelect2Visibility(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { setSelect2Visibility(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (editCourseSelect) { setSelect2Visibility(editCourseSelect, true); editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
-                if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, true); editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = ''; }
-                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = true; nameInput.value = nameInput.value || ''; nameInput.removeAttribute('required'); }
+                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Course name'; nameInput.value = nameInput.value || ''; nameInput.setAttribute('required', 'required'); }
             } else {
                 if (clientSelect) { setSelect2Visibility(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
                 if (otCourseSelect) { setSelect2Visibility(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
@@ -1354,23 +1399,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const editModalCourseSelect = document.getElementById('editModalCourseSelect');
     if (editModalCourseSelect) {
         editModalCourseSelect.addEventListener('change', function() {
-            const pk = this.value || '';
-            const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
             const inp = document.getElementById('editModalClientNameInput');
             const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (editCourseNameSelect) editCourseNameSelect.value = pk;
-            if (inp) inp.value = courseName;
-        });
-    }
-    
-    const editModalCourseNameSelect = document.getElementById('editModalCourseNameSelect');
-    if (editModalCourseNameSelect) {
-        editModalCourseNameSelect.addEventListener('change', function() {
-            const pk = this.value || '';
-            const editCourseSelect = document.getElementById('editModalCourseSelect');
-            const inp = document.getElementById('editModalClientNameInput');
-            const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (editCourseSelect) editCourseSelect.value = pk;
             if (inp) inp.value = courseName;
         });
     }
@@ -1729,11 +1759,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.placeholder = 'Name (from course/student)'; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
                     } else if (isCourse) {
-                        if (editClientSelect) { setSelect2Visibility(editClientSelect, false); editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
-                        if (editOtSelect) { setSelect2Visibility(editOtSelect, false); editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
-                        if (editCourseSelect) { setSelect2Visibility(editCourseSelect, true); editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
-                        if (editCourseNameSelect) { setSelect2Visibility(editCourseNameSelect, true); editCourseNameSelect.setAttribute('required', 'required'); editCourseNameSelect.value = v.client_type_pk || ''; }
-                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = true; editNameInp.value = v.client_name || ''; editNameInp.removeAttribute('required'); }
+                        if (editClientSelect) { editClientSelect.style.display = 'none'; editClientSelect.removeAttribute('required'); editClientSelect.removeAttribute('name'); }
+                        if (editOtSelect) { editOtSelect.style.display = 'none'; editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
+                        if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = v.client_type_pk || ''; }
+                        if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                        if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Course name'; editNameInp.value = v.client_name || ''; editNameInp.setAttribute('required', 'required'); }
                     } else {
                         if (editClientSelect) { setSelect2Visibility(editClientSelect, true); editClientSelect.setAttribute('required', 'required'); editClientSelect.setAttribute('name', 'client_type_pk'); editClientSelect.querySelectorAll('option').forEach(function(opt) { if (opt.value === '') { opt.hidden = false; return; } opt.hidden = (opt.dataset.type || '') !== (v.client_type_slug || 'employee'); }); }
                         if (editOtSelect) { setSelect2Visibility(editOtSelect, false); editOtSelect.removeAttribute('required'); editOtSelect.removeAttribute('name'); editOtSelect.value = ''; }
@@ -1813,6 +1843,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentStoreId = preSelectedStore;
                 fetchStoreItems(preSelectedStore, function() {
                     updateAddItemDropdowns();
+                    refreshAllAvailable();
+                    document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+                    updateGrandTotal();
                 });
             } else {
                 currentStoreId = null;
@@ -1821,14 +1854,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         addSellingVoucherModal.addEventListener('shown.bs.modal', function() {
-            if (typeof $ !== 'undefined' && $.fn.select2) {
-                $('#addSellingVoucherModal .select2').each(function() {
-                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
-                    $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addSellingVoucherModal') });
-                });
-            }
-            var checked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
-            if (checked) { checked.dispatchEvent(new Event('change')); }
+            refreshAllAvailable();
+            document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
+            updateGrandTotal();
         });
     }
 

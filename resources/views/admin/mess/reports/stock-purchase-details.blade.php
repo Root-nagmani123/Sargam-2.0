@@ -105,49 +105,57 @@
                         <table class="table align-middle stock-purchase-table mb-0 ">
                             <thead class="stock-purchase-thead">
                                 <tr>
-                                    <th class="text-center">Item</th>
+                                    <th>Item</th>
+                                    <th>Item Code</th>
+                                    <th class="text-end">Unit</th>
                                     <th class="text-end">Quantity</th>
-                                    <th class="text-end">Purchase (₹)</th>
-                                    <th class="text-end">Total (₹)</th>
+                                    <th class="text-end">Purchase</th>
+                                    <th class="text-end">Tax %</th>
+                                    <th class="text-end">Tax Amount</th>
+                                    <th class="text-end">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($purchaseOrders as $order)
                                     @php
                                         $storeName = $order->store ? $order->store->store_name : 'N/A';
-                                        $billLabel = $storeName . ' (Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
-                                        $billTotal = 0;
+                                        $billLabel = $storeName . '(Primary) Bill No. ' . ($order->po_number ?? $order->id) . ' (' . $order->po_date->format('d-m-Y') . ')';
+                                        $billSubtotal = 0;
+                                        $billTaxTotal = 0;
                                     @endphp
                                     <tr class="bill-header-row">
-                                        <td colspan="4" class="bill-header">{{ $billLabel }}</td>
+                                        <td colspan="8" class="bill-header">{{ $billLabel }}</td>
                                     </tr>
                                     @foreach($order->items as $item)
                                         @php
                                             $qty = $item->quantity ?? 0;
                                             $rate = $item->unit_price ?? 0;
-                                            $total = $qty * $rate;
-                                            $billTotal += $total;
+                                            $taxPercent = $item->tax_percent ?? 0;
+                                            $subtotal = $qty * $rate;
+                                            $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                                            $total = $subtotal + $taxAmount;
+                                            $billSubtotal += $subtotal;
+                                            $billTaxTotal += $taxAmount;
                                         @endphp
                                         <tr>
-                                            <td class="ps-3">{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
-                                            <td class="text-end font-monospace">{{ number_format($qty, 2) }}</td>
-                                            <td class="text-end font-monospace">₹{{ number_format($rate, 1) }}</td>
-                                            <td class="text-end font-monospace fw-medium pe-3">₹{{ number_format($total, 2) }}</td>
+                                            <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
+                                            <td>{{ $item->itemSubcategory->item_code ?? '—' }}</td>
+                                            <td class="text-end">{{ $item->unit ?? '—' }}</td>
+                                            <td class="text-end">{{ number_format($qty, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format($rate, 1) }}</td>
+                                            <td class="text-end">{{ number_format($taxPercent, 2) }}%</td>
+                                            <td class="text-end">₹{{ number_format($taxAmount, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format($total, 2) }}</td>
                                         </tr>
                                     @endforeach
-                                    <tr class="bill-total-row table-active">
-                                        <td colspan="3" class="text-end fw-bold ps-3">Bill Total</td>
-                                        <td class="text-end fw-bold pe-3 font-monospace">₹{{ number_format($billTotal, 2) }}</td>
+                                    @php $billTotal = $billSubtotal + $billTaxTotal; @endphp
+                                    <tr class="bill-total-row">
+                                        <td colspan="7" class="text-end fw-bold">Bill Total:</td>
+                                        <td class="text-end fw-bold">₹{{ number_format($billTotal, 2) }}</td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center py-5 px-4">
-                                            <div class="d-inline-block text-muted">
-                                                <span class="material-icons material-symbols-rounded d-block mb-3 opacity-25" style="font-size:3rem;">remove_shopping_cart</span>
-                                                <p class="fw-medium mb-1">No purchase details found</p>
-                                                <p class="small mb-0 opacity-75">Try adjusting the date range or filters above.</p>
-                                            </div>
-                                        </td>
+                                        <td colspan="8" class="text-center text-muted py-4">No purchase details found</td>
                                     </tr>
                                 @endforelse
                             </tbody>

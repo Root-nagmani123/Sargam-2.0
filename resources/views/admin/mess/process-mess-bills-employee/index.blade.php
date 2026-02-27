@@ -102,12 +102,14 @@
                         <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
                         <input type="text" name="date_from" id="date_from" class="form-control form-control-sm"
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
+                               data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
                         <input type="text" name="date_to" id="date_to" class="form-control form-control-sm"
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
+                               data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
                     <div class="col-md-2">
@@ -130,7 +132,13 @@
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list</i>
                             Apply
                         </button>
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                        @php
+                            $clearFilterParams = array_filter([
+                                'per_page' => request('per_page', 10),
+                                'search' => request('search'),
+                            ]);
+                        @endphp
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary btn-sm">Clear filters</a>
                     </div>
                 </div>
             </form>
@@ -176,7 +184,7 @@
                         <tr>
                             <th class="text-nowrap py-2">S.No.</th>
                             <th class="text-nowrap py-2">Buyer Name</th>
-                            <th class="text-nowrap py-2">Invoice No.</th>
+                            <th class="text-nowrap py-2">Slip No.</th>
                             <th class="text-nowrap py-2">Invoice Date</th>
                             <th class="text-nowrap py-2">Client Type</th>
                             <th class="text-nowrap py-2 text-end">Total</th>
@@ -192,14 +200,17 @@
                         @forelse($bills as $index => $bill)
                             @php
                                 $billId = $bill->id ?? $bill->pk ?? 0;
+                                $isDateRange = ($bill->source_type ?? '') === 'date_range';
+                                $slipNo = $isDateRange ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT) : 'SV-' . str_pad($bill->pk ?? $bill->id ?? 0, 6, '0', STR_PAD_LEFT);
+                                $receiptId = $isDateRange ? 'dr-' . $bill->id : 'ki-' . ($bill->pk ?? $bill->id);
                             @endphp
                             <tr class="{{ ($bill->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
                                 <td>{{ $bills->firstItem() + $index }}</td>
                                 <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
-                                <td>{{ $billId }}</td>
+                                <td>{{ $slipNo }}</td>
                                 <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>
                                 <td>{{ $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—'))) }}</td>
-                                <td class="text-end fw-semibold">₹ {{ number_format($bill->total_amount ?? $bill->items->sum('amount'), 2) }}</td>
+                                <td class="text-end fw-semibold">₹ {{ number_format($bill->net_total, 2) }}</td>
                                 <td>{{ $paymentTypeMap[$bill->payment_type ?? 1] ?? '—' }}</td>
                                 <td>
                                     @if(($bill->status ?? 0) == 2)
@@ -211,7 +222,7 @@
                                     @endif
                                 </td>
                                 <td class="text-center no-print">
-                                    <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $billId) }}" target="_blank"
+                                    <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $receiptId) }}" target="_blank"
                                        class="btn btn-sm btn-outline-primary" title="Print receipt">
                                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
                                     </a>
@@ -548,8 +559,33 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof flatpickr !== 'undefined') {
-        flatpickr('#date_from', { dateFormat: 'd-m-Y', allowInput: true });
-        flatpickr('#date_to', { dateFormat: 'd-m-Y', allowInput: true });
+        var dateFromInput = document.getElementById('date_from');
+        var dateToInput = document.getElementById('date_to');
+        // Prefer data-default-ymd (Y-m-d from server) so nothing can overwrite before we read it.
+        function ymdToDate(ymd) {
+            if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return null;
+            var p = String(ymd).split('-');
+            return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+        }
+        function dmyToDate(dmy) {
+            var m = (dmy || '').match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+            if (!m) return null;
+            return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+        }
+        var defaultFrom = (dateFromInput && dateFromInput.getAttribute('data-default-ymd')) ? ymdToDate(dateFromInput.getAttribute('data-default-ymd')) : (dateFromInput && dateFromInput.value ? dmyToDate(dateFromInput.value) : null);
+        var defaultTo = (dateToInput && dateToInput.getAttribute('data-default-ymd')) ? ymdToDate(dateToInput.getAttribute('data-default-ymd')) : (dateToInput && dateToInput.value ? dmyToDate(dateToInput.value) : null);
+        var fpFrom = flatpickr('#date_from', {
+            dateFormat: 'd-m-Y',
+            allowInput: true,
+            defaultDate: defaultFrom
+        });
+        var fpTo = flatpickr('#date_to', {
+            dateFormat: 'd-m-Y',
+            allowInput: true,
+            defaultDate: defaultTo
+        });
+        if (defaultFrom && fpFrom) fpFrom.setDate(defaultFrom, false);
+        if (defaultTo && fpTo) fpTo.setDate(defaultTo, false);
         flatpickr('#modal_date_from', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#modal_date_to', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#modal_invoice_date', { dateFormat: 'd-m-Y', allowInput: true });
@@ -680,16 +716,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function clearModalFilters() {
-        document.getElementById('modal_date_from').value = '{{ now()->startOfMonth()->format("d-m-Y") }}';
-        document.getElementById('modal_date_to').value = '{{ now()->endOfMonth()->format("d-m-Y") }}';
-        document.getElementById('modal_client_type').value = '';
-        document.getElementById('modal_buyer_name').value = '';
-        document.getElementById('modal_invoice_date').value = '{{ now()->format("d-m-Y") }}';
-        document.getElementById('modal_mode_of_payment').value = 'deduct_from_salary';
-        document.getElementById('modalSearch').value = '';
-        modalBillsData = [];
-        renderModalTable();
-        document.getElementById('modalPaginationInfo').textContent = 'Showing 0 to 0 of 0 entries';
+        // Reset all filter inputs to defaults, then reload bills so table shows unfiltered (default) data
+        var defaultDateFrom = '{{ now()->startOfMonth()->format("d-m-Y") }}';
+        var defaultDateTo = '{{ now()->endOfMonth()->format("d-m-Y") }}';
+        var defaultInvoiceDate = '{{ now()->format("d-m-Y") }}';
+
+        function setDateInput(id, value) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.value = value;
+            if (el._flatpickr) el._flatpickr.setDate(value, false);
+        }
+        setDateInput('modal_date_from', defaultDateFrom);
+        setDateInput('modal_date_to', defaultDateTo);
+        setDateInput('modal_invoice_date', defaultInvoiceDate);
+
+        var ct = document.getElementById('modal_client_type');
+        if (ct) ct.value = '';
+        var bn = document.getElementById('modal_buyer_name');
+        if (bn) bn.value = '';
+        var mp = document.getElementById('modal_mode_of_payment');
+        if (mp) mp.value = 'deduct_from_salary';
+        var ms = document.getElementById('modalSearch');
+        if (ms) ms.value = '';
+
+        loadModalBills();
     }
 
     document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });

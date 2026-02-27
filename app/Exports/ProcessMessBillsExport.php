@@ -35,7 +35,7 @@ class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustom
         return [
             'S.No.',
             'Buyer Name',
-            'Invoice No.',
+            'Slip No.',
             'Invoice Date',
             'Client Type',
             'Total',

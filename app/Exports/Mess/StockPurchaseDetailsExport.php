@@ -69,17 +69,25 @@ class StockPurchaseDetailsExport implements FromCollection, WithStyles, WithColu
             foreach ($order->items as $item) {
                 $qty = $item->quantity ?? 0;
                 $rate = $item->unit_price ?? 0;
-                $total = $qty * $rate;
-                $billTotal += $total;
+                $taxPercent = $item->tax_percent ?? 0;
+                $subtotal = $qty * $rate;
+                $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                $total = $subtotal + $taxAmount;
                 $itemName = $item->itemSubcategory->item_name
                     ?? $item->itemSubcategory->subcategory_name
                     ?? $item->itemSubcategory->name
                     ?? 'N/A';
+                $itemCode = $item->itemSubcategory->item_code ?? '—';
+                $unit = $item->unit ?? '—';
 
                 $rows[] = [
                     $itemName,
+                    $itemCode,
+                    $unit,
                     number_format($qty, 2),
-                    number_format($rate, 1),
+                    number_format($rate, 2),
+                    number_format($taxPercent, 2) . '%',
+                    number_format($taxAmount, 2),
                     number_format($total, 2),
                 ];
             }
@@ -100,60 +108,18 @@ class StockPurchaseDetailsExport implements FromCollection, WithStyles, WithColu
     public function columnWidths(): array
     {
         return [
-            'A' => 45,
-            'B' => 12,
-            'C' => 14,
-            'D' => 14,
+            'Bill No',
+            'PO Date',
+            'Store',
+            'Vendor',
+            'Item Name',
+            'Item Code',
+            'Unit',
+            'Quantity',
+            'Unit Price',
+            'Tax %',
+            'Tax Amount',
+            'Total',
         ];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        $lastRow = $sheet->getHighestRow();
-        $lastCol = 'D';
-
-        // Title row (1): bold, larger
-        $sheet->getStyle('A1:D1')->getFont()->setBold(true)->setSize(14);
-        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-
-        // Date row (2)
-        $sheet->getStyle('A2:D2')->getFont()->setSize(11);
-
-        // Vendor row (3)
-        $sheet->getStyle('A3:D3')->getFont()->setSize(11);
-
-        // Table header (row 5): bold, fill
-        $sheet->getStyle('A5:D5')->getFont()->setBold(true);
-        $sheet->getStyle('A5:D5')->getFill()
-            ->setFillType(Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('D3D6D9');
-        $sheet->getStyle('A5:D5')->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('B5:D5')->getAlignment()
-            ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
-        // Data area: borders and alignment (from row 6)
-        if ($lastRow >= 6) {
-            $sheet->getStyle('A6:' . $lastCol . $lastRow)->getBorders()
-                ->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-            $sheet->getStyle('B6:D' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
-            // Bill header rows: bold, fill (same as view)
-            for ($r = 6; $r <= $lastRow; $r++) {
-                $cellA = $sheet->getCell('A' . $r)->getValue();
-                if (is_string($cellA) && str_contains($cellA, '(Primary)')) {
-                    $sheet->getStyle('A' . $r . ':' . $lastCol . $r)->getFont()->setBold(true);
-                    $sheet->getStyle('A' . $r . ':' . $lastCol . $r)->getFill()
-                        ->setFillType(Fill::FILL_SOLID)
-                        ->getStartColor()->setRGB('6C757D');
-                    $sheet->getStyle('A' . $r . ':' . $lastCol . $r)->getFont()->getColor()->setRGB('FFFFFF');
-                }
-                if (is_string($cellA) && $cellA === 'Bill Total') {
-                    $sheet->getStyle('A' . $r . ':' . $lastCol . $r)->getFont()->setBold(true);
-                }
-            }
-        }
-
-        return [];
     }
 }

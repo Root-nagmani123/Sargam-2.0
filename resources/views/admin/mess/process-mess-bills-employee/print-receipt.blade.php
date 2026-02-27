@@ -9,7 +9,7 @@
         $dateFrom = isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
         $dateTo = isset($bill->date_to) && $bill->date_to ? $bill->date_to->format('d-m-Y') : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
         $purchaseDate = $bill->issue_date ? $bill->issue_date->format('d-m-Y') : $dateFrom;
-        $totalAmount = (float) ($bill->total_amount ?? $bill->items->sum('amount'));
+        $totalAmount = (float) $bill->net_total;
         $paidAmount = (float) ($paidAmount ?? 0);
         $dueAmount = (float) ($dueAmount ?? max(0, $totalAmount - $paidAmount));
         $paymentStatusLabel = $paymentStatusLabel ?? ($paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid'));
@@ -84,20 +84,31 @@
                 <th>Store Name</th>
                 <th>Item Name</th>
                 <th>Purchase Date</th>
-                <th class="text-end">Price</th>
-                <th class="text-end">Quantity</th>
+                <th class="text-end">Rate</th>
+                <th class="text-end">Issue Qty</th>
+                <th class="text-end">Return Qty</th>
+                <th class="text-end">Net Qty</th>
                 <th class="text-end">Amount</th>
             </tr>
         </thead>
         <tbody>
             @foreach($bill->items as $item)
+            @php
+                $issueQty = (float) ($item->quantity ?? 0);
+                $returnQty = (float) ($item->return_quantity ?? 0);
+                $netQty = max(0, $issueQty - $returnQty);
+                $rate = (float) ($item->rate ?? 0);
+                $itemAmount = $netQty * $rate;
+            @endphp
             <tr>
                 <td>{{ $storeName }}</td>
                 <td>{{ $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
                 <td>{{ $purchaseDate }}</td>
-                <td class="text-end">{{ number_format($item->rate ?? 0, 1) }}</td>
-                <td class="text-end">{{ $item->quantity }}</td>
-                <td class="text-end">{{ number_format($item->amount ?? 0, 2) }}</td>
+                <td class="text-end">{{ number_format($rate, 2) }}</td>
+                <td class="text-end">{{ number_format($issueQty, 2) }}</td>
+                <td class="text-end">{{ number_format($returnQty, 2) }}</td>
+                <td class="text-end">{{ number_format($netQty, 2) }}</td>
+                <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
             </tr>
             @endforeach
         </tbody>

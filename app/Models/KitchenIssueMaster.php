@@ -174,6 +174,20 @@ class KitchenIssueMaster extends Model
     }
 
     /**
+     * Total after deducting returns: sum of (quantity - return_quantity) * rate per item.
+     * Used by Process Mess Bills so amounts match Selling Voucher after return.
+     */
+    public function getNetTotalAttribute(): float
+    {
+        return (float) $this->items->sum(function ($item) {
+            $qty = (float) ($item->quantity ?? 0);
+            $returnQty = (float) ($item->return_quantity ?? 0);
+            $rate = (float) ($item->rate ?? 0);
+            return max(0, $qty - $returnQty) * $rate;
+        });
+    }
+
+    /**
      * Get status label
      */
     public function getStatusLabelAttribute()
