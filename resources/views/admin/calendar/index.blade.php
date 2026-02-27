@@ -1,11 +1,53 @@
 @extends(hasRole('Student-OT') ? 'fc.layouts.master' : 'admin.layouts.master')
 
-
-@extends('admin.layouts.master')
-
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
+@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+<link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
+<style>
+        :root {
+        --primary: #004a93;
+        --primary-dark: #003366;
+        --accent: #eef5ff;
+        --bg-light: #f4f6f9;
+        --text-main: #1f2937;
+        --text-muted: #6b7280;
+        --border: #e5e7eb;
+    }
+        .course-header {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: #fff;
+        padding: 2.75rem 1.5rem;
+        border-radius: 1rem 1rem 1rem 1rem;
+        text-align: center;
+    }
+
+    .course-header h1 {
+        font-size: 1.85rem;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .course-header .badge {
+        background: #ffffff;
+        color: #000;
+    }
+
+    /* Responsive Design for Smaller Screens */
+    @media (max-width: 768px) {
+        .course-header {
+            padding: 1.5rem 1rem;
+        }
+
+        .course-header h1 {
+            font-size: 1.25rem;
+        }
+
+        .course-header p {
+            font-size: 0.9rem;
+        }
+    }
+</style>
 <div class="container-fluid">
     <a href="#calendar" class="visually-hidden-focusable" aria-label="Skip to calendar">Skip to calendar</a>
     <!-- Page Header with ARIA landmark -->
@@ -1344,7 +1386,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 }
 
 </style>
-
+  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
 console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
