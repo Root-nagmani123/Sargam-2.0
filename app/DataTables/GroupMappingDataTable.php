@@ -31,90 +31,87 @@ class GroupMappingDataTable extends DataTable
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
                 $id = encrypt($row->pk);
-                    if (!empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
-                        $exportUrl = route('group.mapping.export.student.list', $id);
-                        $html = <<<HTML
-    <div class="d-inline-flex align-items-center gap-2">
-        <a href="javascript:void(0)" class="view-student btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 py-1" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students" aria-label="View Students">
-            <i class="bi bi-eye-fill"></i>
-            <span class="d-none d-md-inline">View</span>
-        </a>
-        <a href="{$exportUrl}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 px-2 py-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List" aria-label="Download Student List">
-            <i class="bi bi-download"></i>
-            <span class="d-none d-md-inline">Download</span>
-        </a>
-    </div>
-    HTML;
+
+                if (!empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
+                    $exportUrl = route('group.mapping.export.student.list', $id);
+
+                    $html = <<<HTML
+<div class="d-inline-flex align-items-center gap-2">
+    <button
+        type="button"
+        class="btn btn-sm btn-outline-primary rounded-1 d-inline-flex align-items-center gap-1 view-student"
+        data-id="{$id}"
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
+        title="View students in this group"
+        aria-label="View students in this group"
+    >
+        <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">visibility</span>
+    </button>
+
+    <a
+        href="{$exportUrl}"
+        class="btn btn-sm btn-outline-success rounded-1 d-inline-flex align-items-center gap-1"
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
+        title="Download student list (Excel)"
+        aria-label="Download student list (Excel)"
+    >
+        <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">download</span>
+    </a>
+</div>
+HTML;
+
                     return $html;
                 }
-                return "<span class='text-muted'>No Students</span>";
+
+                return "<span class='badge bg-secondary-subtle text-secondary-emphasis rounded-1 px-3 py-1'>No students</span>";
             })
             ->addColumn('action', function ($row) {
-                $id = encrypt($row->pk);
-                $editUrl = route('group.mapping.edit', ['id' => $id]);
+                $id       = encrypt($row->pk);
+                $editUrl  = route('group.mapping.edit', ['id' => $id]);
                 $deleteUrl = route('group.mapping.delete', ['id' => $id]);
-                $isActive = $row->active_inactive == 1;
-                $csrf = csrf_token();
+                $isActive = (int) $row->active_inactive === 1;
+                $csrf     = csrf_token();
 
                 $html = <<<HTML
-<td class="text-center">
-    <div class="d-inline-flex align-items-center gap-2"
-         role="group"
-         aria-label="Row actions">
+<div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
+    <a
+        href="{$editUrl}"
+        class="btn btn-sm btn-outline-primary rounded-1 d-inline-flex align-items-center gap-1"
+        aria-label="Edit group mapping"
+    >
+        <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</span>
+    </a>
 
-        <!-- Edit -->
-        <a
-            href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-            aria-label="Edit group name mapping"
-        >
-            <span class="material-icons material-symbols-rounded fs-6"
-                  aria-hidden="true">
-                edit
-            </span>
-            <span class="d-none d-lg-inline">Edit</span>
-        </a>
+    <?php if (!\$isActive): ?>
+        <form action="{$deleteUrl}" method="POST" class="d-inline m-0 p-0">
+            <input type="hidden" name="_token" value="{$csrf}">
+            <input type="hidden" name="_method" value="DELETE">
 
-        <!-- Delete -->
-        <?php if ($isActive): ?>
             <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active group mapping"
+                type="submit"
+                class="btn btn-sm btn-outline-danger rounded-1 d-inline-flex align-items-center gap-1"
+                aria-label="Delete group mapping"
+                onclick="return confirm('Are you sure you want to delete this group name mapping?');"
             >
-                <span class="material-icons material-symbols-rounded fs-6"
-                      aria-hidden="true">
-                    delete
-                </span>
-                <span class="d-none d-lg-inline">Delete</span>
+                <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">delete</span>
             </button>
-        <?php else: ?>
-            <form action="{$deleteUrl}" method="POST" class="d-inline">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="_method" value="DELETE">
-
-                <button
-                    type="submit"
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-                    aria-label="Delete group name mapping"
-                    onclick="return confirm('Are you sure you want to delete this group name mapping?');"
-                >
-                    <span class="material-icons material-symbols-rounded"
-                          style="font-size:18px;"
-                          aria-hidden="true">
-                        delete
-                    </span>
-                    <span class="d-none d-lg-inline">Delete</span>
-                </button>
-            </form>
-        <?php endif; ?>
-
-    </div>
-</td>
-
+        </form>
+    <?php else: ?>
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary rounded-1 d-inline-flex align-items-center gap-1"
+            disabled
+            aria-disabled="true"
+            title="Cannot delete an active group mapping"
+        >
+            <span class="material-icons material-symbols-rounded fs-6" aria-hidden="true">lock</span>
+        </button>
+    <?php endif; ?>
+</div>
 HTML;
+
                 return $html;
             })
 
