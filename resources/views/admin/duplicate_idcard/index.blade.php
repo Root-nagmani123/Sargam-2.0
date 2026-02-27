@@ -55,7 +55,6 @@
                             <th>Valid To</th>
                             <th>Status</th>
                             <th>Request Date</th>
-                            <th class="text-center" style="width:120px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -75,10 +74,12 @@
                                     @php
                                         $p = $r->photo_path;
                                         if ($p && strpos($p,'/') === false) { $p = 'idcard/photos/'.$p; }
-                                        $photoExists = $p && \Storage::disk('public')->exists($p);
-                                        $photoUrl = $photoExists ? asset('storage/'.$p) : asset('images/dummypic.jpeg');
                                     @endphp
-                                    <a href="{{ $photoUrl }}" target="_blank">Download</a>
+                                    @if($p)
+                                        <a href="{{ asset('storage/'.$p) }}" target="_blank">Download</a>
+                                    @else
+                                        --
+                                    @endif
                                 </td>
                                 <td>
                                     @php
@@ -95,16 +96,9 @@
                                 <td>{{ $r->valid_to ? \Carbon\Carbon::parse($r->valid_to)->format('d-m-Y') : '--' }}</td>
                                 <td>{{ $r->status_label }}</td>
                                 <td>{{ $r->request_date ? \Carbon\Carbon::parse($r->request_date)->format('d-m-Y') : '--' }}</td>
-                                <td class="text-center">
-                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
-                                        <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
-                                        </a>
-                                    </div>
-                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="17" class="text-center text-muted py-4">No requests found.</td></tr>
+                            <tr><td colspan="16" class="text-center text-muted py-4">No requests found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
