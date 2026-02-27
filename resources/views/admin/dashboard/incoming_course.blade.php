@@ -8,7 +8,7 @@
 
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
-            <h4>Upcoming Course</h4>
+            <h4></h4>
             <hr class="my-2">
             <div class="table-responsive">
                 <table class="table text-nowrap">
