@@ -74,6 +74,18 @@ class EmployeeIDCardApprovalController extends Controller
                     ->orWhere('dup.id_card_no', 'like', '%' . $search . '%');
             });
         }
+
+        // Date filters (by created_date)
+        if ($request->filled('date_from')) {
+            $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+            $contQuery->where('created_date', '>=', $from);
+            $dupPermQuery->where('dup.created_date', '>=', $from);
+        }
+        if ($request->filled('date_to')) {
+            $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+            $contQuery->where('created_date', '<=', $to);
+            $dupPermQuery->where('dup.created_date', '<=', $to);
+        }
         if ($request->filled('card_type')) {
             $contQuery->where('permanent_type', $request->card_type);
         }
@@ -176,6 +188,18 @@ class EmployeeIDCardApprovalController extends Controller
                     ->orWhere('dup.employee_name', 'like', '%' . $search . '%');
             });
         }
+
+        // Date filters (by created_date)
+        if ($request->filled('date_from')) {
+            $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+            $permQuery->where('created_date', '>=', $from);
+            $dupPermQuery->where('dup.created_date', '>=', $from);
+        }
+        if ($request->filled('date_to')) {
+            $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+            $permQuery->where('created_date', '<=', $to);
+            $dupPermQuery->where('dup.created_date', '<=', $to);
+        }
         if ($request->filled('card_type')) {
             $permQuery->where('permanent_type', $request->card_type);
         }
@@ -212,73 +236,9 @@ class EmployeeIDCardApprovalController extends Controller
             return $dto;
         });
 
-        // Contractual: pending, has A1, no A2
-        $contHasA1 = DB::table('security_con_oth_id_apply_approval')->where('status', 1)->pluck('security_parm_id_apply_pk');
-        $contHasA2 = DB::table('security_con_oth_id_apply_approval')->where('status', 2)->pluck('security_parm_id_apply_pk');
-        $contQuery = DB::table('security_con_oth_id_apply')
-            ->where('id_status', 1)
-            ->whereIn('emp_id_apply', $contHasA1)
-            ->whereNotIn('emp_id_apply', $contHasA2)
-            ->orderByDesc('created_date');
-
-        // Contractual/Family Duplicate: only section authority sees. Direct to Approval 2 (no A1) or has A1 no A2
-        $dupContHasA2 = DB::table('security_dup_other_id_apply_approval')->where('status', 2)->pluck('security_con_id_apply_pk');
-        $dupContQuery = DB::table('security_dup_other_id_apply')
-            ->where('id_status', 1)
-            ->whereNotIn('emp_id_apply', $dupContHasA2)
-            ->where(function ($q) use ($currentEmployeePk) {
-                $q->where('department_approval_emp_pk', $currentEmployeePk);
-                if (hasRole('Admin')) {
-                    $q->orWhereNull('department_approval_emp_pk');
-                }
-            })
-            ->orderByDesc('created_date');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $contQuery->where(function ($q) use ($search) {
-                $q->where('employee_name', 'like', '%' . $search . '%')
-                    ->orWhere('id_card_no', 'like', '%' . $search . '%');
-            });
-            $dupContQuery->where(function ($q) use ($search) {
-                $q->where('employee_name', 'like', '%' . $search . '%')
-                    ->orWhere('id_card_no', 'like', '%' . $search . '%');
-            });
-        }
-        if ($request->filled('card_type')) {
-            $contQuery->where('permanent_type', $request->card_type);
-        }
-
-        $contRows = $contQuery->get();
-        $dupContRows = $dupContQuery->get();
-        
-        $contDtos = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
-        // For duplicate contractual records (stdClass from DB query), create DTOs directly without mapper
-        $dupContDtos = $dupContRows->map(function ($r) {
-            $dto = (object) [
-                // Use "c-<applyId>" as base id so view can build c-dup- prefix
-                'id' => 'c-' . $r->emp_id_apply,
-                'name' => $r->employee_name ?? '--',
-                'designation' => $r->designation_name ?? '--',
-                'father_name' => null,
-                'id_card_number' => $r->id_card_no,
-                'card_type' => null,
-                'date_of_birth' => $r->employee_dob,
-                'blood_group' => $r->blood_group,
-                'mobile_number' => $r->mobile_no,
-                'telephone_number' => null,
-                'id_card_valid_from' => $r->card_valid_from,
-                'id_card_valid_upto' => $r->card_valid_to,
-                'photo' => $r->id_photo_path,
-                'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
-                'requested_by' => null,
-                'requested_section' => $r->section,
-                'request_type' => 'duplicate',
-            ];
-            return $dto;
-        });
-
-        $merged = $permDtos->concat($dupPermDtos)->concat($contDtos)->concat($dupContDtos)->sortByDesc(function ($d) {
+        // At Approval II level, only Permanent regular and Permanent duplicate ID cards should appear.
+        // Contractual (regular and duplicate) are fully handled at Approval I.
+        $merged = $permDtos->concat($dupPermDtos)->sortByDesc(function ($d) {
             return $d->created_at ? (\Carbon\Carbon::parse($d->created_at)->timestamp ?? 0) : 0;
         })->values();
 
@@ -809,27 +769,38 @@ class EmployeeIDCardApprovalController extends Controller
         $search = $request->get('search', '');
         $cardType = $request->get('card_type', '');
         $perPage = (int) $request->get('per_page', 100);
+        $dateFrom = $request->get('date_from', '');
+        $dateTo = $request->get('date_to', '');
 
         // Fetch data based on stage
         if ($stage === '1') {
-            return $this->exportApproval1($search, $cardType, $format, $perPage);
+            return $this->exportApproval1($search, $cardType, $dateFrom, $dateTo, $format, $perPage);
         } else {
-            return $this->exportApproval2($search, $cardType, $format, $perPage);
+            return $this->exportApproval2($search, $cardType, $dateFrom, $dateTo, $format, $perPage);
         }
     }
 
-    private function exportApproval1($search, $cardType, $format, $perPage)
+    private function exportApproval1($search, $cardType, $dateFrom, $dateTo, $format, $perPage)
     {
         $user = Auth::user();
         $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
 
-        // Build query for Contractual requests
+        // Build query for Contractual requests (same base as approval1() list)
         $contQuery = DB::table('security_con_oth_id_apply')
             ->where('id_status', 1)
             ->where('department_approval_emp_pk', $currentEmployeePk)
-            ->select('emp_id_apply as id', 'employee_name as name', 'designation_name as designation', 
-                    'id_card_no', 'employee_dob', 'blood_group', 'mobile_no', 'created_date', 
-                    DB::raw("'Regular' as type"), 'permanent_type as card_type');
+            ->select(
+                'emp_id_apply as id',
+                'employee_name as name',
+                'designation_name as designation',
+                'id_card_no',
+                'employee_dob',
+                'blood_group',
+                'mobile_no',
+                'created_date',
+                DB::raw("'Regular' as type"),
+                'permanent_type as card_type'
+            );
 
         if (!empty($search)) {
             $contQuery->where(function ($q) use ($search) {
@@ -841,25 +812,106 @@ class EmployeeIDCardApprovalController extends Controller
             $contQuery->where('permanent_type', $cardType);
         }
 
-        $data = $contQuery->get()->toArray();
+        // Date filters (created_date)
+        if (!empty($dateFrom)) {
+            $from = \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
+            $contQuery->where('created_date', '>=', $from);
+        }
+        if (!empty($dateTo)) {
+            $to = \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
+            $contQuery->where('created_date', '<=', $to);
+        }
+
+        $contData = $contQuery->get()->toArray();
+
+        // Permanent Duplicate ID Card requests for Approval 1 (same base as approval1() list)
+        $dupPermA1Done = DB::table('security_dup_perm_id_apply_approval')
+            ->where('status', 1)
+            ->pluck('security_parm_id_apply_pk');
+        $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
+            ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
+            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
+            ->where('dup.id_status', 1)
+            ->whereNotIn('dup.emp_id_apply', $dupPermA1Done)
+            ->select(
+                'dup.emp_id_apply as id',
+                DB::raw("TRIM(CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, ''))) as name"),
+                'desig.designation_name as designation',
+                'dup.id_card_no',
+                'dup.employee_dob',
+                'dup.blood_group',
+                'dup.mobile_no',
+                'dup.created_date',
+                DB::raw("'Duplicate' as type"),
+                DB::raw('NULL as card_type')
+            );
+
+        if (!empty($search)) {
+            $dupPermQuery->where(function ($q) use ($search) {
+                $q->where('dup.employee_name', 'like', '%' . $search . '%')
+                  ->orWhere('dup.id_card_no', 'like', '%' . $search . '%')
+                  ->orWhere('emp.first_name', 'like', '%' . $search . '%')
+                  ->orWhere('emp.last_name', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (!empty($dateFrom)) {
+            $from = \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
+            $dupPermQuery->where('dup.created_date', '>=', $from);
+        }
+        if (!empty($dateTo)) {
+            $to = \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
+            $dupPermQuery->where('dup.created_date', '<=', $to);
+        }
+
+        $dupPermData = $dupPermQuery->get()->toArray();
+
+        $data = array_merge($contData, $dupPermData);
 
         return $this->outputExport($data, 'Approval_I_' . now()->format('Y-m-d'), $format);
     }
 
-    private function exportApproval2($search, $cardType, $format, $perPage)
+    private function exportApproval2($search, $cardType, $dateFrom, $dateTo, $format, $perPage)
     {
-        // Build query for all requests in Approval 2
-        $query = DB::table('security_parm_id_apply')
-            ->where('id_status', 1)
-            ->select('emp_id_apply as id', 'employee_name as name', 'designation_name as designation', 
-                    'id_card_no', 'employee_dob', 'blood_group', 'mobile_no', 'created_date', 
-                    DB::raw("'Regular' as type"), DB::raw("'Permanent' as card_type"));
+        // Build query for all pending regular (Permanent) requests in Approval 2
+        // Join with employee_master + designation_master to derive name/designation
+        $query = DB::table('security_parm_id_apply as spa')
+            ->leftJoin('employee_master as emp', 'spa.employee_master_pk', '=', 'emp.pk')
+            ->leftJoin('designation_master as desig', 'emp.designation_master_pk', '=', 'desig.pk')
+            ->where('spa.id_status', 1)
+            ->select(
+                'spa.emp_id_apply as id',
+                DB::raw("TRIM(CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, ''))) as name"),
+                'desig.designation_name as designation',
+                'spa.id_card_no',
+                'spa.employee_dob',
+                'spa.blood_group',
+                'spa.mobile_no',
+                'spa.created_date',
+                DB::raw("'Regular' as type"),
+                DB::raw("'Permanent' as card_type")
+            );
 
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
-                $q->where('employee_name', 'like', "%{$search}%")
-                  ->orWhere('id_card_no', 'like', "%{$search}%");
+                $q->where('emp.first_name', 'like', "%{$search}%")
+                  ->orWhere('emp.last_name', 'like', "%{$search}%")
+                  ->orWhere('spa.id_card_no', 'like', "%{$search}%");
             });
+        }
+
+        // Optional card type filter (permanent_type on main table)
+        if (!empty($cardType)) {
+            $query->where('spa.permanent_type', $cardType);
+        }
+
+        if (!empty($dateFrom)) {
+            $from = \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
+            $query->where('spa.created_date', '>=', $from);
+        }
+        if (!empty($dateTo)) {
+            $to = \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
+            $query->where('spa.created_date', '<=', $to);
         }
 
         $data = $query->get()->toArray();

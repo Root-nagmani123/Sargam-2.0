@@ -131,7 +131,7 @@
                         </div>
                         <div class="col-6">
                             <label for="id_card_valid_upto_perm" class="form-label">ID Card Valid Upto</label>
-                            <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
                             @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-6">

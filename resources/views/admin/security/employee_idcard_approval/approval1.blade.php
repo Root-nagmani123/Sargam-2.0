@@ -31,7 +31,14 @@
                                 <label for="search" class="form-label">Search</label>
                                 <input type="text" name="search" id="search" class="form-control" placeholder="Search by Employee Name, ID Card No..." value="{{ request('search', '') }}">
                             </div>
-                            
+                            <div class="col-md-3">
+                                <label class="form-label">Request Date From</label>
+                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Request Date To</label>
+                                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                            </div>
                             <div class="col-md-2">
                                 <label for="per_page" class="form-label">Show Entries</label>
                                 <select name="per_page" id="per_page" class="form-select">

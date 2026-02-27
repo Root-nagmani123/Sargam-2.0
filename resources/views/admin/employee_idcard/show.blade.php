@@ -358,18 +358,7 @@
                                     </a>
                                 </div>
                             </div>
-                        @elseif($request->joining_letter)
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-success" style="font-size:48px;">description</i>
-                                    <small class="d-block mt-2 text-muted">Joining Letter / Document</small>
-                                    <a href="{{ asset('storage/' . $request->joining_letter) }}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
-                                        <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">download</i>
-                                        View / Download
-                                    </a>
-                                </div>
-                            </div>
-                        @else
+                       @else
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-muted" style="font-size:48px; opacity: 0.5;">description</i>

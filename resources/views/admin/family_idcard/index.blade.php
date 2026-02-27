@@ -202,15 +202,21 @@
                                     <td class="text-end family-idcard-actions-col">
                                         <div class="d-flex align-items-center justify-content-end gap-1">
                                             <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn btn-sm btn-outline-primary" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
+                                            @if(($req->id_status ?? 1) === 3)
                                             <form action="{{ route('admin.family_idcard.restore', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
                                                 @csrf
                                                 <button type="submit" class="btn btn-sm btn-outline-success" title="Restore"><i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i></button>
                                             </form>
+                                            @endif
+                                            @if(($req->id_status ?? 1) === 1)
                                             <form action="{{ route('admin.family_idcard.forceDelete', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i></button>
                                             </form>
+                                            @else
+                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" disabled><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i></button>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
