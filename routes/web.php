@@ -44,7 +44,11 @@ use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\IssueManagement\{
     IssueManagementController,
     IssueCategoryController,
-    IssueSubCategoryController
+    IssueSubCategoryController,
+    IssueEscalationMatrixController,
+    IssuePriorityController,
+
+
 };
 
 Route::get('clear-cache', function () {
@@ -742,30 +746,50 @@ Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController
 // Issue Management Module Routes (CENTCOM)
 // ============================================
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-    
+
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+    Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
+    Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
     Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
     Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
     Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
+
+    // AJAX Routes (must come BEFORE parameterized routes like {id})
+    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
+    Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
+    Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
+    Route::get('issue-management/floors', [IssueManagementController::class, 'getFloors'])->name('issue-management.floors');
+    Route::get('issue-management/rooms', [IssueManagementController::class, 'getRooms'])->name('issue-management.rooms');
+
+    // Parameterized Routes (must come AFTER specific routes)
     Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
     Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
     Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
-    
+    Route::put('issue-management/{id}/status', [IssueManagementController::class, 'status_update'])->name('issue-management.status_update');
+
     // AJAX Routes
     Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
     Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
-    
+
     // Category Management
     Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
     Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
     Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
-    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');
-    
-    // Sub-Category Management
+    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
     Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
     Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
-});
 
+    // Priority Management
+    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
+    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
+    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
+    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
+
+    // Escalation Matrix (3-level hierarchy)
+    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
+    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
+    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+});
