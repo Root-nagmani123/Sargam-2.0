@@ -14,7 +14,6 @@
             style="font-size: 40px;">
             keyboard_double_arrow_right
         </i>
-
     </a>
 </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init">
@@ -101,6 +100,20 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            <li class="mini-nav-item" id="setup-mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Mess Management">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">
+                                                            restaurant
+                                                        </i>
+                                                    </div>
+                                                </a>
+                                            </li>
                                             @endif
 
                                             @endif
@@ -148,6 +161,11 @@
                     <!-- Forms -->
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
+
+                    <!-- Mess Management -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_mess_management />
+
 
                 </div>
             </div>

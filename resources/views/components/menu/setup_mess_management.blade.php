@@ -1,4 +1,4 @@
-<nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-8" data-simplebar="">
+<nav class="sidebar-nav scroll-sidebar" id="menu-right-setup-mini-9" data-simplebar="">
     <ul class="sidebar-menu" id="sidebarnav">
         <!-- ======= MASTER DATA ======= -->
         <li class="sidebar-item"
