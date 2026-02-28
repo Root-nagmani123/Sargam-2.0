@@ -871,8 +871,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
     Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
-<<<<<<< HEAD
-=======
 
     // Priority Management
     Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
@@ -947,6 +945,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             })->name('bill-report-print');
         });
     });
->>>>>>> 4b13ef6a (report section-design patten -page)
 });Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
     ->middleware('auth');
