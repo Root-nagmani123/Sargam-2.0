@@ -1,5 +1,4 @@
 @extends('admin.layouts.master')
-<<<<<<< HEAD
 @section('title', 'Selling Voucher')
 @section('setup_content')
 <div class="container-fluid">
@@ -38,51 +37,10 @@
                             <option value="">All</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ request('store') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
-=======
-@section('title', 'Kitchen Issues')
-@section('setup_content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Kitchen Issues</h4>
-        <a href="{{ route('admin.mess.kitchen-issues.create') }}" class="btn btn-primary">Create Kitchen Issue</a>
-    </div>
-    
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-    
-    <!-- Filters -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.mess.kitchen-issues.index') }}">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label>Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All</option>
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="issued" {{ request('status') == 'issued' ? 'selected' : '' }}>Issued</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label>Store</label>
-                        <select name="store" class="form-select">
-                            <option value="">All</option>
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ request('store') == $store->id ? 'selected' : '' }}>
-                                    {{ $store->store_name }}
-                                </option>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-2">
-<<<<<<< HEAD
                         <label class="form-label small">Start Date</label>
                         <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
                     </div>
@@ -92,28 +50,11 @@
                     </div>
                     <div class="col-md-2 d-flex align-items-end gap-1">
                         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-<<<<<<< HEAD
-=======
-                        <label>Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label>End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label>&nbsp;</label>
-                        <button type="submit" class="btn btn-primary w-100">Filter</button>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
-=======
-                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
->>>>>>> 04ad889c (selling voucher issue)
                     </div>
                 </div>
             </form>
         </div>
     </div>
-<<<<<<< HEAD
 
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle" id="sellingVouchersTable">
@@ -832,107 +773,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const returnSvBaseUrl = "{{ url('admin/mess/material-management') }}";
     let rowIndex = 1;
     let editRowIndex = 0;
-<<<<<<< HEAD
-=======
-    let currentStoreId = null;
-    let editCurrentStoreId = null;
-
-    function enforceQtyWithinAvailable(row) {
-        if (!row) return;
-        const availEl = row.querySelector('.sv-avail');
-        const qtyEl = row.querySelector('.sv-qty');
-        if (!availEl || !qtyEl) return;
-
-        const avail = parseFloat(availEl.value) || 0;
-        const qtyRaw = qtyEl.value;
-        const qty = parseFloat(qtyRaw);
-
-        // Keep browser constraint in sync
-        qtyEl.max = String(avail);
-
-        // If empty, don't force an error yet
-        if (qtyRaw === '' || Number.isNaN(qty)) {
-            qtyEl.setCustomValidity('');
-            qtyEl.classList.remove('is-invalid');
-            return;
-        }
-
-        if (qty > avail) {
-            qtyEl.setCustomValidity('Issue Qty cannot exceed Available Qty.');
-            qtyEl.classList.add('is-invalid');
-        } else {
-            qtyEl.setCustomValidity('');
-            qtyEl.classList.remove('is-invalid');
-        }
-    }
-
-    function fetchStoreItems(storeId, callback) {
-        if (!storeId) {
-            filteredItems = itemSubcategories;
-            if (callback) callback();
-            return;
-        }
-        
-        fetch(editSvBaseUrl + '/store/' + storeId + '/items', {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(r => r.json())
-        .then(data => {
-            filteredItems = data;
-            if (callback) callback();
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Failed to load store items.');
-            filteredItems = [];
-        });
-    }
-
-    function updateAddItemDropdowns() {
-        const rows = document.querySelectorAll('#modalItemsBody .sv-item-row');
-        console.log('Updating dropdowns, found rows:', rows.length); // Debug log
-        rows.forEach(row => {
-            const select = row.querySelector('.sv-item-select');
-            if (!select) return;
-            
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">Select Item</option>';
-            
-            filteredItems.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.item_name || '—';
-                option.setAttribute('data-unit', item.unit_measurement || '');
-                option.setAttribute('data-rate', item.standard_cost || 0);
-                option.setAttribute('data-available', item.available_quantity || 0);
-                if (item.price_tiers && item.price_tiers.length > 0) {
-                    option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
-                }
-                if (item.id == currentValue) {
-                    option.selected = true;
-                }
-                select.appendChild(option);
-            });
-            
-            updateUnit(row);
-        });
-    }
->>>>>>> 10602391 (selling voucher)
 
     function getRowHtml(index) {
-<<<<<<< HEAD
         const options = itemSubcategories.map(s =>
             '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '">' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
         ).join('');
-=======
-        const options = filteredItems.map(s => {
-            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
-            if (s.price_tiers && s.price_tiers.length > 0) {
-                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
-            }
-            return '<option value="' + s.id + '" ' + attrs + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
-        }).join('');
->>>>>>> 4ef6a7fc (purchase order -new calculation)
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm select2 sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
@@ -950,13 +795,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const opt = sel && sel.options[sel.selectedIndex];
         const unitInp = row.querySelector('.sv-unit');
         if (unitInp) unitInp.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
-<<<<<<< HEAD
-=======
-        if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
-        if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
-        if (availInp) availInp.readOnly = true;
-        enforceQtyWithinAvailable(row);
->>>>>>> 10602391 (selling voucher)
     }
 
     function calcFifoAmount(tiers, qty) {
@@ -1848,64 +1686,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-<<<<<<< HEAD
-=======
-    // Reset add selling voucher modal when opened
-    const addSellingVoucherModal = document.getElementById('addSellingVoucherModal');
-    if (addSellingVoucherModal) {
-        addSellingVoucherModal.addEventListener('show.bs.modal', function() {
-            const storeSelect = addSellingVoucherModal.querySelector('select[name="store_id"]');
-            const preSelectedStore = storeSelect ? storeSelect.value : null;
-            if (preSelectedStore) {
-                currentStoreId = preSelectedStore;
-                fetchStoreItems(preSelectedStore, function() {
-                    updateAddItemDropdowns();
-                });
-            } else {
-                currentStoreId = null;
-                filteredItems = itemSubcategories;
-                if (storeSelect) storeSelect.value = '';
-            }
-        });
-        addSellingVoucherModal.addEventListener('shown.bs.modal', function() {
-            if (typeof $ !== 'undefined' && $.fn.select2) {
-                $('#addSellingVoucherModal .select2').each(function() {
-                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
-                    $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addSellingVoucherModal') });
-                });
-            }
-            var checked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
-            if (checked) { checked.dispatchEvent(new Event('change')); }
-        });
-    }
-
-    // Before disabling submit buttons, ensure form is valid (includes qty <= available)
-    if (sellingVoucherModalForm) {
-        sellingVoucherModalForm.addEventListener('submit', function(e) {
-            // sync validity for all rows
-            document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(enforceQtyWithinAvailable);
-            if (!this.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.add('was-validated');
-                return;
-            }
-        }, true);
-    }
-
-    if (editSellingVoucherForm) {
-        editSellingVoucherForm.addEventListener('submit', function(e) {
-            document.querySelectorAll('#editModalItemsBody .sv-item-row').forEach(enforceQtyWithinAvailable);
-            if (!this.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-                this.classList.add('was-validated');
-                return;
-            }
-        }, true);
-    }
-
->>>>>>> 10602391 (selling voucher)
     @if($errors->any() || session('open_selling_voucher_modal'))
     var modal = document.getElementById('addSellingVoucherModal');
     if (modal && typeof bootstrap !== 'undefined') {
@@ -1917,67 +1697,4 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Script initialization complete');
 });
 </script>
-=======
-    
-    <div class="table-responsive">
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Issue No</th>
-                    <th>Request Date</th>
-                    <th>Issue Date</th>
-                    <th>Store</th>
-                    <th>Quantity</th>
-                    <th>Status</th>
-                    <th>Payment</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            @forelse($kitchenIssues as $issue)
-                <tr>
-                    <td>{{ $issue->pk }}</td>
-                    <td>{{ $issue->request_date ? \Carbon\Carbon::parse($issue->request_date)->format('d/m/Y') : '-' }}</td>
-                    <td>{{ $issue->issue_date ? \Carbon\Carbon::parse($issue->issue_date)->format('d/m/Y') : '-' }}</td>
-                    <td>{{ $issue->storeMaster->store_name ?? 'N/A' }}</td>
-                    <td>{{ $issue->quantity }}</td>
-                    <td>
-                        @if($issue->status == 'pending')
-                            <span class="badge bg-warning">Pending</span>
-                        @elseif($issue->status == 'approved')
-                            <span class="badge bg-success">Approved</span>
-                        @elseif($issue->status == 'issued')
-                            <span class="badge bg-primary">Issued</span>
-                        @else
-                            <span class="badge bg-secondary">{{ ucfirst($issue->status) }}</span>
-                        @endif
-                    </td>
-                    <td>
-                        @if($issue->payment_type == 1)
-                            <span class="badge bg-success">Paid</span>
-                        @else
-                            <span class="badge bg-danger">Unpaid</span>
-                        @endif
-                    </td>
-                    <td>
-                        <a href="{{ route('admin.mess.kitchen-issues.show', $issue->pk) }}" class="btn btn-sm btn-info">View</a>
-                        @if($issue->status == 'pending')
-                            <a href="{{ route('admin.mess.kitchen-issues.edit', $issue->pk) }}" class="btn btn-sm btn-warning">Edit</a>
-                        @endif
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="8" class="text-center">No kitchen issues found</td>
-                </tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-    
-    <div class="d-flex justify-content-center">
-        {{ $kitchenIssues->links() }}
-    </div>
-</div>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
 @endsection

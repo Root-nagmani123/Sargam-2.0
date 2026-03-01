@@ -994,7 +994,6 @@
         }
     });
 
-<<<<<<< HEAD
     // Enter key inside Item Details table triggers Add Item (and prevents form submit)
     const addReportModalEl = document.getElementById('addReportModal');
     const addReportItemsTable = document.getElementById('addReportItemsTable');
@@ -1011,15 +1010,6 @@
     }
 
     // Add modal: Client Type + Client Name -> Name field (Faculty / Academy Staff / Mess Staff dropdown when Employee)
-=======
-    /** Show/hide Add modal dependent field by wrapper (hides Select2 container too) */
-    function setDrModalWrap(wrapId, show) {
-        var w = document.getElementById(wrapId);
-        if (!w) return;
-        if (show) w.classList.remove('d-none'); else w.classList.add('d-none');
-    }
-    /** Name column (input / Faculty / Academy Staff / Mess Staff) depends on Client Name dropdown when client type is Employee. */
->>>>>>> 1d23f418 (mess select2)
     function updateDrNameField() {
         const clientTypeRadio = document.querySelector('#addReportModal .dr-client-type-radio:checked');
         const clientNameSelect = document.getElementById('drClientNameSelect');

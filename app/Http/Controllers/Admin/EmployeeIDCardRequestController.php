@@ -474,37 +474,5 @@ class EmployeeIDCardRequestController extends Controller
             return null;
         }
     }
-
-    /**
-     * Export ID card requests to Excel or CSV.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     */
-    public function export(Request $request)
-    {
-        $tab = $request->get('tab', 'active');
-        $format = $request->get('format', 'xlsx');
-
-        if (! in_array($tab, ['active', 'archive', 'all'])) {
-            $tab = 'active';
-        }
-
-        $filename = 'employee_idcard_requests_' . $tab . '_' . now()->format('Y-m-d_His');
-
-        if ($format === 'csv') {
-            return Excel::download(
-                new EmployeeIDCardExport($tab),
-                $filename . '.csv',
-                \Maatwebsite\Excel\Excel::CSV
-            );
-        }
-
-        return Excel::download(
-            new EmployeeIDCardExport($tab),
-            $filename . '.xlsx',
-            \Maatwebsite\Excel\Excel::XLSX
-        );
-    }
 }
 

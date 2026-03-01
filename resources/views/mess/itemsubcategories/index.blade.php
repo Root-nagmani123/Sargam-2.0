@@ -2,15 +2,8 @@
 @section('title', 'Subcategory Item Master')
 @section('setup_content')
 <div class="container-fluid">
-<<<<<<< HEAD
-<<<<<<< HEAD
     <div class="card">
         <div class="card-body">
-=======
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
->>>>>>> f22b1565 (all master issue resolved)
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Subcategory Item Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
@@ -90,22 +83,6 @@
         </div>
         </div>
     </div>
-=======
-    <h4>Mess Item Subcategories</h4>
-    <a href="{{ route('admin.mess.itemsubcategories.create') }}" class="btn btn-primary mb-3">Add Subcategory</a>
-    <table class="table table-bordered">
-        <thead><tr><th>Name</th><th>Category</th><th>Description</th></tr></thead>
-        <tbody>
-        @foreach($itemsubcategories as $subcategory)
-            <tr>
-                <td>{{ $subcategory->name }}</td>
-                <td>{{ $subcategory->category->name ?? '' }}</td>
-                <td>{{ $subcategory->description }}</td>
-            </tr>
-        @endforeach
-        </tbody>
-    </table>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
 </div>
 
 {{-- Create Item Modal --}}

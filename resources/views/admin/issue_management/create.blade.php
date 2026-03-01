@@ -391,14 +391,9 @@ $(document).ready(function() {
                     if(response.status) {
                         $('#floor_select').html('<option value="">— Select floor —</option>');
                         $.each(response.data, function(key, value) {
-<<<<<<< HEAD
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
                             var floorId = value.floor_id ?? value.pk ?? value.estate_unit_sub_type_master_pk ?? '';
                             var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
-=======
-                            var floorId = value.floor_id || value.pk || value.estate_unit_sub_type_master_pk;
-                            var floorName = value.floor_name || value.floor || value.unit_sub_type;
->>>>>>> ec99a6d9 (log new complaint select2 added)
                             $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
                         });
                         initSelect2($('#floor_select'), '— Select floor —');
@@ -431,13 +426,9 @@ $(document).ready(function() {
                     if(response.status) {
                         $('#room_select').html('<option value="">— Select room —</option>');
                         $.each(response.data, function(key, value) {
-<<<<<<< HEAD
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
                             var roomId = value.pk;
                             var roomName = value.room_name ?? value.house_no ?? value.floor ?? '';
-=======
-                            var roomName = value.room_name || value.house_no || value.floor;
->>>>>>> ec99a6d9 (log new complaint select2 added)
                             $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
                         });
                         initSelect2($('#room_select'), '— Select room —');

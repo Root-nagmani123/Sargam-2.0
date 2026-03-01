@@ -7,16 +7,9 @@ use App\DataTables\EstateMigrationReportDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\DataTables\EstateRequestForEstateDataTable;
-<<<<<<< HEAD
-use App\DataTables\EstateReturnHouseDataTable;
-=======
-use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateRequestHacForwardDataTable;
-<<<<<<< HEAD
->>>>>>> e21ec05d (hac approved and forward)
-=======
-use App\DataTables\EstateHacApprovedDataTable;
->>>>>>> ffa3a6c0 (hac approved and possession details)
+use App\DataTables\EstateRequestPutInHacDataTable;
+use App\DataTables\EstateReturnHouseDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
@@ -50,74 +43,7 @@ class EstateController extends Controller
     }
 
     /**
-<<<<<<< HEAD
-<<<<<<< HEAD
      * Estate Approval Setting - Listing of approval management (requested by / approved by).
-=======
-     * Put In HAC - Authority view: List estate requests not yet in HAC. Authority selects and puts in HAC.
-     */
-    public function putInHac(EstateRequestPutInHacDataTable $dataTable)
-    {
-        return $dataTable->render('admin.estate.put_in_hac');
-    }
-
-    /**
-     * HAC Forward - HAC view: List requests in HAC not yet forwarded. HAC forwards to allotment team.
-     */
-    public function hacForward(EstateRequestHacForwardDataTable $dataTable)
-    {
-        return $dataTable->render('admin.estate.hac_forward');
-    }
-
-    /**
-     * Put selected estate requests in HAC (set hac_status = 1).
-     */
-    public function putInHacAction(Request $request)
-    {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer|exists:estate_home_request_details,pk',
-        ]);
-
-        $updated = EstateHomeRequestDetails::whereIn('pk', $request->ids)
-            ->where('hac_status', 0)
-            ->update(['hac_status' => 1]);
-
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => $updated . ' request(s) put in HAC successfully.',
-            ]);
-        }
-        return redirect()->route('admin.estate.put-in-hac')
-            ->with('success', $updated . ' request(s) put in HAC successfully.');
-    }
-
-    /**
-     * Forward estate request to allotment team (set f_status = 1).
-     */
-    public function forwardToAllotment(Request $request, $id)
-    {
-        $record = EstateHomeRequestDetails::where('hac_status', 1)
-            ->where('f_status', 0)
-            ->findOrFail($id);
-
-        $record->f_status = 1;
-        $record->save();
-
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Request forwarded to allotment team successfully.',
-            ]);
-        }
-        return redirect()->route('admin.estate.hac-forward')
-            ->with('success', 'Request forwarded to allotment team successfully.');
-    }
-
-    /**
-     * Get next Request ID for Add Estate Request (e.g. home-req-01, home-req-02).
->>>>>>> e21ec05d (hac approved and forward)
      */
     public function estateApprovalSetting(EstateApprovalSettingDataTable $dataTable)
     {
@@ -402,6 +328,71 @@ class EstateController extends Controller
             return response()->json(['success' => true, 'message' => 'Estate request deleted successfully.']);
         }
         return redirect()->route('admin.estate.request-for-estate')->with('success', 'Estate request deleted successfully.');
+    }
+
+    /**
+     * Put In HAC - List estate requests not yet in HAC; user can select and put them in HAC.
+     */
+    public function putInHac(EstateRequestPutInHacDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.put_in_hac');
+    }
+
+    /**
+     * Put In HAC action - Mark selected estate request(s) as put in HAC (hac_status = 1).
+     */
+    public function putInHacAction(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (! is_array($ids)) {
+            $ids = array_filter([(int) $ids]);
+        }
+        $ids = array_filter(array_map('intval', $ids));
+        if (empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'No requests selected.'], 422);
+        }
+        $updated = EstateHomeRequestDetails::where('hac_status', 0)
+            ->where('change_status', 0)
+            ->whereIn('pk', $ids)
+            ->update(['hac_status' => 1]);
+        return response()->json([
+            'success' => true,
+            'message' => $updated > 0
+                ? $updated . ' request(s) put in HAC successfully.'
+                : 'No eligible requests were updated.',
+        ]);
+    }
+
+    /**
+     * HAC Forward - List estate requests that are in HAC (hac_status=1) but not yet forwarded (f_status=0).
+     */
+    public function hacForward(EstateRequestHacForwardDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.hac_forward');
+    }
+
+    /**
+     * Forward a single estate request to allotment (set f_status = 1).
+     */
+    public function forwardToAllotment(Request $request, $id)
+    {
+        $id = (int) $id;
+        $record = EstateHomeRequestDetails::where('hac_status', 1)
+            ->where('f_status', 0)
+            ->where('change_status', 0)
+            ->find($id);
+        if (! $record) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Request not found or not eligible for forward.'], 404);
+            }
+            return redirect()->route('admin.estate.hac-forward')->with('error', 'Request not found or not eligible for forward.');
+        }
+        $record->f_status = 1;
+        $record->save();
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Request forwarded to allotment team successfully.']);
+        }
+        return redirect()->route('admin.estate.hac-forward')->with('success', 'Request forwarded to allotment team successfully.');
     }
 
     /**

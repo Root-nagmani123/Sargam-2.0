@@ -53,7 +53,7 @@
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('stream.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Stream</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('section.index') }}">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.section.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Section</span>
                                     </a></li>
                             </ul>

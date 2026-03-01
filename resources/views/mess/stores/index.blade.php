@@ -5,19 +5,11 @@
     $storeTypes = \App\Models\Mess\Store::storeTypes();
 @endphp
 <div class="container-fluid">
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
     <div class="card">
         <div class="card-body">
-=======
-=======
-    <x-breadcrum title="Store Master"></x-breadcrum>
->>>>>>> 9dc7162d (choices.js)
     <div class="datatables">
         <div class="card">
             <div class="card-body">
->>>>>>> f22b1565 (all master issue resolved)
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Store Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createStoreModal">
@@ -84,43 +76,6 @@
         </div>
         </div>
     </div>
-=======
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Mess Stores</h4>
-        <a href="{{ route('admin.mess.stores.create') }}" class="btn btn-primary">Add Store</a>
-    </div>
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Store Code</th>
-                <th>Store Name</th>
-                <th>Location</th>
-                <th>Incharge</th>
-                <th>Contact</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach($stores as $store)
-            <tr>
-                <td>{{ $store->store_code }}</td>
-                <td>{{ $store->store_name }}</td>
-                <td>{{ $store->location }}</td>
-                <td>{{ $store->incharge_name }}</td>
-                <td>{{ $store->incharge_contact }}</td>
-                <td><span class="badge bg-{{ $store->status == 'active' ? 'success' : 'danger' }}">{{ $store->status }}</span></td>
-                <td>
-                    <a href="{{ route('admin.mess.stores.edit', $store->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                </td>
-            </tr>
-        @endforeach
-        </tbody>
-    </table>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
 </div>
 
 {{-- Create Store Modal --}}

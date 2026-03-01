@@ -17,7 +17,6 @@
                 </div>
             </div>
             <div class="table-responsive">
-<<<<<<< HEAD
                 <table class="table align-middle mb-0" id="updateMeterNoTable">
                     <thead>
                         <tr>
@@ -26,26 +25,6 @@
                             <th scope="col">Employee Type</th>
                             <th scope="col">Unit Type</th>
                             <th scope="col">Actions</th>
-=======
-                <table class="table text-nowrap" id="updateMeterNoTable">
-                    <thead>
-                        <tr>
-                            <th>S.No.</th>
-                            <th>Name</th>
-                            <th>Employee Type</th>
-                            <th>Unit Type</th>
-                            <th>Unit Sub Type</th>
-                            <th>Building Name</th>
-                            <th>House No.</th>
-                            <th>Old Meter1 No.</th>
-                            <th>New Meter1 No.</th>
-                            <th>Old Meter2 No.</th>
-                            <th>New Meter2 No.</th>
-                            <th>Old Meter1 Reading</th>
-                            <th>New Meter1 Reading</th>
-                            <th>Old Meter2 Reading</th>
-                            <th>New Meter2 Reading</th>
->>>>>>> 6c88c002 (estate related)
                         </tr>
                     </thead>
                     <tbody>

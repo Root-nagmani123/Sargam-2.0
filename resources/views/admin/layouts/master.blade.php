@@ -15,11 +15,7 @@
         })();
     </script>
     @include('admin.layouts.pre_header')
-<<<<<<< HEAD
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
-=======
-    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
->>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
     @section('css')
     <style>
     .nav-item .tab-item .active {

@@ -31,7 +31,6 @@ class EstatePossessionOtherDataTable extends DataTable
             ->editColumn('building_name', fn($row) => $row->block_name ?? 'N/A')
             ->editColumn('unit_sub_type', fn($row) => $row->unit_sub_type_name ?? 'N/A')
             ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
-<<<<<<< HEAD
             ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('Y-m-d') : 'N/A')
             ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('Y-m-d') : 'N/A')
             ->editColumn('meter_reading_oth', fn($row) => $row->meter_reading_oth ?? 'N/A')
@@ -39,23 +38,6 @@ class EstatePossessionOtherDataTable extends DataTable
                 $searchValue = trim((string) $keyword);
                 if ($searchValue === '') {
                     return;
-=======
-            ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
-            ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
-            ->editColumn('meter_reading_oth', fn($row) => ($row->meter_reading_oth ?? '---') . '/' . ($row->meter_reading_oth1 ?? '---'))
-            ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
-                if (!empty($searchValue)) {
-                    $query->where(function ($q) use ($searchValue) {
-                        $q->whereHas('estateOtherRequest', function ($sq) use ($searchValue) {
-                            $sq->where('emp_name', 'like', "%{$searchValue}%")
-                                ->orWhere('request_no_oth', 'like', "%{$searchValue}%")
-                                ->orWhere('section', 'like', "%{$searchValue}%")
-                                ->orWhere('designation', 'like', "%{$searchValue}%");
-                        })
-                        ->orWhere('estate_possession_other.house_no', 'like', "%{$searchValue}%");
-                    });
->>>>>>> ffa3a6c0 (hac approved and possession details)
                 }
                 $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
                 $query->where(function ($q) use ($searchLike) {
@@ -163,31 +145,17 @@ class EstatePossessionOtherDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(true)->searchable(false)->width('50px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(false),
             Column::make('name')->title('NAME')->orderable(true)->searchable(false),
             Column::make('section_name')->title('SECTION NAME')->orderable(true)->searchable(false),
             Column::make('estate_name')->title('ESTATE NAME')->orderable(true)->searchable(false),
-=======
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('request_id')->title('REQUEST ID')->orderable(false)->searchable(false),
-            Column::make('name')->title('NAME')->orderable(false)->searchable(false),
-            Column::make('designation')->title('DESIGNATION')->orderable(false)->searchable(false),
-            Column::make('estate_name')->title('ESTATE NAME')->orderable(false)->searchable(false),
->>>>>>> ffa3a6c0 (hac approved and possession details)
             Column::make('unit_type')->title('UNIT TYPE')->orderable(false)->searchable(false),
             Column::make('building_name')->title('BUILDING NAME')->orderable(false)->searchable(false),
             Column::make('unit_sub_type')->title('UNIT SUB TYPE')->orderable(false)->searchable(false),
             Column::make('house_no')->title('HOUSE NO.')->orderable(false)->searchable(true),
             Column::make('allotment_date')->title('ALLOTMENT DATE')->orderable(false)->searchable(false),
             Column::make('possession_date_oth')->title('POSSESSION DATE')->orderable(false)->searchable(false),
-=======
-=======
-            Column::computed('checkbox')->title('')->addClass('text-center')->orderable(false)->searchable(false)->width('40px'),
->>>>>>> 05ede78a (possession for other)
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(true)->searchable(false)->width('50px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
             Column::make('name')->title('NAME')->orderable(true)->searchable(true),
@@ -199,7 +167,6 @@ class EstatePossessionOtherDataTable extends DataTable
             Column::make('house_no')->title('HOUSE NO.')->orderable(true)->searchable(true),
             Column::make('allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date_oth')->title('POSSESSION DATE')->orderable(true)->searchable(false),
->>>>>>> 7d9cb868 (working on estate module)
             Column::make('meter_reading_oth')->title('LAST MONTH ELECTRIC METER READING')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
