@@ -33,14 +33,6 @@ class IssueManagementController extends Controller
      */
     public function index(Request $request)
     {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 0623079b (Revert "estate datatable")
-=======
->>>>>>> 8cac3c3c (Revert "estate datatable")
         // echo Auth::user()->user_id; exit;
         $query = IssueLogManagement::with([
             'category',
@@ -54,8 +46,6 @@ class IssueManagementController extends Controller
 
         $applyUserScope = function ($builder) {
             if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
-<<<<<<< HEAD
-<<<<<<< HEAD
                 $ids = getEmployeeIdsForUser(Auth::user()->user_id);
                 if (empty($ids)) {
                     $ids = [Auth::user()->user_id];
@@ -65,18 +55,6 @@ class IssueManagementController extends Controller
                         ->orWhereIn('issue_logger', $ids)
                         ->orWhereIn('assigned_to', $ids)
                         ->orWhereIn('created_by', $ids);
-=======
-=======
->>>>>>> 8cac3c3c (Revert "estate datatable")
-                $builder->where(function ($q) {
-                    $q->where('employee_master_pk', Auth::user()->user_id)
-                        ->orWhere('issue_logger', Auth::user()->user_id)
-                        ->orWhere('assigned_to', Auth::user()->user_id)
-                        ->orWhere('created_by', Auth::user()->user_id);
-<<<<<<< HEAD
->>>>>>> 0623079b (Revert "estate datatable")
-=======
->>>>>>> 8cac3c3c (Revert "estate datatable")
                 });
             }
         };
@@ -84,16 +62,8 @@ class IssueManagementController extends Controller
         // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
         $applyRaisedBy = function ($builder) use ($request) {
             if ($request->get('raised_by') === 'self') {
-<<<<<<< HEAD
-<<<<<<< HEAD
                 $ids = getEmployeeIdsForUser(Auth::user()->user_id);
                 $builder->whereIn('created_by', empty($ids) ? [Auth::user()->user_id] : $ids);
-=======
-                $builder->where('created_by', Auth::user()->user_id);
->>>>>>> 0623079b (Revert "estate datatable")
-=======
-                $builder->where('created_by', Auth::user()->user_id);
->>>>>>> 8cac3c3c (Revert "estate datatable")
             }
         };
 
@@ -151,16 +121,6 @@ class IssueManagementController extends Controller
 
         $issues = $query->paginate(20);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 1a2c46f4 (estate datatable)
-=======
->>>>>>> 0623079b (Revert "estate datatable")
-=======
->>>>>>> 9b058492 (estate datatable)
-=======
->>>>>>> 8cac3c3c (Revert "estate datatable")
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 

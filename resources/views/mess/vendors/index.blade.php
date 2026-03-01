@@ -1,17 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Vendors')
 @section('setup_content')
-<<<<<<< HEAD
 <div class="container-fluid">
-<<<<<<< HEAD
-<<<<<<< HEAD
     <div class="card">
         <div class="card-body">
-=======
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
->>>>>>> f22b1565 (all master issue resolved)
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Vendor Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createVendorModal">
@@ -23,19 +15,6 @@
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     {{ session('success') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-=======
-<div class="container-fluid py-3">
-    <x-breadcrum title="Vendor Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-            <div class="card-body p-4">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3 mb-4">
-                    <h4 class="mb-0 fw-semibold">Vendor Master</h4>
-                    <button type="button" class="btn btn-primary rounded-2 px-3 d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createVendorModal">
-                        <i class="material-icons material-icons-rounded" style="font-size: 1.25rem;">add</i>
-                        <span>Add Vendor</span>
-                    </button>
->>>>>>> 9dc7162d (choices.js)
                 </div>
 
                 @if(session('success'))
@@ -110,24 +89,6 @@
             </div>
         </div>
     </div>
-=======
-    <h4>Mess Vendors</h4>
-    <a href="{{ route('admin.mess.vendors.create') }}" class="btn btn-primary mb-3">Add Vendor</a>
-    <table class="table table-bordered">
-        <thead><tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>
-        <tbody>
-        @foreach($vendors as $vendor)
-            <tr>
-                <td>{{ $vendor->name }}</td>
-                <td>{{ $vendor->contact_person }}</td>
-                <td>{{ $vendor->phone }}</td>
-                <td>{{ $vendor->email }}</td>
-                <td>{{ $vendor->address }}</td>
-            </tr>
-        @endforeach
-        </tbody>
-    </table>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
 </div>
 
 {{-- Create Vendor Modal --}}

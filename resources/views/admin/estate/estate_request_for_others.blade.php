@@ -6,8 +6,6 @@
 <div class="container-fluid py-4">
     <x-breadcrum title="Estate Request for Others"></x-breadcrum>
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
         <div class="card-header bg-body border-0 py-3 px-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
@@ -59,30 +57,6 @@
                         </tr>
                     </tbody>
                 </table>
-=======
-    <!-- Page Header -->
-    <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <div class="row align-items-center mb-4">
-                <div class="col-12 col-md-6">
-                    <h2 class="mb-0">Estate Request for Others</h2>
-                </div>
-                <div class="col-12 col-md-6 mt-3 mt-md-0">
-                    <div class="d-flex justify-content-md-end justify-content-start">
-                        <a href="{{ route('admin.estate.add-other-estate-request') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-2"></i>Add Other Estate
-                        </a>
-                    </div>
-=======
-    <!-- Page Card -->
-    <div class="card">
-        <div class="card-body p-4 p-lg-5" id="estateRequestCardBody">
-            <!-- Header -->
-            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
-                <div>
-                    <h1 class="h4 fw-semibold mb-1">Estate Request for Others</h1>
-                    <p class="text-muted small mb-0">View and manage estate requests submitted on behalf of others.</p>
->>>>>>> 18dc9e55 (estate master and hac)
                 </div>
                 <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 flex-shrink-0" id="btn-open-add-other-request">
                     <i class="en material-symbols-rounded" style="font-size: 1.25rem;">add</i>
@@ -100,83 +74,8 @@
 <hr class="my-2">
             <!-- Table Section -->
             <div class="table-responsive">
-<<<<<<< HEAD
                 {!! $dataTable->table(['class' => 'table table-bordered table-hover align-middle', 'aria-describedby' => 'estate-request-caption']) !!}
                 <div id="estate-request-caption" class="visually-hidden">Estate Request for Others list</div>
->>>>>>> 79c7a654 (Working on estate management)
-=======
-                {!! $dataTable->table(['class' => 'table align-middle mb-0', 'aria-describedby' => 'estate-request-caption']) !!}
-            </div>
-            <div id="estate-request-caption" class="visually-hidden">Estate Request for Others list</div>
-        </div>
-    </div>
-</div>
-
-<!-- Add / Edit Other Estate Request modal -->
-<div class="modal fade" id="addEditOtherRequestModal" tabindex="-1" aria-labelledby="addEditOtherRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="addEditOtherRequestModalLabel">Add Other Estate Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <div id="addEditOtherRequestFormErrors" class="alert alert-danger d-none" role="alert">
-                    <ul class="mb-0 ps-3"></ul>
-                </div>
-                <form id="formAddEditOtherRequest" method="POST" action="{{ route('admin.estate.add-other-estate-request.store') }}">
-                    @csrf
-                    <input type="hidden" name="id" id="other_request_id" value="">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="modal_employee_name" class="form-label">Employee Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_employee_name" name="employee_name" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="modal_father_name" class="form-label">Father Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_father_name" name="father_name" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="modal_section" class="form-label">Section <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_section" name="section" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="modal_doj_academy" class="form-label">DOJ in Academy <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" id="modal_doj_academy" name="doj_academy" required>
-                                <span class="input-group-text"><i class="bi bi-calendar"></i></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-success" id="btnSubmitOtherRequest">
-                            <i class="bi bi-save me-2"></i>Save
-                        </button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="bi bi-x-circle me-2"></i>Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Delete confirmation modal -->
-<div class="modal fade" id="deleteOtherRequestModal" tabindex="-1" aria-labelledby="deleteOtherRequestModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="deleteOtherRequestModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-2">
-                Are you sure you want to delete this estate request? This action cannot be undone.
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteOtherRequestBtn">Delete</button>
->>>>>>> 18dc9e55 (estate master and hac)
             </div>
         </div>
     </div>

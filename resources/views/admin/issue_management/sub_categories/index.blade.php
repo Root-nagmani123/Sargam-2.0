@@ -45,7 +45,6 @@
                                         {{ $subCategory->category->issue_category ?? '-' }}
                                     </td>
                                     <td>
-<<<<<<< HEAD
                                         <span class="fw-medium">{{ $subCategory->issue_sub_category }}</span>
                                     </td>
                                     <td class="text-center">
@@ -79,21 +78,6 @@
                                                 </a>
                                             </form>
                                         </div>
-=======
-                                        <button type="button" class="btn btn-sm btn-warning" 
-                                                onclick="editSubCategory({{ $subCategory->pk }}, {{ $subCategory->issue_category_master_pk }}, '{{ addslashes($subCategory->issue_sub_category) }}', '{{ addslashes($subCategory->description) }}', {{ $subCategory->status }})">
-                                            <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                        </button>
-                                        <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}" 
-                                              method="POST" class="d-inline" 
-                                              onsubmit="return confirm('Are you sure you want to delete this sub-category?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> Delete
-                                            </button>
-                                        </form>
->>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
                                     </td>
                                 </tr>
                                     @empty
@@ -138,7 +122,6 @@
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-<<<<<<< HEAD
                 <div class="modal-body p-4">
                     <div class="mb-4">
                         <label for="issue_category_fk" class="form-label fw-semibold">
@@ -147,24 +130,13 @@
                         </label>
                         <select class="form-select form-select-lg @error('issue_category_master_pk') is-invalid @enderror" 
                                 id="issue_category_fk" name="issue_category_master_pk" required>
-=======
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="issue_category_master_pk" class="form-label">Category <span class="text-danger">*</span></label>
-                        <select class="form-select @error('issue_category_master_pk') is-invalid @enderror" 
-                                id="issue_category_master_pk" name="issue_category_master_pk" required>
->>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
                             <option value="">Select Category</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
                             @endforeach
                         </select>
                         @error('issue_category_master_pk')
-<<<<<<< HEAD
                             <div class="invalid-feedback d-block">{{ $message }}</div>
-=======
-                            <div class="invalid-feedback">{{ $message }}</div>
->>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
                         @enderror
                     </div>
                     <div class="mb-3">
@@ -212,7 +184,6 @@
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-<<<<<<< HEAD
                 <div class="modal-body p-4">
                     <div class="mb-4">
                         <label for="edit_issue_category_fk" class="form-label fw-semibold">
@@ -220,12 +191,6 @@
                             Category <span class="text-danger">*</span>
                         </label>
                         <select class="form-select form-select-lg" id="edit_issue_category_fk" name="issue_category_master_pk" required>
-=======
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="edit_issue_category_master_pk" class="form-label">Category <span class="text-danger">*</span></label>
-                        <select class="form-select" id="edit_issue_category_master_pk" name="issue_category_master_pk" required>
->>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
                             <option value="">Select Category</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->pk }}">{{ $category->issue_category }}</option>
@@ -274,13 +239,8 @@
 
 @section('scripts')
 <script>
-<<<<<<< HEAD
 function editSubCategory(id, categoryId, name, status) {
     document.getElementById('edit_issue_category_fk').value = categoryId != null ? String(categoryId) : '';
-=======
-function editSubCategory(id, categoryId, name, description, status) {
-    document.getElementById('edit_issue_category_master_pk').value = categoryId;
->>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
     document.getElementById('edit_issue_sub_category').value = name;
     document.getElementById('edit_status').value = status;
     

@@ -2,104 +2,6 @@
 
 @section('title', 'All Issues - Sargam | Lal Bahadur')
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-@section('css')
-<style>
-    .issue-card {
-        border: none;
-        border-radius: 1rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075), 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
-        overflow: hidden;
-    }
-    .issue-card .card-header {
-        background: linear-gradient(135deg, #004a93 0%, #f25d33 100%);
-        color: #fff;
-        border: none;
-        padding: 1rem 1.5rem;
-        font-weight: 600;
-    }
-    .issue-table {
-        --bs-table-hover-bg: rgba(0, 74, 147, 0.04);
-        --bs-table-hover-color: inherit;
-    }
-    .issue-table thead th {
-        font-weight: 600;
-        font-size: 0.8125rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: #495057;
-        border-bottom-width: 2px;
-        white-space: nowrap;
-    }
-    .issue-table tbody td {
-        vertical-align: middle;
-    }
-    .badge-pill {
-        padding: 0.35em 0.65em;
-        font-weight: 500;
-        font-size: 0.75rem;
-    }
-    .btn-action {
-        width: 2.25rem;
-        height: 2.25rem;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 0.5rem;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .btn-action:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
-    }
-    .filter-card {
-        background: #f8fafc;
-        border-radius: 0.75rem;
-        border: 1px solid rgba(0, 0, 0, 0.06);
-    }
-    .nav-tabs-issue .nav-link {
-        border: none;
-        color: #6c757d;
-        font-weight: 500;
-        padding: 0.6rem 1rem;
-        border-radius: 0.5rem;
-        transition: color 0.2s, background 0.2s;
-    }
-    .nav-tabs-issue .nav-link:hover {
-        color: #004a93;
-        background: rgba(175, 41, 16, 0.06);
-    }
-    .nav-tabs-issue .nav-link.active {
-        color: #004a93;
-        background: rgba(175, 41, 16, 0.1);
-    }
-    .empty-state {
-        padding: 3rem 1.5rem;
-        text-align: center;
-    }
-    .empty-state-icon {
-        width: 4rem;
-        height: 4rem;
-        margin: 0 auto 1rem;
-        background: rgba(0, 74, 147, 0.08);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #004a93;
-    }
-    @media (max-width: 768px) {
-        .issue-table thead th { font-size: 0.75rem; }
-    }
-</style>
-@endsection
-
->>>>>>> 1a2c46f4 (estate datatable)
-=======
->>>>>>> 29f034b4 (issue managament)
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="All Issues" />
@@ -137,14 +39,6 @@
                                 <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                             </select>
                         </div>
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 9b058492 (estate datatable)
-=======
->>>>>>> 29f034b4 (issue managament)
                         <div class="col-12 col-md-6 col-lg-3">
                             <label class="form-label small fw-medium text-body-secondary">Category</label>
                             <select name="category" class="form-select form-select-sm">
@@ -198,11 +92,8 @@
                         </div>
                     </div>
                 </form>
-<<<<<<< HEAD
-<<<<<<< HEAD
 
                 <!-- Issues DataTable -->
-<<<<<<< HEAD
               <!-- Issues Table -->
               <div class="table-responsive">
                     <table class="table mb-0">
@@ -269,26 +160,12 @@
                             @endforelse
                         </tbody>
                     </table>
-=======
-                <div class="table-responsive">
-                    {!! $dataTable->table() !!}
->>>>>>> 1a2c46f4 (estate datatable)
-=======
-                    </form>
->>>>>>> 0623079b (Revert "estate datatable")
                 </div>
-=======
->>>>>>> 9b058492 (estate datatable)
 
                 <!-- Issues DataTable -->
                 <div class="table-responsive">
                     {!! $dataTable->table() !!}
-=======
-                    </form>
->>>>>>> 8cac3c3c (Revert "estate datatable")
                 </div>
-=======
->>>>>>> 29f034b4 (issue managament)
 
                 <!-- Issues DataTable -->
               <!-- Issues Table -->
@@ -374,28 +251,4 @@
         </div>
     </div>
 </div>
-<<<<<<< HEAD
-<<<<<<< HEAD
 @endsection
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-@endsection
-<<<<<<< HEAD
-=======
->>>>>>> 9b058492 (estate datatable)
-
-@push('scripts')
-    {!! $dataTable->scripts() !!}
-@endpush
-<<<<<<< HEAD
->>>>>>> 1a2c46f4 (estate datatable)
-=======
->>>>>>> 0623079b (Revert "estate datatable")
-=======
->>>>>>> 9b058492 (estate datatable)
-=======
->>>>>>> 8cac3c3c (Revert "estate datatable")
-=======
-@endsection
->>>>>>> 29f034b4 (issue managament)

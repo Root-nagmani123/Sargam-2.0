@@ -245,14 +245,10 @@
         border: 1px solid var(--bs-border-color);
         background-color: var(--bs-body-bg);
     }
-<<<<<<< HEAD
     #estateChangeRequestTable_wrapper .dataTables_filter {
         text-align: right;
     }
     #estateChangeRequestTable_wrapper .dataTables_filter label {
-=======
-    #estateHacApprovedTable_wrapper .dataTables_filter label {
->>>>>>> ffa3a6c0 (hac approved and possession details)
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -325,25 +321,6 @@
 @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
-<<<<<<< HEAD
-=======
-    function wrapTableScroll() {
-        var tbl = document.getElementById('estateHacApprovedTable');
-        if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) {
-            var wrap = document.createElement('div');
-            wrap.className = 'table-responsive';
-            wrap.style.overflowX = 'auto';
-            wrap.style.webkitOverflowScrolling = 'touch';
-            tbl.parentNode.insertBefore(wrap, tbl);
-            wrap.appendChild(tbl);
-        }
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', wrapTableScroll);
-    } else {
-        wrapTableScroll();
-    }
->>>>>>> ffa3a6c0 (hac approved and possession details)
     document.addEventListener('DOMContentLoaded', function() {
         var approveModalEl = document.getElementById('approveChangeRequestModal');
         var approveModal = approveModalEl ? new bootstrap.Modal(approveModalEl) : null;

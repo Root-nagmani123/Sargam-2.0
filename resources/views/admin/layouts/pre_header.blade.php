@@ -3,16 +3,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<<<<<<< HEAD
 <meta name="app-base-url" content="{{ url('') }}">
 <meta name="app-base-path" content="{{ request()->getBaseUrl() }}">
 <meta name="faculty-index-path" content="{{ route('faculty.index', [], false) }}">
 <!-- Force light color scheme to prevent system dark mode -->
 <meta name="color-scheme" content="light">
-=======
-<!-- Support both light and dark - user choice via theme toggle -->
-<meta name="color-scheme" content="light dark">
->>>>>>> 3fd64ef0 (ui bugs fixes and approval for id card)
 
 <!-- Favicon icon-->
 <link rel="shortcut icon" type="image/ico" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
@@ -31,15 +26,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <link rel="stylesheet" href="{{asset('admin_assets/libs/select2/dist/css/select2.min.css')}}">
-<<<<<<< HEAD
-<<<<<<< HEAD
 <link rel="stylesheet" href="{{asset('css/select2-enhancements.css')}}">
-=======
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" crossorigin="anonymous">
-<link rel="stylesheet" href="{{asset('css/select2-bootstrap5-enhancements.css')}}">
->>>>>>> 1d23f418 (mess select2)
-=======
->>>>>>> 8dca9a47 (Revert "select2 enrolment in all module")
 <link rel="stylesheet" href="{{asset('admin_assets/css/plugins/datatable.min.css')}}">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
 <!-- Breadcrumb Component CSS -->

@@ -22,11 +22,7 @@
                 </div>
             </div>
 
-<<<<<<< HEAD
             <div class="table-responsive estate-approval-table-wrap">
-=======
-            <div class="table-responsive table-scroll-vertical">
->>>>>>> 693d3a5f (estate approval setting delete button)
                 {!! $dataTable->table([
                     'class' => 'table text-nowrap align-middle mb-0',
                     'aria-describedby' => 'estate-approval-caption'

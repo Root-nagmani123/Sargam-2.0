@@ -2,16 +2,11 @@
 @section('title', 'Purchase Orders')
 @section('setup_content')
 <div class="container-fluid">
-<<<<<<< HEAD
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Purchase Orders</h4>
-<<<<<<< HEAD
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
             Create Purchase Order
         </button>
-=======
-        <a href="{{ route('admin.mess.purchaseorders.create') }}" class="btn btn-primary">Create Purchase Order</a>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
     </div>
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -19,7 +14,6 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
-<<<<<<< HEAD
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle">
             <thead style="background-color: #af2910;">
@@ -48,120 +42,16 @@
                         <button type="button" class="btn btn-sm btn-info btn-view-po" data-po-id="{{ $po->id }}" title="View">View</button>
                         <button type="button" class="btn btn-sm btn-warning btn-edit-po" data-po-id="{{ $po->id }}" title="Edit">Edit</button>
                         <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
-=======
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>PO Number</th>
-                <th>Date</th>
-                <th>Vendor</th>
-                <th>Store</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach($purchaseOrders as $po)
-            <tr>
-                <td>{{ $po->po_number }}</td>
-                <td>{{ $po->po_date->format('d/m/Y') }}</td>
-                <td>{{ $po->vendor->name ?? 'N/A' }}</td>
-                <td>{{ $po->store->store_name ?? 'N/A' }}</td>
-                <td>₹{{ number_format($po->total_amount, 2) }}</td>
-                <td>
-                    <span class="badge bg-{{ $po->status == 'approved' ? 'success' : ($po->status == 'rejected' ? 'danger' : ($po->status == 'completed' ? 'primary' : 'warning')) }}">
-                        {{ ucfirst($po->status) }}
-                    </span>
-                </td>
-                <td>
-                    <a href="{{ route('admin.mess.purchaseorders.show', $po->id) }}" class="btn btn-sm btn-info">View</a>
-                    @if($po->status == 'pending')
-                        <form action="{{ route('admin.mess.purchaseorders.approve', $po->id) }}" method="POST" style="display:inline;">
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                         </form>
-<<<<<<< HEAD
                     </td>
                 </tr>
             @endforeach
             </tbody>
         </table>
-=======
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">Purchase Orders</h4>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                        Create Purchase Order
-                    </button>
-                </div>
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-                <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table table-bordered table-hover align-middle w-100">
-                        <thead>
-                            <tr>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; width: 60px;">S.No</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Order Number</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Vendor Name</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; min-width: 180px;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($purchaseOrders as $po)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $po->po_number }}</td>
-                                <td>{{ $po->vendor->name ?? 'N/A' }}</td>
-                                <td>{{ $po->store->store_name ?? 'N/A' }}</td>
-                                <td>
-                                    <span class="badge bg-{{ $po->status == 'approved' ? 'success' : ($po->status == 'rejected' ? 'danger' : ($po->status == 'completed' ? 'primary' : 'warning')) }}">
-                                        {{ ucfirst($po->status) }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-info btn-view-po" data-po-id="{{ $po->id }}" title="View">View</button>
-                                    <button type="button" class="btn btn-sm btn-warning btn-edit-po" data-po-id="{{ $po->id }}" title="Edit">Edit</button>
-                                    <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
->>>>>>> 74576ca0 (purchase-order-issue-resolve)
     </div>
-=======
-                        <form action="{{ route('admin.mess.purchaseorders.reject', $po->id) }}" method="POST" style="display:inline;">
-                            @csrf
-                            <button class="btn btn-sm btn-danger">Reject</button>
-                        </form>
-                    @endif
-                    @if($po->status == 'approved')
-                        <a href="{{ route('admin.mess.inboundtransactions.create', ['purchase_order_id' => $po->id]) }}" class="btn btn-sm btn-primary">Receive Goods</a>
-                    @endif
-                </td>
-            </tr>
-        @endforeach
-        </tbody>
-    </table>
->>>>>>> 824e914f (feat(kitchen-management-and-report): kitchen management and report module included)
 </div>
 
 @include('components.mess-master-datatables', [
