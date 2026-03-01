@@ -251,8 +251,32 @@ function editSubCategory(id, categoryId, name, status) {
     modal.show();
 }
 
-// Status Toggle Functionality
+// Status Toggle Functionality + Choices.js (DropdownSearch) for modal selects
 $(document).ready(function() {
+    // Choices.js / DropdownSearch: init when Add modal is shown (so dropdown renders correctly inside modal)
+    var addModal = document.getElementById('addSubCategoryModal');
+    if (addModal && typeof DropdownSearch !== 'undefined') {
+        addModal.addEventListener('shown.bs.modal', function() {
+            DropdownSearch.destroy('#issue_category_fk');
+            DropdownSearch.init('#issue_category_fk', { placeholder: 'Select Category', allowClear: true });
+        });
+    }
+
+    // Choices.js / DropdownSearch: init when Edit modal is shown; setValue after so Choices UI reflects pre-set value
+    var editModal = document.getElementById('editSubCategoryModal');
+    if (editModal && typeof DropdownSearch !== 'undefined') {
+        editModal.addEventListener('shown.bs.modal', function() {
+            DropdownSearch.destroy('#edit_issue_category_fk');
+            DropdownSearch.destroy('#edit_status');
+            DropdownSearch.init('#edit_issue_category_fk', { placeholder: 'Select Category', allowClear: true });
+            DropdownSearch.init('#edit_status', { placeholder: 'Select status', allowClear: false });
+            var catVal = document.getElementById('edit_issue_category_fk').value;
+            var statusVal = document.getElementById('edit_status').value;
+            if (catVal) DropdownSearch.setValue('#edit_issue_category_fk', catVal, false);
+            if (statusVal) DropdownSearch.setValue('#edit_status', statusVal, false);
+        });
+    }
+
     // Auto-filter functionality - automatically filter when category is selected
     $('#category_filter').on('change', function() {
         const selectedValue = $(this).val();

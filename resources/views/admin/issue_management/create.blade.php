@@ -215,16 +215,22 @@ $(document).ready(function() {
         if (typeof DropdownSearch === 'undefined') return;
         DropdownSearch.init(selector, { placeholder: placeholder || '— Search / Select —', allowClear: true });
     }
+    // Reinit after dynamic options so dropdown UI updates (required for sub_categories, floor, room)
+    function reinitChoices(selector, placeholder) {
+        if (typeof DropdownSearch === 'undefined') return;
+        var sel = typeof selector === 'string' ? selector : (selector && selector[0] && selector[0].id ? '#' + selector[0].id : null);
+        if (!sel) return;
+        DropdownSearch.reinit(sel, { placeholder: placeholder || '— Search / Select —', allowClear: true });
+    }
 
-    // Apply searchable dropdowns to all selects
+    // Apply searchable dropdowns to all selects (floor_select and room_select are inited when options are loaded, inside visible section)
     initChoices('#issue_category', '— Select category —');
     initChoices('#sub_categories', '— Select sub-category —');
     initChoices('#issue_priority', '— Select priority —');
     initChoices('#complainant', 'Search complainant by name...');
     initChoices('#nodal_employee', '— Select category first —');
     initChoices('#building_select', '— Select —');
-    initChoices('#floor_select', '— Select floor —');
-    initChoices('#room_select', '— Select room —');
+    // floor_select and room_select: init only when populated (they live in #building_section which is hidden until location is chosen)
 
     // Character counter for description (max 1000)
     function updateCharCount() {
@@ -239,8 +245,9 @@ $(document).ready(function() {
         var categoryId = $(this).val();
         
         // Reset nodal employee dropdown when category changes
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#nodal_employee');
         $('#nodal_employee').html('<option value="">- Select -</option>');
-        initChoices($('#nodal_employee'), '— Select category first —');
+        reinitChoices('#nodal_employee', '— Select category first —');
         
         if(categoryId) {
             // Load sub-categories
@@ -248,11 +255,12 @@ $(document).ready(function() {
                 url: '/admin/issue-management/sub-categories/' + categoryId,
                 type: 'GET',
                 success: function(data) {
+                    if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#sub_categories');
                     $('#sub_categories').html('<option value="">— Select sub-category —</option>');
                     $.each(data, function(key, value) {
                         $('#sub_categories').append('<option value="'+ value.pk +'">'+ value.issue_sub_category +'</option>');
                     });
-                    initChoices($('#sub_categories'), '— Select sub-category —');
+                    reinitChoices('#sub_categories', '— Select sub-category —');
                 }
             });
             
@@ -262,6 +270,7 @@ $(document).ready(function() {
                 type: 'GET',
                 success: function(response) {
                     if(response.success && response.level1 && response.level1.length > 0) {
+                        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#nodal_employee');
                         $('#nodal_employee').html('<option value="">- Select -</option>');
                         var autoSelect = response.level1_auto_select;
                         $.each(response.level1, function(key, employee) {
@@ -269,7 +278,7 @@ $(document).ready(function() {
                             var selected = (autoSelect && employee.employee_pk == autoSelect) ? 'selected' : '';
                             $('#nodal_employee').append('<option value="'+ employee.employee_pk +'" '+ selected +'>'+ fullName +'</option>');
                         });
-                        initChoices($('#nodal_employee'), '— Select —');
+                        reinitChoices('#nodal_employee', '— Select —');
                         // Level 2 & 3 - display only
                         if(response.level2) {
                             $('#level2_display').text(response.level2.employee_name + ' (' + response.level2.days_notify + ' days)');
@@ -283,23 +292,29 @@ $(document).ready(function() {
                         }
                         $('#escalation_levels_display').removeClass('d-none');
                     } else {
+                        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#nodal_employee');
                         $('#nodal_employee').html('<option value="">No Level 1 employees - configure Escalation Matrix</option>');
-                        initChoices($('#nodal_employee'), '— Select —');
+                        reinitChoices('#nodal_employee', '— Select —');
                         $('#escalation_levels_display').addClass('d-none');
                     }
                 },
                 error: function() {
                     console.log('Error loading nodal employees');
+                    if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#nodal_employee');
                     $('#nodal_employee').html('<option value="">Error loading employees</option>');
-                    initChoices($('#nodal_employee'), '— Select —');
+                    reinitChoices('#nodal_employee', '— Select —');
                     $('#escalation_levels_display').addClass('d-none');
                 }
             });
         } else {
+            if (typeof DropdownSearch !== 'undefined') {
+                DropdownSearch.destroy('#sub_categories');
+                DropdownSearch.destroy('#nodal_employee');
+            }
             $('#sub_categories').html('<option value="">— Select sub-category —</option>');
             $('#nodal_employee').html('<option value="">— Select category first —</option>');
-            initChoices($('#sub_categories'), '— Select sub-category —');
-            initChoices($('#nodal_employee'), '— Select category first —');
+            reinitChoices('#sub_categories', '— Select sub-category —');
+            reinitChoices('#nodal_employee', '— Select category first —');
             $('#escalation_levels_display').addClass('d-none');
         }
     });
@@ -338,12 +353,17 @@ $(document).ready(function() {
         $('#building_section').addClass('d-none');
         
         // Reset building details
+        if (typeof DropdownSearch !== 'undefined') {
+            DropdownSearch.destroy('#building_select');
+            DropdownSearch.destroy('#floor_select');
+            DropdownSearch.destroy('#room_select');
+        }
         $('#building_select').html('<option value="">— Select —</option>');
         $('#floor_select').html('<option value="">— Select floor —</option>');
         $('#room_select').html('<option value="">— Select room —</option>');
-        initChoices($('#building_select'), '— Select —');
-        initChoices($('#floor_select'), '— Select floor —');
-        initChoices($('#room_select'), '— Select room —');
+        reinitChoices('#building_select', '— Select —');
+        reinitChoices('#floor_select', '— Select floor —');
+        reinitChoices('#room_select', '— Select room —');
         
         if(type == 'H' || type == 'R' || type == 'O') {
             $('#building_section').removeClass('d-none');
@@ -355,11 +375,12 @@ $(document).ready(function() {
                 data: { type: type },
                 success: function(response) {
                     if(response.status) {
+                        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#building_select');
                         $('#building_select').html('<option value="">— Select —</option>');
                         $.each(response.data, function(key, value) {
                             $('#building_select').append('<option value="'+ value.pk +'">'+ value.building_name +'</option>');
                         });
-                        initChoices($('#building_select'), '— Select —');
+                        reinitChoices('#building_select', '— Select —');
                     }
                 },
                 error: function() {
@@ -381,6 +402,7 @@ $(document).ready(function() {
                 data: { building_id: buildingId, type: locationType },
                 success: function(response) {
                     if(response.status) {
+                        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#floor_select');
                         $('#floor_select').html('<option value="">— Select floor —</option>');
                         $.each(response.data, function(key, value) {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
@@ -388,7 +410,7 @@ $(document).ready(function() {
                             var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
                             $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
                         });
-                        initChoices($('#floor_select'), '— Select floor —');
+                        reinitChoices('#floor_select', '— Select floor —');
                     }
                 },
                 error: function() {
@@ -396,10 +418,14 @@ $(document).ready(function() {
                 }
             });
         } else {
+            if (typeof DropdownSearch !== 'undefined') {
+                DropdownSearch.destroy('#floor_select');
+                DropdownSearch.destroy('#room_select');
+            }
             $('#floor_select').html('<option value="">— Select floor —</option>');
             $('#room_select').html('<option value="">— Select room —</option>');
-            initChoices($('#floor_select'), '— Select floor —');
-            initChoices($('#room_select'), '— Select room —');
+            reinitChoices('#floor_select', '— Select floor —');
+            reinitChoices('#room_select', '— Select room —');
         }
     });
 
@@ -416,6 +442,7 @@ $(document).ready(function() {
                 data: { building_id: buildingId, floor_id: floorId, type: locationType },
                 success: function(response) {
                     if(response.status) {
+                        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#room_select');
                         $('#room_select').html('<option value="">— Select room —</option>');
                         $.each(response.data, function(key, value) {
                             // Use ?? so 0 is preserved (|| would treat 0 as falsy and show undefined)
@@ -423,7 +450,7 @@ $(document).ready(function() {
                             var roomName = value.room_name ?? value.house_no ?? value.floor ?? '';
                             $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
                         });
-                        initChoices($('#room_select'), '— Select room —');
+                        reinitChoices('#room_select', '— Select room —');
                     }
                 },
                 error: function() {
@@ -431,8 +458,9 @@ $(document).ready(function() {
                 }
             });
         } else {
+            if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#room_select');
             $('#room_select').html('<option value="">— Select room —</option>');
-            initChoices($('#room_select'), '— Select room —');
+            reinitChoices('#room_select', '— Select room —');
         }
     });
 
@@ -488,11 +516,12 @@ $(document).ready(function() {
                     url: '/admin/issue-management/sub-categories/' + oldCategory,
                     type: 'GET',
                     success: function(data) {
+                        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#sub_categories');
                         $('#sub_categories').html('<option value="">— Select sub-category —</option>');
                         $.each(data, function(k, v) {
                             $('#sub_categories').append(new Option(v.issue_sub_category, v.pk, v.pk == oldSubCategory, v.pk == oldSubCategory));
                         });
-                        initChoices($('#sub_categories'), '— Select sub-category —');
+                        reinitChoices('#sub_categories', '— Select sub-category —');
                         var selText = $('#sub_categories option:selected').text();
                         if (selText) $('#sub_category_name').val(selText);
                     }
@@ -506,13 +535,14 @@ $(document).ready(function() {
                     type: 'GET',
                     success: function(res) {
                         if (res.success && res.level1) {
+                            if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#nodal_employee');
                             $('#nodal_employee').html('<option value="">- Select -</option>');
                             $.each(res.level1, function(k, emp) {
                                 var pk = emp.employee_pk;
                                 var name = emp.employee_name || ((emp.first_name || '') + ' ' + (emp.middle_name ? emp.middle_name + ' ' : '') + (emp.last_name || ''));
                                 $('#nodal_employee').append(new Option(name, pk, pk == oldNodal, pk == oldNodal));
                             });
-                            initChoices($('#nodal_employee'), '— Select —');
+                            reinitChoices('#nodal_employee', '— Select —');
                         }
                     }
                 });
@@ -529,11 +559,12 @@ $(document).ready(function() {
                 data: { type: oldLocation },
                 success: function(response) {
                     if (response.status && response.data) {
+                        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#building_select');
                         $('#building_select').html('<option value="">— Select —</option>');
                         $.each(response.data, function(k, v) {
                             $('#building_select').append(new Option(v.building_name, v.pk, v.pk == oldBuilding, v.pk == oldBuilding));
                         });
-                        initChoices($('#building_select'), '— Select —');
+                        reinitChoices('#building_select', '— Select —');
                     }
                 }
             });

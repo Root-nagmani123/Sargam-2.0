@@ -67,21 +67,21 @@ class MemoNoticeTemplateDataTable extends DataTable
                 $csrf = csrf_token();
 
                 $html = '<div class="btn-group btn-group-sm flex-nowrap" role="group" aria-label="Template actions">';
-                $html .= '<a href="' . e($editUrl) . '" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" aria-label="Edit template">';
-                $html .= '<i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</i>';
-                $html .= '<span class="d-none d-lg-inline">Edit</span></a>';
+                $html .= '<a href="' . e($editUrl) . '" class="text-primary d-inline-flex align-items-center gap-1" aria-label="Edit template">';
+                $html .= '<i class="material-icons material-symbols-rounded fs-6 text-primary" aria-hidden="true">edit</i>';
+                $html .= '</a>';
 
                 if ($row->active_inactive == 1) {
-                    $html .= '<button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" disabled aria-disabled="true" title="Deactivate before deleting">';
-                    $html .= '<i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">delete</i>';
-                    $html .= '<span class="d-none d-lg-inline">Delete</span></button>';
+                    $html .= '<a href="javascript:void(0);" class="text-primary d-inline-flex align-items-center gap-1" disabled aria-disabled="true" title="Deactivate before deleting">';
+                    $html .= '<i class="material-icons material-symbols-rounded fs-6 text-primary" aria-hidden="true">delete</i>';
+                    $html .= '</a>';
                 } else {
                     $html .= '<form action="' . e($destroyUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this template?\');">';
                     $html .= '<input type="hidden" name="_token" value="' . $csrf . '">';
                     $html .= '<input type="hidden" name="_method" value="DELETE">';
-                    $html .= '<button type="submit" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" aria-label="Delete template">';
-                    $html .= '<i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">delete</i>';
-                    $html .= '<span class="d-none d-lg-inline">Delete</span></button></form>';
+                    $html .= '<a href="javascript:void(0);" class="text-primary d-inline-flex align-items-center gap-1" aria-label="Delete template">';
+                    $html .= '<i class="material-icons material-symbols-rounded fs-6 text-primary" aria-hidden="true">delete</i>';
+                    $html .= '</a></form>';
                 }
                 $html .= '</div>';
                 return $html;
@@ -147,12 +147,12 @@ class MemoNoticeTemplateDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false)->width('60px'),
+            Column::computed('DT_RowIndex')->title('#')->orderable(false)->searchable(false)->width('60px'),
             Column::make('course')->title('Course')->orderable(true)->searchable(true),
             Column::make('title')->title('Title')->orderable(true)->searchable(true),
             Column::make('memo_notice_type')->title('Type')->orderable(true)->searchable(true),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false)->width('80px'),
-            Column::computed('actions')->title('Actions')->addClass('text-end')->orderable(false)->searchable(false),
+            Column::computed('status')->title('Status')->orderable(false)->searchable(false)->width('80px'),
+            Column::computed('actions')->title('Actions')->orderable(false)->searchable(false),
         ];
     }
 

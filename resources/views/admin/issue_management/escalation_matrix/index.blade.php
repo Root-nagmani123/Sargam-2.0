@@ -44,12 +44,12 @@
                     <table class="table table-bordered">
                         <thead class="table-light">
                             <tr>
-                                <th width="5%">#</th>
-                                <th width="20%">Complaint Category</th>
-                                <th width="25%">Level 1 (Employee / Days)</th>
-                                <th width="25%">Level 2 (Employee / Days)</th>
-                                <th width="25%">Level 3 (Employee / Days)</th>
-                                <th width="10%">Actions</th>
+                                <th>#</th>
+                                <th>Complaint Category</th>
+                                <th>Level 1 (Employee / Days)</th>
+                                <th>Level 2 (Employee / Days)</th>
+                                <th>Level 3 (Employee / Days)</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -79,9 +79,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="editMatrix({{ $row['category']->pk }}, {{ json_encode($row['category']->issue_category) }}, {{ $row['level1']?->employee_master_pk ?? 'null' }}, {{ $row['level1']?->days_notify ?? 0 }}, {{ $row['level2']?->employee_master_pk ?? 'null' }}, {{ $row['level2']?->days_notify ?? 0 }}, {{ $row['level3']?->employee_master_pk ?? 'null' }}, {{ $row['level3']?->days_notify ?? 0 }})">
+                                    <a href="javascript:void(0)" class="btn btn-sm btn-warning" onclick="editMatrix({{ $row['category']->pk }}, {{ json_encode($row['category']->issue_category) }}, {{ $row['level1']?->employee_master_pk ?? 'null' }}, {{ $row['level1']?->days_notify ?? 0 }}, {{ $row['level2']?->employee_master_pk ?? 'null' }}, {{ $row['level2']?->days_notify ?? 0 }}, {{ $row['level3']?->employee_master_pk ?? 'null' }}, {{ $row['level3']?->days_notify ?? 0 }})">
                                         <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
-                                    </button>
+                                    </a>
                                 </td>
                             </tr>
                             @empty
@@ -156,6 +156,7 @@
         var sel = document.getElementById('level2_employee');
         if (!sel) return;
         var current = sel.value;
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#level2_employee');
         sel.innerHTML = '<option value="">- Select -</option>';
         escalationEmployees.forEach(function(emp) {
             if (String(emp.employee_pk) !== String(excludePk)) {
@@ -163,11 +164,13 @@
             }
         });
         sel.value = '';
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.reinit('#level2_employee', { placeholder: '- Select -', allowClear: true });
     }
 
     function rebuildLevel3Add(excludePk1, excludePk2) {
         var sel = document.getElementById('level3_employee');
         if (!sel) return;
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#level3_employee');
         sel.innerHTML = '<option value="">- Select -</option>';
         escalationEmployees.forEach(function(emp) {
             var pk = String(emp.employee_pk);
@@ -176,12 +179,14 @@
             }
         });
         sel.value = '';
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.reinit('#level3_employee', { placeholder: '- Select -', allowClear: true });
     }
 
     function rebuildLevel2Edit(excludePk) {
         var sel = document.getElementById('edit_level2_employee');
         if (!sel) return;
         var current = sel.value;
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#edit_level2_employee');
         sel.innerHTML = '<option value="">- Select -</option>';
         escalationEmployees.forEach(function(emp) {
             if (String(emp.employee_pk) !== String(excludePk)) {
@@ -189,12 +194,14 @@
             }
         });
         if (current && String(excludePk) !== current) sel.value = current;
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.reinit('#edit_level2_employee', { placeholder: '- Select -', allowClear: true });
     }
 
     function rebuildLevel3Edit(excludePk1, excludePk2) {
         var sel = document.getElementById('edit_level3_employee');
         if (!sel) return;
         var current = sel.value;
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.destroy('#edit_level3_employee');
         sel.innerHTML = '<option value="">- Select -</option>';
         escalationEmployees.forEach(function(emp) {
             var pk = String(emp.employee_pk);
@@ -203,6 +210,7 @@
             }
         });
         if (current && current !== String(excludePk1) && current !== String(excludePk2)) sel.value = current;
+        if (typeof DropdownSearch !== 'undefined') DropdownSearch.reinit('#edit_level3_employee', { placeholder: '- Select -', allowClear: true });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
