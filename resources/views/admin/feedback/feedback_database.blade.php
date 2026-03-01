@@ -341,7 +341,7 @@
         }
     </style>
 
-    <div class="container-fluid feedback-database-page">
+    <div class="container-fluid">
         <x-breadcrum title="Feedback Database"></x-breadcrum>
 
 
@@ -513,38 +513,10 @@
 @endsection
 
 @section('css')
-    @parent
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    <style>
-        .feedback-database-page .choices__inner {
-            min-height: calc(2.25rem + 2px);
-            border-radius: 0.375rem;
-            border: 1px solid #ced4da;
-            padding: 0.375rem 0.75rem;
-            background-color: #fff;
-        }
-
-        .feedback-database-page .choices__list--single .choices__item {
-            padding: 0;
-            margin: 0;
-        }
-
-        .feedback-database-page .choices__list--dropdown {
-            border-radius: 0.375rem;
-            border-color: #ced4da;
-        }
-
-        .feedback-database-page .choices.is-focused .choices__inner,
-        .feedback-database-page .choices.is-open .choices__inner {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-    </style>
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1353,26 +1325,6 @@
                 div.textContent = text;
                 return div.innerHTML;
             }
-        });
-
-        // Initialize Choices.js on selects in this page
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof Choices === 'undefined') return;
-
-            document.querySelectorAll('.feedback-database-page select').forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
-
-                new Choices(el, {
-                    allowHTML: false,
-                    searchPlaceholderValue: 'Search...',
-                    removeItemButton: !!el.multiple,
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
-                });
-
-                el.dataset.choicesInitialized = 'true';
-            });
         });
     </script>
 @endsection
