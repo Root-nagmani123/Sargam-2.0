@@ -1,5 +1,6 @@
 @extends('admin.layouts.master')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 
 @section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
@@ -542,8 +543,10 @@
 #memo_generate .form-control[readonly] {
     background-color: #f1f5f9;
 }
+/* Choices.js dropdown above modal overlay */
+#memo_generate .choices__list--dropdown { z-index: 1060; }
 </style>
-<div class="container-fluid">
+<div class="container-fluid px-2 px-sm-3 px-lg-4 py-2 py-md-3">
     <x-breadcrum title="Notice /Memo Management" />
     <x-session_message />
 
@@ -580,11 +583,14 @@
                 </div>
             </div>
             <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
-            <div class="filter-section">
-                <div class="row g-3">
+            <div class="filter-section rounded-3 border border-primary border-opacity-25 shadow-sm">
+                <div class="row g-3 g-md-4">
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <label for="program_name" class="form-label">Program Name</label>
-                        <select class="form-select" id="program_name" name="program_name">
+                        <label for="program_name" class="form-label fw-semibold text-body-secondary d-flex align-items-center gap-1">
+                            <i class="bi bi-mortarboard-fill text-primary opacity-75"></i>
+                            <span>Program Name</span>
+                        </label>
+                        <select class="form-select rounded-2 border-primary border-opacity-25" id="program_name" name="program_name">
                             <option value="">Select Program</option>
                             @foreach($courses as $course)
                             <option value="{{ $course->pk }}" {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
@@ -592,68 +598,98 @@
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <label for="type" class="form-label">Type</label>
-                        <select class="form-select" id="type" name="type">
+                        <label for="type" class="form-label fw-semibold text-body-secondary d-flex align-items-center gap-1">
+                            <i class="bi bi-file-earmark-text text-primary opacity-75"></i>
+                            <span>Type</span>
+                        </label>
+                        <select class="form-select rounded-2 border-primary border-opacity-25" id="type" name="type">
                             <option value="">Select type</option>
                             <option value="1" {{ $typeFilter == '1' ? 'selected' : '' }}>Notice</option>
                             <option value="0" {{ $typeFilter == '0' ? 'selected' : '' }}>Memo</option>
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" id="status" name="status">
+                        <label for="status" class="form-label fw-semibold text-body-secondary d-flex align-items-center gap-1">
+                            <i class="bi bi-toggle-on text-primary opacity-75"></i>
+                            <span>Status</span>
+                        </label>
+                        <select class="form-select rounded-2 border-primary border-opacity-25" id="status" name="status">
                             <option value="">Select status</option>
                             <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
                             <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <label for="search" class="form-label">Search</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" class="form-control border-start-0 ps-0" id="search" name="search" placeholder="Search notices, memos..." value="{{ $searchFilter }}">
+                        <label for="search" class="form-label fw-semibold text-body-secondary d-flex align-items-center gap-1">
+                            <i class="bi bi-search text-primary opacity-75"></i>
+                            <span>Search</span>
+                        </label>
+                        <div class="input-group rounded-2 border border-primary border-opacity-25 overflow-hidden">
+                            <span class="input-group-text bg-white border-end-0 border-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0 focus-ring focus-ring-primary" id="search" name="search" placeholder="Search notices, memos..." value="{{ $searchFilter }}">
                         </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <label for="from_date" class="form-label">From Date</label>
-                        <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                        <label for="from_date" class="form-label fw-semibold text-body-secondary d-flex align-items-center gap-1">
+                            <i class="bi bi-calendar-event text-primary opacity-75"></i>
+                            <span>From Date</span>
+                        </label>
+                        <input type="date" class="form-control rounded-2 border-primary border-opacity-25" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
-                        <label for="to_date" class="form-label">To Date</label>
-                        <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                        <label for="to_date" class="form-label fw-semibold text-body-secondary d-flex align-items-center gap-1">
+                            <i class="bi bi-calendar-event text-primary opacity-75"></i>
+                            <span>To Date</span>
+                        </label>
+                        <input type="date" class="form-control rounded-2 border-primary border-opacity-25" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-6 d-flex align-items-end">
-                        <button type="button" id="clearFilters" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
+                    <div class="col-12 col-sm-6 col-lg-6 d-flex align-items-end gap-2 flex-wrap">
+                        <button type="submit" form="filterForm" class="btn btn-primary rounded-2 d-inline-flex align-items-center gap-2" id="applyFilters">
+                            <i class="bi bi-funnel"></i>
+                            <span>Apply Filters</span>
+                        </button>
+                        <button type="button" id="clearFilters" class="btn btn-outline-secondary rounded-2 d-inline-flex align-items-center gap-2">
+                            <i class="bi bi-x-circle"></i>
+                            <span>Clear Filters</span>
                         </button>
                     </div>
                 </div>
             </div>
             </form>
-            <div class="table-responsive rounded-3 border">
-                <table class="table text-nowrap mb-0">
-                    <thead>
+            <div class="position-relative">
+                <div id="memoTableLoadingOverlay" class="position-absolute top-0 start-0 end-0 bottom-0 bg-white bg-opacity-75 d-flex align-items-center justify-content-center rounded-3" style="display: none; z-index: 10;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                        <p class="text-body-secondary small mt-2 mb-0">Loading table...</p>
+                    </div>
+                </div>
+                <div id="memoTableWrapper" class="table-responsive rounded-3 border border-primary border-opacity-25 shadow-sm overflow-hidden">
+                <table class="table memo-table text-nowrap mb-0">
+                    <thead class="table-light border-bottom border-2 border-primary border-opacity-25">
                         <tr>
-                            <th>S.No.</th>
-                            <th>Program Name</th>
-                            <th>Participant Name</th>
-                            <th>Type</th>
-                            <th>Session Date</th>
-                            <th>Topic</th>
-                            <th>Conversation</th>
-                            <th>Response</th>
-                            <th>Conclusion Type</th>
-                            <th>Discussion Name</th>
-                            <th>Conclusion Remark</th>
-                            <th>Status</th>
+                            <th class="py-3 fw-semibold text-body">S.No.</th>
+                            <th class="py-3 fw-semibold text-body">Program Name</th>
+                            <th class="py-3 fw-semibold text-body">Participant Name</th>
+                            <th class="py-3 fw-semibold text-body">Type</th>
+                            <th class="py-3 fw-semibold text-body">Session Date</th>
+                            <th class="py-3 fw-semibold text-body">Topic</th>
+                            <th class="py-3 fw-semibold text-body">Conversation</th>
+                            <th class="py-3 fw-semibold text-body">Response</th>
+                            <th class="py-3 fw-semibold text-body">Conclusion Type</th>
+                            <th class="py-3 fw-semibold text-body">Discussion Name</th>
+                            <th class="py-3 fw-semibold text-body">Conclusion Remark</th>
+                            <th class="py-3 fw-semibold text-body">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @if ($memos->isEmpty())
                         <tr>
-                            <td colspan="12" class="empty-state">
-                                <i class="bi bi-inbox d-block"></i>
-                                <span class="text-muted">No records found. Try adjusting your filters.</span>
+                            <td colspan="12" class="empty-state py-5">
+                                <span class="d-inline-flex rounded-circle bg-primary bg-opacity-10 p-3 mb-3">
+                                    <i class="bi bi-inbox text-primary fs-2"></i>
+                                </span>
+                                <p class="text-body-secondary fw-semibold mb-1">No records found</p>
+                                <span class="text-muted small">Try adjusting your filters.</span>
                             </td>
                         </tr>
                         @else
@@ -831,7 +867,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                 </table>
 
                 <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pagination-wrapper mt-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pagination-wrapper mt-3 rounded-2">
                     <div class="text-muted small">
                         Showing <strong>{{ $memos->firstItem() ?? 0 }}</strong>
                         to <strong>{{ $memos->lastItem() }}</strong>
@@ -840,6 +876,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                     <div>
                         {{ $memos->links('vendor.pagination.custom') }}
                     </div>
+                </div>
                 </div>
             </div>
 
@@ -885,149 +922,138 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
     <div class="modal fade" id="memo_generate" tabindex="-1" aria-labelledby="memo_generateLabel" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
-                <div class="modal-header bg-primary text-white py-3">
+                <div class="modal-header bg-primary bg-gradient text-white border-0 py-3 px-4">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-file-earmark-plus fs-5"></i>
                         <h5 class="modal-title mb-0 fw-semibold" id="memo_generateLabel">Generate Memo</h5>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white opacity-100" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body bg-light">
+                <div class="modal-body bg-light px-4 py-4">
                     <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
                         @csrf
-                        <div class="row">
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="course_master_name" class="form-label">Course</label>
-
-                                <input type="text" id="course_master_name" class="form-control"
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="course_master_name" class="form-label fw-semibold text-body-secondary">Course</label>
+                                <input type="text" id="course_master_name" class="form-control rounded-2"
                                     name="course_master_name" readonly>
                                 <input type="hidden" id="course_master_pk" name="course_master_pk">
                                 <input type="hidden" id="student_notice_status_pk" name="student_notice_status_pk">
                                 <input type="hidden" id="memo_count" name="memo_count">
                                 <input type="hidden" id="student_pk" name="student_pk">
                                 @error('course_master_name')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
 
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="date_memo_notice" class="form-label">Date</label>
-                                <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice"
+                            <div class="col-12 col-md-6">
+                                <label for="date_memo_notice" class="form-label fw-semibold text-body-secondary">Date</label>
+                                <input type="date" class="form-control rounded-2" id="date_memo_notice" name="date_memo_notice"
                                     required readonly>
                                 @error('date_memo_notice')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
 
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="subject_master_id" class="form-label">Subject <span
-                                        class="text-danger">*</span></label>
-
-                                <input type="text" id="subject_master_id" class="form-control" name="subject_master_id"
-                                    readonly>
-
+                            <div class="col-12 col-md-6">
+                                <label for="subject_master_id" class="form-label fw-semibold text-body-secondary">Subject <span class="text-danger">*</span></label>
+                                <input type="text" id="subject_master_id" class="form-control rounded-2" name="subject_master_id" readonly>
                                 @error('subject_master_id')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
 
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="topic_id" class="form-label">Topic</label>
-
-                                <input type="text" id="topic_id" class="form-control" name="topic_id" readonly>
-
+                            <div class="col-12 col-md-6">
+                                <label for="topic_id" class="form-label fw-semibold text-body-secondary">Topic</label>
+                                <input type="text" id="topic_id" class="form-control rounded-2" name="topic_id" readonly>
                                 @error('topic_id')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
 
-
-
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="session_name" class="form-label">Session</label>
-                                <input type="text" id="class_session_master_pk" class="form-control" readonly>
+                            <div class="col-12 col-md-6">
+                                <label for="session_name" class="form-label fw-semibold text-body-secondary">Session</label>
+                                <input type="text" id="class_session_master_pk" class="form-control rounded-2" readonly>
                                 @error('session_name')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
 
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="faculty_name" class="form-label">Faculty Name</label>
-                                <input type="text" id="faculty_name" class="form-control" readonly>
+                            <div class="col-12 col-md-6">
+                                <label for="faculty_name" class="form-label fw-semibold text-body-secondary">Faculty Name</label>
+                                <input type="text" id="faculty_name" class="form-control rounded-2" readonly>
                                 @error('faculty_name')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="student_name" class="form-label">Student Name</label>
-                                <input type="text" id="student_name" class="form-control" readonly>
+                            <div class="col-12 col-md-6">
+                                <label for="student_name" class="form-label fw-semibold text-body-secondary">Student Name</label>
+                                <input type="text" id="student_name" class="form-control rounded-2" readonly>
                                 @error('student_name')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-12 col-md-6 mb-3">
+                            <div class="col-12 col-md-6">
                             </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="memo_type" class="form-label">Memo Type</label>
-                                <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select">
+                            <div class="col-12 col-md-6">
+                                <label for="memo_type_master_pk" class="form-label fw-semibold text-body-secondary">Memo Type</label>
+                                <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select rounded-2">
                                     <option value="">Select Memo Type</option>
                                     @foreach ($memo_master as $master)
                                     <option value="{{ $master->pk }}">{{ $master->memo_type_name }}</option>
                                     @endforeach
                                 </select>
                                 @error('memo_type_master_pk')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="memo_number" class="form-label">Memo Number</label>
-                                <input type="text" id="memo_number" name="memo_number" class="form-control" readonly>
+                            <div class="col-12 col-md-6">
+                                <label for="memo_number" class="form-label fw-semibold text-body-secondary">Memo Number</label>
+                                <input type="text" id="memo_number" name="memo_number" class="form-control rounded-2" readonly>
                                 @error('memo_number')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
 
-
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="venue" class="form-label">Venue</label>
-                                <select name="venue" id="venue" class="form-select">
+                            <div class="col-12 col-md-6">
+                                <label for="venue" class="form-label fw-semibold text-body-secondary">Venue</label>
+                                <select name="venue" id="venue" class="form-select rounded-2">
                                     <option value="">Select Venue</option>
                                     @foreach ($venue as $v)
                                     <option value="{{ $v->venue_id }}">{{ $v->venue_name }}</option>
                                     @endforeach
                                 </select>
                                 @error('venue')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-12 col-md-3 mb-3">
-                                <label for="memo_date" class="form-label">Date</label>
-                                <input type="date" id="memo_date" class="form-control">
+                            <div class="col-12 col-md-3">
+                                <label for="memo_date" class="form-label fw-semibold text-body-secondary">Date</label>
+                                <input type="date" id="memo_date" class="form-control rounded-2">
                                 @error('memo_date')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-12 col-md-3 mb-3">
-                                <label for="meeting_time" class="form-label">Meeting Time</label>
-                                <input type="time" id="meeting_time" name="meeting_time" class="form-control">
+                            <div class="col-12 col-md-3">
+                                <label for="meeting_time" class="form-label fw-semibold text-body-secondary">Meeting Time</label>
+                                <input type="time" id="meeting_time" name="meeting_time" class="form-control rounded-2">
                                 @error('meeting_time')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-12 mb-3">
-                                <label for="textarea" class="form-label">Message (If Any)</label>
-                                <textarea class="form-control" id="textarea" name="Remark" rows="3"
-                                    placeholder="Enter remarks..."></textarea>
+                            <div class="col-12">
+                                <label for="textarea" class="form-label fw-semibold text-body-secondary">Message (If Any)</label>
+                                <textarea class="form-control rounded-2" id="textarea" name="Remark" rows="3" placeholder="Enter remarks..."></textarea>
                                 @error('Remark')
-                                <span class="text-danger">{{ $message }}</span>
+                                <span class="text-danger small">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>
 
                 </div>
-                <div class="modal-footer border-top bg-white py-3">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">
+                <div class="modal-footer border-top border-primary border-opacity-25 bg-white py-3 px-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-2" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary rounded-2">
                         <i class="bi bi-check-lg me-1"></i> Save
                     </button>
                 </div>
@@ -1039,9 +1065,30 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
     <!-- Memo generation end -->
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function() {
-    $('.view-conversation').on('click', function() {
+    // Choices.js for filter selects (searchable Program, Type, Status)
+    if (typeof Choices !== 'undefined') {
+        window.memoFilterChoices = {};
+        var filterSelectIds = ['program_name', 'type', 'status'];
+        filterSelectIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && !el.dataset.choicesInitialized) {
+                window.memoFilterChoices[id] = new Choices(el, {
+                    searchEnabled: id === 'program_name',
+                    searchPlaceholderValue: 'Search...',
+                    itemSelectText: '',
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.options[0] ? el.options[0].text : 'Select'
+                });
+                el.dataset.choicesInitialized = 'true';
+            }
+        });
+    }
+
+    $(document).on('click', '.view-conversation', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
         let type = $(this).data('type');
@@ -1085,13 +1132,129 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Filter form submission on change
+    var indexUrl = $('#filterForm').attr('action') || '{{ route("memo.notice.management.index") }}';
+
+    // Load table content via AJAX (no full page reload)
+    function loadTableContent(url) {
+        var $overlay = $('#memoTableLoadingOverlay');
+        var $wrapper = $('#memoTableWrapper');
+        $overlay.show();
+        $.get(url)
+            .done(function(html) {
+                var wrapperEl = $wrapper[0];
+                if (!wrapperEl) { return; }
+                try {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+                    var newWrap = doc.getElementById('memoTableWrapper');
+                    if (newWrap) {
+                        wrapperEl.innerHTML = newWrap.innerHTML;
+                    }
+                    if (typeof history !== 'undefined' && history.pushState) {
+                        history.pushState({ memoTable: true }, '', url);
+                    }
+                } catch (err) {
+                    console.error('Table parse error:', err);
+                }
+            })
+            .fail(function() {
+                alert('Failed to load table. Please try again.');
+            })
+            .always(function() {
+                $overlay.hide();
+            });
+    }
+
+    // Intercept form submit: load table via AJAX instead of full reload
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+        var params = $(this).serialize();
+        var url = params ? (indexUrl + (indexUrl.indexOf('?') >= 0 ? '&' : '?') + params) : indexUrl;
+        loadTableContent(url);
+    });
+
+    // Filter change still triggers form submit (which is now AJAX)
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
         $('#filterForm').submit();
     });
+
+    // Pagination: intercept links inside table wrapper so they load via AJAX
+    $(document).on('click', '#memoTableWrapper a.page-link[href]', function(e) {
+        var href = $(this).attr('href');
+        if (href && href.indexOf('memo-notice-management') !== -1 && !$(this).closest('.page-item').hasClass('disabled')) {
+            e.preventDefault();
+            loadTableContent(href);
+        }
+    });
+
+    // Clear filters: reset form and load table without params
+    $('#clearFilters').on('click', function() {
+        var today = new Date().toISOString().split('T')[0];
+        $('#search').val('');
+        $('#from_date').val(today);
+        $('#to_date').val(today);
+        if (window.memoFilterChoices) {
+            if (window.memoFilterChoices.program_name) window.memoFilterChoices.program_name.setChoiceByValue('', true);
+            if (window.memoFilterChoices.type) window.memoFilterChoices.type.setChoiceByValue('', true);
+            if (window.memoFilterChoices.status) window.memoFilterChoices.status.setChoiceByValue('', true);
+        }
+        $('#program_name').val('');
+        $('#type').val('');
+        $('#status').val('');
+        loadTableContent(indexUrl);
+    });
+
+    // Browser back/forward: reload table for current URL
+    $(window).on('popstate', function(e) {
+        if (e.originalEvent.state && e.originalEvent.state.memoTable) {
+            loadTableContent(location.href);
+        }
+    });
+
+    // Choices.js for modal selects: init on show, destroy on hide (so form reset works)
+    var memoTypeEl = document.getElementById('memo_type_master_pk');
+    var venueEl = document.getElementById('venue');
+    function initMemoModalChoices() {
+        if (typeof Choices === 'undefined' || !memoTypeEl || !venueEl) return;
+        window.memoModalChoices = window.memoModalChoices || {};
+        if (!memoTypeEl.dataset.choicesInitialized) {
+            window.memoModalChoices.memoType = new Choices(memoTypeEl, {
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search...',
+                itemSelectText: '',
+                shouldSort: false,
+                placeholder: true,
+                placeholderValue: 'Select Memo Type'
+            });
+            memoTypeEl.dataset.choicesInitialized = 'true';
+        }
+        if (!venueEl.dataset.choicesInitialized) {
+            window.memoModalChoices.venue = new Choices(venueEl, {
+                searchEnabled: true,
+                searchPlaceholderValue: 'Search...',
+                itemSelectText: '',
+                shouldSort: false,
+                placeholder: true,
+                placeholderValue: 'Select Venue'
+            });
+            venueEl.dataset.choicesInitialized = 'true';
+        }
+    }
+    function destroyMemoModalChoices() {
+        if (window.memoModalChoices) {
+            if (window.memoModalChoices.memoType) { window.memoModalChoices.memoType.destroy(); window.memoModalChoices.memoType = null; }
+            if (window.memoModalChoices.venue) { window.memoModalChoices.venue.destroy(); window.memoModalChoices.venue = null; }
+            if (memoTypeEl) memoTypeEl.dataset.choicesInitialized = '';
+            if (venueEl) venueEl.dataset.choicesInitialized = '';
+        }
+    }
+    $('#memo_generate').on('shown.bs.modal', initMemoModalChoices);
+    $('#memo_generate').on('hidden.bs.modal', function() {
+        destroyMemoModalChoices();
+    });
     
-    // Handle Generate Memo button (editable mode)
-    $('.generate-memo-btn').on('click', function() {
+    // Handle Generate Memo button (editable mode) - delegation so it works after AJAX table load
+    $(document).on('click', '.generate-memo-btn', function() {
         let memoId = $(this).data('id');
         setModalMode('generate');
 
@@ -1110,6 +1273,7 @@ $(document).ready(function() {
                 $('#subject_master_id').val(res.student_name);
                 $('#topic_id').val(res.subject_topic);
                 $('#venue_id').val(res.venue_id);
+                $('#venue').val(res.venue_id);
                 $('#student_notice_status_pk').val(res
                     .student_notice_status_pk);
                 $('#course_master_pk').val(res.course_master_pk);
@@ -1121,7 +1285,12 @@ $(document).ready(function() {
                 $('#student_pk').val(res.student_pk);
                 $('#memo_number').val(res.memo_number);
 
-                // Add more if needed
+                // Sync Choices.js if modal selects are initialized (modal opens after AJAX)
+                setTimeout(function() {
+                    if (window.memoModalChoices && window.memoModalChoices.venue && res.venue_id) {
+                        window.memoModalChoices.venue.setChoiceByValue(String(res.venue_id), true);
+                    }
+                }, 100);
             },
             error: function() {
                 alert('Something went wrong!');
@@ -1129,8 +1298,8 @@ $(document).ready(function() {
         });
     });
 
-    // Handle Preview Memo button (read-only mode)
-    $('.preview-memo-btn').on('click', function() {
+    // Handle Preview Memo button (read-only mode) - delegation for AJAX-loaded content
+    $(document).on('click', '.preview-memo-btn', function() {
         let memoId = $(this).data('memo-id');
         // Set preview mode immediately to hide save button
         setModalMode('preview');
@@ -1170,9 +1339,15 @@ $(document).ready(function() {
                 // Populate memo-specific fields
                 if (res.memo_type_master_pk) {
                     $('#memo_type_master_pk').val(res.memo_type_master_pk);
+                    if (window.memoModalChoices && window.memoModalChoices.memoType) {
+                        window.memoModalChoices.memoType.setChoiceByValue(String(res.memo_type_master_pk), true);
+                    }
                 }
                 if (res.venue_master_pk) {
                     $('#venue').val(res.venue_master_pk);
+                    if (window.memoModalChoices && window.memoModalChoices.venue) {
+                        window.memoModalChoices.venue.setChoiceByValue(String(res.venue_master_pk), true);
+                    }
                 }
                 if (res.date) {
                     $('#memo_date').val(res.date);
@@ -1204,18 +1379,22 @@ $(document).ready(function() {
             // Preview mode: make all fields read-only
             form.find('input[type="text"], input[type="date"], input[type="time"], textarea').prop('readonly', true);
             form.find('select').prop('disabled', true);
-            // Hide save button in preview mode
+            if (window.memoModalChoices) {
+                if (window.memoModalChoices.memoType) window.memoModalChoices.memoType.disable();
+                if (window.memoModalChoices.venue) window.memoModalChoices.venue.disable();
+            }
             saveButton.hide();
             modalTitle.text('Preview Memo');
         } else {
             // Generate mode: enable editable fields
             form.find('input, textarea').prop('readonly', false);
             form.find('select').prop('disabled', false);
-            // Keep readonly fields as readonly
+            if (window.memoModalChoices) {
+                if (window.memoModalChoices.memoType) window.memoModalChoices.memoType.enable();
+                if (window.memoModalChoices.venue) window.memoModalChoices.venue.enable();
+            }
             $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #student_name, #memo_number').prop('readonly', true);
-            // Keep non-editable selects disabled
             form.find('select').not('#memo_type_master_pk, #venue').prop('disabled', true);
-            // Show save button in generate mode
             saveButton.show();
             modalTitle.text('Generate Memo');
         }

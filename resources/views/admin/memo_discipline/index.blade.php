@@ -1,4 +1,5 @@
 @extends('admin.layouts.master')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 
 @section('title', 'Discipline Memo - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
@@ -191,9 +192,38 @@
                 </div>
             </form>
 
-            <!-- Add this JavaScript for enhanced UX -->
+            <!-- Choices.js for filter selects -->
+            <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
             <script>
             document.addEventListener('DOMContentLoaded', function() {
+                // Choices.js: Program Name (searchable) and Status
+                window.memoDisciplineChoices = {};
+                var programEl = document.getElementById('program_name');
+                var statusEl = document.getElementById('status');
+                if (typeof Choices !== 'undefined') {
+                    if (programEl && !programEl.dataset.choicesInitialized) {
+                        window.memoDisciplineChoices.program_name = new Choices(programEl, {
+                            searchEnabled: true,
+                            searchPlaceholderValue: 'Search programs...',
+                            itemSelectText: '',
+                            shouldSort: false,
+                            placeholder: true,
+                            placeholderValue: 'All Programs'
+                        });
+                        programEl.dataset.choicesInitialized = 'true';
+                    }
+                    if (statusEl && !statusEl.dataset.choicesInitialized) {
+                        window.memoDisciplineChoices.status = new Choices(statusEl, {
+                            searchEnabled: false,
+                            itemSelectText: '',
+                            shouldSort: false,
+                            placeholder: true,
+                            placeholderValue: 'All Status'
+                        });
+                        statusEl.dataset.choicesInitialized = 'true';
+                    }
+                }
+
                 // Update active filter count
                 function updateFilterCount() {
                     const form = document.getElementById('filterForm');
@@ -245,6 +275,12 @@
                 const today = new Date().toISOString().split('T')[0];
                 form.querySelectorAll('input[type="date"]').forEach(input => input.value = today);
 
+                // Sync Choices.js display
+                if (window.memoDisciplineChoices) {
+                    if (window.memoDisciplineChoices.program_name) window.memoDisciplineChoices.program_name.setChoiceByValue('', true);
+                    if (window.memoDisciplineChoices.status) window.memoDisciplineChoices.status.setChoiceByValue('', true);
+                }
+
                 form.submit();
             }
 
@@ -252,10 +288,11 @@
             function removeFilter(filterName) {
                 const input = document.querySelector(`[name="${filterName}"]`);
                 if (input) {
-                    if (input.tagName === 'SELECT') {
-                        input.value = '';
-                    } else {
-                        input.value = '';
+                    input.value = '';
+                    // Sync Choices.js if it's a select we enhanced
+                    if (window.memoDisciplineChoices && input.tagName === 'SELECT') {
+                        if (filterName === 'program_name' && window.memoDisciplineChoices.program_name) window.memoDisciplineChoices.program_name.setChoiceByValue('', true);
+                        if (filterName === 'status' && window.memoDisciplineChoices.status) window.memoDisciplineChoices.status.setChoiceByValue('', true);
                     }
                 }
                 document.getElementById('filterForm').submit();

@@ -29,52 +29,50 @@
                                 <thead>
                                     <!-- start row -->
                                     <tr>
-                                        <th class="col text-center">S.No.</th>
-                                        <th class="col text-center">Subject name</th>
-                                        <th class="col text-center">Status</th>
-                                        <th class="col text-center">Action</th>
+                                        <th class="col">S.No.</th>
+                                        <th class="col">Subject name</th>
+                                        <th class="col">Status</th>
+                                        <th class="col">Action</th>
                                     </tr>
                                     <!-- end row -->
                                 </thead>
                                 <tbody>
                                     @foreach($modules as $key => $module)
                                     <tr class="{{ $loop->odd ? 'odd' : 'even' }} ">
-                                        <td class="text-center">{{ $modules->firstItem() + $key }}</td>
-                                        <td class="text-center">
+                                        <td>{{ $modules->firstItem() + $key }}</td>
+                                        <td>
                                             {{ $module->module_name }}
                                         </td>
-                                        <td class="text-center">
+                                        <td>
                                             <div
-                                                class="form-check form-switch m-auto d-flex justify-content-center align-items-center">
+                                                class="form-check form-switch m-auto">
                                                 <input class="form-check-input status-toggle" type="checkbox"
                                                     role="switch" data-table="subject_module_master"
                                                     data-column="active_inactive" data-id="{{ $module->pk }}"
                                                     {{ $module->active_inactive == 1 ? 'checked' : '' }}>
                                             </div>
                                         </td>
-                                        <td class="text-center">
+                                        <td>
                                             <div class="d-inline-flex align-items-center gap-2" role="group"
                                                 aria-label="Subject module actions">
 
                                                 <!-- Edit -->
                                                 <a href="{{ route('subject-module.edit', $module->pk) }}"
-                                                    class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                                                    class="text-primary d-flex align-items-center gap-1"
                                                     aria-label="Edit subject module">
                                                     <i class="material-icons material-symbols-rounded"
                                                         style="font-size:18px;" aria-hidden="true">edit</i>
-                                                    <span class="d-none d-md-inline">Edit</span>
                                                 </a>
 
                                                 <!-- Delete -->
                                                 @if($module->active_inactive == 1)
-                                                <button type="button"
-                                                    class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                <a href="javascript:void(0)"
+                                                    class="text-primary d-flex align-items-center gap-1"
                                                     disabled aria-disabled="true"
                                                     title="Cannot delete active subject module">
                                                     <i class="material-icons material-symbols-rounded"
                                                         style="font-size:18px;" aria-hidden="true">delete</i>
-                                                    <span class="d-none d-md-inline">Delete</span>
-                                                </button>
+                                                </a>
                                                 @else
                                                 <form action="{{ route('subject-module.destroy', $module->pk) }}"
                                                     method="POST" class="d-inline"
@@ -82,13 +80,13 @@
                                                     @csrf
                                                     @method('DELETE')
 
-                                                    <button type="submit"
-                                                        class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                                    <a href="javascript:void(0)"
+                                                        class="text-primary d-flex align-items-center gap-1"
+                                                        onclick="event.preventDefault(); this.closest('form').submit();"
                                                         aria-label="Delete subject module">
                                                         <i class="material-icons material-symbols-rounded"
                                                             style="font-size:18px;" aria-hidden="true">delete</i>
-                                                        <span class="d-none d-md-inline">Delete</span>
-                                                    </button>
+                                                    </a>
                                                 </form>
                                                 @endif
 

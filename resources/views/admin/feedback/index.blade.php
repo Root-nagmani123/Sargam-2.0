@@ -1,4 +1,5 @@
 @extends('admin.layouts.master')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 
 @section('title', 'Feedback - Sargam | Lal Bahadur')
 
@@ -1366,8 +1367,30 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Choices.js for filter selects (searchable: course, faculty, subject)
+    window.feedbackFilterChoices = {};
+    var choiceSelectIds = ['courseFilter', 'facultyFilter', 'subjectFilter', 'ratingFilter', 'statusFilter'];
+    var searchableIds = ['courseFilter', 'facultyFilter', 'subjectFilter'];
+    if (typeof Choices !== 'undefined') {
+        choiceSelectIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && !el.dataset.choicesInitialized) {
+                window.feedbackFilterChoices[id] = new Choices(el, {
+                    searchEnabled: searchableIds.indexOf(id) !== -1,
+                    searchPlaceholderValue: 'Search...',
+                    itemSelectText: '',
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.options[0] ? el.options[0].text : 'Select'
+                });
+                el.dataset.choicesInitialized = 'true';
+            }
+        });
+    }
+
     // Initialize date range picker
     const dateRangePicker = new DateRangePicker(document.getElementById('dateRange'), {
         format: 'yyyy-mm-dd',
@@ -1457,6 +1480,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetFilters() {
         document.getElementById('feedbackFilterForm').reset();
         document.getElementById('dateRange').value = '';
+        // Sync Choices.js display to placeholder
+        if (window.feedbackFilterChoices) {
+            ['courseFilter', 'facultyFilter', 'subjectFilter', 'ratingFilter', 'statusFilter'].forEach(function(id) {
+                if (window.feedbackFilterChoices[id]) {
+                    window.feedbackFilterChoices[id].setChoiceByValue('', true);
+                }
+            });
+        }
         applyFilters();
     }
 
@@ -1471,10 +1502,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateFilterState(tab) {
         // Store/restore filter state based on active tab
+        const nameToId = { course: 'courseFilter', faculty: 'facultyFilter', subject: 'subjectFilter', rating: 'ratingFilter', status: 'statusFilter' };
         const filters = JSON.parse(localStorage.getItem(`feedbackFilters_${tab}`) || '{}');
         Object.keys(filters).forEach(key => {
             const element = document.querySelector(`[name="${key}"]`);
-            if (element) element.value = filters[key];
+            if (element) {
+                element.value = filters[key];
+                var choiceId = nameToId[key];
+                if (window.feedbackFilterChoices && choiceId && window.feedbackFilterChoices[choiceId]) {
+                    window.feedbackFilterChoices[choiceId].setChoiceByValue(String(filters[key] || ''), true);
+                }
+            }
         });
     }
 

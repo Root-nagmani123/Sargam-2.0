@@ -11,7 +11,7 @@
 @else
     <div class="mb-3">
         <label class="form-label">Complaint Category <span class="text-danger">*</span></label>
-        <select name="issue_category_master_pk" class="form-select" required>
+        <select name="issue_category_master_pk" id="add_issue_category" class="form-select" data-searchable="true" data-placeholder="- Select Category -" required>
             <option value="">- Select Category -</option>
             @foreach($categories as $cat)
                 <option value="{{ $cat->pk }}">{{ $cat->issue_category }}</option>
@@ -24,7 +24,7 @@
     <div class="col-md-12"><h6 class="border-bottom pb-2">Level 1</h6></div>
     <div class="col-md-6">
         <label class="form-label">Employee Name (Level 1) <span class="text-danger">*</span></label>
-        <select name="level1_employee_pk" id="{{ $isEdit ? 'edit_level1_employee' : 'level1_employee' }}" class="form-select" required>
+        <select name="level1_employee_pk" id="{{ $isEdit ? 'edit_level1_employee' : 'level1_employee' }}" class="form-select" data-searchable="true" data-placeholder="- Select -" required>
             <option value="">- Select -</option>
             @foreach($employees as $emp)
                 <option value="{{ $emp->employee_pk }}">{{ $emp->employee_name }}</option>
@@ -41,7 +41,7 @@
     <div class="col-md-12"><h6 class="border-bottom pb-2">Level 2</h6></div>
     <div class="col-md-6">
         <label class="form-label">Employee Name (Level 2) <span class="text-danger">*</span></label>
-        <select name="level2_employee_pk" id="{{ $isEdit ? 'edit_level2_employee' : 'level2_employee' }}" class="form-select" required>
+        <select name="level2_employee_pk" id="{{ $isEdit ? 'edit_level2_employee' : 'level2_employee' }}" class="form-select" data-searchable="true" data-placeholder="- Select -" required>
             <option value="">- Select -</option>
             @foreach($employees as $emp)
                 <option value="{{ $emp->employee_pk }}">{{ $emp->employee_name }}</option>
@@ -58,7 +58,7 @@
     <div class="col-md-12"><h6 class="border-bottom pb-2">Level 3</h6></div>
     <div class="col-md-6">
         <label class="form-label">Employee Name (Level 3) <span class="text-danger">*</span></label>
-        <select name="level3_employee_pk" id="{{ $isEdit ? 'edit_level3_employee' : 'level3_employee' }}" class="form-select" required>
+        <select name="level3_employee_pk" id="{{ $isEdit ? 'edit_level3_employee' : 'level3_employee' }}" class="form-select" data-searchable="true" data-placeholder="- Select -" required>
             <option value="">- Select -</option>
             @foreach($employees as $emp)
                 <option value="{{ $emp->employee_pk }}">{{ $emp->employee_name }}</option>

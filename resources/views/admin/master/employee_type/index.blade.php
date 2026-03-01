@@ -26,8 +26,8 @@
                     </div>
                 </div>
                 <hr class="my-4 opacity-25">
-                <div class="table-responsive rounded-3 overflow-hidden border">
-                    {{ $dataTable->table(['class' => 'table text-nowrap mb-0 align-middle employee-type-table']) }}
+                <div class="table-responsive">
+                    {{ $dataTable->table(['class' => 'table text-nowrap mb-0 employee-type-table']) }}
                 </div>
             </div>
         </div>
