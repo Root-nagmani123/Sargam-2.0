@@ -210,29 +210,21 @@
 @include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
-    // Reusable Select2 with search and focus-on-open for all dropdowns
-    function initSelect2($el, placeholder) {
-        if (!$el.length || !$.fn.select2) return;
-        if ($el.data('select2')) $el.select2('destroy');
-        $el.select2({
-            placeholder: placeholder || '— Search / Select —',
-            allowClear: true,
-            width: '100%'
-        });
-        $el.off('select2:open').on('select2:open', function() {
-            setTimeout(function() { $('.select2-container--open .select2-search__field').focus(); }, 0);
-        });
+    // Reusable Choices.js (searchable dropdowns) via DropdownSearch
+    function initChoices(selector, placeholder) {
+        if (typeof DropdownSearch === 'undefined') return;
+        DropdownSearch.init(selector, { placeholder: placeholder || '— Search / Select —', allowClear: true });
     }
 
-    // Apply searchable Select2 to all dropdowns
-    initSelect2($('#issue_category'), '— Select category —');
-    initSelect2($('#sub_categories'), '— Select sub-category —');
-    initSelect2($('#issue_priority'), '— Select priority —');
-    initSelect2($('#complainant'), 'Search complainant by name...');
-    initSelect2($('#nodal_employee'), '— Select category first —');
-    initSelect2($('#building_select'), '— Select —');
-    initSelect2($('#floor_select'), '— Select floor —');
-    initSelect2($('#room_select'), '— Select room —');
+    // Apply searchable dropdowns to all selects
+    initChoices('#issue_category', '— Select category —');
+    initChoices('#sub_categories', '— Select sub-category —');
+    initChoices('#issue_priority', '— Select priority —');
+    initChoices('#complainant', 'Search complainant by name...');
+    initChoices('#nodal_employee', '— Select category first —');
+    initChoices('#building_select', '— Select —');
+    initChoices('#floor_select', '— Select floor —');
+    initChoices('#room_select', '— Select room —');
 
     // Character counter for description (max 1000)
     function updateCharCount() {
@@ -248,7 +240,7 @@ $(document).ready(function() {
         
         // Reset nodal employee dropdown when category changes
         $('#nodal_employee').html('<option value="">- Select -</option>');
-        initSelect2($('#nodal_employee'), '— Select category first —');
+        initChoices($('#nodal_employee'), '— Select category first —');
         
         if(categoryId) {
             // Load sub-categories
@@ -260,7 +252,7 @@ $(document).ready(function() {
                     $.each(data, function(key, value) {
                         $('#sub_categories').append('<option value="'+ value.pk +'">'+ value.issue_sub_category +'</option>');
                     });
-                    initSelect2($('#sub_categories'), '— Select sub-category —');
+                    initChoices($('#sub_categories'), '— Select sub-category —');
                 }
             });
             
@@ -277,7 +269,7 @@ $(document).ready(function() {
                             var selected = (autoSelect && employee.employee_pk == autoSelect) ? 'selected' : '';
                             $('#nodal_employee').append('<option value="'+ employee.employee_pk +'" '+ selected +'>'+ fullName +'</option>');
                         });
-                        initSelect2($('#nodal_employee'), '— Select —');
+                        initChoices($('#nodal_employee'), '— Select —');
                         // Level 2 & 3 - display only
                         if(response.level2) {
                             $('#level2_display').text(response.level2.employee_name + ' (' + response.level2.days_notify + ' days)');
@@ -292,22 +284,22 @@ $(document).ready(function() {
                         $('#escalation_levels_display').removeClass('d-none');
                     } else {
                         $('#nodal_employee').html('<option value="">No Level 1 employees - configure Escalation Matrix</option>');
-                        initSelect2($('#nodal_employee'), '— Select —');
+                        initChoices($('#nodal_employee'), '— Select —');
                         $('#escalation_levels_display').addClass('d-none');
                     }
                 },
                 error: function() {
                     console.log('Error loading nodal employees');
                     $('#nodal_employee').html('<option value="">Error loading employees</option>');
-                    initSelect2($('#nodal_employee'), '— Select —');
+                    initChoices($('#nodal_employee'), '— Select —');
                     $('#escalation_levels_display').addClass('d-none');
                 }
             });
         } else {
             $('#sub_categories').html('<option value="">— Select sub-category —</option>');
             $('#nodal_employee').html('<option value="">— Select category first —</option>');
-            initSelect2($('#sub_categories'), '— Select sub-category —');
-            initSelect2($('#nodal_employee'), '— Select category first —');
+            initChoices($('#sub_categories'), '— Select sub-category —');
+            initChoices($('#nodal_employee'), '— Select category first —');
             $('#escalation_levels_display').addClass('d-none');
         }
     });
@@ -349,9 +341,9 @@ $(document).ready(function() {
         $('#building_select').html('<option value="">— Select —</option>');
         $('#floor_select').html('<option value="">— Select floor —</option>');
         $('#room_select').html('<option value="">— Select room —</option>');
-        initSelect2($('#building_select'), '— Select —');
-        initSelect2($('#floor_select'), '— Select floor —');
-        initSelect2($('#room_select'), '— Select room —');
+        initChoices($('#building_select'), '— Select —');
+        initChoices($('#floor_select'), '— Select floor —');
+        initChoices($('#room_select'), '— Select room —');
         
         if(type == 'H' || type == 'R' || type == 'O') {
             $('#building_section').removeClass('d-none');
@@ -367,7 +359,7 @@ $(document).ready(function() {
                         $.each(response.data, function(key, value) {
                             $('#building_select').append('<option value="'+ value.pk +'">'+ value.building_name +'</option>');
                         });
-                        initSelect2($('#building_select'), '— Select —');
+                        initChoices($('#building_select'), '— Select —');
                     }
                 },
                 error: function() {
@@ -396,7 +388,7 @@ $(document).ready(function() {
                             var floorName = value.floor_name ?? value.floor ?? value.unit_sub_type ?? '';
                             $('#floor_select').append('<option value="'+ floorId +'">'+ floorName +'</option>');
                         });
-                        initSelect2($('#floor_select'), '— Select floor —');
+                        initChoices($('#floor_select'), '— Select floor —');
                     }
                 },
                 error: function() {
@@ -406,8 +398,8 @@ $(document).ready(function() {
         } else {
             $('#floor_select').html('<option value="">— Select floor —</option>');
             $('#room_select').html('<option value="">— Select room —</option>');
-            initSelect2($('#floor_select'), '— Select floor —');
-            initSelect2($('#room_select'), '— Select room —');
+            initChoices($('#floor_select'), '— Select floor —');
+            initChoices($('#room_select'), '— Select room —');
         }
     });
 
@@ -431,7 +423,7 @@ $(document).ready(function() {
                             var roomName = value.room_name ?? value.house_no ?? value.floor ?? '';
                             $('#room_select').append('<option value="'+ roomName +'">'+ roomName +'</option>');
                         });
-                        initSelect2($('#room_select'), '— Select room —');
+                        initChoices($('#room_select'), '— Select room —');
                     }
                 },
                 error: function() {
@@ -440,7 +432,7 @@ $(document).ready(function() {
             });
         } else {
             $('#room_select').html('<option value="">— Select room —</option>');
-            initSelect2($('#room_select'), '— Select room —');
+            initChoices($('#room_select'), '— Select room —');
         }
     });
 
@@ -500,7 +492,7 @@ $(document).ready(function() {
                         $.each(data, function(k, v) {
                             $('#sub_categories').append(new Option(v.issue_sub_category, v.pk, v.pk == oldSubCategory, v.pk == oldSubCategory));
                         });
-                        initSelect2($('#sub_categories'), '— Select sub-category —');
+                        initChoices($('#sub_categories'), '— Select sub-category —');
                         var selText = $('#sub_categories option:selected').text();
                         if (selText) $('#sub_category_name').val(selText);
                     }
@@ -520,7 +512,7 @@ $(document).ready(function() {
                                 var name = emp.employee_name || ((emp.first_name || '') + ' ' + (emp.middle_name ? emp.middle_name + ' ' : '') + (emp.last_name || ''));
                                 $('#nodal_employee').append(new Option(name, pk, pk == oldNodal, pk == oldNodal));
                             });
-                            initSelect2($('#nodal_employee'), '— Select —');
+                            initChoices($('#nodal_employee'), '— Select —');
                         }
                     }
                 });
@@ -541,7 +533,7 @@ $(document).ready(function() {
                         $.each(response.data, function(k, v) {
                             $('#building_select').append(new Option(v.building_name, v.pk, v.pk == oldBuilding, v.pk == oldBuilding));
                         });
-                        initSelect2($('#building_select'), '— Select —');
+                        initChoices($('#building_select'), '— Select —');
                     }
                 }
             });

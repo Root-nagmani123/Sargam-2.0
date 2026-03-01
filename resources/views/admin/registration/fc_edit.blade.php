@@ -471,10 +471,10 @@
             } else {
                 fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
             }
-            // Re-initialize only the new select2
-            $(fieldsContainer).find('.select2').last().select2({
-                // width: '100%'
-            });
+            if (typeof DropdownSearch !== 'undefined') {
+                var lastSelect = fieldsContainer.querySelectorAll('.select2');
+                if (lastSelect.length) DropdownSearch.init(lastSelect[lastSelect.length - 1], { placeholder: 'Select...', allowClear: true });
+            }
 
             // Add event listener to type dropdown to show/hide layout
             const fieldTypeSelect = document.getElementById(`field_type_${newFieldIndex}`); //  HIGHLIGHT

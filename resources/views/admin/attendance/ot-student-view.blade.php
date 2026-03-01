@@ -320,11 +320,9 @@
 @section('scripts')
 <script>
 $(document).ready(function() {
-    // Initialize select2 if available
-    if ($.fn.select2) {
-        $('.select2').select2({
-            placeholder: 'Select an option',
-            allowClear: true
+    if (typeof DropdownSearch !== 'undefined') {
+        document.querySelectorAll('.select2').forEach(function(el) {
+            DropdownSearch.init(el, { placeholder: 'Select an option', allowClear: true });
         });
     }
 
@@ -375,18 +373,19 @@ $(document).ready(function() {
         }, 300);
     });
 
-    // Clear filters button
     $('#clearFilters').on('click', function() {
         $('#filter_date').val('');
         $('#filter_status').val('');
-        if ($.fn.select2) {
-            $('#filter_status').select2('val', '');
+        if (typeof DropdownSearch !== 'undefined') {
+            DropdownSearch.setValue('#filter_status', '', true);
+        } else {
+            $('#filter_status').val('');
         }
-        const courseSelect = $('#filter_course');
+        var courseSelect = $('#filter_course');
         if (courseSelect.length) {
             courseSelect.val('').trigger('change');
-            if ($.fn.select2 && courseSelect.hasClass('select2-hidden-accessible')) {
-                courseSelect.select2('val', '');
+            if (typeof DropdownSearch !== 'undefined') {
+                DropdownSearch.setValue('#filter_course', '', true);
             }
         }
         setActiveButton($('#filterActive'));

@@ -283,11 +283,9 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    $('#studentDropdown').select2({
-        placeholder: 'Search Student',
-        allowClear: true,
-        width: '100%'
-    });
+    if (typeof DropdownSearch !== 'undefined') {
+        DropdownSearch.init('#studentDropdown', { placeholder: 'Search Student', allowClear: true });
+    }
     $('#studentDropdown').on('change', function() {
         var otCode = $(this).find(':selected').data('ot_code') || '';
         $('#otCodeField').val(otCode);

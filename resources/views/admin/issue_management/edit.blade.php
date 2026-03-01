@@ -291,13 +291,9 @@
 @include('components.jquery-3-6')
 <script>
 $(document).ready(function() {
-    // Complainant searchable dropdown (search by name when creating/editing issue on behalf of others)
-    if ($.fn.select2) {
-        $('#complainant').select2({
-            placeholder: 'Search complainant by name...',
-            allowClear: true,
-            width: '100%'
-        });
+    // Complainant searchable dropdown (Choices.js)
+    if (typeof DropdownSearch !== 'undefined') {
+        DropdownSearch.init('#complainant', { placeholder: 'Search complainant by name...', allowClear: true });
     }
 
     // Character counter

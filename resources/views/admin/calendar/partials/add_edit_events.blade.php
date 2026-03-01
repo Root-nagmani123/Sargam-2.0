@@ -2136,47 +2136,14 @@ document.addEventListener('DOMContentLoaded', function() {
         var isMobile = window.innerWidth <= 767;
         var dropdownMaxHeight = isMobile ? '200px' : '300px';
 
-        // Initialize Select2 for faculty field - use immediate parent (position-relative wrapper) so dropdown stays below field
-        if (!$('#faculty').hasClass('select2-hidden-accessible')) {
-            $('#faculty').select2({
-                placeholder: '👤 Select Faculty',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('#faculty').parent(),
-                theme: 'default',
-                selectionCssClass: 'select2-modern',
-                dropdownCssClass: 'select2-modern-dropdown',
-                dropdownAutoWidth: false,
-                closeOnSelect: isMobile ? true : false // Close on mobile for better UX
-            });
+        // Choices.js for faculty dropdowns
+        if (typeof DropdownSearch !== 'undefined') {
+            DropdownSearch.init('#faculty', { placeholder: '👤 Select Faculty', allowClear: true });
+            DropdownSearch.init('#internal_faculty', { placeholder: '👥 Select Internal Faculty', allowClear: true });
         }
-
-        // Update Select2 display if value is set programmatically (for edit mode)
         setTimeout(function() {
-            if ($('#faculty').hasClass('select2-hidden-accessible') && $('#faculty').val()) {
-                $('#faculty').trigger('change.select2');
-            }
+            if ($('#faculty').val()) $('#faculty').trigger('change');
         }, 100);
-
-        if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
-            $('#internal_faculty').select2({
-                placeholder: '👥 Select Internal Faculty',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('#internal_faculty').parent(),
-                theme: 'default',
-                selectionCssClass: 'select2-modern',
-                dropdownCssClass: 'select2-modern-dropdown',
-                dropdownAutoWidth: false,
-                closeOnSelect: isMobile ? true : false
-            });
-        }
-        
-        // Adjust Select2 dropdown max height on mobile
-        if (isMobile) {
-            $('.select2-dropdown').css('max-height', dropdownMaxHeight);
-            $('.select2-results__options').css('max-height', dropdownMaxHeight);
-        }
         
         // Prevent body scroll when modal is open on mobile
         if (isMobile) {
@@ -2185,16 +2152,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     });
 
-    // Destroy Select2 when modal is hidden to prevent conflicts
     $('#eventModal').on('hidden.bs.modal', function() {
-        if ($('#faculty').hasClass('select2-hidden-accessible')) {
-            $('#faculty').select2('destroy');
+        if (typeof DropdownSearch !== 'undefined') {
+            DropdownSearch.destroy('#faculty');
+            DropdownSearch.destroy('#internal_faculty');
         }
-        if ($('#internal_faculty').hasClass('select2-hidden-accessible')) {
-            $('#internal_faculty').select2('destroy');
-        }
-        
-        // Remove mobile body class
         $('body').removeClass('modal-open-mobile');
     });
     

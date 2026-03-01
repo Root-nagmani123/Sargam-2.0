@@ -1,173 +1,118 @@
 /**
  * Reusable Dropdown Search Utility
- * Provides a simple way to initialize searchable dropdowns using Select2
- * 
+ * Uses Choices.js for searchable dropdowns (replaces Select2)
+ *
  * Features:
  * - Auto-initializes dropdowns with class "select2" or data-searchable="true"
- * - Simple API for manual initialization
- * - Supports all Select2 options
- * - Handles dynamic content (re-initialization)
- * 
- * Usage Examples:
- * 
- * 1. Auto-initialization (recommended):
- *    Add class "select2" to your select element:
- *    <select class="select2" name="myField">
- * 
- *    Or use data attributes:
- *    <select data-searchable="true" data-placeholder="Search..." data-allow-clear="true">
- * 
- * 2. Manual initialization:
- *    DropdownSearch.init('#mySelect', {
- *        placeholder: 'Search and select...',
- *        allowClear: true,
- *        width: '100%'
- *    });
- * 
- * 3. Initialize multiple dropdowns:
- *    DropdownSearch.initAll('.searchable-dropdown', {
- *        placeholder: 'Search...',
- *        allowClear: true
- *    });
- * 
- * 4. Re-initialize after dynamic content changes:
- *    DropdownSearch.reinit('#mySelect', { placeholder: 'Search...' });
- * 
- * 5. Get/Set values:
- *    DropdownSearch.getValue('#mySelect');
- *    DropdownSearch.setValue('#mySelect', 'value123');
- * 
- * 6. Destroy instance:
- *    DropdownSearch.destroy('#mySelect');
+ * - Simple API for manual init, destroy, reinit, getValue, setValue
+ * - No jQuery dependency for Choices.js
+ *
+ * Usage:
+ * - Add class "select2" to a select: <select class="form-select select2" name="myField">
+ * - Or data-searchable="true" with optional data-placeholder="..."
+ * - Manual: DropdownSearch.init('#mySelect', { placeholder: 'Search...' });
+ * - Reinit after dynamic options: DropdownSearch.reinit('#mySelect', { placeholder: '...' });
  */
 
 (function(window) {
     'use strict';
 
-    // Check if jQuery and Select2 are available
-    function isSelect2Available() {
-        return typeof $ !== 'undefined' && typeof $.fn.select2 !== 'undefined';
+    var Choices = window.Choices;
+    var choicesInstances = new WeakMap();
+
+    function isChoicesAvailable() {
+        return typeof Choices === 'function';
+    }
+
+    function getElement(selector) {
+        if (typeof selector === 'string') {
+            return document.querySelector(selector);
+        }
+        if (selector && selector.nodeType === 1) {
+            return selector;
+        }
+        if (typeof $ !== 'undefined' && selector && selector.jquery) {
+            return selector[0];
+        }
+        return null;
+    }
+
+    function getOptions(options) {
+        var opts = {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Type to search...',
+            itemSelectText: '',
+            placeholder: true,
+            placeholderValue: 'Search and select...',
+            shouldSort: false
+        };
+        if (options && typeof options === 'object') {
+            if (options.placeholder !== undefined) opts.placeholderValue = options.placeholder;
+            if (options.searchPlaceholderValue !== undefined) opts.searchPlaceholderValue = options.searchPlaceholderValue;
+            if (options.allowClear !== undefined && options.allowClear) opts.removeItemButton = true;
+            // Pass through any other Choices.js options (e.g. position, classNames)
+            ['position', 'classNames', 'callbackOnCreateTemplates'].forEach(function(key) {
+                if (options[key] !== undefined) opts[key] = options[key];
+            });
+        }
+        return opts;
     }
 
     /**
-     * Initialize Select2 for a single dropdown element
-     * 
-     * @param {string|HTMLElement|jQuery} selector - CSS selector, DOM element, or jQuery object
-     * @param {Object} options - Select2 configuration options
-     * @returns {jQuery|null} - jQuery object of initialized select or null if failed
-     * 
-     * @example
-     * DropdownSearch.init('#mySelect', {
-     *     placeholder: 'Search and select...',
-     *     allowClear: true,
-     *     width: '100%'
-     * });
+     * Initialize Choices.js for a single select
+     * @param {string|HTMLElement|jQuery} selector
+     * @param {Object} options - { placeholder: string, allowClear: boolean }
+     * @returns {Object|null} - Choices instance or null
      */
     function init(selector, options) {
-        if (!isSelect2Available()) {
-            console.warn('Select2 is not available. Make sure jQuery and Select2 are loaded.');
+        if (!isChoicesAvailable()) {
+            console.warn('Choices.js is not loaded.');
             return null;
         }
-
-        const $select = $(selector);
-        
-        if ($select.length === 0) {
-            console.warn('DropdownSearch.init: Element not found', selector);
+        var el = getElement(selector);
+        if (!el || el.tagName !== 'SELECT') {
+            if (selector && typeof selector === 'string') console.warn('DropdownSearch.init: Element not found', selector);
             return null;
         }
-
-        // Default options (Bootstrap 5 theme + UX)
-        const defaultOptions = {
-            theme: 'bootstrap-5',
-            placeholder: 'Search and select...',
-            allowClear: false,
-            width: '100%',
-            dropdownParent: $select.closest('.modal').length ? $select.closest('.modal') : undefined,
-            language: {
-                noResults: function() { return 'No results found'; },
-                searching: function() { return 'Searching...'; },
-                inputTooShort: function(args) { return 'Please enter ' + (args.minimum - args.input.length) + ' or more characters'; }
-            }
-        };
-
-        // Merge user options with defaults
-        const config = Object.assign({}, defaultOptions, options);
-
-        // If already initialized, destroy first
-        if ($select.hasClass('select2-hidden-accessible')) {
-            $select.select2('destroy');
+        var existing = choicesInstances.get(el);
+        if (existing && existing.destroy) {
+            try { existing.destroy(); } catch (e) {}
+            choicesInstances.delete(el);
         }
-
-        // Initialize Select2
-        $select.select2(config);
-
-        return $select;
+        var config = getOptions(options);
+        var instance = new Choices(el, config);
+        choicesInstances.set(el, instance);
+        return instance;
     }
 
     /**
-     * Initialize Select2 for multiple dropdown elements
-     * 
-     * @param {string|NodeList|Array} selector - CSS selector, NodeList, or Array of elements
-     * @param {Object} options - Select2 configuration options (applied to all)
-     * @returns {Array} - Array of initialized jQuery objects
-     * 
-     * @example
-     * DropdownSearch.initAll('.searchable-dropdown', {
-     *     placeholder: 'Search...',
-     *     allowClear: true
-     * });
+     * Initialize Choices for multiple elements
      */
     function initAll(selector, options) {
-        if (!isSelect2Available()) {
-            console.warn('Select2 is not available. Make sure jQuery and Select2 are loaded.');
-            return [];
-        }
-
-        const $selects = $(selector);
-        const initialized = [];
-
-        $selects.each(function() {
-            const $select = $(this);
-            const result = init($select, options);
-            if (result) {
-                initialized.push(result);
-            }
-        });
-
-        return initialized;
+        if (!isChoicesAvailable()) return [];
+        var nodes = typeof selector === 'string' ? document.querySelectorAll(selector) : selector;
+        if (!nodes || !nodes.length) return [];
+        var list = Array.isArray(nodes) ? nodes : Array.prototype.slice.call(nodes);
+        return list.map(function(el) { return init(el, options); }).filter(Boolean);
     }
 
     /**
-     * Destroy Select2 instance for a dropdown
-     * 
-     * @param {string|HTMLElement|jQuery} selector - CSS selector, DOM element, or jQuery object
-     * @returns {boolean} - True if destroyed, false otherwise
+     * Destroy Choices instance
      */
     function destroy(selector) {
-        if (!isSelect2Available()) {
-            return false;
-        }
-
-        const $select = $(selector);
-        
-        if ($select.length === 0) {
-            return false;
-        }
-
-        if ($select.hasClass('select2-hidden-accessible')) {
-            $select.select2('destroy');
+        var el = getElement(selector);
+        if (!el) return false;
+        var instance = choicesInstances.get(el);
+        if (instance && instance.destroy) {
+            try { instance.destroy(); } catch (e) {}
+            choicesInstances.delete(el);
             return true;
         }
-
         return false;
     }
 
     /**
-     * Re-initialize a dropdown (useful after dynamic content changes)
-     * 
-     * @param {string|HTMLElement|jQuery} selector - CSS selector, DOM element, or jQuery object
-     * @param {Object} options - Select2 configuration options
-     * @returns {jQuery|null} - jQuery object of re-initialized select or null if failed
+     * Re-initialize (destroy then init)
      */
     function reinit(selector, options) {
         destroy(selector);
@@ -175,106 +120,69 @@
     }
 
     /**
-     * Get the value of a Select2 dropdown
-     * 
-     * @param {string|HTMLElement|jQuery} selector - CSS selector, DOM element, or jQuery object
-     * @returns {string|Array|null} - Selected value(s) or null if not found
+     * Get current value (single or multiple)
      */
     function getValue(selector) {
-        if (!isSelect2Available()) {
-            const $select = $(selector);
-            return $select.length > 0 ? $select.val() : null;
+        var el = getElement(selector);
+        if (!el) return null;
+        if (el.multiple) {
+            return Array.from(el.selectedOptions).map(function(o) { return o.value; });
         }
-
-        const $select = $(selector);
-        
-        if ($select.length === 0) {
-            return null;
-        }
-
-        return $select.val();
+        return el.value;
     }
 
     /**
-     * Set the value of a Select2 dropdown
-     * 
-     * @param {string|HTMLElement|jQuery} selector - CSS selector, DOM element, or jQuery object
-     * @param {string|Array} value - Value(s) to set
-     * @param {boolean} triggerChange - Whether to trigger change event
-     * @returns {boolean} - True if set successfully, false otherwise
+     * Set value and optionally trigger change
      */
-    function setValue(selector, value, triggerChange = true) {
-        if (!isSelect2Available()) {
-            const $select = $(selector);
-            if ($select.length > 0) {
-                $select.val(value);
-                if (triggerChange) {
-                    $select.trigger('change');
-                }
-                return true;
-            }
-            return false;
-        }
-
-        const $select = $(selector);
-        
-        if ($select.length === 0) {
-            return false;
-        }
-
-        $select.val(value);
-        
-        if (triggerChange) {
-            $select.trigger('change');
+    function setValue(selector, value, triggerChange) {
+        if (triggerChange === undefined) triggerChange = true;
+        var el = getElement(selector);
+        if (!el) return false;
+        if (Array.isArray(value)) {
+            Array.from(el.options).forEach(function(opt) {
+                opt.selected = value.indexOf(opt.value) !== -1;
+            });
         } else {
-            $select.trigger('change.select2');
+            el.value = value;
         }
-
+        var instance = choicesInstances.get(el);
+        if (instance && instance.setChoiceByValue) {
+            try {
+                instance.setChoiceByValue(Array.isArray(value) ? value : [value]);
+            } catch (e) {
+                el.value = value;
+            }
+        }
+        if (triggerChange) {
+            var ev = new Event('change', { bubbles: true });
+            el.dispatchEvent(ev);
+        }
         return true;
     }
 
-    /**
-     * Auto-initialize all dropdowns with data-searchable="true" attribute or .select2 class
-     * This runs automatically on DOMContentLoaded
-     */
     function autoInit() {
-        if (!isSelect2Available()) {
-            return;
-        }
-
-        // Initialize dropdowns with data-searchable attribute
-        const searchableDropdowns = document.querySelectorAll('[data-searchable="true"]');
-        searchableDropdowns.forEach(function(element) {
-            const placeholder = element.getAttribute('data-placeholder') || 'Search and select...';
-            const allowClear = element.getAttribute('data-allow-clear') === 'true';
-            
-            init(element, {
-                placeholder: placeholder,
-                allowClear: allowClear
-            });
+        if (!isChoicesAvailable()) return;
+        var searchable = document.querySelectorAll('[data-searchable="true"]');
+        searchable.forEach(function(el) {
+            var placeholder = el.getAttribute('data-placeholder') || 'Search and select...';
+            var allowClear = el.getAttribute('data-allow-clear') === 'true';
+            if (!choicesInstances.get(el)) init(el, { placeholder: placeholder, allowClear: allowClear });
         });
-
-        // Initialize dropdowns with .select2 class (if not already initialized)
-        const select2Dropdowns = document.querySelectorAll('select.select2:not(.select2-hidden-accessible)');
-        select2Dropdowns.forEach(function(element) {
-            const placeholder = element.getAttribute('data-placeholder') || element.getAttribute('placeholder') || 'Search and select...';
-            const allowClear = element.getAttribute('data-allow-clear') === 'true';
-            
-            init(element, {
-                placeholder: placeholder,
-                allowClear: allowClear
-            });
+        var select2Class = document.querySelectorAll('select.select2');
+        select2Class.forEach(function(el) {
+            if (choicesInstances.get(el)) return;
+            var placeholder = el.getAttribute('data-placeholder') || el.getAttribute('placeholder') || 'Search and select...';
+            var allowClear = el.getAttribute('data-allow-clear') === 'true';
+            init(el, { placeholder: placeholder, allowClear: allowClear });
         });
     }
 
-    // Auto-initialize on DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', autoInit);
     } else {
         autoInit();
     }
 
-    // Public API
     window.DropdownSearch = {
         init: init,
         initAll: initAll,
@@ -282,9 +190,7 @@
         reinit: reinit,
         getValue: getValue,
         setValue: setValue,
-        isAvailable: isSelect2Available,
+        isAvailable: isChoicesAvailable,
         autoInit: autoInit
     };
-
 })(window);
-
