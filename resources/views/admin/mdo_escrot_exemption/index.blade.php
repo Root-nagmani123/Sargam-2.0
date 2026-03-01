@@ -2,52 +2,178 @@
 
 @section('title', 'MDO Escrot Exemption')
 
-@section('css')
-    @parent
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-@endsection
-
 @section('setup_content')
 <style>
-
-/* Choices.js Bootstrap-like styling */
-.datatables .choices__inner {
-    min-height: calc(2.25rem + 2px);
-    border-radius: 0.375rem;
-    border: 1px solid #ced4da;
-    padding: 0.375rem 0.75rem;
-    background-color: #fff;
+.btn-group[role="group"] .btn {
+    transition: all 0.3s ease-in-out;
+    border-radius: 0;
 }
 
-.datatables .choices__list--single .choices__item {
-    padding: 0;
-    margin: 0;
+.btn-group[role="group"] .btn:first-child {
+    border-top-left-radius: 50rem !important;
+    border-bottom-left-radius: 50rem !important;
 }
 
-.datatables .choices__list--dropdown {
-    border-radius: 0.375rem;
-    border-color: #ced4da;
+.btn-group[role="group"] .btn:last-child {
+    border-top-right-radius: 50rem !important;
+    border-bottom-right-radius: 50rem !important;
 }
 
-.datatables .choices.is-focused .choices__inner,
-.datatables .choices.is-open .choices__inner {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-group .btn.active {
+    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+.btn:focus-visible {
+    outline: 3px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.btn-outline-secondary {
+    color: #333;
+    border-color: #999;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #666;
+}
+
+/* Horizontal Scroll for Table */
+.datatables .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.datatables #mdoescot-table {
+    min-width: 100%;
+    width: max-content;
+}
+
+.datatables #mdoescot-table th,
+.datatables #mdoescot-table td {
+    white-space: nowrap;
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+/* Responsive - Tablet (768px - 991px) */
+@media (max-width: 991.98px) {
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Responsive - Small tablet / large phone (576px - 767px) */
+@media (max-width: 767.98px) {
+    .datatables .card-body {
+        padding: 1rem !important;
+    }
+
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+
+    .datatables .btn-group[role="group"] .btn {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        font-size: 0.875rem;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .datatables .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .datatables .mdo-header-row h4 {
+        font-size: 1.1rem !important;
+    }
+
+    .datatables .btn-group[role="group"] {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .datatables .btn-group[role="group"] .btn {
+        flex: 1;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.8125rem;
+    }
+
+    .datatables .mdo-action-buttons .btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: center;
+        font-size: 0.8125rem;
+    }
+
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
+
+    .datatables .row.mb-3.align-items-end [class*="col-"] {
+        margin-bottom: 0.5rem;
+    }
+
+    .datatables #resetFilters {
+        width: 100% !important;
+    }
+}
+
+/* Reset button: auto width on desktop */
+@media (min-width: 768px) {
+    .datatables #resetFilters {
+        width: auto !important;
+    }
+}
+
+/* Responsive - Very small phone (max 375px) */
+@media (max-width: 375px) {
+    .datatables .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .datatables .card-body {
+        padding: 0.5rem !important;
+    }
+
+    .datatables #mdoescot-table th,
+    .datatables #mdoescot-table td {
+        padding: 4px 6px;
+        font-size: 0.75rem;
+    }
 }
 </style>
 <div class="container-fluid">
     <x-breadcrum title="MDO/Escort Exemption" />
-    <x-session_message />
     <div class="datatables">
-        <div class="card shadow-sm border-0 rounded-3 overflow-hidden" style="border-left: 4px solid #004a93;">
-            <div class="card-header border-0 bg-body-tertiary pb-2 pb-md-3">
-                <div class="row align-items-center g-3 mdo-header-row">
-                    <div class="col-12 col-lg-4">
-                        <h4 class="mb-0 fw-bold text-dark">MDO/Escort Exemption</h4>
-                    </div>
-                    <div class="col-12 col-lg-4 text-lg-center text-start">
-                        <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
-                            aria-label="Course Status Filter">
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row align-items-center g-3 mb-3 mdo-header-row">
+                        <div class="col-12 col-lg-4">
+                            <h4 class="mb-0 fw-bold text-dark">MDO/Escort Exemption</h4>
+                        </div>
+                        <div class="col-12 col-lg-4 text-lg-center text-start">
+                             <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                                aria-label="Course Status Filter">
                                 @php
                                     $activeParams = ['filter' => 'active'];
                                     $archiveParams = ['filter' => 'archive'];
@@ -82,43 +208,43 @@
                                     }
                                 @endphp
                                 <a href="{{ route('mdo-escrot-exemption.index', $activeParams) }}"
-                                    class="btn {{ ($filter ?? 'active') === 'active' ? 'btn-success active' : 'btn-outline-secondary' }} px-3 px-md-4 fw-semibold"
+                                    class="btn {{ ($filter ?? 'active') === 'active' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
                                     id="filterActive" aria-pressed="{{ ($filter ?? 'active') === 'active' ? 'true' : 'false' }}">
                                     <i class="bi bi-check-circle me-1"></i> Active
                                 </a>
                                 <a href="{{ route('mdo-escrot-exemption.index', $archiveParams) }}"
-                                    class="btn {{ ($filter ?? 'active') === 'archive' ? 'btn-success active' : 'btn-outline-secondary' }} px-3 px-md-4 fw-semibold"
+                                    class="btn {{ ($filter ?? 'active') === 'archive' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
                                     id="filterArchive" aria-pressed="{{ ($filter ?? 'active') === 'archive' ? 'true' : 'false' }}">
                                     <i class="bi bi-archive me-1"></i> Archive
                                 </a>
                             </div>
-                    </div>
-                    <div class="col-12 col-lg-4">
-                        <div
-                            class="d-flex justify-content-lg-end justify-content-start align-items-end gap-2 mdo-action-buttons flex-wrap">
-                            <!-- Print / Download Button -->
-                            <button type="button" id="printDownloadBtn"
-                                class="btn btn-outline-info d-flex align-items-center gap-1 px-3 py-2 rounded shadow-sm">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 20px; vertical-align: middle;">print</i>
-                                <span class="d-none d-sm-inline">Print / Download</span>
-                                <span class="d-sm-none">Print</span>
-                            </button>
-                            <!-- Add New Button -->
-                            <a href="{{ route('mdo-escrot-exemption.create') }}"
-                                class="btn btn-primary d-flex align-items-center gap-1 px-3 py-2 rounded shadow-sm">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 20px; vertical-align: middle;">add</i>
-                                <span class="d-none d-md-inline">Add New MDO/Escort Exemption</span>
-                                <span class="d-md-none">Add New</span>
-                            </a>
+                        </div>
+                        <div class="col-12 col-lg-4">
+                            <div class="d-flex justify-content-lg-end justify-content-start align-items-end gap-2 mdo-action-buttons flex-wrap">
+                                <!-- Print / Download Button -->
+                                <button type="button" id="printDownloadBtn"
+                                    class="btn btn-outline-info px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">print</i>
+                                    <span class="d-none d-sm-inline">Print / Download</span>
+                                    <span class="d-sm-none">Print</span>
+                                </button>
+                                <!-- Add New Button -->
+                                <a href="{{ route('mdo-escrot-exemption.create') }}"
+                                    class="btn btn-primary px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">add</i>
+                                    <span class="d-none d-md-inline">Add New MDO/Escort Exemption</span>
+                                    <span class="d-md-none">Add New</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="card-body pt-3 pt-md-4">
-                                    <!-- Filters Section -->
-                                    <div class="row mb-3 align-items-end g-2">
+
+                    <hr>
+
+                    <!-- Filters Section -->
+                    <div class="row mb-3 align-items-end g-2">
                         <!-- Course Filter -->
                         <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3">
                             <label for="course_filter" class="form-label fw-semibold">Course:</label>
@@ -175,8 +301,8 @@
                             <label for="time_to_filter" class="form-label fw-semibold">Time To:</label>
                             <input type="time" id="time_to_filter" class="form-control">
                         </div>
-                        <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3 d-flex align-items-end">
-                            <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto" id="resetFilters">
+                         <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-lg-3 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-secondary" id="resetFilters">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                             </button>
                         </div>
@@ -200,9 +326,8 @@
                     
                     <!-- Hidden input for filter status -->
                     <input type="hidden" id="filter_status" value="{{ $filter ?? 'active' }}">
-                <div class="table-responsive">
 
-                    {!! $dataTable->table(['class' => 'table text-nowrap']) !!}
+                    {!! $dataTable->table(['class' => 'table']) !!}
 
                 </div>
             </div>
@@ -215,27 +340,8 @@
 
 @push('scripts')
 {!! $dataTable->scripts() !!}
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Initialize Choices.js on filter selects
-    if (typeof Choices !== 'undefined') {
-        document.querySelectorAll('.datatables select').forEach(function (el) {
-            if (el.dataset.choicesInitialized === 'true') return;
-
-            new Choices(el, {
-                allowHTML: false,
-                searchPlaceholderValue: 'Search...',
-                removeItemButton: !!el.multiple,
-                shouldSort: false,
-                placeholder: true,
-                placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
-            });
-
-            el.dataset.choicesInitialized = 'true';
-        });
-    }
-
     var table = $('#mdoescot-table').DataTable();
     
     // Update total records count on initial load and after each draw

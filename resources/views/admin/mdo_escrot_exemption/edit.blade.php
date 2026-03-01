@@ -3,7 +3,6 @@
 {{--
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.8.1/themes/prism.min.css" rel="stylesheet" /> --}}
 <link rel="stylesheet" href="{{asset('admin_assets/css/dual-listbox.css')}}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <style>
 /* MDO Escrot Exemption Edit - Responsive */
 @media (max-width: 991.98px) {
@@ -31,34 +30,9 @@
     .mdo-edit-page .card-body { padding: 0.5rem !important; }
 }
 
-/* Select2 responsive - full width on mobile (legacy) */
+/* Select2 responsive - full width on mobile */
 @media (max-width: 575.98px) {
     .mdo-edit-page .select2-container { width: 100% !important; }
-}
-
-/* Choices.js Bootstrap-like styling */
-.mdo-edit-page .choices__inner {
-    min-height: calc(2.25rem + 2px);
-    border-radius: 0.375rem;
-    border: 1px solid #ced4da;
-    padding: 0.375rem 0.75rem;
-    background-color: #fff;
-}
-
-.mdo-edit-page .choices__list--single .choices__item {
-    padding: 0;
-    margin: 0;
-}
-
-.mdo-edit-page .choices__list--dropdown {
-    border-radius: 0.375rem;
-    border-color: #ced4da;
-}
-
-.mdo-edit-page .choices.is-focused .choices__inner,
-.mdo-edit-page .choices.is-open .choices__inner {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
 /* Prevent date/time inputs from overflowing */
@@ -84,7 +58,7 @@
             <hr>
 
             <div class="row mb-4">
-                <div class="col-12 col-md-12">
+                <div class="col-12 col-md-8">
                     <div class="alert alert-info d-flex align-items-center" role="alert">
                         <i class="material-icons me-2">person</i>
                         <div>
@@ -102,24 +76,25 @@
                 @endif
                 <div class="row g-2 g-md-3">
 
-                    <div class="col-12 col-sm-6 col-md-4">
+                    <div class="col-12 col-sm-6 col-md-3">
                         <div class="mb-3">
 
                             <x-select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
-                               
+                                formSelectClass="select2 "
                                 value="{{ old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '') }}"
                                 :options="$MDODutyTypeMaster" labelRequired="true" />
                         </div>
 
                     </div>
-                    <div class="col-12 col-sm-6 col-md-4" id="faculty_field_container" style="display: none;">
+                    <div class="col-12 col-sm-6 col-md-3" id="faculty_field_container" style="display: none;">
                         <div class="mb-3">
                             <x-select name="faculty_master_pk" id="faculty_master_pk" label="Faculty :" formLabelClass="form-label"
+                                formSelectClass="select2"
                                 value="{{ old('faculty_master_pk', $mdoDutyType->faculty_master_pk ?? '') }}"
                                 :options="$facultyMaster" labelRequired="true" />
                         </div>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-4">
+                    <div class="col-12 col-sm-6 col-md-3">
                         <div class="mb-3">
                             <x-input type="date" name="mdo_date" label="Select Date & Time :"
                                 placeholder="Select Date & Time : " formLabelClass="form-label" 
@@ -127,14 +102,14 @@
                         </div>
                     </div>
 
-                    <div class="col-12 col-sm-6 col-md-4">
+                    <div class="col-12 col-sm-6 col-md-3">
 
                         <x-input type="time" name="Time_from" label="From Time :" placeholder="From Time : "
                             formLabelClass="form-label" labelRequired="true"
                             value="{{ old('Time_from', $mdoDutyType->Time_from ?? '') }}" />
 
                     </div>
-                    <div class="col-12 col-sm-6 col-md-4">
+                    <div class="col-12 col-sm-6 col-md-3">
 
                         <x-input type="time" name="Time_to" label="To Time :" placeholder="To Time : "
                             formLabelClass="form-label" labelRequired="true"
@@ -163,27 +138,8 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Initialize Choices.js on selects in this form
-    if (typeof Choices !== 'undefined') {
-        document.querySelectorAll('.mdo-edit-page select').forEach(function (el) {
-            if (el.dataset.choicesInitialized === 'true') return;
-
-            new Choices(el, {
-                allowHTML: false,
-                searchPlaceholderValue: 'Search...',
-                removeItemButton: !!el.multiple,
-                shouldSort: false,
-                placeholder: true,
-                placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
-            });
-
-            el.dataset.choicesInitialized = 'true';
-        });
-    }
-
     // Function to toggle faculty field based on duty type
     function toggleFacultyField() {
         const dutyTypeSelect = $('#mdo_duty_type_master_pk');
@@ -203,14 +159,19 @@ $(document).ready(function() {
         if (selectedDutyType && selectedDutyType == escortDutyTypeId) {
             facultyContainer.show();
             $('#faculty_master_pk').attr('required', true);
+            // Reinitialize select2 if needed
+            if ($('#faculty_master_pk').hasClass('select2-hidden-accessible')) {
+                $('#faculty_master_pk').select2('destroy');
+            }
+            $('#faculty_master_pk').select2();
         } else {
             facultyContainer.hide();
-            $('#faculty_master_pk').val('');
+            $('#faculty_master_pk').val('').trigger('change');
             $('#faculty_master_pk').removeAttr('required');
         }
     }
     
-    // Initialize after DOM is ready
+    // Initialize after select2 is ready
     setTimeout(function() {
         toggleFacultyField();
     }, 100);

@@ -3,7 +3,111 @@
 @section('title', 'Exemption medical speciality')
 
 @section('setup_content')
+<style>
+/* Exemption medical speciality - responsive (mobile/tablet only, desktop unchanged) */
 
+/* Responsive - Tablet (768px - 991px) */
+@media (max-width: 991.98px) {
+    .exemption-medical-speciality-index .datatables .table-scroll-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm {
+        min-width: 500px;
+    }
+
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm th,
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm td {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Responsive - Small tablet / large phone (576px - 767px) */
+@media (max-width: 767.98px) {
+    .exemption-medical-speciality-index .datatables .card-body {
+        padding: 1rem !important;
+    }
+
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm th,
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm td {
+        padding: 6px 8px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .exemption-medical-speciality-index.container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .exemption-medical-speciality-index .exemption-header-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .exemption-medical-speciality-index .exemption-header-row .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .exemption-medical-speciality-index .exemption-header-row .float-end {
+        float: none !important;
+    }
+
+    .exemption-medical-speciality-index .exemption-header-row .btn {
+        width: 100%;
+    }
+
+    .exemption-medical-speciality-index .datatables .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .exemption-medical-speciality-index .datatables .table-scroll-wrapper {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm th,
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm td {
+        padding: 6px 8px;
+        font-size: 0.8125rem;
+    }
+
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm_wrapper .dataTables_length,
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm_wrapper .dataTables_filter {
+        text-align: left !important;
+    }
+
+    .exemption-medical-speciality-index .datatables #exemptionCategoryeditForm_wrapper .dataTables_length select {
+        margin: 0 0.5rem 0 0;
+    }
+}
+
+/* Swal popup forms - responsive */
+@media (max-width: 575.98px) {
+    .swal2-popup #exemptionCategoryForm .row,
+    .swal2-popup #exemptionCategoryeditForm .row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .swal2-popup #exemptionCategoryForm .row .col-auto,
+    .swal2-popup #exemptionCategoryeditForm .row .col-auto {
+        margin-bottom: 0.25rem;
+    }
+
+    .swal2-popup #exemptionCategoryForm .row .col,
+    .swal2-popup #exemptionCategoryeditForm .row .col {
+        max-width: 100%;
+    }
+}
+</style>
 <div class="container-fluid exemption-medical-speciality-index">
     <x-breadcrum title="Exemption medical speciality" />
     <div class="datatables">
@@ -26,7 +130,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive table-scroll-wrapper">
-                        <table class="table text-nowrap" id="exemptionCategoryeditForm">
+                        <table class="table" id="exemptionCategoryeditForm">
                             <thead>
                                 <!-- start row -->
                                 <tr>

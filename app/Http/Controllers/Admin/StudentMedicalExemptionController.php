@@ -181,8 +181,8 @@ class StudentMedicalExemptionController extends Controller
                 ->addColumn('document', function ($row) {
                     if ($row->Doc_upload) {
                         return '<a href="' . asset('storage/' . $row->Doc_upload) . '" target="_blank"
-                                class="text-primary">
-                                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">description</i>
+                                class="btn btn-sm btn-info">
+                                <i class="material-icons material-symbols-rounded">description</i>
                             </a>';
                     }
                     return '<span class="text-muted">N/A</span>';
@@ -195,17 +195,17 @@ class StudentMedicalExemptionController extends Controller
                     $disabled = $row->active_inactive == 1 ? 'disabled' : '';
 
                     return '
-                        <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
+                        <div class="d-flex gap-1 flex-wrap">
                             <a href="' . $editUrl . '"
-                               class="text-primary action-btn-edit"
+                               class="btn btn-sm btn-outline-primary action-btn-edit"
                                title="Edit">
-                                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</i>
+                                <i class="bi bi-pencil-square me-1"></i>Edit
                             </a>
                             <a href="javascript:void(0)"
-                               class="text-primary delete-btn action-btn-delete ' . $disabled . '"
+                               class="btn btn-sm btn-outline-danger delete-btn action-btn-delete ' . $disabled . '"
                                data-url="' . $deleteUrl . '"
                                title="' . ($disabled ? 'Cannot delete active record' : 'Delete') . '">
-                                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">delete</i>
+                                <i class="bi bi-trash me-1"></i>Delete
                             </a>
                         </div>';
                 })

@@ -104,19 +104,25 @@ class ExemptionCategoryController extends Controller
                         data-exemp_category_name="' . $row->exemp_category_name . '"
                         data-exemp_cat_short_name="' . $row->exemp_cat_short_name . '"
                         data-active_inactive="' . $row->active_inactive . '"
-                        class="text-primary d-inline-flex align-items-center gap-1"
+                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
                         aria-label="Edit course group type">
 
-                            <i class="material-icons material-symbols-rounded fs-6">edit</i>
+                            <i class="material-icons material-symbols-rounded"
+                            style="font-size:18px;">edit</i>
+
+                            <span class="d-none d-md-inline">Edit</span>
                         </a>
 
                         <!-- Delete Action -->
                         <a href="javascript:void(0)"
                         data-id="' . $row->pk . '"
-                        class="text-primary delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
+                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
                         aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
 
-                            <i class="material-icons material-symbols-rounded fs-6">delete</i>
+                            <i class="material-icons material-symbols-rounded"
+                            style="font-size:18px;">delete</i>
+
+                            <span class="d-none d-md-inline">Delete</span>
                         </a>
 
                     </div>

@@ -46,62 +46,11 @@
 </div>
 <input type="hidden" id="pk" value="">
 <input type="hidden" id="active_inactive" value="">
-
-<div class="modal fade" id="courseGroupTypeModal" tabindex="-1" aria-labelledby="courseGroupTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form action="{{ route('master.course.group.type.store') }}" method="POST" id="courseGroupTypeForm">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title fw-semibold" id="courseGroupTypeModalLabel">Add Course Group Type</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="id" id="courseGroupTypeId">
-                    <div class="mb-3">
-                        <label for="courseGroupTypeName" class="form-label">
-                            Type Name <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" name="type_name" id="courseGroupTypeName" class="form-control" placeholder="Type Name" required>
-                        <div class="invalid-feedback" id="courseGroupTypeNameError"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-primary d-inline-flex align-items-center gap-1" type="submit" id="saveCourseGroupTypeBtn">
-                        <i class="material-icons menu-icon">save</i>
-                        <span id="saveCourseGroupTypeBtnText">Save</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @endsection
-
 @section('scripts')
 <script>
     $(function() {
-        const modalElement = document.getElementById('courseGroupTypeModal');
-        const courseGroupTypeModal = new bootstrap.Modal(modalElement);
-        const form = $('#courseGroupTypeForm');
-        const idInput = $('#courseGroupTypeId');
-        const typeNameInput = $('#courseGroupTypeName');
-        const typeNameError = $('#courseGroupTypeNameError');
-        const modalTitle = $('#courseGroupTypeModalLabel');
-        const saveBtn = $('#saveCourseGroupTypeBtn');
-        const saveBtnText = $('#saveCourseGroupTypeBtnText');
-
-        function resetCourseGroupTypeForm() {
-            form[0].reset();
-            idInput.val('');
-            typeNameInput.removeClass('is-invalid');
-            typeNameError.text('');
-            modalTitle.text('Add Course Group Type');
-            saveBtnText.text('Save');
-        }
-
-        const table = $('#coursegrouptype').DataTable({
+        let table = $('#coursegrouptype').DataTable({
             processing: true,
             serverSide: true,
             searching: true,
@@ -111,6 +60,8 @@
                 data: function(d) {
                     d.pk = $('#pk').val();
                     d.active_inactive = $('#active_inactive').val();
+                    //  console.log(d.pk);
+
                 }
             },
             columns: [{
@@ -140,143 +91,65 @@
                     responsivePriority: 2
                 }
             ]
+
         });
 
-        $('#showAlert').on('click', function() {
-            resetCourseGroupTypeForm();
-            courseGroupTypeModal.show();
-        });
+        $(document).on('change', '.plain-status-toggle', function () {
+    var checkbox = $(this);
+    var previousState = !checkbox.is(':checked'); // save previous state
+    var pk = checkbox.data('id');
+    var active_inactive = checkbox.is(':checked') ? 1 : 0;
 
-        $(document).on('click', '.edit-btn', function() {
-            resetCourseGroupTypeForm();
+    var actionText = active_inactive ? 'activate' : 'deactivate';
+    var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+    var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
 
-            const pk = $(this).data('id');
-            const typeName = $(this).data('type-name');
-
-            idInput.val(pk);
-            typeNameInput.val(typeName);
-            modalTitle.text('Edit Course Group Type');
-            saveBtnText.text('Update');
-
-            courseGroupTypeModal.show();
-        });
-
-        form.on('submit', function(e) {
-            e.preventDefault();
-
-            typeNameInput.removeClass('is-invalid');
-            typeNameError.text('');
-
-            const typeName = (typeNameInput.val() || '').trim();
-            if (!typeName) {
-                typeNameInput.addClass('is-invalid');
-                typeNameError.text('Type Name is required.');
-                return;
-            }
-
-            typeNameInput.val(typeName);
-            saveBtn.prop('disabled', true);
-
-            $.ajax({
-                url: form.attr('action'),
-                type: 'POST',
-                data: form.serialize(),
-                success: function(response) {
-                    if (response.status === true) {
-                        courseGroupTypeModal.hide();
-                        table.ajax.reload(null, false);
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success',
-                            text: response.message
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: response.message || 'Unable to save course group type.'
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    if (xhr.status === 422) {
-                        const errors = xhr.responseJSON?.errors || {};
-                        const errorMessage = errors.type_name ? errors.type_name[0] : 'Type Name is required.';
-                        typeNameInput.addClass('is-invalid');
-                        typeNameError.text(errorMessage);
-                        return;
-                    }
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Server Error',
-                        text: xhr.responseJSON?.message || 'Something went wrong!'
-                    });
-                },
-                complete: function() {
-                    saveBtn.prop('disabled', false);
-                }
-            });
-        });
-
-        $(modalElement).on('hidden.bs.modal', function() {
-            resetCourseGroupTypeForm();
-        });
-
-        $(document).on('change', '.plain-status-toggle', function() {
-            const checkbox = $(this);
-            const previousState = !checkbox.is(':checked');
-            const pk = checkbox.data('id');
-            const active_inactive = checkbox.is(':checked') ? 1 : 0;
-
-            const actionText = active_inactive ? 'activate' : 'deactivate';
-            const confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
-            const confirmBtnColor = active_inactive ? '#28a745' : '#d33';
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `Are you sure you want to ${actionText} this item?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: confirmBtnColor,
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: confirmBtnText,
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#pk').val(pk);
+            $('#active_inactive').val(active_inactive);
+            table.ajax.reload(null, false);
 
             Swal.fire({
-                title: 'Are you sure?',
-                text: `Are you sure you want to ${actionText} this item?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: confirmBtnColor,
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: confirmBtnText,
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $('#pk').val(pk);
-                    $('#active_inactive').val(active_inactive);
-                    table.ajax.reload(null, false);
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Updated!',
-                        text: 'Status has been updated successfully.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                } else {
-                    checkbox.prop('checked', previousState);
-
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Cancelled',
-                        text: 'Status change has been cancelled.',
-                        timer: 1200,
-                        showConfirmButton: false
-                    });
-                }
+                icon: 'success',
+                title: 'Updated!',
+                text: 'Status has been updated successfully.',
+                timer: 1500,
+                showConfirmButton: false
             });
-        });
+        } else {
+            // revert checkbox to previous state
+            checkbox.prop('checked', previousState);
+
+            Swal.fire({
+                icon: 'info',
+                title: 'Cancelled',
+                text: 'Status change has been cancelled.',
+                timer: 1200,
+                showConfirmButton: false
+            });
+        }
+    });
+});
+
+
+
 
         $(document).on('click', '.delete-btn', function(e) {
             e.preventDefault();
-            const pk = $(this).data('id');
-
+            let pk = $(this).data('id');
             Swal.fire({
                 title: 'Are you sure?',
-                text: 'This record will be permanently deleted!',
+                text: "This record will be permanently deleted!",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
@@ -288,7 +161,6 @@
                     $('#pk').val(pk);
                     $('#active_inactive').val(2);
                     table.ajax.reload(null, false);
-
                     Swal.fire({
                         icon: 'success',
                         title: 'Delete!',
@@ -298,7 +170,7 @@
                     });
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
                     Swal.fire({
-                        icon: 'info',
+                        icon: 'danger',
                         title: 'Cancelled',
                         text: 'Delete has been cancelled.',
                         timer: 1500,
@@ -307,9 +179,182 @@
                 }
             });
         });
+
+    }); //endclose
+</script>
+<script>
+
+document.getElementById('showAlert').addEventListener('click', function () {
+
+    Swal.fire({
+        title: '<strong class="text-body">Add Course Group Type</strong>',
+        html: `
+        <form id="courseGroupTypeForm" class="text-start">
+            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label fw-semibold text-body">
+                    Type Name <span class="text-danger">*</span>
+                </label>
+                <input type="text" name="type_name" id="type_name"
+                       class="form-control form-control-lg rounded-2"
+                       placeholder="Enter type name">
+                <div class="invalid-feedback" id="type_name_error">
+                    Type Name is required
+                </div>
+            </div>
+        </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        cancelButtonText: 'Cancel',
+        customClass: { confirmButton: 'btn btn-primary px-4 rounded-2', cancelButton: 'btn btn-outline-secondary px-4 rounded-2' },
+        focusConfirm: false,
+
+        preConfirm: () => {
+            const typeNameInput = Swal.getPopup().querySelector('#type_name');
+            typeNameInput.classList.remove('is-invalid');
+            if (!typeNameInput.value.trim()) {
+                typeNameInput.classList.add('is-invalid');
+                return false;
+            }
+            return { type_name: typeNameInput.value.trim() };
+        }
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            fetch(`{{ route('master.course.group.type.store') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(result.value)
+            })
+            .then(response => response.json())
+            .then(data => {
+             
+                if (data.status === true) {
+                  
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: data.message
+                    });
+                    $('#coursegrouptype').DataTable().ajax.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message
+                    });
+                }
+
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error',
+                    text: 'Something went wrong!'
+                });
+            });
+        }
     });
+});
+
+
 </script>
 
+<!-- EDIT FORM  -->
+
+<script>
+  
+$(document).on('click', '.edit-btn', function () {
+
+    let pk = $(this).data('id');          // encrypted id
+    let typeName = $(this).data('type-name');
+
+    let url = "{{ route('master.course.group.type.store') }}";
+
+    Swal.fire({
+        title: '<strong class="text-body">Edit Course Group Type</strong>',
+        html: `
+        <form id="courseGroupTypeEditForm" class="text-start">
+            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="id" value="${pk}">
+            <div class="mb-3">
+                <label class="form-label fw-semibold text-body">
+                    Type Name <span class="text-danger">*</span>
+                </label>
+                <input type="text" name="type_name" id="type_name"
+                       class="form-control form-control-lg rounded-2"
+                       value="${typeName.replace(/"/g, '&quot;')}">
+                <div class="invalid-feedback" id="type_name_error">
+                    Type Name is required
+                </div>
+            </div>
+        </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Update',
+        cancelButtonText: 'Cancel',
+        customClass: { confirmButton: 'btn btn-primary px-4 rounded-2', cancelButton: 'btn btn-outline-secondary px-4 rounded-2' },
+        focusConfirm: false,
+
+        preConfirm: () => {
+            const typeNameInput = Swal.getPopup().querySelector('#type_name');
+            typeNameInput.classList.remove('is-invalid');
+            if (!typeNameInput.value.trim()) {
+                typeNameInput.classList.add('is-invalid');
+                return false;
+            }
+            return { id: pk, type_name: typeNameInput.value.trim() };
+        }
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    id: result.value.id,
+                    type_name: result.value.type_name
+                },
+                success: function (response) {
+
+                    if (response.status === true) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated',
+                            text: response.message
+                        });
+
+                        // 🔁 Reload DataTable if exists
+                         $('#coursegrouptype').DataTable().ajax.reload();
+
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                },
+                error: function (xhr) {
+
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        Swal.fire('Validation Error', errors.type_name[0], 'error');
+                    } else {
+                        Swal.fire('Error', 'Something went wrong!', 'error');
+                    }
+                }
+            });
+        }
+    });
+});
+
+
+</script>
 @if(session('success'))
 <script>
     Swal.fire({

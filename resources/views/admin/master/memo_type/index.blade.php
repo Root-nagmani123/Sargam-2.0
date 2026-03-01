@@ -29,7 +29,7 @@
                 </section>
                 <div class="border-top pt-4 mt-2"></div>
                 <div class="table-responsive overflow-x-auto">
-                    {!! $dataTable->table(['class' => 'table text-nowrap align-middle mb-0 w-100']) !!}
+                    {!! $dataTable->table(['class' => 'table table-striped table-hover align-middle mb-0 w-100']) !!}
                 </div>
             </div>
         </div>
