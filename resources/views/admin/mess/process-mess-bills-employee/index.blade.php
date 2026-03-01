@@ -558,11 +558,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var addModalEl = document.getElementById('addProcessMessBillsModal');
-    if (addModalEl && typeof $ !== 'undefined' && $.fn.select2) {
+    if (addModalEl && typeof DropdownSearch !== 'undefined') {
         addModalEl.addEventListener('shown.bs.modal', function() {
-            $('#addProcessMessBillsModal .select2').each(function() {
-                if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
-                $(this).select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $('#addProcessMessBillsModal') });
+            document.querySelectorAll('#addProcessMessBillsModal select.select2').forEach(function(el) {
+                DropdownSearch.init(el, { placeholder: 'Select...', allowClear: true });
             });
         });
     }

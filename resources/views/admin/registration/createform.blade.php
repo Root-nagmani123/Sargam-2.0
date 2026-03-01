@@ -201,7 +201,7 @@
             document.getElementById(`field_name_${sectionIndex}_${index}`).addEventListener('change',
                 updateFieldNameOptions);
 
-                $('.select2').select2()
+                if (typeof DropdownSearch !== 'undefined') { document.querySelectorAll('.select2').forEach(function(el) { DropdownSearch.init(el, { placeholder: 'Select...', allowClear: true }); }); }
 
         }
 

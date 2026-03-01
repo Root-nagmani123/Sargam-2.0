@@ -220,44 +220,43 @@ $activeNavTab = '#tab-material-management';
 
                     <!-- Notifications (visible on both desktop and mobile) -->
                     <div class="dropdown position-relative d-none d-lg-block">
-                        <button type="button"
-                            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
+                        <a href="#"
+                            class="position-relative d-flex align-items-center justify-content-center rounded-circle p-2 text-dark text-decoration-none notification-btn bg-light bg-opacity-50 border-0"
+                            style="width: 42px; height: 42px;"
                             id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
                             aria-label="Notifications">
-
-                            <i class="material-icons material-symbols-rounded fs-5">
-                                notifications
-                            </i>
-
+                            <i class="material-icons material-symbols-rounded fs-5" aria-hidden="true">notifications</i>
                             @php
                             $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
                             @endphp
-
                             @if($unreadCount > 0)
-                            <span
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                            <span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-danger notification-badge lh-1 px-2 py-1" style="font-size: 0.7rem;">
                                 {{ $unreadCount > 99 ? '99+' : $unreadCount }}
                             </span>
                             @endif
-                        </button>
+                        </a>
 
                         <!-- Dropdown -->
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 p-0 notification-dropdown mt-2 overflow-x-hidden"
+                            style="min-width: 280px; width: min(360px, calc(100vw - 1rem)); max-height: 420px; overflow: hidden;"
                             aria-labelledby="notificationDropdown">
 
-                            <!-- Header -->
-                            <li
-                                class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                                <span class="fw-semibold">Notifications</span>
-                                @if($unreadCount > 0)
-                                <button type="button" class="btn btn-sm btn-link text-primary p-0"
-                                    onclick="markAllAsRead()">
+                            <!-- Header (custom class so global .dropdown-header display:block doesn't override flex) -->
+                            <li class="list-unstyled sticky-top bg-white d-flex justify-content-between align-items-center gap-2 px-4 py-3 border-bottom border-1 border-opacity-10">
+                                <span class="fw-semibold text-body d-flex align-items-center gap-2 flex-shrink-0">
+                                    <i class="material-icons material-symbols-rounded fs-6 text-primary">notifications</i>
+                                    Notifications
+                                </span>
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-primary flex-shrink-0"
+                                    onclick="{{ $unreadCount > 0 ? 'markAllAsRead()' : 'return false' }}"
+                                    {{ $unreadCount > 0 ? '' : 'disabled' }}
+                                    aria-label="Mark all as read">
                                     Mark all as read
                                 </button>
-                                @endif
                             </li>
 
-                            <div id="notificationList" class="notification-list">
+                            <div id="notificationList" class="notification-list overflow-y-auto overflow-x-hidden" style="max-height: 340px;">
                                 @php
                                 $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10,
                                 false);
@@ -265,19 +264,26 @@ $activeNavTab = '#tab-material-management';
 
                                 @if($notifications->count() > 0)
                                 @foreach($notifications as $notification)
-                                <li>
-                                    <a class="dropdown-item px-3 py-3 d-flex gap-2 notification-item
-                                {{ $notification->is_read ? '' : 'unread' }}" href="javascript:void(0)"
+                                <li class="border-bottom border-1 border-opacity-10">
+                                    <a class="dropdown-item py-3 px-4 d-flex gap-3 notification-item text-decoration-none rounded-0 {{ $notification->is_read ? 'bg-white' : 'bg-primary bg-opacity-10' }}"
+                                        href="javascript:void(0)"
                                         onclick="markAsRead({{ $notification->pk }})">
 
-                                        <div class="flex-grow-1">
-                                            <div class="fw-semibold small">
+                                        <div class="flex-shrink-0 d-flex align-items-start pt-1">
+                                            <span class="rounded-circle d-flex align-items-center justify-content-center {{ $notification->is_read ? 'bg-light' : 'bg-primary bg-opacity-25' }}"
+                                                style="width: 36px; height: 36px;">
+                                                <i class="material-icons material-symbols-rounded text-body-secondary" style="font-size: 20px;">{{ $notification->is_read ? 'campaign' : 'notifications_active' }}</i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1 min-w-0">
+                                            <div class="fw-semibold small text-body lh-sm text-break">
                                                 {{ $notification->title ?? 'Notification' }}
                                             </div>
-                                            <div class="text-muted small mt-1">
-                                                {{ Str::limit($notification->message ?? '', 60) }}
+                                            <div class="text-body-secondary small mt-1 lh-sm text-break">
+                                                {{ $notification->message ?? '' }}
                                             </div>
-                                            <div class="text-muted mt-1" style="font-size: 11px;">
+                                            <div class="text-muted mt-2 small" style="font-size: 0.75rem;">
+                                                <i class="material-icons material-symbols-rounded align-text-bottom me-1" style="font-size: 14px;">schedule</i>
                                                 {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
                                             </div>
                                         </div>
@@ -285,11 +291,12 @@ $activeNavTab = '#tab-material-management';
                                 </li>
                                 @endforeach
                                 @else
-                                <li class="text-center px-4 py-5 text-muted">
-                                    <i class="material-icons material-symbols-rounded fs-1 opacity-25">
-                                        notifications_none
-                                    </i>
-                                    <div class="mt-2 small">No notifications</div>
+                                <li class="list-unstyled">
+                                    <div class="d-flex flex-column align-items-center justify-content-center text-center px-4 py-5 text-body-secondary">
+                                        <i class="material-icons material-symbols-rounded opacity-25 mb-2" style="font-size: 3.5rem;">notifications_none</i>
+                                        <span class="small fw-medium">No notifications yet</span>
+                                        <span class="small text-muted mt-1">When you get notifications, they’ll show up here.</span>
+                                    </div>
                                 </li>
                                 @endif
                             </div>

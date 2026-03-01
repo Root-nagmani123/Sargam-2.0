@@ -251,11 +251,9 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    $('#studentDropdown').select2({
-        placeholder: 'Search Student',
-        allowClear: true,
-        width: '100%'
-    });
+    if (typeof DropdownSearch !== 'undefined') {
+        DropdownSearch.init('#studentDropdown', { placeholder: 'Search Student', allowClear: true });
+    }
 
     $('#courseDropdown').on('change', function() {
         var courseId = $(this).val();
@@ -272,20 +270,16 @@ $(document).ready(function() {
                         options += '<option value="' + student.pk + '" data-ot_code="' + (student.generated_OT_code || '') + '">' + student.display_name + '</option>';
                     });
                     $('#studentDropdown').html(options);
-                    $('#studentDropdown').select2('destroy').select2({
-                        placeholder: 'Search Student',
-                        allowClear: true,
-                        width: '100%'
-                    });
+                    if (typeof DropdownSearch !== 'undefined') {
+                        DropdownSearch.reinit('#studentDropdown', { placeholder: 'Search Student', allowClear: true });
+                    }
                 }
             });
         } else {
             $('#studentDropdown').html('<option value="">Select Course First</option>');
-            $('#studentDropdown').select2('destroy').select2({
-                placeholder: 'Select Course First',
-                allowClear: true,
-                width: '100%'
-            });
+            if (typeof DropdownSearch !== 'undefined') {
+                DropdownSearch.reinit('#studentDropdown', { placeholder: 'Select Course First', allowClear: true });
+            }
         }
     });
 

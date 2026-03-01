@@ -299,12 +299,8 @@
         }
         $(document).ready(function() {
 
-            // Initialize Select2 for service dropdown
-            if ($.fn.select2) {
-                $('#service_master_pk').select2({
-                    placeholder: "-- Select Service --",
-                    width: '100%'
-                });
+            if (typeof DropdownSearch !== 'undefined') {
+                DropdownSearch.init('#service_master_pk', { placeholder: '-- Select Service --', allowClear: true });
             }
 
             // Form validation

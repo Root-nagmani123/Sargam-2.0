@@ -159,11 +159,9 @@ $(document).ready(function() {
         if (selectedDutyType && selectedDutyType == escortDutyTypeId) {
             facultyContainer.show();
             $('#faculty_master_pk').attr('required', true);
-            // Reinitialize select2 if needed
-            if ($('#faculty_master_pk').hasClass('select2-hidden-accessible')) {
-                $('#faculty_master_pk').select2('destroy');
+            if (typeof DropdownSearch !== 'undefined') {
+                DropdownSearch.reinit('#faculty_master_pk', { placeholder: 'Select faculty...', allowClear: true });
             }
-            $('#faculty_master_pk').select2();
         } else {
             facultyContainer.hide();
             $('#faculty_master_pk').val('').trigger('change');

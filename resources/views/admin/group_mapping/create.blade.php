@@ -183,28 +183,21 @@ body:has(.group-mapping-create) .select2-results__options {
 @push('scripts')
 <script>
 (function() {
-    function initGroupMappingSelect2() {
-        if (typeof $ === 'undefined' || !$.fn.select2) return;
-        $('.group-mapping-create select.select2').each(function() {
-            var $el = $(this);
-            if ($el.hasClass('select2-hidden-accessible')) {
-                try { $el.select2('destroy'); } catch (e) {}
-            }
-            $el.select2({
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('body'),
-                dropdownCssClass: 'select2-dropdown-group-mapping',
-                theme: 'default'
-            });
+    function initGroupMappingChoices() {
+        if (typeof DropdownSearch === 'undefined') return;
+        document.querySelectorAll('.group-mapping-create select.select2').forEach(function(el) {
+            DropdownSearch.init(el, { placeholder: 'Select...', allowClear: true });
         });
     }
-    $(document).ready(function() {
-        initGroupMappingSelect2();
-        $(window).on('load', function() {
-            initGroupMappingSelect2();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            initGroupMappingChoices();
+            window.addEventListener('load', initGroupMappingChoices);
         });
-    });
+    } else {
+        initGroupMappingChoices();
+        window.addEventListener('load', initGroupMappingChoices);
+    }
 })();
 </script>
 @endpush
