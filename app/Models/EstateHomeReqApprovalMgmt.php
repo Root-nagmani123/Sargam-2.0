@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Schema;
 
 class EstateHomeReqApprovalMgmt extends Model
 {
@@ -25,19 +24,11 @@ class EstateHomeReqApprovalMgmt extends Model
     ];
 
     /**
-     * Estate module uses employee_master.pk_old when present (payroll_salary_master references pk_old).
-     */
-    protected static function employeeOwnerKey(): string
-    {
-        return Schema::hasColumn((new EmployeeMaster)->getTable(), 'pk_old') ? 'pk_old' : 'pk';
-    }
-
-    /**
      * Requester (requested by) - from employee_master.
      */
     public function requestedBy(): BelongsTo
     {
-        return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', static::employeeOwnerKey());
+        return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
     }
 
     /**
@@ -45,6 +36,6 @@ class EstateHomeReqApprovalMgmt extends Model
      */
     public function approvedBy(): BelongsTo
     {
-        return $this->belongsTo(EmployeeMaster::class, 'employees_pk', static::employeeOwnerKey());
+        return $this->belongsTo(EmployeeMaster::class, 'employees_pk', 'pk');
     }
 }
