@@ -16,6 +16,12 @@
             $oldVehicleNo = old('vehicle_no', '');
             $oldValidFrom = old('veh_card_valid_from', '2026-01-01');
             $oldValidTo = old('vech_card_valid_to', '2027-01-01');
+            if (in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee) {
+                if ($oldIdCard === '') $oldIdCard = $currentUserEmployee->emp_id ?? '';
+                if ($oldName === '') $oldName = $currentUserEmployee->name ?? '';
+                if ($oldDesignation === '') $oldDesignation = $currentUserEmployee->designation ?? '';
+                if ($oldDepartment === '') $oldDepartment = $currentUserEmployee->department ?? '';
+            }
         @endphp
 
         {{-- 3 Radio buttons: Employee, Others, Government Vehicle --}}
@@ -43,19 +49,35 @@
             <div class="card-body p-4">
                 <h6 class="fw-semibold mb-4">Please enter new configuration for vehicle</h6>
 
-                <div class="row g-3 mb-4" id="employeeSelectRow" style="display:{{ $oldApplicantType === 'employee' ? '' : 'none' }};">
-                    <div class="col-12">
-                        <label for="emp_master_pk" class="form-label">Select Employee</label>
-                        <select name="emp_master_pk" id="emp_master_pk" class="form-select">
-                            <option value="">Select Employee (optional - or fill below manually)</option>
-                            @foreach($employees as $emp)
-                                <option value="{{ $emp->pk }}" {{ old('emp_master_pk') == $emp->pk ? 'selected' : '' }}>
-                                    {{ $emp->first_name }} {{ $emp->last_name }} ({{ $emp->emp_id ?? $emp->pk }})
-                                </option>
-                            @endforeach
-                        </select>
+                {{-- ID Card Validity Information Alert --}}
+                @if(isset($currentUserIdCard) && $currentUserIdCard && in_array($oldApplicantType, ['employee', 'government_vehicle']))
+                <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" id="idCardInfoAlert">
+                    <div class="d-flex align-items-start">
+                        <i class="material-icons material-symbols-rounded me-2" style="font-size: 24px;">info</i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-1">Your ID Card Information</h6>
+                            <p class="mb-1"><strong>ID Card No:</strong> {{ $currentUserIdCard->id_card_no }}</p>
+                            <p class="mb-0"><strong>Valid Until:</strong> {{ \Carbon\Carbon::parse($currentUserIdCard->valid_to)->format('d/m/Y') }}</p>
+                            <p class="small text-muted mb-0 mt-1"><em>Note: Vehicle pass validity cannot exceed your ID card validity date.</em></p>
+                        </div>
                     </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+                @elseif(in_array($oldApplicantType, ['employee', 'government_vehicle']) && (!isset($currentUserIdCard) || !$currentUserIdCard))
+                <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert" id="idCardWarningAlert">
+                    <div class="d-flex align-items-start">
+                        <i class="material-icons material-symbols-rounded me-2" style="font-size: 24px;">warning</i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-1">No Valid ID Card Found</h6>
+                            <p class="mb-0">You do not have a valid approved ID card. Please apply for an ID card before creating a vehicle pass.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
+
+                {{-- Employee / Government Vehicle: logged-in user's details auto-fill; no employee selection. Others: user fills manually. --}}
+                <input type="hidden" name="emp_master_pk" id="emp_master_pk" value="{{ in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee ? $currentUserEmployee->pk : old('emp_master_pk', '') }}">
 
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
@@ -115,7 +137,7 @@
                             <div class="vehicle-pass-upload-placeholder" id="ownershipDocPlaceholder">
                                 <i class="material-icons material-symbols-rounded vehicle-pass-upload-icon">upload</i>
                                 <p class="mt-2 mb-0">Click to upload or drag and drop</p>
-                                <span class="small text-muted">Image or PDF (max 2MB)</span>
+                                <span class="small text-muted">Allowed: PDF, JPG, PNG. Max size: 2 MB</span>
                             </div>
                             <div class="vehicle-pass-upload-preview d-none" id="ownershipDocPreview">
                                 <div class="vehicle-pass-preview-inner position-relative">
@@ -347,34 +369,91 @@
         });
     }
 
-    // When applicant_type = employee, show employee dropdown and auto-fill name/designation/department
+    // Employee / Government Vehicle: auto-fill from logged-in user only (no employee dropdown). Others: user fills manually.
     var applicantTypeEmployee = document.getElementById('applicant_type_employee');
     var applicantTypeOthers = document.getElementById('applicant_type_others');
     var applicantTypeGovernment = document.getElementById('applicant_type_government');
-    var empSelect = document.getElementById('emp_master_pk');
-    var employeeSelectRow = document.getElementById('employeeSelectRow');
-    if (applicantTypeEmployee) {
-        function toggleEmployeeRow() {
-            if (employeeSelectRow) employeeSelectRow.style.display = applicantTypeEmployee.checked ? '' : 'none';
-        }
-        applicantTypeEmployee.addEventListener('change', toggleEmployeeRow);
-        if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', toggleEmployeeRow);
-        if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', toggleEmployeeRow);
-        toggleEmployeeRow();
+    var empMasterPkInput = document.getElementById('emp_master_pk');
+    var currentUserEmployee = @json($currentUserEmployee ?? null);
+    var currentUserIdCard = @json($currentUserIdCard ?? null);
+    var idCardInfoAlert = document.getElementById('idCardInfoAlert');
+    var idCardWarningAlert = document.getElementById('idCardWarningAlert');
+
+    function isEmployeeOrGovVehicle() {
+        return (applicantTypeEmployee && applicantTypeEmployee.checked) || (applicantTypeGovernment && applicantTypeGovernment.checked);
     }
-    if (empSelect && applicantTypeEmployee) {
-        var empData = @json($empDataForJs);
-        empSelect.addEventListener('change', function() {
-            if (!applicantTypeEmployee || !applicantTypeEmployee.checked) return;
-            var pk = this.value;
-            if (empData[pk]) {
-                document.getElementById('applicant_name').value = empData[pk].name || '';
-                document.getElementById('designation').value = empData[pk].designation || '';
-                document.getElementById('department').value = empData[pk].department || '';
-                document.getElementById('employee_id_card').value = empData[pk].emp_id || '';
+
+    function setApplicantFields(idCard, name, designation, department, readonly) {
+        var idCardEl = document.getElementById('employee_id_card');
+        var nameEl = document.getElementById('applicant_name');
+        var desEl = document.getElementById('designation');
+        var deptEl = document.getElementById('department');
+        if (idCardEl) { idCardEl.value = idCard || ''; idCardEl.readOnly = !!readonly; }
+        if (nameEl) { nameEl.value = name || ''; nameEl.readOnly = !!readonly; }
+        if (desEl) { desEl.value = designation || ''; desEl.readOnly = !!readonly; }
+        if (deptEl) { deptEl.value = department || ''; deptEl.readOnly = !!readonly; }
+    }
+
+    function toggleIdCardAlerts() {
+        var validToInput = document.getElementById('vech_card_valid_to');
+        
+        if (isEmployeeOrGovVehicle()) {
+            // Show ID card info alert if user has valid ID card
+            if (currentUserIdCard && idCardInfoAlert) {
+                idCardInfoAlert.style.display = '';
+                
+                // Set max date on vehicle pass valid_to field
+                if (validToInput && currentUserIdCard.valid_to) {
+                    validToInput.setAttribute('max', currentUserIdCard.valid_to);
+                }
             }
-        });
+            // Show warning alert if user doesn't have valid ID card
+            if (!currentUserIdCard && idCardWarningAlert) {
+                idCardWarningAlert.style.display = '';
+                
+                // Remove max constraint if no ID card
+                if (validToInput) {
+                    validToInput.removeAttribute('max');
+                }
+            }
+        } else {
+            // Hide both alerts for "Others" applicant type
+            if (idCardInfoAlert) idCardInfoAlert.style.display = 'none';
+            if (idCardWarningAlert) idCardWarningAlert.style.display = 'none';
+            
+            // Remove max constraint for "Others"
+            if (validToInput) {
+                validToInput.removeAttribute('max');
+            }
+        }
     }
+
+    function updateApplicantTypeFields() {
+        if (isEmployeeOrGovVehicle()) {
+            if (currentUserEmployee && empMasterPkInput) {
+                empMasterPkInput.value = currentUserEmployee.pk;
+                setApplicantFields(
+                    currentUserEmployee.emp_id,
+                    currentUserEmployee.name,
+                    currentUserEmployee.designation,
+                    currentUserEmployee.department,
+                    true
+                );
+            } else if (empMasterPkInput) {
+                empMasterPkInput.value = '';
+                setApplicantFields('', '', '', '', false);
+            }
+        } else {
+            if (empMasterPkInput) empMasterPkInput.value = '';
+            setApplicantFields('', '', '', '', false);
+        }
+        toggleIdCardAlerts();
+    }
+
+    if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateApplicantTypeFields);
+    if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', updateApplicantTypeFields);
+    if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', updateApplicantTypeFields);
+    updateApplicantTypeFields();
 
     // Add new vehicle type (modal + AJAX)
     var addVehicleTypeBtn = document.getElementById('addVehicleTypeBtn');

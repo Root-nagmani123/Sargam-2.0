@@ -3,6 +3,7 @@
 @section('setup_content')
 <div class="container-fluid idcard-create-page">
     <x-breadcrum title="Edit ID Card Request"></x-breadcrum>
+    <x-session_message />
 
     <form action="{{ route('admin.employee_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         @csrf
@@ -30,15 +31,16 @@
         <div class="card idcard-create-form-card mb-4 border-0 shadow overflow-hidden">
             <div class="card-body p-4 p-lg-5">
                 <h6 class="idcard-form-title mb-4">Please add the Request For Employee ID Card</h6>
+                @php $isContractual = ($request->employee_type ?? '') === 'Contractual Employee'; @endphp
                 <div class="row g-3">
                     <!-- Row 1: Card Type, Sub Type, Request For -->
                     <div class="col-md-6">
                         <label for="card_type" class="form-label">Card Type <span class="text-danger">*</span></label>
                         <select name="card_type" id="card_type" class="form-select @error('card_type') is-invalid @enderror" required>
                             <option value="">Select Card Type</option>
-                            <option value="LBSNAA" {{ old('card_type', $request->card_type) == 'LBSNAA' ? 'selected' : '' }}>LBSNAA</option>
-                            <option value="Visitor" {{ old('card_type', $request->card_type) == 'Visitor' ? 'selected' : '' }}>Visitor</option>
-                            <option value="Contractor" {{ old('card_type', $request->card_type) == 'Contractor' ? 'selected' : '' }}>Contractor</option>
+                            @foreach($cardTypes ?? [] as $ct)
+                                <option value="{{ $ct }}" {{ old('card_type', $request->card_type) == $ct ? 'selected' : '' }}>{{ $ct }}</option>
+                            @endforeach
                         </select>
                         @error('card_type')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -48,7 +50,6 @@
                         <label for="sub_type" class="form-label">Sub Type <span class="text-danger">*</span></label>
                         <select name="sub_type" id="sub_type" class="form-select @error('sub_type') is-invalid @enderror" required>
                             <option value="">Select Sub Type</option>
-                            <?php print_r($request->sub_type); exit; ?>
                             @if(!empty($request->sub_type))
                                 <option value="{{ $request->sub_type }}" selected>{{ $request->sub_type }}</option>
                             @endif
@@ -60,17 +61,17 @@
                     <div class="col-md-6">
                         <label for="request_for" class="form-label">Request For <span class="text-danger">*</span></label>
                         <select name="request_for" id="request_for" class="form-select @error('request_for') is-invalid @enderror" required>
-                            <option value="">Select Request</option>
-                            <option value="Own ID Card" {{ old('request_for', $request->request_for) == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
-                            <option value="Family ID Card" {{ old('request_for', $request->request_for) == 'Family ID Card' ? 'selected' : '' }}>Family ID Card</option>
-                            <option value="Replacement" {{ old('request_for', $request->request_for) == 'Replacement' ? 'selected' : '' }}>Replacement</option>
-                            <option value="Duplication" {{ old('request_for', $request->request_for) == 'Duplication' ? 'selected' : '' }}>Duplication</option>
-                            <option value="Extension" {{ old('request_for', $request->request_for) == 'Extension' ? 'selected' : '' }}>Extension</option>
+                            @if($isContractual)
+                                <option value="Others ID Card" {{ old('request_for', $request->request_for ?? 'Others ID Card') == 'Others ID Card' ? 'selected' : '' }}>Others ID Card</option>
+                            @else
+                                <option value="Own ID Card" {{ old('request_for', $request->request_for ?? 'Own ID Card') == 'Own ID Card' ? 'selected' : '' }}>Own ID Card</option>
+                            @endif
                         </select>
                         @error('request_for')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
+                    @if(!$isContractual)
                     <div class="col-12" id="duplicationExtensionEdit" style="{{ in_array(old('request_for', $request->request_for), ['Replacement', 'Duplication', 'Extension']) ? '' : 'display:none;' }}">
                         <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#duplicationExtensionModalEdit">
                             <i class="material-icons material-symbols-rounded align-middle" style="font-size:18px;">edit_note</i>
@@ -78,6 +79,7 @@
                         </button>
                         <span class="ms-2 small text-muted" id="duplicationSummaryEdit"></span>
                     </div>
+                    @endif
 
                     <!-- Row 2: Name, Designation -->
                     <div class="col-md-6">
@@ -90,8 +92,19 @@
                     </div>
                     <div class="col-md-6">
                         <label for="designation" class="form-label">Designation</label>
-                        <input type="text" name="designation" id="designation" class="form-control @error('designation') is-invalid @enderror" 
-                               value="{{ old('designation', $request->designation) }}">
+                        <select name="designation" id="designation" class="form-select @error('designation') is-invalid @enderror">
+                            <option value="">-- Select Designation --</option>
+                            @php
+                                $currentDesignation = old('designation', $request->designation ?? '');
+                                $designationList = $designations ?? [];
+                                if ($currentDesignation && !isset($designationList[$currentDesignation])) {
+                                    $designationList = [$currentDesignation => $currentDesignation] + $designationList;
+                                }
+                            @endphp
+                            @foreach($designationList as $pk => $name)
+                                <option value="{{ $name }}" {{ $currentDesignation == $name ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
                         @error('designation')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -101,7 +114,7 @@
                     <div class="col-md-6">
                         <label for="date_of_birth" class="form-label">Date of Birth</label>
                         <input type="date" name="date_of_birth" id="date_of_birth" class="form-control @error('date_of_birth') is-invalid @enderror" 
-                               value="{{ old('date_of_birth', $request->date_of_birth?->format('Y-m-d')) }}">
+                               value="{{ old('date_of_birth', $request->date_of_birth ? (\Carbon\Carbon::parse($request->date_of_birth)->format('Y-m-d')) : '') }}">
                         @error('date_of_birth')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -115,25 +128,45 @@
                         @enderror
                     </div>
 
-                    <!-- Row 4: Academy Joining, ID Card Valid Upto -->
+                    <!-- Row 4: Academy Joining, ID Card Valid Upto (date inputs need Y-m-d) -->
+                    @php
+                        $academyJoiningEdit = old('academy_joining');
+                        if ($academyJoiningEdit === null || $academyJoiningEdit === '') {
+                            $academyJoiningEdit = $request->academy_joining ?? '';
+                            if ($academyJoiningEdit && preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', trim($academyJoiningEdit), $m)) {
+                                $academyJoiningEdit = $m[3] . '-' . $m[2] . '-' . $m[1];
+                            }
+                        }
+                        $idCardValidUptoEdit = old('id_card_valid_upto');
+                        if ($idCardValidUptoEdit === null || $idCardValidUptoEdit === '') {
+                            $raw = $request->card_valid_to ?? $request->id_card_valid_upto ?? null;
+                            if ($raw instanceof \DateTimeInterface) {
+                                $idCardValidUptoEdit = $raw->format('Y-m-d');
+                            } elseif (!empty($raw) && is_string($raw) && preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', trim($raw), $m)) {
+                                $idCardValidUptoEdit = $m[3] . '-' . $m[2] . '-' . $m[1];
+                            } else {
+                                $idCardValidUptoEdit = is_string($raw) ? $raw : ($raw ?? '');
+                            }
+                        }
+                    @endphp
                     <div class="col-md-6">
                         <label for="academy_joining" class="form-label">Academy Joining</label>
                         <input type="date" name="academy_joining" id="academy_joining" class="form-control @error('academy_joining') is-invalid @enderror" 
-                               value="{{ old('academy_joining', $request->academy_joining?->format('Y-m-d')) }}">
+                               value="{{ $academyJoiningEdit }}">
                         @error('academy_joining')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-md-6">
                         <label for="id_card_valid_upto" class="form-label">ID Card Valid Upto</label>
-                        <input type="text" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
-                               value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
+                        <input type="date" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
+                               value="{{ $idCardValidUptoEdit }}" placeholder="DD/MM/YYYY" readonly>
                         @error('id_card_valid_upto')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <!-- Row 5: Mobile Number, Telephone Number -->
+                    <!-- Row 5: Mobile Number, Telephone Number (Telephone only for Permanent) -->
                     <div class="col-md-6">
                         <label for="mobile_number" class="form-label">Mobile Number</label>
                         <input type="tel" name="mobile_number" id="mobile_number" class="form-control @error('mobile_number') is-invalid @enderror" 
@@ -142,6 +175,7 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
+                    @if(!$isContractual)
                     <div class="col-md-6">
                         <label for="telephone_number" class="form-label">Telephone Number</label>
                         <input type="tel" name="telephone_number" id="telephone_number" class="form-control @error('telephone_number') is-invalid @enderror" 
@@ -150,38 +184,50 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-
-                    <!-- Row 6: Section, Approval Authority -->
+                    @endif
+                    @if($isContractual)
+                    <!-- Contractual-only: Vender/Org, Section, Approval Authority (same as create) -->
+                    <div class="col-md-6">
+                        <label for="vendor_organization_name" class="form-label">Vender / Organization Name</label>
+                        <input type="text" name="vendor_organization_name" id="vendor_organization_name" class="form-control @error('vendor_organization_name') is-invalid @enderror" 
+                               value="{{ old('vendor_organization_name', $request->vendor_organization_name) }}" placeholder="Vender / Organization Name">
+                        @error('vendor_organization_name')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
                     <div class="col-md-6">
                         <label for="section" class="form-label">Section</label>
-                        <input type="text" name="section" id="section" class="form-control @error('section') is-invalid @enderror" 
-                               value="{{ old('section', $request->section) }}" placeholder="Enter section">
+                        <select name="section" id="section" class="form-select @error('section') is-invalid @enderror">
+                            <option value="">--Select--</option>
+                            @if(!empty($userDepartmentName ?? null))
+                                <option value="{{ $userDepartmentName }}" {{ old('section', $userDepartmentName) == $userDepartmentName ? 'selected' : '' }}>{{ $userDepartmentName }}</option>
+                            @endif
+                        </select>
                         @error('section')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-md-6">
                         <label for="approval_authority" class="form-label">Approval Authority</label>
-                        <input type="text" name="approval_authority" id="approval_authority" class="form-control @error('approval_authority') is-invalid @enderror" 
-                               value="{{ old('approval_authority', $request->approval_authority) }}" placeholder="Enter approval authority">
+                        <select name="approval_authority" id="approval_authority" class="form-select @error('approval_authority') is-invalid @enderror">
+                            <option value="">--Select--</option>
+                            @foreach($approvalAuthorityEmployees ?? [] as $emp)
+                                @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
+                                <option value="{{ $emp->pk }}" {{ (int) (old('approval_authority', $request->approval_authority) ?? 0) === (int) $emp->pk ? 'selected' : '' }}>{{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}</option>
+                            @endforeach
+                        </select>
                         @error('approval_authority')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
+                    @endif
 
-                    <!-- Row 7: Vendor/Organization, Blood Group -->
-                    <div class="col-md-6">
-                        <label for="vendor_organization_name" class="form-label">Vendor / Organization Name</label>
-                        <input type="text" name="vendor_organization_name" id="vendor_organization_name" class="form-control @error('vendor_organization_name') is-invalid @enderror" 
-                               value="{{ old('vendor_organization_name', $request->vendor_organization_name) }}">
-                        @error('vendor_organization_name')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    <!-- Row 6: Blood Group -->
                     <div class="col-md-6">
                         <label for="blood_group" class="form-label">Blood Group <span class="text-danger">*</span></label>
                         <select name="blood_group" id="blood_group" class="form-select @error('blood_group') is-invalid @enderror" required>
                             <option value="">Select Blood Group</option>
+                            <option value="O+ve" {{ old('blood_group', $request->blood_group) == 'O+ve' ? 'selected' : '' }}>O+ve</option>
                             <option value="O+" {{ old('blood_group', $request->blood_group) == 'O+' ? 'selected' : '' }}>O+</option>
                             <option value="O-" {{ old('blood_group', $request->blood_group) == 'O-' ? 'selected' : '' }}>O-</option>
                             <option value="A+" {{ old('blood_group', $request->blood_group) == 'A+' ? 'selected' : '' }}>A+</option>
@@ -196,32 +242,34 @@
                         @enderror
                     </div>
 
-                    <!-- Upload Photo & Documents -->
+                    <!-- Upload Photo (both); Joining Letter only for Permanent -->
                     <div class="col-md-6">
                         <label class="form-label">Upload Photo</label>
                         @if($request->photo)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                Current photo exists
+                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" rel="noopener">View / Download</a>
                             </div>
                         @endif
                         <div class="idcard-upload-zone" id="photoUploadArea">
                             <input type="file" name="photo" id="photo" class="d-none @error('photo') is-invalid @enderror" 
-                                   accept="image/*" onchange="displayFileName(this, 'photoName')">
+                                   accept=".jpeg,.jpg,.png,.gif" onchange="displayFileName(this, 'photoName')">
                             <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                             <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                         </div>
+                        <small class="text-muted d-block">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
                         <small id="photoName" class="d-block mt-2 text-body-secondary"></small>
                         @error('photo')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
+                    @if(!$isContractual)
                     <div class="col-md-6">
                         <label class="form-label">Upload Joining Letter</label>
-                        @if($request->joining_letter)
+                        @if($request->joining_letter ?? null)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                <a href="{{ asset('storage/' . $request->joining_letter) }}" target="_blank">View current</a>
+                                <a href="{{ asset('storage/' . $request->joining_letter) }}" target="_blank" rel="noopener">View / Download</a>
                             </div>
                         @endif
                         <div class="idcard-upload-zone" id="joiningLetterUploadArea">
@@ -230,52 +278,24 @@
                             <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                             <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                         </div>
+                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX. Max size: 5 MB</small>
                         <small id="joiningLetterName" class="d-block mt-2 text-body-secondary"></small>
                         @error('joining_letter')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Upload Documents (if any)</label>
-                        @if($request->documents)
-                            <div class="alert alert-success py-2 px-3 mb-2 small">
-                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                Documents already uploaded
-                            </div>
-                        @endif
-                        <div class="idcard-upload-zone" id="documentsUploadArea">
-                            <input type="file" name="documents" id="documents" class="d-none @error('documents') is-invalid @enderror" 
-                                   accept=".pdf,.doc,.docx" onchange="displayFileName(this, 'documentsName')">
-                            <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
-                            <p class="mt-2 mb-0">Click to upload or drag and drop</p>
-                        </div>
-                        <small id="documentsName" class="d-block mt-2 text-body-secondary"></small>
-                        @error('documents')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <!-- Status (edit only), Remarks -->
-                    <div class="col-md-4">
-                        <label for="status" class="form-label">Status</label>
-                        <select name="status" id="status" class="form-select @error('status') is-invalid @enderror">
-                            <option value="Pending" {{ old('status', $request->status) == 'Pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="Approved" {{ old('status', $request->status) == 'Approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="Rejected" {{ old('status', $request->status) == 'Rejected' ? 'selected' : '' }}>Rejected</option>
-                            <option value="Issued" {{ old('status', $request->status) == 'Issued' ? 'selected' : '' }}>Issued</option>
-                        </select>
-                        @error('status')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    <div class="col-md-8">
+                     <!-- Remarks - shown for both Permanent and Contractual -->
+                    <div class="col-12 mt-3 pt-3 border-top" id="remarks-section">
                         <label for="remarks" class="form-label">Remarks</label>
                         <textarea name="remarks" id="remarks" class="form-control @error('remarks') is-invalid @enderror" 
-                                  rows="3" placeholder="Add any additional remarks...">{{ old('remarks', $request->remarks) }}</textarea>
+                                  rows="3" placeholder="Add any additional remarks...">{{ old('remarks', $request->remarks ?? '') }}</textarea>
                         @error('remarks')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
+                    @endif
+
+                   
                 </div>
 
                 <!-- Required Fields Note -->
@@ -325,12 +345,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_from_edit" class="form-label">ID Card Valid From</label>
-                                <input type="text" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
+                                <input type="date" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
                                 @error('id_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_upto_edit" class="form-label">ID Card Valid Upto</label>
-                                <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
+                                <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
                                 @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6" id="firReceiptFieldEdit" style="display:none;">
@@ -340,6 +360,7 @@
                                     <div class="idcard-upload-placeholder {{ $request->fir_receipt ? 'd-none' : '' }}" id="firReceiptPlaceholderEdit">
                                         <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                         <p class="mt-2 mb-0 small">Upload FIR filed against lost card</p>
+                                        <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                     </div>
                                     <div class="idcard-upload-preview idcard-doc-preview {{ $request->fir_receipt ? '' : 'd-none' }}" id="firReceiptPreviewEdit">
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
@@ -359,6 +380,7 @@
                                     <div class="idcard-upload-placeholder {{ $request->payment_receipt ? 'd-none' : '' }}" id="paymentReceiptPlaceholderEdit">
                                         <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                         <p class="mt-2 mb-0 small">Click to upload</p>
+                                        <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                     </div>
                                     <div class="idcard-upload-preview idcard-doc-preview {{ $request->payment_receipt ? '' : 'd-none' }}" id="paymentReceiptPreviewEdit">
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
@@ -488,6 +510,57 @@
 </style>
 
 <script>
+    var subTypesUrlEdit = '{{ route("admin.employee_idcard.subTypes") }}';
+    var currentSubTypeEdit = '{{ old("sub_type", $request->sub_type ?? "") }}';
+
+    function editLoadSubTypes() {
+        var cardType = document.getElementById('card_type')?.value;
+        if (!cardType) {
+            document.getElementById('sub_type').innerHTML = '<option value="">Select Sub Type</option>';
+            return;
+        }
+        fetch(subTypesUrlEdit + '?card_type=' + encodeURIComponent(cardType) + '&employee_type=Permanent%20Employee')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var sel = document.getElementById('sub_type');
+                sel.innerHTML = '<option value="">Select Sub Type</option>';
+                (data.sub_types || []).forEach(function(o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    if (o.value === currentSubTypeEdit) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                if (!sel.value && currentSubTypeEdit) {
+                    var addOpt = document.createElement('option');
+                    addOpt.value = currentSubTypeEdit;
+                    addOpt.textContent = currentSubTypeEdit;
+                    addOpt.selected = true;
+                    sel.appendChild(addOpt);
+                }
+            })
+            .catch(function() {
+                if (currentSubTypeEdit) {
+                    var sel = document.getElementById('sub_type');
+                    if (sel.options.length <= 1) {
+                        var opt = document.createElement('option');
+                        opt.value = currentSubTypeEdit;
+                        opt.textContent = currentSubTypeEdit;
+                        opt.selected = true;
+                        sel.appendChild(opt);
+                    }
+                }
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        editLoadSubTypes();
+    });
+    document.getElementById('card_type')?.addEventListener('change', function() {
+        currentSubTypeEdit = '';
+        editLoadSubTypes();
+    });
+
     // Enable Bootstrap validation
     (function() {
         'use strict';
@@ -527,27 +600,6 @@
         if (files.length) {
             document.getElementById('photo').files = files;
             displayFileName(document.getElementById('photo'), 'photoName');
-        }
-        this.classList.remove('idcard-upload-zone-active');
-    });
-
-    document.getElementById('documentsUploadArea')?.addEventListener('click', function() {
-        document.getElementById('documents').click();
-    });
-    document.getElementById('documentsUploadArea')?.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        this.classList.add('idcard-upload-zone-active');
-    });
-    document.getElementById('documentsUploadArea')?.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        this.classList.remove('idcard-upload-zone-active');
-    });
-    document.getElementById('documentsUploadArea')?.addEventListener('drop', function(e) {
-        e.preventDefault();
-        const files = e.dataTransfer.files;
-        if (files.length) {
-            document.getElementById('documents').files = files;
-            displayFileName(document.getElementById('documents'), 'documentsName');
         }
         this.classList.remove('idcard-upload-zone-active');
     });

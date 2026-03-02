@@ -8,33 +8,72 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
                 <h4 class="mb-0">Approval II</h4>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">
+                   {{-- <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">arrow_back</i>
                         Approval I
                     </a>
                     <a href="{{ route('admin.security.employee_idcard_approval.all') }}" class="btn btn-secondary btn-sm">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">list</i>
                         All Requests
-                    </a>
+                    </a> --}}
                 </div>
             </div>
 
-            <form method="GET" class="row g-2 mb-3">
-                <div class="col-md-4">
-                    <select name="card_type" class="form-select form-select-sm">
-                        <option value="">Select ID Card Type</option>
-                        @foreach(\App\Models\EmployeeIDCardRequest::distinct()->whereNotNull('card_type')->pluck('card_type') as $ct)
-                            <option value="{{ $ct }}" {{ request('card_type') == $ct ? 'selected' : '' }}>{{ $ct }}</option>
-                        @endforeach
-                    </select>
+            <!-- Filters Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-bottom">
+                    <h6 class="mb-0 fw-semibold">Filters & Search</h6>
                 </div>
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search here..." value="{{ request('search') }}">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.security.employee_idcard_approval.approval2') }}" id="filterForm" class="mb-0">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label for="search" class="form-label">Search</label>
+                                <input type="text" name="search" id="search" class="form-control" placeholder="Search by Employee Name, ID Card No..." value="{{ request('search', '') }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Request Date From</label>
+                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Request Date To</label>
+                                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="per_page" class="form-label">Show Entries</label>
+                                <select name="per_page" id="per_page" class="form-select">
+                                    @foreach([10, 25, 50, 100] as $n)
+                                        <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i> Search
+                                </button>
+                                <a href="{{ route('admin.security.employee_idcard_approval.approval2') }}" class="btn btn-outline-secondary">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">restart_alt</i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary btn-sm">Search</button>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="d-flex justify-content-end gap-2 mb-3">
+                <div class="dropdown">
+                    <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-3 py-2" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">download</i>
+                        Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="exportDropdown">
+                        <li><h6 class="dropdown-header text-muted small text-uppercase">Export with Current Filters</h6></li>
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '2', 'format' => 'xlsx'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i> Excel</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '2', 'format' => 'pdf'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i> PDF</a></li>
+                    </ul>
                 </div>
-            </form>
+            </div>
 
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -49,68 +88,11 @@
                 </div>
             @endif
 
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width:50px;"><input type="checkbox" id="selectAll"></th>
-                            <th style="width:60px;">S.No.</th>
-                            <th>Request date</th>
-                            <th>Employee Name</th>
-                            <th>Approved By A1</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($requests as $index => $req)
-                            <tr>
-                                <td><input type="checkbox" class="row-check" value="{{ $req->id }}"></td>
-                                <td>{{ $requests->firstItem() + $index }}</td>
-                                <td>{{ $req->created_at ? $req->created_at->format('d/m/Y') : '--' }}</td>
-                                <td>{{ $req->name }}</td>
-                                <td>
-                                    @if($req->approver1)
-                                        <span class="badge bg-success">{{ $req->approver1->name }}</span>
-                                        <br><small class="text-muted">{{ $req->approved_by_a1_at ? $req->approved_by_a1_at->format('d/m/Y') : '' }}</small>
-                                    @else
-                                        <span class="text-muted">--</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.security.employee_idcard_approval.show', encrypt($req->id)) }}"
-                                           class="btn btn-sm btn-info" title="View Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
-                                        </a>
-                                        <a href="{{ route('admin.employee_idcard.show', $req->id) }}"
-                                           class="btn btn-sm btn-outline-secondary" title="Full Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">open_in_new</i>
-                                        </a>
-                                        <form action="{{ route('admin.security.employee_idcard_approval.approve2', encrypt($req->id)) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-success" title="Approve">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i>
-                                            </button>
-                                        </form>
-                                        <button type="button" class="btn btn-sm btn-danger reject-btn" title="Reject"
-                                                data-name="{{ $req->name }}"
-                                                data-url="{{ route('admin.security.employee_idcard_approval.reject2', encrypt($req->id)) }}">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">No pending requests for Approval II.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-3 d-flex justify-content-between align-items-center">
-                <small class="text-muted">Show {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</small>
-                {{ $requests->links() }}
+            @include('admin.security.employee_idcard_approval._approval_table', ['requests' => $requests, 'approvalStage' => 2])
+
+            <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-muted">Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</small>
+                {{ $requests->withQueryString()->links() }}
             </div>
         </div>
     </div>
@@ -152,6 +134,11 @@ document.querySelectorAll('.reject-btn').forEach(function(btn) {
         document.getElementById('rejection_reason').value = '';
         new bootstrap.Modal(document.getElementById('rejectModal')).show();
     });
+});
+
+// Auto-submit when per_page changes
+document.getElementById('per_page').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
 });
 </script>
 @endpush

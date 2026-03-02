@@ -21,60 +21,91 @@
             </div>
 
             <div class="row">
-                <div class="col-md-6">
-                    <table class="table table-bordered table-sm">
-                        <tr><th width="40%">Employee Name</th><td>{{ $request->name }}</td></tr>
-                        <tr><th>Designation</th><td>{{ $request->designation ?? '--' }}</td></tr>
-                        <tr><th>Card Type</th><td>{{ $request->card_type ?? '--' }}</td></tr>
-                        <tr><th>Request For</th><td>{{ $request->request_for ?? '--' }}</td></tr>
-                        <tr><th>Request Date</th><td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td></tr>
-                        <tr><th>Status</th>
-                            <td>
+                <div class="col-md-3">
+                    {{-- Photo Display --}}
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="card-title mb-3">Employee Photo</h6>
+                            @if($request->photo)
                                 @php
-                                    $statusClass = match($request->status) {
-                                        'Pending' => 'warning',
-                                        'Approved' => 'success',
-                                        'Rejected' => 'danger',
-                                        'Issued' => 'primary',
-                                        default => 'secondary'
-                                    };
+                                    $photoPath = str_starts_with($request->photo, 'idcard/')
+                                        ? $request->photo
+                                        : 'idcard/photos/' . $request->photo;
+                                    $photoExists = \Storage::disk('public')->exists($photoPath);
+                                    $photoUrl = $photoExists ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
                                 @endphp
-                                <span class="badge bg-{{ $statusClass }}">{{ $request->status }}</span>
-                            </td>
-                        </tr>
-                    </table>
+                                <img src="{{ $photoUrl }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
+                                <div class="mt-2">
+                                    <a href="{{ $photoUrl }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:16px;">download</i>
+                                        Download
+                                    </a>
+                                </div>
+                            @else
+                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
+                                <p class="text-muted small mt-2">No photo available</p>
+                            @endif
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <table class="table table-bordered table-sm">
-                        <tr><th width="40%">Approved By A1</th>
-                            <td>
-                                @if($request->approver1)
-                                    {{ $request->approver1->name }}
-                                    @if($request->approved_by_a1_at)
-                                        <br><small class="text-muted">{{ $request->approved_by_a1_at->format('d/m/Y H:i') }}</small>
-                                    @endif
-                                @else
-                                    <span class="text-muted">--</span>
+                <div class="col-md-9">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-bordered table-sm">
+                                <tr><th width="40%">Employee Name</th><td>{{ $request->name }}</td></tr>
+                                <tr><th>Designation</th><td>{{ $request->designation ?? '--' }}</td></tr>
+                                <tr><th>Card Type</th><td>{{ $request->card_type ?? '--' }}</td></tr>
+                                <tr><th>Request For</th><td>{{ $request->request_for ?? '--' }}</td></tr>
+                                <tr><th>Request Date</th><td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td></tr>
+                                <tr><th>Status</th>
+                                    <td>
+                                        @php
+                                            $statusClass = match($request->status) {
+                                                'Pending' => 'warning',
+                                                'Approved' => 'success',
+                                                'Rejected' => 'danger',
+                                                'Issued' => 'primary',
+                                                default => 'secondary'
+                                            };
+                                        @endphp
+                                        <span class="badge bg-{{ $statusClass }}">{{ $request->status }}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-bordered table-sm">
+                                <tr><th width="40%">Approved By A1</th>
+                                    <td>
+                                        @if($request->approver1)
+                                            {{ $request->approver1->name }}
+                                            @if($request->approved_by_a1_at)
+                                                <br><small class="text-muted">{{ $request->approved_by_a1_at->format('d/m/Y H:i') }}</small>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">--</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr><th>Approved By A2</th>
+                                    <td>
+                                        @if($request->approver2)
+                                            {{ $request->approver2->name }}
+                                            @if($request->approved_by_a2_at)
+                                                <br><small class="text-muted">{{ $request->approved_by_a2_at->format('d/m/Y H:i') }}</small>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">--</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @if($request->rejection_reason)
+                                <tr><th>Rejection Reason</th><td class="text-danger">{{ $request->rejection_reason }}</td></tr>
+                                <tr><th>Rejected By</th><td>{{ $request->rejectedByUser?->name ?? '--' }}</td></tr>
                                 @endif
-                            </td>
-                        </tr>
-                        <tr><th>Approved By A2</th>
-                            <td>
-                                @if($request->approver2)
-                                    {{ $request->approver2->name }}
-                                    @if($request->approved_by_a2_at)
-                                        <br><small class="text-muted">{{ $request->approved_by_a2_at->format('d/m/Y H:i') }}</small>
-                                    @endif
-                                @else
-                                    <span class="text-muted">--</span>
-                                @endif
-                            </td>
-                        </tr>
-                        @if($request->rejection_reason)
-                        <tr><th>Rejection Reason</th><td class="text-danger">{{ $request->rejection_reason }}</td></tr>
-                        <tr><th>Rejected By</th><td>{{ $request->rejectedByUser?->name ?? '--' }}</td></tr>
-                        @endif
-                    </table>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 

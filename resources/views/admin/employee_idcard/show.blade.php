@@ -13,7 +13,7 @@
                         <i class="material-icons material-symbols-rounded align-middle me-2" style="font-size:28px;">visibility</i>
                         Employee ID Card Request Details
                     </h4>
-                    <p class="text-muted mb-0">Request ID: <strong>#{{ $request->id }}</strong> | Created: <strong>{{ $request->created_at->format('d M, Y H:i') }}</strong></p>
+                    <p class="text-muted mb-0">Request ID: <strong>#{{ $request->id }}</strong> | Created: <strong>{{ $request->created_at ? $request->created_at->format('d/m/Y H:i') : '--' }}</strong></p>
                 </div>
                 @php
                     $statusClass = match($request->status) {
@@ -104,7 +104,7 @@
                                 <small class="text-muted d-block mb-1">Date of Birth</small>
                                 <strong class="text-dark d-block fs-6">
                                     @if($request->date_of_birth)
-                                        {{ $request->date_of_birth->format('d M, Y') }}
+                                        {{ \Carbon\Carbon::parse($request->date_of_birth)->format('d M, Y') }}
                                     @else
                                         --
                                     @endif
@@ -122,7 +122,7 @@
                                 <small class="text-muted d-block mb-1">Academy Joining Date</small>
                                 <strong class="text-dark d-block fs-6">
                                     @if($request->academy_joining)
-                                        {{ $request->academy_joining->format('d M, Y') }}
+                                        {{ \Carbon\Carbon::parse($request->academy_joining)->format('d M, Y') }}
                                     @else
                                         --
                                     @endif
@@ -248,7 +248,7 @@
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded-2">
                                 <small class="text-muted d-block mb-1">Request Date</small>
-                                <strong class="text-dark d-block fs-6">{{ $request->created_at->format('d M, Y') }}</strong>
+                                <strong class="text-dark d-block fs-6">{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</strong>
                             </div>
                         </div>
                     </div>
@@ -358,13 +358,8 @@
                                     </a>
                                 </div>
                             </div>
-                        @else
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-muted" style="font-size:48px; opacity: 0.5;">description</i>
-                                    <small class="d-block mt-2 text-muted">No documents uploaded</small>
-                                </div>
-                            </div>
+                       @else
+                           
                         @endif
                     </div>
                 </div>
