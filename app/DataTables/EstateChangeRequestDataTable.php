@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\DataTables;
 
@@ -18,42 +18,42 @@ class EstateChangeRequestDataTable extends DataTable
             ->editColumn('estate_change_req_ID', fn ($row) => $row->estate_change_req_ID ?? 'N/A')
             ->editColumn('change_req_date', function ($row) {
                 $d = $row->change_req_date;
-                if (!$d) return '—';
+                if (!$d) return 'ΓÇö';
                 if (strlen($d) > 10) {
                     $dt = \Carbon\Carbon::parse($d);
                     return $dt->format('d-m-Y');
                 }
                 return $d;
             })
-            ->editColumn('emp_name', fn ($row) => $row->estateHomeRequestDetails->emp_name ?? '—')
-            ->editColumn('employee_id', fn ($row) => $row->estateHomeRequestDetails->employee_id ?? '—')
-            ->editColumn('emp_designation', fn ($row) => $row->estateHomeRequestDetails->emp_designation ?? '—')
-            ->editColumn('pay_scale', fn ($row) => $row->estateHomeRequestDetails->pay_scale ?? '—')
+            ->editColumn('emp_name', fn ($row) => $row->estateHomeRequestDetails->emp_name ?? 'ΓÇö')
+            ->editColumn('employee_id', fn ($row) => $row->estateHomeRequestDetails->employee_id ?? 'ΓÇö')
+            ->editColumn('emp_designation', fn ($row) => $row->estateHomeRequestDetails->emp_designation ?? 'ΓÇö')
+            ->editColumn('pay_scale', fn ($row) => $row->estateHomeRequestDetails->pay_scale ?? 'ΓÇö')
             ->editColumn('doj_pay_scale', function ($row) {
                 $d = $row->estateHomeRequestDetails->doj_pay_scale ?? null;
-                return $d ? $d->format('d-m-Y') : '—';
+                return $d ? $d->format('d-m-Y') : 'ΓÇö';
             })
             ->editColumn('doj_service', function ($row) {
                 $d = $row->estateHomeRequestDetails->doj_service ?? null;
-                return $d ? $d->format('d-m-Y') : '—';
+                return $d ? $d->format('d-m-Y') : 'ΓÇö';
             })
             ->editColumn('doj_academic', function ($row) {
                 $d = $row->estateHomeRequestDetails->doj_academic ?? null;
-                return $d ? $d->format('d-m-Y') : '—';
+                return $d ? $d->format('d-m-Y') : 'ΓÇö';
             })
             ->editColumn('retirement_deputation', function ($row) {
-                return '—';
+                return 'ΓÇö';
             })
             ->editColumn('eligibility_type_pk', function ($row) {
                 $pk = $row->estateHomeRequestDetails->eligibility_type_pk ?? null;
-                if ($pk === null) return '—';
+                if ($pk === null) return 'ΓÇö';
                 return 'Type -' . ($pk == 62 ? 'II' : ($pk == 63 ? 'III' : ($pk == 61 ? 'I' : 'IV')));
             })
             ->editColumn('request_type', fn () => 'Change Request')
-            ->editColumn('availability_as_per_request', fn ($row) => $row->change_house_no ?? '—')
+            ->editColumn('availability_as_per_request', fn ($row) => $row->change_house_no ?? 'ΓÇö')
             ->editColumn('remarks', function ($row) {
                 $remarks = $row->remarks ?? '';
-                return $remarks ? e($remarks) : '—';
+                return $remarks ? e($remarks) : 'ΓÇö';
             })
             ->addColumn('approve_disapprove', function ($row) {
                 $status = (int) ($row->change_ap_dis_status ?? 0);
