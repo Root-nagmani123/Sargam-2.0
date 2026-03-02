@@ -181,8 +181,8 @@ class StudentMedicalExemptionController extends Controller
                 ->addColumn('document', function ($row) {
                     if ($row->Doc_upload) {
                         return '<a href="' . asset('storage/' . $row->Doc_upload) . '" target="_blank"
-                                class="text-primary">
-                                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">description</i>
+                                class="btn btn-sm btn-info">
+                                <i class="material-icons material-symbols-rounded">description</i>
                             </a>';
                     }
                     return '<span class="text-muted">N/A</span>';
@@ -195,19 +195,15 @@ class StudentMedicalExemptionController extends Controller
                     $disabled = $row->active_inactive == 1 ? 'disabled' : '';
 
                     return '
-                        <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
-                            <a href="' . $editUrl . '"
-                               class="text-primary action-btn-edit"
-                               title="Edit">
-                                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</i>
-                            </a>
-                            <a href="javascript:void(0)"
-                               class="text-primary delete-btn action-btn-delete ' . $disabled . '"
-                               data-url="' . $deleteUrl . '"
-                               title="' . ($disabled ? 'Cannot delete active record' : 'Delete') . '">
-                                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">delete</i>
-                            </a>
-                        </div>';
+                        <a href="' . $editUrl . '">
+                            <i class="material-icons material-symbols-rounded">edit</i>
+                        </a>
+
+                        <a href="javascript:void(0)"
+                           class="delete-btn ' . $disabled . '"
+                           data-url="' . $deleteUrl . '">
+                            <i class="material-icons material-symbols-rounded">delete</i>
+                        </a>';
                 })
 
                 ->addColumn('status', function ($row) {

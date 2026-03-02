@@ -4,7 +4,7 @@
 
 @section('setup_content')
 
-<div class="container-fluid exemption-medical-speciality-index">
+<div class="container-fluid">
     <x-breadcrum title="Exemption medical speciality" />
     <div class="datatables">
         <!-- start Zero Configuration -->
@@ -25,8 +25,8 @@
                         </div>
                     </div>
                     <hr>
-                    <div class="table-responsive table-scroll-wrapper">
-                        <table class="table text-nowrap" id="exemptionCategoryeditForm">
+                    <div class="table-responsive">
+                        <table class="table" id="exemptionCategoryeditForm">
                             <thead>
                                 <!-- start row -->
                                 <tr>

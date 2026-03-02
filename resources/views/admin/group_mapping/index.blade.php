@@ -2,36 +2,6 @@
 
 @section('title', 'Course Group Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('css')
-    @parent
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    <style>
-        .group-mapping-index .choices__inner {
-            min-height: calc(2.25rem + 2px);
-            border-radius: 0.375rem;
-            border: 1px solid #ced4da;
-            padding: 0.375rem 0.75rem;
-            background-color: #fff;
-        }
-
-        .group-mapping-index .choices__list--single .choices__item {
-            padding: 0;
-            margin: 0;
-        }
-
-        .group-mapping-index .choices__list--dropdown {
-            border-radius: 0.375rem;
-            border-color: #ced4da;
-        }
-
-        .group-mapping-index .choices.is-focused .choices__inner,
-        .group-mapping-index .choices.is-open .choices__inner {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-    </style>
-@endsection
-
 @section('setup_content')
 
 <div class="container-fluid">
@@ -82,39 +52,11 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
-
-                            <a href="{{ route('group.mapping.create') }}"
-                                class="btn btn-primary px-3 d-flex align-items-center gap-2 shadow-sm rounded-1">
-                                <i class="bi bi-plus-circle-fill"></i>
-                                Add Group Mapping
-                            </a>
-
-                            <button type="button" class="btn btn-info px-3 d-flex align-items-center gap-2 shadow-sm rounded-1"
-                                data-bs-toggle="modal" data-bs-target="#addStudentModal">
-                                <i class="bi bi-person-plus-fill"></i>
-                                Add Student
-                            </button>
-
-                            <button type="button" class="btn btn-success px-3 d-flex align-items-center gap-2 shadow-sm rounded-1"
-                                data-bs-toggle="modal" data-bs-target="#importModal">
-                                <i class="bi bi-file-earmark-excel-fill"></i>
-                                Import Excel
-                            </button>
-
-                            <a href="{{ route('group.mapping.export.student.list') }}"
-                                class="btn btn-outline-primary px-3 d-flex align-items-center gap-2 shadow-sm rounded-1">
-                                <i class="bi bi-download"></i>
-                                Export Excel
-                            </a>
-                        </div>
-                    </div>
-
                         {{-- Status Filter --}}
-                        <div class="row g-3 mb-4 align-items-end group-mapping-filters-row">
-                            <div class="col-12 col-md-4">
-                                <label for="courseFilter" class="form-label fw-medium text-body-secondary">Course Name</label>
-                                <select id="courseFilter" class="form-select shadow-sm rounded-1 border">
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
+                                <select id="courseFilter" class="form-select shadow-sm">
                                     <option value="">All Courses</option>
                                     @foreach($courses ?? [] as $pk => $name)
                                     <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -122,9 +64,9 @@
                                 </select>
                             </div>
 
-                            <div class="col-12 col-md-3">
-                                <label for="groupTypeFilter" class="form-label fw-medium text-body-secondary">Group Type</label>
-                                <select id="groupTypeFilter" class="form-select shadow-sm rounded-1 border">
+                            <div class="col-md-3">
+                                <label for="groupTypeFilter" class="form-label fw-semibold">Group Type</label>
+                                <select id="groupTypeFilter" class="form-select shadow-sm">
                                     <option value="">All Group Types</option>
                                     @foreach($groupTypes ?? [] as $pk => $name)
                                     <option value="{{ $pk }}">{{ $name }}</option>
@@ -132,24 +74,21 @@
                                 </select>
                             </div>
 
-                            <div class="col-12 col-md-2 d-flex gap-2 align-items-end">
-                                <button type="button"
-                                    class="btn btn-outline-secondary px-4 py-2 mt-0 mt-md-4 shadow-sm w-100 w-md-auto rounded-1"
+                            <div class="col-md-2 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary px-4 py-2 mt-lg-4 shadow-sm btn-sm"
                                     id="resetFilters">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                                 </button>
                             </div>
-                            <div class="col-12 col-md-3 text-md-end group-mapping-status-col">
-                                <label class="form-label fw-medium text-body-secondary d-md-none mb-2">Status</label>
-                                <div class="btn-group shadow-sm w-100 w-md-auto rounded-1"
-                                    role="group"
+                            <div class="col-3 text-end">
+                                <div class="btn-group shadow-sm rounded-pill" role="group"
                                     aria-label="Group Mapping Status Filter">
-                                    <button type="button" class="btn btn-outline-success px-4 py-2 fw-semibold rounded-start-1"
+                                    <button type="button" class="btn btn-outline-success px-4 py-2 fw-semibold"
                                         id="filterGroupActive" aria-pressed="false">
                                         <i class="bi bi-check-circle me-1"></i> Active
                                     </button>
 
-                                    <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-semibold rounded-end-1"
+                                    <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-semibold"
                                         id="filterGroupArchive" aria-pressed="false">
                                         <i class="bi bi-archive me-1"></i> Archive
                                     </button>
@@ -183,20 +122,20 @@
                                             <div class="mb-3">
                                                 <label for="studentName" class="form-label">Name <span
                                                         class="text-danger">*</span></label>
-                                                <input type="text" class="form-control rounded-1" id="studentName" name="name"
+                                                <input type="text" class="form-control" id="studentName" name="name"
                                                     placeholder="Enter student name" required maxlength="255">
                                             </div>
 
                                             <div class="mb-3">
                                                 <label for="studentOtCode" class="form-label">OT Code <span
                                                         class="text-danger">*</span></label>
-                                                <input type="text" class="form-control rounded-1" id="studentOtCode" name="otcode"
+                                                <input type="text" class="form-control" id="studentOtCode" name="otcode"
                                                     placeholder="Enter OT code" required maxlength="255">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="studentEmail" class="form-label">Course <span
                                                         class="text-danger">*</span></label>
-                                                <select class="form-select rounded-1" id="studentCourse" name="course_master_pk" required>
+                                                <select class="form-select" id="studentCourse" name="course_master_pk" required>
                                                     <option value="">Select Course</option>
                                                     @foreach($courses ?? [] as $pk => $name)
                                                     <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -207,7 +146,7 @@
                                             <div class="mb-3">
                                                 <label for="studentGroupType" class="form-label">Group Type <span
                                                         class="text-danger">*</span></label>
-                                                <select class="form-select rounded-1" id="studentGroupType" name="group_type"
+                                                <select class="form-select" id="studentGroupType" name="group_type"
                                                     required>
                                                     <option value="">Select Group Type</option>
                                                     @foreach($groupTypes ?? [] as $pk => $name)
@@ -222,7 +161,7 @@
                                             <div class="mb-3">
                                                 <label for="studentGroupName" class="form-label">Group Name <span
                                                         class="text-danger">*</span></label>
-                                                <select class="form-select rounded-1" id="studentGroupName" name="group_name"
+                                                <select class="form-select" id="studentGroupName" name="group_name"
                                                     required disabled>
                                                     <option value="">Select Group Name</option>
                                                 </select>
@@ -265,7 +204,7 @@
                                             <!-- File Upload -->
                                             <div class="mb-3">
                                                 <label for="importFile" class="form-label">Select Course</label>
-                                               <select name="course_master_pk" id="course_master_pk_model" class="form-select shadow-sm rounded-1" required>
+                                               <select name="course_master_pk" id="course_master_pk_model" class="form-select shadow-sm " required>
                                                     <option value="">Select Course</option>
                                                    @foreach($courses ?? [] as $pk => $name)
                                                     <option value="{{ $pk }}"  {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -274,7 +213,7 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label for="importFile" class="form-label">Select Excel File</label>
-                                                <input type="file" name="file" id="importFile" class="form-control rounded-1"
+                                                <input type="file" name="file" id="importFile" class="form-control"
                                                     accept=".xlsx, .xls, .csv" required>
                                                 <small class="text-muted">
                                                     Allowed: .xlsx, .xls, .csv | Max ~500 MB
@@ -450,17 +389,17 @@
                                             <input type="hidden" name="student_id" id="editStudentId">
                                             <div class="mb-3">
                                                 <label for="editStudentName" class="form-label">Display Name</label>
-                                                <input type="text" class="form-control rounded-1" id="editStudentName"
+                                                <input type="text" class="form-control" id="editStudentName"
                                                     name="display_name" required maxlength="255">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="editStudentEmail" class="form-label">Email</label>
-                                                <input type="email" class="form-control rounded-1" id="editStudentEmail"
+                                                <input type="email" class="form-control" id="editStudentEmail"
                                                     name="email" maxlength="255">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="editStudentContact" class="form-label">Contact No</label>
-                                                <input type="text" class="form-control rounded-1" id="editStudentContact"
+                                                <input type="text" class="form-control" id="editStudentContact"
                                                     name="contact_no" maxlength="20">
                                             </div>
                                         </div>
@@ -477,16 +416,8 @@
                         </div>
 
 
-                        <hr class="my-4">
-                        {{-- Table: controls above scroll area so they stay visible on mobile --}}
-                        <div class="group-mapping-table-section">
-                            <p class="d-md-none text-muted small mb-2 text-center rounded-1 p-2 bg-primary bg-opacity-10">
-                                <i class="bi bi-arrow-left-right me-1"></i> Swipe horizontally to see all columns
-                            </p>
-                            <div class="group-mapping-table-wrapper table-responsive overflow-x-auto">
-                                {!! $dataTable->table(['class' => 'table align-middle text-nowrap mb-0']) !!}
-                            </div>
-                        </div>
+                        <hr>
+                        {!! $dataTable->table(['class' => 'table text-nowrap']) !!}
                     </div>
                 </div>
             </div>
@@ -495,7 +426,6 @@
     @endsection
     @push('scripts')
     {!! $dataTable->scripts() !!}
-    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
         $(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
             // Only send filters if they are explicitly set
@@ -514,24 +444,6 @@
         });
 
         $(document).ready(function() {
-            // Initialize Choices.js for filters and modal selects
-            if (typeof Choices !== 'undefined') {
-                document.querySelectorAll('.group-mapping-index select').forEach(function (el) {
-                    if (el.dataset.choicesInitialized === 'true') return;
-
-                    new Choices(el, {
-                        allowHTML: false,
-                        searchPlaceholderValue: 'Search...',
-                        removeItemButton: !!el.multiple,
-                        shouldSort: false,
-                        placeholder: true,
-                        placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
-                    });
-
-                    el.dataset.choicesInitialized = 'true';
-                });
-            }
-
             // Set default filter to active courses
             window.groupMappingCurrentFilter = 'active';
 
