@@ -128,11 +128,31 @@
                         @enderror
                     </div>
 
-                    <!-- Row 4: Academy Joining, ID Card Valid Upto -->
+                    <!-- Row 4: Academy Joining, ID Card Valid Upto (date inputs need Y-m-d) -->
+                    @php
+                        $academyJoiningEdit = old('academy_joining');
+                        if ($academyJoiningEdit === null || $academyJoiningEdit === '') {
+                            $academyJoiningEdit = $request->academy_joining ?? '';
+                            if ($academyJoiningEdit && preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', trim($academyJoiningEdit), $m)) {
+                                $academyJoiningEdit = $m[3] . '-' . $m[2] . '-' . $m[1];
+                            }
+                        }
+                        $idCardValidUptoEdit = old('id_card_valid_upto');
+                        if ($idCardValidUptoEdit === null || $idCardValidUptoEdit === '') {
+                            $raw = $request->card_valid_to ?? $request->id_card_valid_upto ?? null;
+                            if ($raw instanceof \DateTimeInterface) {
+                                $idCardValidUptoEdit = $raw->format('Y-m-d');
+                            } elseif (!empty($raw) && is_string($raw) && preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', trim($raw), $m)) {
+                                $idCardValidUptoEdit = $m[3] . '-' . $m[2] . '-' . $m[1];
+                            } else {
+                                $idCardValidUptoEdit = is_string($raw) ? $raw : ($raw ?? '');
+                            }
+                        }
+                    @endphp
                     <div class="col-md-6">
                         <label for="academy_joining" class="form-label">Academy Joining</label>
                         <input type="date" name="academy_joining" id="academy_joining" class="form-control @error('academy_joining') is-invalid @enderror" 
-                               value="{{ old('academy_joining', $request->academy_joining ?? '') }}">
+                               value="{{ $academyJoiningEdit }}">
                         @error('academy_joining')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -140,7 +160,7 @@
                     <div class="col-md-6">
                         <label for="id_card_valid_upto" class="form-label">ID Card Valid Upto</label>
                         <input type="date" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
-                               value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY" readonly>
+                               value="{{ $idCardValidUptoEdit }}" placeholder="DD/MM/YYYY" readonly>
                         @error('id_card_valid_upto')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror

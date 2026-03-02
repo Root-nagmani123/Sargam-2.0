@@ -692,11 +692,20 @@ class EmployeeIDCardRequestController extends Controller
                 abort(404);
             }
             $request = IdCardSecurityMapper::toContractualRequestDto($row);
+            // Autofill academy_joining from employee_master when created_by links to an employee
+            if (!empty($row->created_by)) {
+                $emp = EmployeeMaster::where('pk', $row->created_by)->first(['doj']);
+                if ($emp && $emp->doj) {
+                    $request->academy_joining = \Carbon\Carbon::parse($emp->doj)->format('Y-m-d');
+                }
+            }
+            $designations = DesignationMaster::active()->orderBy('designation_name')->pluck('designation_name', 'designation_name')->all();
             return view('admin.employee_idcard.edit', [
                 'request' => $request,
                 'cardTypes' => $cardTypes,
                 'userDepartmentName' => $userDepartmentName,
                 'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+                'designations' => $designations,
             ]);
         }
         $row = SecurityParmIdApply::with([
