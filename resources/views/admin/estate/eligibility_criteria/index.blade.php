@@ -4,13 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Protocol</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Eligibility - Criteria</li>
-        </ol>
-    </nav>
+<x-breadcrum title="Eligibility - Criteria" />
 
     <x-session_message />
 

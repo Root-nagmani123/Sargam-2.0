@@ -24,7 +24,7 @@
 
             <div class="table-responsive">
                 <table class="table text-nowrap w-100" id="campusTable">
-                    <thead class="table-primary">
+                    <thead>
                         <tr>
                             <th>S.No.</th>
                             <th>Estate/Campus</th>
