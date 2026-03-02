@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Http\Controllers\Controller;
+use App\Exports\IssueManagementExport;
 use App\Models\{
     IssueLogManagement,
     IssueCategoryMaster,
@@ -27,6 +28,7 @@ class IssueManagementController extends Controller
      */
     public function index(Request $request)
     {
+        // echo Auth::user()->user_id; exit;
         $query = IssueLogManagement::with([
             'category',
             'priority',
@@ -35,47 +37,85 @@ class IssueManagementController extends Controller
             'buildingMapping.building',
             'hostelMapping.hostelBuilding',
             'statusHistory'
-        ])->orderBy('created_date', 'desc');
+        ]);
 
-        // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
-        $tab = $request->get('tab', 'active');
-        if ($tab === 'archive') {
-            $query->where('issue_status', 2); // Completed only
-        } else {
-            $query->whereIn('issue_status', [0, 1, 3, 6]); // Reported, In Progress, Pending, Reopened
+        $applyUserScope = function ($builder) {
+            if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
+                $builder->where(function ($q) {
+                    $q->where('employee_master_pk', Auth::user()->user_id)
+                        ->orWhere('issue_logger', Auth::user()->user_id)
+                        ->orWhere('assigned_to', Auth::user()->user_id)
+                        ->orWhere('created_by', Auth::user()->user_id);
+                });
+            }
+        };
+
+        // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
+        $applyRaisedBy = function ($builder) use ($request) {
+            if ($request->get('raised_by') === 'self') {
+                $builder->where('created_by', Auth::user()->user_id);
+            }
+        };
+
+        $applyFilters = function ($builder) use ($request) {
+            // Search (ID, description, category name, sub-category)
+            if ($request->filled('search')) {
+                $term = trim($request->search);
+                $builder->where(function ($q) use ($term) {
+                    if (is_numeric($term)) {
+                        $q->orWhere('pk', $term);
+                    }
+                    $q->orWhere('description', 'like', "%{$term}%")
+                        ->orWhereHas('category', function ($cq) use ($term) {
+                            $cq->where('issue_category', 'like', "%{$term}%");
+                        })
+                        ->orWhereHas('subCategoryMappings.subCategory', function ($sq) use ($term) {
+                            $sq->where('issue_sub_category', 'like', "%{$term}%");
+                        });
+                });
+            }
+
+            // Filter by category
+            if ($request->has('category') && !empty($request->category)) {
+                $builder->where('issue_category_master_pk', $request->category);
+            }
+
+            // Filter by priority
+            if ($request->has('priority') && !empty($request->priority)) {
+                $builder->where('issue_priority_master_pk', $request->priority);
+            }
+
+            // Filter by date range (use Carbon for consistent timezone handling)
+            if ($request->filled('date_from')) {
+                // Use full datetime so the day's range is applied correctly
+                $from = Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+                $builder->where('created_date', '>=', $from);
+            }
+            if ($request->filled('date_to')) {
+                // Use full datetime so the "to" date includes the entire day (23:59:59)
+                $to = Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+                $builder->where('created_date', '<=', $to);
+            }
+        };
+
+        $applyUserScope($query);
+        $applyRaisedBy($query);
+        $query->orderBy('created_date', 'desc');
+
+        // Single list: all complaints. Status filter only when user selects from dropdown.
+        if ($request->filled('status') && $request->status !== '') {
+            $query->where('issue_status', (int) $request->status);
         }
 
-        // Filter by status (further refines within the tab)
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('issue_status', $request->status);
-        }
-
-        // Filter by category
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('issue_category_master_pk', $request->category);
-        }
-
-        // Filter by priority
-        if ($request->has('priority') && $request->priority !== '') {
-            $query->where('issue_priority_master_pk', $request->priority);
-        }
-
-        // Filter by date range
-        if ($request->has('date_from') && $request->date_from !== '') {
-            $query->whereDate('created_date', '>=', $request->date_from);
-        }
-        if ($request->has('date_to') && $request->date_to !== '') {
-            $query->whereDate('created_date', '<=', $request->date_to);
-        }
+        $applyFilters($query);
 
         $issues = $query->paginate(20);
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        $baseQuery = IssueLogManagement::query();
-        $activeCount = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6])->count();
-        $archiveCount = (clone $baseQuery)->where('issue_status', 2)->count();
+        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities'));
+    }
 
         return view('admin.issue_management.index', compact('issues', 'categories', 'priorities', 'tab', 'activeCount', 'archiveCount'));
     }
