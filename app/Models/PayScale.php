@@ -6,18 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class PayScale extends Model
 {
-    protected $table = 'salary_grade_master';
+    protected $table = 'estate_pay_scale_master';
 
     protected $primaryKey = 'pk';
 
     public $timestamps = false;
 
-    protected $fillable = ['salary_grade'];
+    protected $fillable = ['pay_scale_range', 'pay_scale_level', 'display_label'];
 
     protected $appends = ['display_label_text'];
 
     public function getDisplayLabelTextAttribute(): string
     {
-        return $this->salary_grade ?? '';
+        return $this->display_label
+            ?: $this->pay_scale_range . ' (' . $this->pay_scale_level . ')';
     }
 }
