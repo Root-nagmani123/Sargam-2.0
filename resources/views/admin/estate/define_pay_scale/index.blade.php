@@ -4,53 +4,46 @@
 
 @section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Protocol</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Define Pay Scale</li>
-        </ol>
-    </nav>
+<x-breadcrum title="Define Pay Scale" />
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #0d6efd;">
+    <div class="card">
         <div class="card-body p-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
                 <div>
                     <h1 class="h4 fw-bold text-dark mb-1">Define Pay Scale</h1>
-                    <p class="text-muted small mb-0">Manage pay scale range and level for eligibility mapping.</p>
+                    <p class="text-muted small mb-0">Manage eligibility mapping (salary grade, unit type and unit sub type) from estate_eligibility_mapping.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.define-pay-scale.create') }}" class="btn btn-success"><i class="bi bi-plus-lg me-1"></i> Add New</a>
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i></button>
+                    <a href="{{ route('admin.estate.define-pay-scale.create') }}" class="btn btn-primary"><i class="material-icons material-symbols-rounded">add</i> Add New</a>
                 </div>
             </div>
 
             <div class="table-responsive">
-                <table class="table table-bordered table-striped table-hover align-middle mb-0">
-                    <thead class="table-primary">
+                <table class="table align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th class="text-center">S.NO.</th>
-                            <th>Pay Scale Range</th>
-                            <th>Level</th>
-                            <th>Display Label</th>
-                            <th class="text-center" style="width: 80px;">EDIT</th>
+                            <th>S.NO.</th>
+                            <th>Pay Scale / Salary Grade</th>
+                            <th>Unit Type</th>
+                            <th>Unit Sub Type</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($items as $index => $row)
                         <tr>
-                            <td class="text-center">{{ $items->firstItem() + $index }}</td>
-                            <td>{{ $row->pay_scale_range }}</td>
-                            <td>{{ $row->pay_scale_level }}</td>
-                            <td>{{ $row->display_label_text }}</td>
-                            <td class="text-center">
-                                <a href="{{ route('admin.estate.define-pay-scale.edit', $row->pk) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <td>{{ $items->firstItem() + $index }}</td>
+                            <td>{{ $row->salaryGrade ? $row->salaryGrade->display_label_text : '-' }}</td>
+                            <td>{{ $row->unitType ? $row->unitType->name : '-' }}</td>
+                            <td>{{ $row->unitSubType ? $row->unitSubType->name : '-' }}</td>
+                            <td>
+                                <a href="{{ route('admin.estate.define-pay-scale.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="5" class="text-center text-muted py-4">No pay scale found. <a href="{{ route('admin.estate.define-pay-scale.create') }}">Add one</a> to use in Eligibility Criteria.</td></tr>
+                        <tr><td colspan="5" class="text-center text-muted py-4">No eligibility mapping found. <a href="{{ route('admin.estate.define-pay-scale.create') }}">Add one</a> to define pay scale mapping.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
