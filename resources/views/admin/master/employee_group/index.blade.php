@@ -3,36 +3,35 @@
 @section('title', 'Employee Group Master')
 
 @section('setup_content')
-<div class="container-fluid employee-group-index">
+<div class="container-fluid employee-group-index py-3">
     <x-breadcrum title="Employee Group Master"></x-breadcrum>
     <x-session_message />
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
-            <div class="card-body p-4">
+        <div class="card shadow border-0 border-start border-4 border-primary rounded-3 overflow-hidden">
+            <div class="card-body p-4 p-lg-5">
                 
-                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-                    <div>
-                        <h4 class="fw-semibold text-dark mb-1">Employee Group Master</h4>
-                        <p class="text-muted small mb-0">Manage and organize employee group categories</p>
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+                    <div class="order-2 order-md-1">
+                        <h4 class="fw-bold text-body-emphasis mb-1 lh-sm">Employee Group Master</h4>
+                        <p class="text-body-secondary small mb-0 opacity-75">Manage and organize employee group categories</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
+                    <div class="order-1 order-md-2 w-100 w-md-auto">
                         <button type="button" 
-                                class="btn btn-primary px-4 py-2 rounded-1 shadow-sm d-flex align-items-center gap-2 transition-all"
+                                class="btn btn-primary px-4 py-2 rounded-2 shadow-sm d-inline-flex align-items-center gap-2"
                                 data-bs-toggle="modal" 
                                 data-bs-target="#employeeGroupModal"
                                 onclick="openEmployeeGroupModal('{{ route('master.employee.group.create') }}', 'Create Employee Group')">
-                            <i class="material-icons menu-icon material-symbols-rounded" 
-                               style="font-size: 20px; vertical-align: middle;">add</i>
+                            <i class="material-icons menu-icon material-symbols-rounded fs-6">add</i>
                             <span>Add Employee Group</span>
                         </button>
                     </div>
                 </div>
                 
-                <hr class="my-4">
+                <hr class="my-4 border-secondary border-opacity-25">
                 
-                <div class="table-responsive rounded overflow-auto">
-                    {{ $dataTable->table(['class' => 'table text-nowrap mb-0 align-middle']) }}
+                <div class="table-responsive rounded-3 overflow-hidden border border-secondary border-opacity-25">
+                    {{ $dataTable->table(['class' => 'table table-hover table-striped table-borderless text-nowrap mb-0 align-middle']) }}
                 </div>
                 
             </div>
@@ -41,192 +40,38 @@
     </div>
 </div>
 
+{{-- Minimal CSS: DataTables responsive column hide + table min-width (Bootstrap cannot target these) --}}
 <style>
-    .employee-group-index .card {
-        transition: box-shadow 0.3s ease;
-    }
-    
-    .employee-group-index .card:hover {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-    
-    .employee-group-index .btn-primary {
-        transition: all 0.3s ease;
-        font-weight: 500;
-    }
-    
-    .employee-group-index .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 74, 147, 0.3) !important;
-    }
-    
-    /* Table: full row visible on all screens, horizontal scroll on small */
-    .employee-group-index .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    .employee-group-index #employeegroupmaster-table {
-        width: 100% !important;
-        min-width: 320px;
-    }
-    
-    .employee-group-index #employeegroupmaster-table th,
-    .employee-group-index #employeegroupmaster-table td {
-        white-space: nowrap;
-        min-width: 0;
-    }
-    
-    .employee-group-index .table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-    
-    .employee-group-index .table thead th {
-        background-color: #f8f9fa;
-        border-bottom: 2px solid #dee2e6;
-        font-weight: 600;
-        color: #495057;
-        padding: 1rem;
-        text-transform: uppercase;
-        font-size: 0.875rem;
-        letter-spacing: 0.5px;
-    }
-    
-    .employee-group-index .table tbody td {
-        padding: 1rem;
-        vertical-align: middle;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .employee-group-index .table tbody tr:hover {
-        background-color: #f8f9fa;
-        transition: background-color 0.2s ease;
-    }
-    
-    .employee-group-index .table tbody tr:last-child td {
-        border-bottom: none;
-    }
-    
-    /* Action buttons styling */
-    .employee-group-index .table tbody td .btn {
-        transition: all 0.2s ease;
-        margin: 0 2px;
-    }
-    
-    .employee-group-index .table tbody td .btn:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    
-    .employee-group-index .table tbody td .btn-outline-primary:hover {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-        color: #fff;
-    }
-    
-    .employee-group-index .table tbody td .btn-outline-danger:hover {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        color: #fff;
-    }
-    
-    /* Hide DataTables responsive control column if it ever appears */
+    .employee-group-index #employeegroupmaster-table { width: 100% !important; min-width: 320px; }
     .employee-group-index #employeegroupmaster-table .dtr-control,
     .employee-group-index #employeegroupmaster-table th.dtr-control,
     .employee-group-index #employeegroupmaster-table td.dtr-control {
-        display: none !important;
-        width: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        visibility: hidden !important;
-        position: absolute !important;
-        left: -9999px !important;
-    }
-    
-    /* Action buttons container */
-    .employee-group-index .action-buttons {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    @media (max-width: 768px) {
-        .employee-group-index .d-flex.justify-content-between {
-            flex-direction: column;
-            align-items: flex-start !important;
-        }
-        
-        .employee-group-index .btn-primary {
-            width: 100%;
-            justify-content: center;
-        }
-        
-        .employee-group-index .card-body {
-            padding: 1rem !important;
-        }
-        
-        .employee-group-index #employeegroupmaster-table th,
-        .employee-group-index #employeegroupmaster-table td {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-        }
-        
-        .employee-group-index .action-buttons {
-            flex-direction: column;
-            width: 100%;
-        }
-        
-        .employee-group-index .action-buttons .btn {
-            width: 100%;
-            margin: 2px 0;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .employee-group-index .table thead th {
-            font-size: 0.75rem;
-            padding: 0.5rem 0.5rem;
-        }
-        
-        .employee-group-index .table tbody td {
-            padding: 0.5rem 0.5rem;
-            font-size: 0.8125rem;
-        }
-    }
-    
-    /* Modal styling */
-    .employee-group-index .modal-header {
-        background-color: #f8f9fa;
-        border-bottom: 2px solid #dee2e6;
-    }
-    
-    .employee-group-index .modal-footer {
-        border-top: 1px solid #dee2e6;
+        display: none !important; width: 0 !important; padding: 0 !important; margin: 0 !important;
+        visibility: hidden !important; position: absolute !important; left: -9999px !important;
     }
 </style>
 
 <!-- Employee Group Modal -->
 <div class="modal fade" id="employeeGroupModal" tabindex="-1" aria-labelledby="employeeGroupModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-semibold" id="employeeGroupModalLabel">Create Employee Group</h5>
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-3 shadow-lg border-0 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-semibold text-body-emphasis" id="employeeGroupModalLabel">Create Employee Group</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="employeeGroupModalBody">
-                <div class="text-center p-4">
+            <div class="modal-body p-4" id="employeeGroupModalBody">
+                <div class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
+                    <p class="text-body-secondary small mt-2 mb-0">Loading form...</p>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            <div class="modal-footer border-top py-3 px-4 gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-2" data-bs-dismiss="modal">
                     Cancel
                 </button>
-                <button type="submit" form="employeeGroupForm" class="btn btn-primary btn-sm" id="saveEmployeeGroupBtn" style="font-size: 14px;">
+                <button type="submit" form="employeeGroupForm" class="btn btn-primary rounded-2 px-3" id="saveEmployeeGroupBtn">
                     <span class="btn-text">Save</span>
                 </button>
             </div>
@@ -246,7 +91,7 @@
         const modalBody = modalEl.querySelector('#employeeGroupModalBody');
         
         modalTitle.textContent = title || 'Employee Group';
-        modalBody.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        modalBody.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="text-body-secondary small mt-2 mb-0">Loading form...</p></div>';
         
         const bsModal = new bootstrap.Modal(modalEl);
         bsModal.show();
@@ -353,7 +198,7 @@
     
     // Clear modal on close and update button text
     $('#employeeGroupModal').on('hidden.bs.modal', function() {
-        $('#employeeGroupModalBody').html('<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+        $('#employeeGroupModalBody').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="text-body-secondary small mt-2 mb-0">Loading form...</p></div>');
         $('#saveEmployeeGroupBtn').find('.btn-text').text('Save');
         $('#employeeGroupModalLabel').text('Create Employee Group');
     });
