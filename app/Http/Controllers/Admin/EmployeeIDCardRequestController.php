@@ -130,8 +130,8 @@ class EmployeeIDCardRequestController extends Controller
             ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')
             ->values();
 
-        $perPage = (int) $request->get('per_page', 15);
-        $perPage = $perPage >= 5 && $perPage <= 100 ? $perPage : 15;
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = $perPage >= 5 && $perPage <= 100 ? $perPage : 10;
 
         $activeRequests = static::paginateCollection($activeCollection, (int) $request->get('active_page', 1) ?: 1, $perPage, $request->url(), 'active_page');
         $activeRequests->withQueryString();
