@@ -3,7 +3,7 @@
 @section('title', isset($conclusion) ? 'Edit Memo Conclusion' : 'Add Memo Conclusion')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid memo-conclusion-form">
     <x-breadcrum title="Memo Conclusion Master" />
     <x-session_message />
 
@@ -23,8 +23,8 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="discussion_name" class="form-label">Discussion Name<span style="color:red;">*</span></label>
-                            <input type="text" name="discussion_name" class="form-control"
+                            <label for="discussion_name" class="form-label">Conclusion name<span style="color:red;">*</span></label>
+                            <input type="text" name="discussion_name" class="form-control memo-conclusion-input"
                                    value="{{ old('discussion_name', $conclusion->discussion_name ?? '') }}" required>
                             @error('discussion_name')
                                 <small class="text-danger">{{ $message }}</small>
@@ -35,7 +35,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="pt_discusion" class="form-label">PT Discussion</label>
-                            <input type="text" name="pt_discusion" class="form-control"
+                            <input type="text" name="pt_discusion" class="form-control memo-conclusion-input"
                                    value="{{ old('pt_discusion', $conclusion->pt_discusion ?? '') }}">
                             @error('pt_discusion')
                                 <small class="text-danger">{{ $message }}</small>
@@ -69,4 +69,72 @@
         </div>
     </div>
 </div>
+
+{{-- Responsive styles: only apply below desktop (992px), desktop view unchanged --}}
+<style>
+@media (max-width: 991.98px) {
+    .memo-conclusion-form .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .memo-conclusion-form .card-body {
+        padding: 1rem;
+    }
+    .memo-conclusion-form .card-title {
+        font-size: 1.1rem;
+    }
+    .memo-conclusion-form .text-end {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    .memo-conclusion-form .text-end .btn {
+        min-width: 0;
+    }
+}
+@media (max-width: 767.98px) {
+    .memo-conclusion-form .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .memo-conclusion-form .card-body {
+        padding: 0.875rem;
+    }
+    .memo-conclusion-form .form-control,
+    .memo-conclusion-form .form-select {
+        font-size: 16px; /* prevents zoom on iOS */
+    }
+    .memo-conclusion-form .text-end {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .memo-conclusion-form .text-end .btn {
+        width: 100%;
+    }
+}
+@media (max-width: 575.98px) {
+    .memo-conclusion-form .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .memo-conclusion-form .card-body {
+        padding: 0.75rem;
+    }
+    .memo-conclusion-form .card-title {
+        font-size: 1rem;
+    }
+    .memo-conclusion-form .form-label {
+        font-size: 0.9375rem;
+    }
+    /* Same size text boxes at Add Discussion */
+    .memo-conclusion-form .memo-conclusion-input {
+        width: 100%;
+        min-height: 38px;
+    }
+    .memo-conclusion-form .row .col-md-6 .form-control {
+        flex: 1 1 auto;
+    }
+}
+</style>
 @endsection

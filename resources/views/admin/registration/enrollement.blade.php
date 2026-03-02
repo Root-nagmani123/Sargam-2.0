@@ -3,7 +3,7 @@
 @section('title', 'Enrollment - Sargam | Lal Bahadur')
 
 @section('setup_content')
-    <div class="container-fluid">
+    <div class="container-fluid enrollment-page">
         <x-breadcrum title="Enroll to New Course" />
         <x-session_message />
         <div class="row justify-content-center">
@@ -306,36 +306,14 @@
     $(function() {
         var editStudentBaseUrl = '{{ route('enrollment.edit', ':id') }}';
 
-        // --- INITIALIZE ALL SELECT2 DROPDOWNS ---
-        function initializeSelect2() {
-            $('#course_master_pk').select2({
-                placeholder: "Select course",
-                allowClear: true,
-                width: '100%'
-            });
-
-            $('#previous_courses').select2({
-                placeholder: "Select previous courses",
-                allowClear: true,
-                width: '100%',
-                closeOnSelect: false
-            });
-
-            $('#services').select2({
-                placeholder: "Select services",
-                allowClear: true,
-                width: '100%',
-                closeOnSelect: false
-            });
-
-            $('#modalCourseSelect').select2({
-                placeholder: "All Courses",
-                allowClear: true,
-                width: '100%'
-            });
+        function initializeSearchableDropdowns() {
+            if (typeof DropdownSearch === 'undefined') return;
+            DropdownSearch.init('#course_master_pk', { placeholder: 'Select course', allowClear: true });
+            DropdownSearch.init('#previous_courses', { placeholder: 'Select previous courses', allowClear: true });
+            DropdownSearch.init('#services', { placeholder: 'Select services', allowClear: true });
+            DropdownSearch.init('#modalCourseSelect', { placeholder: 'All Courses', allowClear: true });
         }
-
-        initializeSelect2();
+        initializeSearchableDropdowns();
 
         // ---------- Variables for enrolled modal ----------
         let currentPage = 1;

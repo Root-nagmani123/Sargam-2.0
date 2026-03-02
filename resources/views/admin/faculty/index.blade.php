@@ -3,7 +3,7 @@
 @section('title', 'Faculty')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid faculty-index">
 <x-breadcrum title="Faculty"></x-breadcrum>
     <!--<x-session_message />-->
     <div id="status-msg"></div>
@@ -13,14 +13,14 @@
         <div class="card" style="border-left:4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
+                    <div class="row faculty-header-row">
+                        <div class="col-12 col-md-6">
                             <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
                                 Faculty
                             </h4>
                         </div>
 
-                        <div class="col-6">
+                        <div class="col-12 col-md-6">
                             <div class="d-flex justify-content-end align-items-center gap-3">
 
                                 <!-- Add Faculty -->

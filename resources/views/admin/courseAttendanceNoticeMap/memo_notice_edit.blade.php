@@ -64,7 +64,7 @@
 
                         <!-- Content -->
                         <div class="col-12">
-                            <label class="form-label">Memo / Notice Content <span class="text-danger">*</span></label>
+                            <label class="form-label">Message <span class="text-danger">*</span></label>
                             <textarea name="content" id="content" class="form-control" required>
                             {{ old('content', $template->content) }}
                         </textarea>

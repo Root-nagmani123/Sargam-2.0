@@ -8,6 +8,11 @@ input.is-invalid {
     border-color: #dc3545;
 }
 
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+}
+
 .mobile-duplicate {
     border: 2px solid #dc3545 !important;
     background-color: #fff5f5;

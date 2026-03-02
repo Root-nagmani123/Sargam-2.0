@@ -3,7 +3,7 @@
 @section('title', 'Student - Course Mapping')
 
 @section('setup_content')
-    <div class="container-fluid">
+    <div class="container-fluid student-courselist-page">
         <x-breadcrum title="Course Wise OTs List" />
         <x-session_message />
 
@@ -129,7 +129,7 @@
                                         <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Import Instructions:</h6>
                                         <p class="mb-2">Your Excel file should have these columns:</p>
                                         <table class="table table-bordered text-nowrap align-middle">
-                                            <thead style="background:#af2910; color:#fff;">
+                                            <thead style="background:#004a93; color:#fff;">
                                                 <tr>
                                                     <th>Excel Column</th>
                                                     <th>Description</th>
@@ -223,7 +223,7 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table" id="studentsTable">
-                        <thead style="background:#af2910; color:#fff;">
+                        <thead style="background:#004a93; color:#fff;">
                             <tr>
                                 <th>S.No</th>
                                 <th>Student</th>

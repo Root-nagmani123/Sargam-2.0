@@ -25,7 +25,7 @@
                         <div class="mb-3">
                             <x-input
                                 name="Seat_name"
-                                label="Seat Name :" 
+                                label="Category/Caste name :" 
                                 placeholder="Name" 
                                 formLabelClass="form-label"
                                 required="true"
@@ -37,7 +37,7 @@
                         <div class="mb-3">
                             <x-input
                                 name="Seat_name_hindi"
-                                label="Seat Name (Hindi) :" 
+                                label="Category/Caste name (Hindi) :" 
                                 placeholder="Name" 
                                 formLabelClass="form-label"
                                 required="true"
