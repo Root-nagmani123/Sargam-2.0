@@ -118,7 +118,7 @@ class EstatePossessionOtherDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(false)->searchable(false),
             Column::make('name')->title('NAME')->orderable(false)->searchable(false),
-            Column::make('section_name')->title('SECTION NAME')->orderable(false)->searchable(false),
+            Column::make('designation')->title('DESIGNATION')->orderable(false)->searchable(false),
             Column::make('estate_name')->title('ESTATE NAME')->orderable(false)->searchable(false),
             Column::make('unit_type')->title('UNIT TYPE')->orderable(false)->searchable(false),
             Column::make('building_name')->title('BUILDING NAME')->orderable(false)->searchable(false),

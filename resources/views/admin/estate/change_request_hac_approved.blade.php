@@ -8,19 +8,26 @@
     <x-estate-workflow-stepper current="hac-approved" />
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
-                <div>
-                    <h1 class="h4 fw-semibold mb-1">Change Requests (Approved by HAC)</h1>
-                    <p class="text-muted small mb-0">View and manage change requests approved by HAC. Use Approve/Disapprove to take action on each request.</p>
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
+                        <i class="bi bi-check2-circle me-1"></i> HAC Approved
+                    </span>
+                    <h1 class="h5 fw-bold mb-0 text-body">Change Requests</h1>
                 </div>
             </div>
+        </div>
+        <div class="card-body p-4 p-lg-5">
+            <p class="text-body-secondary small mb-4 lh-sm">
+                Change requests and new requests (forwarded from HAC) in one table. Use <strong class="text-success">Approve</strong> / <strong class="text-danger">Disapprove</strong> for change requests, or <strong class="text-primary">Allot</strong> for new requests to add to Possession Details.
+            </p>
 
-            <div class="estate-change-request-table-wrapper table-responsive">
+            <div class="estate-hac-approved-table-wrapper table-responsive">
                 {!! $dataTable->table([
-                    'class' => 'table table-bordered table-striped table-hover text-nowrap align-middle mb-0 estate-change-request-table',
-                    'aria-describedby' => 'change-request-caption'
+                    'class' => 'table text-nowrap align-middle mb-0',
+                    'aria-describedby' => 'hac-approved-caption'
                 ]) !!}
             </div>
             <div id="hac-approved-caption" class="visually-hidden">HAC Approved – change and new requests</div>
@@ -46,22 +53,6 @@
                         <p class="mt-3 text-body-secondary small mb-0">Loading details...</p>
                     </div>
                     <div id="approveModalContent" class="d-none">
-                        {{-- Direct confirm when house was already selected at Raise Change Request --}}
-                        <div id="approveConfirmOnly" class="d-none mb-4">
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Requester Name</label>
-                                    <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveRequesterNameConfirm" readonly>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Designation</label>
-                                    <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveDesignationConfirm" readonly>
-                                </div>
-                            </div>
-                            <p class="mb-0 text-body">Requested house was already selected when the change request was raised. Approve with house: <strong id="approveRequestedHouseNo" class="text-success"></strong>?</p>
-                        </div>
-                        {{-- Full form (dropdowns) – only when requested house not already set --}}
-                        <div id="approveFullForm">
                         <p class="text-body-secondary small mb-4">Please select the house to approve for this request.</p>
                         {{-- Requester Name & Designation (read-only) --}}
                         <div class="row g-3 mb-4">
@@ -109,7 +100,6 @@
                         </div>
                         <div id="approveNoHouses" class="alert alert-warning alert-dismissible fade show small mt-3 d-none" role="alert">No vacant houses available. Select Estate, Unit Type, Building, and Unit Sub Type first.<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button></div>
                         <div id="approveFormError" class="alert alert-danger alert-dismissible fade show mt-3 d-none" role="alert"></div>
-                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 bg-body-secondary bg-opacity-50 py-3 px-4 gap-2">
@@ -157,7 +147,7 @@
     </div>
 </div>
 
-{{-- Allot new request modal (add to Possession Details) --}}
+{{-- Allot new request modal (forwarded from HAC → add to Possession Details) --}}
 <div class="modal fade" id="allotNewRequestModal" tabindex="-1" aria-labelledby="allotNewRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content rounded-4 shadow-lg border-0">
@@ -238,65 +228,89 @@
 
 @push('styles')
 <style>
-    /* DataTables controls: Bootstrap 5 form styling */
-    #estateChangeRequestTable_wrapper .dataTables_length label {
+    /* DataTables: Bootstrap 5.3 form controls */
+    #estateHacApprovedTable_wrapper .dataTables_length label {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         flex-wrap: wrap;
     }
-    #estateChangeRequestTable_wrapper .dataTables_length select {
+    #estateHacApprovedTable_wrapper .dataTables_length select {
         width: auto;
         min-width: 4.5rem;
         display: inline-block;
         padding: 0.25rem 2rem 0.25rem 0.5rem;
         font-size: 0.875rem;
-        border-radius: 0.375rem;
-        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: var(--bs-border-radius);
+        border: 1px solid var(--bs-border-color);
+        background-color: var(--bs-body-bg);
     }
-    #estateChangeRequestTable_wrapper .dataTables_filter label {
+    #estateHacApprovedTable_wrapper .dataTables_filter label {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         flex-wrap: wrap;
     }
-    #estateChangeRequestTable_wrapper .dataTables_filter input {
-        padding: 0.25rem 0.5rem;
+    #estateHacApprovedTable_wrapper .dataTables_filter input {
+        padding: 0.375rem 0.75rem;
         font-size: 0.875rem;
-        border: 1px solid var(--bs-border-color, #dee2e6);
-        border-radius: 0.375rem;
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
         margin-left: 0.25rem;
     }
-    /* Blue header row (Bootstrap 5 table-primary style) */
-    #estateChangeRequestTable_wrapper thead th {
+    #estateHacApprovedTable_wrapper .dataTables_filter input:focus {
+        border-color: var(--bs-primary);
+        outline: 0;
+        box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+    /* Table: primary header, striped rows, hover */
+    #estateHacApprovedTable_wrapper thead th {
         background-color: var(--bs-primary);
-        color: #fff;
+        color: var(--bs-white);
         font-weight: 600;
         border-color: var(--bs-primary);
-        padding: 0.75rem;
+        padding: 0.75rem 1rem;
         white-space: nowrap;
+        font-size: 0.875rem;
     }
-    .estate-change-request-table-wrapper {
+    #estateHacApprovedTable_wrapper tbody tr:nth-of-type(even) {
+        background-color: rgba(var(--bs-primary-rgb), 0.04);
+    }
+    #estateHacApprovedTable_wrapper tbody tr:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.08);
+    }
+    #estateHacApprovedTable_wrapper tbody td {
+        padding: 0.75rem 1rem;
+        border-color: var(--bs-border-color);
+        font-size: 0.875rem;
+    }
+    .estate-hac-approved-table-wrapper {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-    #estateChangeRequestTable_wrapper table {
+    #estateHacApprovedTable_wrapper table {
         min-width: 992px;
     }
-    #estateChangeRequestTable_wrapper .dataTables_paginate .paginate_button {
-        padding: 0.25rem 0.5rem;
-        margin: 0 1px;
-        border-radius: 0.375rem;
+    /* Pagination: btn-like buttons */
+    #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.375rem 0.75rem;
+        margin: 0 0.125rem;
+        border-radius: var(--bs-border-radius);
         border: 1px solid var(--bs-border-color);
+        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
     }
-    #estateChangeRequestTable_wrapper .dataTables_paginate .paginate_button.current {
+    #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button:hover {
+        background-color: var(--bs-secondary-bg);
+        border-color: var(--bs-border-color);
+    }
+    #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button.current {
         background: var(--bs-primary);
-        color: #fff !important;
+        color: var(--bs-white) !important;
         border-color: var(--bs-primary);
     }
-    #estateChangeRequestTable_wrapper .dataTables_info {
+    #estateHacApprovedTable_wrapper .dataTables_info {
         font-size: 0.875rem;
-        color: var(--bs-body-secondary);
+        color: var(--bs-secondary-color);
     }
 </style>
 @endpush
@@ -305,7 +319,7 @@
     {!! $dataTable->scripts() !!}
     <script>
     function wrapTableScroll() {
-        var tbl = document.getElementById('estateChangeRequestTable');
+        var tbl = document.getElementById('estateHacApprovedTable');
         if (tbl && tbl.parentNode && !tbl.parentNode.classList.contains('table-responsive')) {
             var wrap = document.createElement('div');
             wrap.className = 'table-responsive';
@@ -413,38 +427,16 @@
                     return;
                 }
                 var emp = data.employee || {};
-                var chReq = data.change_request || {};
-                var requestedHousePk = chReq.requested_house_pk ? parseInt(chReq.requested_house_pk, 10) : null;
-                var requestedHouseNo = chReq.change_house_no || '';
-
-                if (requestedHousePk && requestedHouseNo) {
-                    document.getElementById('approveConfirmOnly').classList.remove('d-none');
-                    document.getElementById('approveFullForm').classList.add('d-none');
-                    var titleEl = document.getElementById('approveChangeRequestModalLabel');
-                    if (titleEl) titleEl.innerHTML = '<i class="bi bi-check2-circle text-success"></i> Approve Change Request';
-                    $('#approveRequesterNameConfirm').val(emp.emp_name || '');
-                    $('#approveDesignationConfirm').val(emp.emp_designation || '');
-                    document.getElementById('approveRequestedHouseNo').textContent = requestedHouseNo;
-                    var sel = document.getElementById('estate_house_master_pk');
-                    sel.innerHTML = '<option value="' + requestedHousePk + '">' + requestedHouseNo + '</option>';
-                    sel.removeAttribute('required');
-                } else {
-                    var titleEl = document.getElementById('approveChangeRequestModalLabel');
-                    if (titleEl) titleEl.innerHTML = '<i class="bi bi-check2-circle text-success"></i> Approved Request House';
-                    document.getElementById('approveConfirmOnly').classList.add('d-none');
-                    document.getElementById('approveFullForm').classList.remove('d-none');
-                    $('#approveRequesterName').val(emp.emp_name || '');
-                    $('#approveDesignation').val(emp.emp_designation || '');
-                    approveCampuses = data.campuses || [];
-                    approveUnitTypesByCampus = data.unit_types_by_campus || {};
-                    $('#approve_estate_campus').html('<option value="">---select---</option>');
-                    approveCampuses.forEach(function(c) {
-                        $('#approve_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
-                    });
-                    $('#approve_unit_type, #approve_building, #approve_unit_sub_type, #estate_house_master_pk').html('<option value="">---select---</option>');
-                    document.getElementById('estate_house_master_pk').setAttribute('required', 'required');
-                    $('#approveNoHouses').addClass('d-none');
-                }
+                $('#approveRequesterName').val(emp.emp_name || '');
+                $('#approveDesignation').val(emp.emp_designation || '');
+                approveCampuses = data.campuses || [];
+                approveUnitTypesByCampus = data.unit_types_by_campus || {};
+                $('#approve_estate_campus').html('<option value="">---select---</option>');
+                approveCampuses.forEach(function(c) {
+                    $('#approve_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
+                });
+                $('#approve_unit_type, #approve_building, #approve_unit_sub_type, #estate_house_master_pk').html('<option value="">---select---</option>');
+                $('#approveNoHouses').addClass('d-none');
             }).catch(function() {
                 approveLoading.classList.add('d-none');
                 approveContent.classList.remove('d-none');
@@ -576,7 +568,7 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             });
         }
 
-        // Allot new request (to Possession Details)
+        // Allot new request (forwarded from HAC → Possession Details)
         var allotModalEl = document.getElementById('allotNewRequestModal');
         var allotModal = allotModalEl ? new bootstrap.Modal(allotModalEl) : null;
         var allotForm = document.getElementById('formAllotNewRequest');
@@ -585,8 +577,6 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
         var allotFormError = document.getElementById('allotFormError');
         var allotCampuses = [];
         var allotUnitTypesByCampus = {};
-        var allotEligibilityTypePk = null;
-        var allotEmployeePk = null; // for House No. filter by employee's salary-grade eligibility (DB admin query)
         var blocksUrlAllot = '{{ route("admin.estate.possession.blocks") }}';
         var unitSubTypesUrlAllot = '{{ route("admin.estate.possession.unit-sub-types") }}';
         var vacantHousesUrlAllot = '{{ route("admin.estate.change-request.vacant-houses") }}';
@@ -635,14 +625,12 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             var unitTypeId = $('#allot_unit_type').val();
             $('#allot_estate_house_master_pk').html('<option value="">---select---</option>');
             if (!campusId || !blockId || !unitSubId) return;
-            var params = {
+            $.get(vacantHousesUrlAllot, {
                 campus_id: campusId,
                 block_id: blockId,
                 unit_sub_type_id: unitSubId,
                 unit_type_id: unitTypeId || ''
-            };
-            if (allotEmployeePk) params.employee_pk = allotEmployeePk;
-            $.get(vacantHousesUrlAllot, params, function(res) {
+            }, function(res) {
                 if (res.status && res.data) {
                     res.data.forEach(function(h) {
                         $('#allot_estate_house_master_pk').append('<option value="' + h.pk + '">' + (h.house_no || h.pk) + '</option>');
@@ -675,23 +663,14 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                     var emp = data.employee || {};
                     $('#allotRequesterName').val(emp.emp_name || '');
                     $('#allotDesignation').val(emp.emp_designation || '');
-                    allotEligibilityTypePk = (emp.eligibility_type_pk != null && emp.eligibility_type_pk !== '') ? parseInt(emp.eligibility_type_pk, 10) : null;
-                    allotEmployeePk = (emp.employee_pk != null && emp.employee_pk !== '') ? parseInt(emp.employee_pk, 10) : null;
                     allotCampuses = data.campuses || [];
                     allotUnitTypesByCampus = data.unit_types_by_campus || {};
                     $('#allot_estate_campus').html('<option value="">---select---</option>');
                     allotCampuses.forEach(function(c) {
                         $('#allot_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
                     });
-                    $('#allot_unit_type, #allot_building, #allot_unit_sub_type').html('<option value="">---select---</option>');
-                    // Pre-fill House No. from vacant_houses (already filtered by eligibility + occupied) so user can allot without cascade
-                    var vacantList = data.vacant_houses || [];
-                    $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
-                    vacantList.forEach(function(h) {
-                        var label = (h.block_name ? h.block_name + ' - ' : '') + (h.house_no || h.pk);
-                        $('#allot_estate_house_master_pk').append('<option value="' + h.pk + '">' + label + '</option>');
-                    });
-                    $('#allotNoHouses').toggleClass('d-none', vacantList.length > 0);
+                    $('#allot_unit_type, #allot_building, #allot_unit_sub_type, #allot_estate_house_master_pk').html('<option value="">---select---</option>');
+                    $('#allotNoHouses').addClass('d-none');
                 })
                 .catch(function() {
                     allotLoading.classList.add('d-none');

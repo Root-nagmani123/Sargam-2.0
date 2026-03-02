@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\EstateApprovalSettingDataTable;
-use App\DataTables\EstateChangeRequestDataTable;
 use App\DataTables\EstateMigrationReportDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\DataTables\EstateRequestForEstateDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateRequestHacForwardDataTable;
+use App\DataTables\EstateHacApprovedDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
@@ -163,6 +163,25 @@ class EstateController extends Controller
         return redirect()
             ->route('admin.estate.estate-approval-setting')
             ->with('success', 'Approved request house settings saved successfully.');
+    }
+
+    /**
+     * Delete a single estate approval setting record.
+     */
+    public function destroyEstateApprovalSetting(Request $request, $id)
+    {
+        $record = EstateHomeReqApprovalMgmt::find($id);
+        if (!$record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.estate-approval-setting')->with('error', 'Record not found.');
+        }
+        $record->delete();
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Approval setting deleted successfully.']);
+        }
+        return redirect()->route('admin.estate.estate-approval-setting')->with('success', 'Approval setting deleted successfully.');
     }
 
     /**
@@ -372,28 +391,321 @@ class EstateController extends Controller
     }
 
     /**
-     * Change Requests (Approved by HAC) - Listing from estate_change_home_req_details.
+     * HAC Approved - Single table: Change requests + New requests (forwarded from HAC).
      */
-    public function changeRequestHacApproved(EstateChangeRequestDataTable $dataTable)
+    public function changeRequestHacApproved(EstateHacApprovedDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.change_request_hac_approved');
     }
 
     /**
-     * Approve change request - set change_ap_dis_status = 1.
+     * Get change request approve details - employee full details, paygrade/eligibility type, available vacant residences.
      */
-    public function approveChangeRequest($id)
+    public function getChangeRequestApproveDetails($id)
     {
-        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail($id);
+        $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
+            ->where('estate_change_hac_status', 1)
+            ->findOrFail($id);
+
+        $homeReq = $record->estateHomeRequestDetails;
+        if (! $homeReq) {
+            return response()->json(['error' => 'Request details not found'], 404);
+        }
+
+        $eligibilityTypePk = (int) ($homeReq->eligibility_type_pk ?? 62);
+        $eligibilityLabel = 'Type-' . ($eligibilityTypePk == 61 ? 'I' : ($eligibilityTypePk == 62 ? 'II' : ($eligibilityTypePk == 63 ? 'III' : 'IV')));
+
+        // Fetch vacant houses by eligibility type (same logic as getVacantHousesForEstateRequest)
+        $occupiedHousePks = DB::table('estate_possession_details')
+            ->whereNotNull('estate_house_master_pk')
+            ->pluck('estate_house_master_pk')
+            ->merge(
+                DB::table('estate_possession_other')
+                    ->whereNotNull('estate_house_master_pk')
+                    ->pluck('estate_house_master_pk')
+            )
+            ->unique()
+            ->values();
+
+        $housesQuery = DB::table('estate_house_master as h')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
+            ->select('h.pk', 'h.house_no', 'b.block_name')
+            ->orderBy('b.block_name')
+            ->orderBy('h.house_no');
+
+        if ($occupiedHousePks->isNotEmpty()) {
+            $housesQuery->whereNotIn('h.pk', $occupiedHousePks->toArray());
+        }
+
+        $vacantHouses = $housesQuery->get()->map(function ($row) {
+            $houseNo = trim($row->house_no ?? '') ?: (string) $row->pk;
+            return [
+                'pk' => (int) $row->pk,
+                'house_no' => $row->house_no ?? '',
+                'block_name' => $row->block_name ?? '',
+                'label' => ($row->block_name ? $row->block_name . ' - ' : '') . $houseNo,
+            ];
+        });
+
+        // Campuses and unit types per campus for dependent dropdowns
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+
+        $unitTypesByCampus = DB::table('estate_campus_master as a')
+            ->join('estate_house_master as b', 'a.pk', '=', 'b.estate_campus_master_pk')
+            ->join('estate_unit_type_master as c', 'b.estate_unit_master_pk', '=', 'c.pk')
+            ->select('a.pk as campus_pk', 'c.pk as unit_type_pk', 'c.unit_type')
+            ->distinct()
+            ->orderBy('a.pk')
+            ->orderBy('c.unit_type')
+            ->get()
+            ->groupBy('campus_pk')
+            ->map(fn ($rows) => $rows->map(fn ($r) => ['pk' => $r->unit_type_pk, 'unit_type' => $r->unit_type])->values()->all())
+            ->all();
+
+        return response()->json([
+            'employee' => [
+                'emp_name' => $homeReq->emp_name ?? '',
+                'employee_id' => $homeReq->employee_id ?? '',
+                'emp_designation' => $homeReq->emp_designation ?? '',
+                'pay_scale' => $homeReq->pay_scale ?? '',
+                'doj_pay_scale' => $homeReq->doj_pay_scale ? \Carbon\Carbon::parse($homeReq->doj_pay_scale)->format('d-m-Y') : '',
+                'doj_academic' => $homeReq->doj_academic ? \Carbon\Carbon::parse($homeReq->doj_academic)->format('d-m-Y') : '',
+                'doj_service' => $homeReq->doj_service ? \Carbon\Carbon::parse($homeReq->doj_service)->format('d-m-Y') : '',
+                'eligibility_type_pk' => $eligibilityTypePk,
+                'eligibility_label' => $eligibilityLabel,
+            ],
+            'change_request' => [
+                'pk' => $record->pk,
+                'estate_change_req_ID' => $record->estate_change_req_ID ?? 'N/A',
+                'change_house_no' => $record->change_house_no ?? '',
+                'remarks' => $record->remarks ?? '',
+            ],
+            'campuses' => $campuses,
+            'unit_types_by_campus' => $unitTypesByCampus,
+            'vacant_houses' => $vacantHouses,
+        ]);
+    }
+
+    /**
+     * Get new request (forwarded to allotment) details for allotment modal - employee info, campuses, unit types, vacant houses.
+     */
+    public function getNewRequestAllotDetails($id)
+    {
+        $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
+            ->where('f_status', 1)
+            ->where('change_status', 0)
+            ->findOrFail($id);
+
+        $existingPossession = DB::table('estate_possession_details')
+            ->where('estate_home_request_details', $homeReq->pk)
+            ->first();
+        if ($existingPossession) {
+            return response()->json(['error' => 'This request already has a house allotted.'], 404);
+        }
+
+        $eligibilityTypePk = (int) ($homeReq->eligibility_type_pk ?? 62);
+        $eligibilityLabel = 'Type-' . ($eligibilityTypePk == 61 ? 'I' : ($eligibilityTypePk == 62 ? 'II' : ($eligibilityTypePk == 63 ? 'III' : 'IV')));
+
+        $occupiedHousePks = DB::table('estate_possession_details')
+            ->whereNotNull('estate_house_master_pk')
+            ->pluck('estate_house_master_pk')
+            ->merge(
+                DB::table('estate_possession_other')
+                    ->whereNotNull('estate_house_master_pk')
+                    ->pluck('estate_house_master_pk')
+            )
+            ->unique()
+            ->values();
+
+        $housesQuery = DB::table('estate_house_master as h')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
+            ->select('h.pk', 'h.house_no', 'b.block_name')
+            ->orderBy('b.block_name')
+            ->orderBy('h.house_no');
+
+        if ($occupiedHousePks->isNotEmpty()) {
+            $housesQuery->whereNotIn('h.pk', $occupiedHousePks->toArray());
+        }
+
+        $vacantHouses = $housesQuery->get()->map(function ($row) {
+            $houseNo = trim($row->house_no ?? '') ?: (string) $row->pk;
+            return [
+                'pk' => (int) $row->pk,
+                'house_no' => $row->house_no ?? '',
+                'block_name' => $row->block_name ?? '',
+                'label' => ($row->block_name ? $row->block_name . ' - ' : '') . $houseNo,
+            ];
+        });
+
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+
+        $unitTypesByCampus = DB::table('estate_campus_master as a')
+            ->join('estate_house_master as b', 'a.pk', '=', 'b.estate_campus_master_pk')
+            ->join('estate_unit_type_master as c', 'b.estate_unit_master_pk', '=', 'c.pk')
+            ->select('a.pk as campus_pk', 'c.pk as unit_type_pk', 'c.unit_type')
+            ->distinct()
+            ->orderBy('a.pk')
+            ->orderBy('c.unit_type')
+            ->get()
+            ->groupBy('campus_pk')
+            ->map(fn ($rows) => $rows->map(fn ($r) => ['pk' => $r->unit_type_pk, 'unit_type' => $r->unit_type])->values()->all())
+            ->all();
+
+        return response()->json([
+            'employee' => [
+                'emp_name' => $homeReq->emp_name ?? '',
+                'employee_id' => $homeReq->employee_id ?? '',
+                'emp_designation' => $homeReq->emp_designation ?? '',
+                'pay_scale' => $homeReq->pay_scale ?? '',
+                'doj_pay_scale' => $homeReq->doj_pay_scale ? \Carbon\Carbon::parse($homeReq->doj_pay_scale)->format('d-m-Y') : '',
+                'doj_academic' => $homeReq->doj_academic ? \Carbon\Carbon::parse($homeReq->doj_academic)->format('d-m-Y') : '',
+                'doj_service' => $homeReq->doj_service ? \Carbon\Carbon::parse($homeReq->doj_service)->format('d-m-Y') : '',
+                'eligibility_type_pk' => $eligibilityTypePk,
+                'eligibility_label' => $eligibilityLabel,
+            ],
+            'request' => [
+                'pk' => $homeReq->pk,
+                'req_id' => $homeReq->req_id ?? 'N/A',
+            ],
+            'campuses' => $campuses,
+            'unit_types_by_campus' => $unitTypesByCampus,
+            'vacant_houses' => $vacantHouses,
+        ]);
+    }
+
+    /**
+     * Allot house to new request (forwarded from HAC) - insert into estate_possession_details (moves to Possession Details).
+     */
+    public function allotNewRequest(Request $request, $id)
+    {
+        $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
+            ->where('f_status', 1)
+            ->where('change_status', 0)
+            ->findOrFail($id);
+
+        $request->validate([
+            'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
+        ]);
+
+        $estateHouseMasterPk = (int) $request->estate_house_master_pk;
+        $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
+
+        // If employee_pk is missing, try to resolve from employee_id via employee_master
+        if (! $employeePk && $homeReq->employee_id) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id')) {
+                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value('pk');
+            }
+            if (! $employeePk && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id')) {
+                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value('pk');
+            }
+            if ($employeePk) {
+                $homeReq->employee_pk = $employeePk;
+                $homeReq->save();
+            }
+        }
+
+        // emploee_master_pk can be null; possession is linked via estate_home_request_details
+        $existingPossession = DB::table('estate_possession_details')
+            ->where('estate_home_request_details', $homeReq->pk)
+            ->first();
+
+        $allotmentDate = now()->format('Y-m-d');
+
+        if ($existingPossession) {
+            DB::table('estate_possession_details')
+                ->where('pk', $existingPossession->pk)
+                ->update([
+                    'estate_house_master_pk' => $estateHouseMasterPk,
+                    'estate_change_id' => null,
+                ]);
+        } else {
+            DB::table('estate_possession_details')->insert([
+                'estate_home_request_details' => $homeReq->pk,
+                'emploee_master_pk' => $employeePk,
+                'allotment_date' => $allotmentDate,
+                'possession_date' => $allotmentDate,
+                'electric_meter_reading' => 0,
+                'estate_house_master_pk' => $estateHouseMasterPk,
+                'estate_change_id' => null,
+            ]);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'House allotted successfully. Record is now in Possession Details.',
+            ]);
+        }
+        return redirect()->route('admin.estate.change-request-hac-approved')
+            ->with('success', 'House allotted successfully. Record is now in Possession Details.');
+    }
+
+    /**
+     * Approve change request - set change_ap_dis_status = 1 and allot house to employee.
+     */
+    public function approveChangeRequest(Request $request, $id)
+    {
+        $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
+            ->where('estate_change_hac_status', 1)
+            ->findOrFail($id);
+
+        $request->validate([
+            'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
+        ]);
+
+        $estateHouseMasterPk = (int) $request->estate_house_master_pk;
+        $homeReqPk = $record->estate_home_req_details_pk;
+        $employeePk = $record->estateHomeRequestDetails->employee_pk ?? null;
+
+        if (! $employeePk) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Employee PK not found for this request.'], 422);
+            }
+            return redirect()->route('admin.estate.change-request-hac-approved')
+                ->with('error', 'Employee PK not found for this request.');
+        }
+
+        // Check if employee already has possession (estate_possession_details)
+        $existingPossession = DB::table('estate_possession_details')
+            ->where('estate_home_request_details', $homeReqPk)
+            ->first();
+
+        $allotmentDate = now()->format('Y-m-d');
+
+        if ($existingPossession) {
+            DB::table('estate_possession_details')
+                ->where('pk', $existingPossession->pk)
+                ->update([
+                    'estate_house_master_pk' => $estateHouseMasterPk,
+                    'estate_change_id' => $record->estate_change_req_ID ?? null,
+                ]);
+        } else {
+            DB::table('estate_possession_details')->insert([
+                'estate_home_request_details' => $homeReqPk,
+                'emploee_master_pk' => $employeePk,
+                'allotment_date' => $allotmentDate,
+                'possession_date' => $allotmentDate,
+                'electric_meter_reading' => 0,
+                'estate_house_master_pk' => $estateHouseMasterPk,
+                'estate_change_id' => $record->estate_change_req_ID ?? null,
+            ]);
+        }
+
         $record->change_ap_dis_status = 1;
         $record->remarks = null;
         $record->save();
 
-        if (request()->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Change request approved successfully.']);
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Change request approved and house allotted successfully.']);
         }
         return redirect()->route('admin.estate.change-request-hac-approved')
-            ->with('success', 'Change request approved successfully.');
+            ->with('success', 'Change request approved and house allotted successfully.');
     }
 
     /**
@@ -499,7 +811,7 @@ class EstateController extends Controller
     public function possessionView(Request $request)
     {
         $requesters = EstateOtherRequest::orderBy('emp_name')
-            ->get(['pk', 'emp_name', 'request_no_oth', 'section']);
+            ->get(['pk', 'emp_name', 'request_no_oth', 'section', 'designation']);
 
         $campuses = DB::table('estate_campus_master')
             ->orderBy('campus_name')
@@ -538,6 +850,7 @@ class EstateController extends Controller
             'possession_date_oth' => 'nullable|date',
             'allotment_date' => 'nullable|date',
             'meter_reading_oth' => 'nullable|integer',
+            'meter_reading_oth1' => 'nullable|integer',
             'house_no' => 'nullable|string|max:100',
         ]);
 
@@ -555,10 +868,816 @@ class EstateController extends Controller
             'possession_date_oth' => $validated['possession_date_oth'] ?? null,
             'allotment_date' => $validated['allotment_date'] ?? null,
             'meter_reading_oth' => $validated['meter_reading_oth'] ?? null,
+            'meter_reading_oth1' => $validated['meter_reading_oth1'] ?? null,
             'house_no' => $validated['house_no'] ?? ($house->house_no ?? null),
             'status' => 0,
             'request_no_oth' => $requestNo,
         ]);
+
+        $userId = Auth::id();
+        $now = now();
+        $houseNos = $validated['house_no'] ?? [];
+        $count = count($houseNos);
+        if ($count === 0) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'At least one house entry is required.'], 422);
+            }
+            return redirect()->back()->withInput()->withErrors(['house_no' => 'At least one house entry is required.']);
+        }
+
+        $meterOnes = array_pad($validated['meter_one'] ?? [], $count, '');
+        $meterTwos = array_pad($validated['meter_two'] ?? [], $count, '');
+        $licenceFees = array_pad($validated['licence_fee'] ?? [], $count, 0);
+        $statuses = array_pad($validated['vacant_renovation_status'] ?? [], $count, 1);
+
+        $waterCharge = (float) ($validated['water_charge'] ?? 0);
+        $electricCharge = (float) ($validated['electric_charge'] ?? 0);
+        $remarks = $validated['remarks'] ?? '';
+
+        for ($i = 0; $i < $count; $i++) {
+            $data = [
+                'estate_campus_master_pk' => $validated['estate_campus_master_pk'],
+                'estate_unit_master_pk' => $validated['estate_unit_type_master_pk'],
+                'estate_block_master_pk' => $validated['estate_block_master_pk'],
+                'estate_unit_sub_type_master_pk' => $validated['estate_unit_sub_type_master_pk'],
+                'house_no' => $houseNos[$i],
+                'water_charge' => $waterCharge,
+                'electric_charge' => $electricCharge,
+                'licence_fee' => (float) ($licenceFees[$i] ?? 0),
+                'meter_one' => (int) preg_replace('/\D/', '', $meterOnes[$i] ?? '') ?: 0,
+                'meter_two' => (int) preg_replace('/\D/', '', $meterTwos[$i] ?? '') ?: 0,
+                'vacant_renovation_status' => (int) ($statuses[$i] ?? 1),
+                'remarks' => $remarks,
+                'used_home_status' => 0,
+                'created_date' => $now,
+                'created_by' => $userId,
+            ];
+            EstateHouse::create($data);
+        }
+
+        $message = $count === 1 ? 'Estate house added successfully.' : $count . ' estate houses added successfully.';
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+        return redirect()->route('admin.estate.define-house')->with('success', $message);
+    }
+
+    /**
+     * Define House list data for DataTable (server-side).
+     */
+    public function getDefineHouseData(Request $request)
+    {
+        $query = DB::table('estate_house_master as h')
+            ->leftJoin('estate_campus_master as c', 'h.estate_campus_master_pk', '=', 'c.pk')
+            ->leftJoin('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->leftJoin('estate_unit_type_master as ut', 'h.estate_unit_master_pk', '=', 'ut.pk')
+            ->leftJoin('estate_unit_sub_type_master as ust', 'h.estate_unit_sub_type_master_pk', '=', 'ust.pk')
+            ->select(
+                'h.pk',
+                'c.campus_name as estate_name',
+                'ut.unit_type',
+                'b.block_name as building_name',
+                'ust.unit_sub_type',
+                'h.house_no',
+                'h.water_charge',
+                'h.electric_charge',
+                'h.licence_fee',
+                'h.vacant_renovation_status',
+                'h.remarks'
+            )
+            ->orderBy('h.pk', 'desc');
+
+        $total = $query->count();
+
+        if ($request->filled('search.value')) {
+            $term = $request->get('search')['value'];
+            $query->where(function ($q) use ($term) {
+                $q->where('c.campus_name', 'like', "%{$term}%")
+                    ->orWhere('b.block_name', 'like', "%{$term}%")
+                    ->orWhere('ut.unit_type', 'like', "%{$term}%")
+                    ->orWhere('ust.unit_sub_type', 'like', "%{$term}%")
+                    ->orWhere('h.house_no', 'like', "%{$term}%");
+            });
+        }
+
+        $filtered = $query->count();
+
+        $start = (int) $request->get('start', 0);
+        $length = (int) $request->get('length', 10);
+        if ($length > 0) {
+            $query->offset($start)->limit($length);
+        }
+
+        $rows = $query->get();
+
+        return response()->json([
+            'draw' => (int) $request->get('draw', 1),
+            'recordsTotal' => $total,
+            'recordsFiltered' => $filtered,
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * Get single estate house for edit (JSON).
+     */
+    public function showDefineHouse($id)
+    {
+        $row = DB::table('estate_house_master as h')
+            ->leftJoin('estate_campus_master as c', 'h.estate_campus_master_pk', '=', 'c.pk')
+            ->leftJoin('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->leftJoin('estate_unit_type_master as ut', 'h.estate_unit_master_pk', '=', 'ut.pk')
+            ->leftJoin('estate_unit_sub_type_master as ust', 'h.estate_unit_sub_type_master_pk', '=', 'ust.pk')
+            ->where('h.pk', $id)
+            ->select(
+                'h.pk',
+                'h.estate_campus_master_pk',
+                'h.estate_unit_master_pk',
+                'h.estate_block_master_pk',
+                'h.estate_unit_sub_type_master_pk',
+                'c.campus_name as estate_name',
+                'b.block_name as building_name',
+                'h.house_no',
+                'h.water_charge',
+                'h.electric_charge',
+                'h.licence_fee',
+                'h.meter_one',
+                'h.meter_two',
+                'h.vacant_renovation_status',
+                'h.remarks'
+            )
+            ->first();
+
+        if (!$row) {
+            return response()->json(['message' => 'House not found.'], 404);
+        }
+
+        return response()->json($row);
+    }
+
+    /**
+     * Update estate house (single record).
+     */
+    public function updateDefineHouse(Request $request, $id)
+    {
+        $house = EstateHouse::find($id);
+        if (!$house) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'House not found.'], 404);
+            }
+            return redirect()->route('admin.estate.define-house')->with('error', 'House not found.');
+        }
+
+        $validated = $request->validate([
+            'estate_campus_master_pk' => 'required|integer|exists:estate_campus_master,pk',
+            'estate_unit_type_master_pk' => 'required|integer|exists:estate_unit_type_master,pk',
+            'estate_block_master_pk' => 'required|integer|exists:estate_block_master,pk',
+            'estate_unit_sub_type_master_pk' => 'required|integer|exists:estate_unit_sub_type_master,pk',
+            'water_charge' => 'nullable|numeric|min:0',
+            'electric_charge' => 'nullable|numeric|min:0',
+            'remarks' => 'nullable|string|max:200',
+            'house_no' => 'required|array',
+            'house_no.0' => 'required|string|max:20',
+            'meter_one' => 'nullable|array',
+            'meter_one.0' => 'nullable|string|max:30',
+            'meter_two' => 'nullable|array',
+            'meter_two.0' => 'nullable|string|max:30',
+            'licence_fee' => 'nullable|array',
+            'licence_fee.0' => 'nullable|numeric|min:0',
+            'vacant_renovation_status' => 'required|array',
+            'vacant_renovation_status.0' => 'required|in:0,1',
+        ]);
+
+        $house->estate_campus_master_pk = $validated['estate_campus_master_pk'];
+        $house->estate_unit_master_pk = $validated['estate_unit_type_master_pk'];
+        $house->estate_block_master_pk = $validated['estate_block_master_pk'];
+        $house->estate_unit_sub_type_master_pk = $validated['estate_unit_sub_type_master_pk'];
+        $house->house_no = $validated['house_no'][0];
+        $house->water_charge = (float) ($validated['water_charge'] ?? 0);
+        $house->electric_charge = (float) ($validated['electric_charge'] ?? 0);
+        $house->licence_fee = (float) (($validated['licence_fee'] ?? [])[0] ?? 0);
+        $house->meter_one = (int) preg_replace('/\D/', '', ($validated['meter_one'] ?? [])[0] ?? '') ?: 0;
+        $house->meter_two = (int) preg_replace('/\D/', '', ($validated['meter_two'] ?? [])[0] ?? '') ?: 0;
+        $house->vacant_renovation_status = (int) (($validated['vacant_renovation_status'] ?? [])[0] ?? 1);
+        $house->remarks = $validated['remarks'] ?? '';
+        $house->modify_date = now();
+        $house->modify_by = Auth::id();
+        $house->save();
+
+        $message = 'Estate house updated successfully.';
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+        return redirect()->route('admin.estate.define-house')->with('success', $message);
+    }
+
+    /**
+     * Delete estate house.
+     */
+    public function destroyDefineHouse($id)
+    {
+        $house = EstateHouse::find($id);
+        if (!$house) {
+            return response()->json(['success' => false, 'message' => 'House not found.'], 404);
+        }
+        $house->delete();
+        return response()->json(['success' => true, 'message' => 'Estate house deleted successfully.']);
+    }
+
+    /**
+     * API: Get unit sub types for estate possession (by campus + block).
+     */
+    public function getPossessionUnitSubTypes(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        $unitTypeId = $request->get('unit_type_id');
+        if (!$campusId || !$blockId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        $items = DB::table('estate_house_master as h')
+            ->join('estate_unit_sub_type_master as u', 'h.estate_unit_sub_type_master_pk', '=', 'u.pk')
+            ->where('h.estate_campus_master_pk', $campusId)
+            ->where('h.estate_block_master_pk', $blockId)
+            ->when($unitTypeId, function ($q) use ($unitTypeId) {
+                $q->where('h.estate_unit_master_pk', $unitTypeId);
+            })
+            ->select('u.pk', 'u.unit_sub_type')
+            ->distinct()
+            ->orderBy('u.unit_sub_type')
+            ->get();
+
+        return response()->json(['status' => true, 'data' => $items]);
+    }
+
+    /**
+     * API: Get houses for estate possession (by campus + block + unit_sub_type).
+     */
+    public function getPossessionHouses(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        $unitSubTypeId = $request->get('unit_sub_type_id');
+        $unitTypeId = $request->get('unit_type_id');
+        if (!$campusId || !$blockId || !$unitSubTypeId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        $houses = DB::table('estate_house_master')
+            ->where('estate_campus_master_pk', $campusId)
+            ->where('estate_block_master_pk', $blockId)
+            ->where('estate_unit_sub_type_master_pk', $unitSubTypeId)
+            ->when($unitTypeId, function ($q) use ($unitTypeId) {
+                $q->where('estate_unit_master_pk', $unitTypeId);
+            })
+            ->select('pk', 'house_no')
+            ->orderBy('house_no')
+            ->get();
+
+        return response()->json(['status' => true, 'data' => $houses]);
+    }
+
+    /**
+     * API: Get vacant houses for change request approve (by campus + block + unit_sub_type + unit_type).
+     * Excludes houses in estate_possession_details and estate_possession_other.
+     */
+    public function getChangeRequestVacantHouses(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        $unitSubTypeId = $request->get('unit_sub_type_id');
+        $unitTypeId = $request->get('unit_type_id');
+        if (! $campusId || ! $blockId || ! $unitSubTypeId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        $occupiedHousePks = DB::table('estate_possession_details')
+            ->whereNotNull('estate_house_master_pk')
+            ->pluck('estate_house_master_pk')
+            ->merge(
+                DB::table('estate_possession_other')
+                    ->whereNotNull('estate_house_master_pk')
+                    ->pluck('estate_house_master_pk')
+            )
+            ->unique()
+            ->values();
+
+        $query = DB::table('estate_house_master')
+            ->where('estate_campus_master_pk', $campusId)
+            ->where('estate_block_master_pk', $blockId)
+            ->where('estate_unit_sub_type_master_pk', $unitSubTypeId)
+            ->when($unitTypeId, function ($q) use ($unitTypeId) {
+                $q->where('estate_unit_master_pk', $unitTypeId);
+            });
+
+        if ($occupiedHousePks->isNotEmpty()) {
+            $query->whereNotIn('pk', $occupiedHousePks->toArray());
+        }
+
+        $houses = $query->select('pk', 'house_no')
+            ->orderBy('house_no')
+            ->get();
+
+        return response()->json(['status' => true, 'data' => $houses]);
+    }
+
+    /**
+     * Estate Possession for Others - Listing (dynamic from DB).
+     */
+    public function possessionForOthers(EstatePossessionOtherDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.estate_possession_for_others');
+    }
+
+    /**
+     * Delete Estate Possession.
+     */
+    public function destroyPossession(Request $request, $id)
+    {
+        $record = EstatePossessionOther::find($id);
+        if (!$record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.possession-for-others')->with('error', 'Record not found.');
+        }
+
+        $record->delete();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Possession deleted successfully.']);
+        }
+        return redirect()->route('admin.estate.possession-for-others')->with('success', 'Possession deleted successfully.');
+    }
+
+    /**
+     * Return House - Listing (estate_possession_other where return_home_status = 0).
+     * Pass requesters & campuses for Add Request Details modal (dynamic dropdowns).
+     */
+    public function returnHouse(EstateReturnHouseDataTable $dataTable)
+    {
+        $requesters = EstateOtherRequest::orderBy('emp_name')
+            ->get(['pk', 'emp_name', 'request_no_oth', 'section']);
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+        $unitTypesByCampus = DB::table('estate_campus_master as a')
+            ->join('estate_house_master as b', 'a.pk', '=', 'b.estate_campus_master_pk')
+            ->join('estate_unit_type_master as c', 'b.estate_unit_master_pk', '=', 'c.pk')
+            ->select('a.pk as campus_pk', 'c.pk as unit_type_pk', 'c.unit_type')
+            ->distinct()
+            ->orderBy('a.pk')
+            ->orderBy('c.unit_type')
+            ->get()
+            ->groupBy('campus_pk')
+            ->map(fn ($rows) => $rows->map(fn ($r) => ['pk' => $r->unit_type_pk, 'unit_type' => $r->unit_type])->values()->all())
+            ->all();
+
+        return $dataTable->render('admin.estate.return_house', compact('requesters', 'campuses', 'unitTypesByCampus'));
+    }
+
+    /**
+     * Mark house as returned (set return_home_status = 1 in estate_possession_other).
+     */
+    public function markReturnHouse(Request $request, $id)
+    {
+        $record = EstatePossessionOther::find($id);
+        if (!$record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.return-house')->with('error', 'Record not found.');
+        }
+
+        $record->return_home_status = 1;
+        $record->save();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'House marked as returned successfully.']);
+        }
+        return redirect()->route('admin.estate.return-house')->with('success', 'House marked as returned successfully.');
+    }
+
+    /**
+     * API: Get requester details (request_no_oth, section) when requester selected.
+     */
+    public function getRequesterDetails(Request $request)
+    {
+        $pk = $request->get('pk');
+        $req = EstateOtherRequest::find($pk);
+        if (!$req) {
+            return response()->json(['status' => false, 'data' => null]);
+        }
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'request_no_oth' => $req->request_no_oth,
+                'section' => $req->section,
+            ],
+        ]);
+    }
+
+    /**
+     * API: Return House - Get employees list by type (LBSNAA = estate_possession_details + estate_home_request_details, Other = estate_other_req).
+     */
+    public function getReturnHouseEmployees(Request $request)
+    {
+        $type = $request->get('employee_type', 'Other Employee');
+        if ($type === 'LBSNAA') {
+            $list = DB::table('estate_possession_details as epd')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('epd.return_home_status', 0)
+                ->whereNotNull('epd.estate_house_master_pk')
+                ->select('epd.pk as id', 'ehrd.emp_name as name', 'ehrd.req_id as request_no')
+                ->orderBy('ehrd.emp_name')
+                ->get();
+        } else {
+            $list = EstateOtherRequest::orderBy('emp_name')
+                ->get(['pk as id', 'emp_name as name', 'request_no_oth as request_no', 'section'])
+                ->map(fn ($r) => (object) ['id' => $r->id, 'name' => $r->name, 'request_no' => $r->request_no, 'section' => $r->section ?? '']);
+        }
+        return response()->json(['status' => true, 'data' => $list]);
+    }
+
+    /**
+     * API: Return House - Get full request details for mapping (section, estate, unit, building, house, dates).
+     * Other: estate_other_req (section) + latest estate_possession_other. LBSNAA: estate_possession_details + house/campus/block/unit.
+     */
+    public function getReturnHouseRequestDetails(Request $request)
+    {
+        $type = $request->get('employee_type', 'Other Employee');
+        $id = $request->get('id');
+        if (!$id) {
+            return response()->json(['status' => false, 'data' => null]);
+        }
+        if ($type === 'LBSNAA') {
+            $row = DB::table('estate_possession_details as epd')
+                ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->join('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
+                ->join('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
+                ->join('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->leftJoin('estate_unit_master as eum', 'ehm.estate_unit_master_pk', '=', 'eum.pk')
+                ->leftJoin('estate_unit_type_master as eut', 'eum.estate_unit_type_master_pk', '=', 'eut.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('epd.pk', $id)
+                ->select(
+                    'ec.pk as estate_campus_master_pk',
+                    'ec.campus_name',
+                    'eb.pk as estate_block_master_pk',
+                    'eb.block_name',
+                    'eut.pk as estate_unit_type_master_pk',
+                    'eut.unit_type as unit_type_name',
+                    'eust.pk as estate_unit_sub_type_master_pk',
+                    'eust.unit_sub_type',
+                    'ehm.pk as estate_house_master_pk',
+                    'ehm.house_no',
+                    'epd.allotment_date',
+                    'epd.possession_date as possession_date_oth',
+                    'ehrd.remarks as section_display'
+                )
+                ->first();
+            if (!$row) {
+                return response()->json(['status' => false, 'data' => null]);
+            }
+            $section = $row->section_display ?? '';
+            unset($row->section_display);
+            $row->section = $section;
+            $row->possession_date_oth = $row->possession_date_oth ? (\Carbon\Carbon::parse($row->possession_date_oth)->format('Y-m-d')) : null;
+            $row->allotment_date = $row->allotment_date ? (is_string($row->allotment_date) ? (date('Y-m-d', strtotime($row->allotment_date)) ?: $row->allotment_date) : \Carbon\Carbon::parse($row->allotment_date)->format('Y-m-d')) : null;
+            return response()->json(['status' => true, 'data' => $row]);
+        }
+        // Other: estate_other_req (section) + latest estate_possession_other
+        $req = EstateOtherRequest::find($id);
+        if (!$req) {
+            return response()->json(['status' => false, 'data' => null]);
+        }
+        $pos = DB::table('estate_possession_other as epo')
+            ->leftJoin('estate_campus_master as ec', 'epo.estate_campus_master_pk', '=', 'ec.pk')
+            ->leftJoin('estate_block_master as eb', 'epo.estate_block_master_pk', '=', 'eb.pk')
+            ->leftJoin('estate_unit_type_master as eut', 'epo.estate_unit_type_master_pk', '=', 'eut.pk')
+            ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+            ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('epo.estate_other_req_pk', $id)
+            ->orderBy('epo.pk', 'desc')
+            ->select(
+                'ec.pk as estate_campus_master_pk',
+                'ec.campus_name',
+                'eb.pk as estate_block_master_pk',
+                'eb.block_name',
+                'eut.pk as estate_unit_type_master_pk',
+                'eut.unit_type as unit_type_name',
+                'eust.pk as estate_unit_sub_type_master_pk',
+                'eust.unit_sub_type',
+                'ehm.pk as estate_house_master_pk',
+                'ehm.house_no',
+                'epo.allotment_date',
+                'epo.possession_date_oth'
+            )
+            ->first();
+        $section = $req->section ?? '';
+        if ($pos) {
+            $pos->section = $section;
+            $pos->possession_date_oth = $pos->possession_date_oth ? (\Carbon\Carbon::parse($pos->possession_date_oth)->format('Y-m-d')) : null;
+            $pos->allotment_date = $pos->allotment_date ? (is_string($pos->allotment_date) ? date('Y-m-d', strtotime($pos->allotment_date)) : \Carbon\Carbon::parse($pos->allotment_date)->format('Y-m-d')) : null;
+            return response()->json(['status' => true, 'data' => $pos]);
+        }
+        return response()->json([
+            'status' => true,
+            'data' => (object) [
+                'section' => $section,
+                'estate_campus_master_pk' => null,
+                'campus_name' => null,
+                'estate_block_master_pk' => null,
+                'block_name' => null,
+                'estate_unit_type_master_pk' => null,
+                'unit_type_name' => null,
+                'estate_unit_sub_type_master_pk' => null,
+                'unit_sub_type' => null,
+                'estate_house_master_pk' => null,
+                'house_no' => null,
+                'allotment_date' => null,
+                'possession_date_oth' => null,
+            ],
+        ]);
+    }
+
+    /**
+     * Update Meter Reading of Other - Form page.
+     */
+    public function updateMeterReadingOfOther()
+    {
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+
+        $unitTypes = DB::table('estate_unit_type_master')
+            ->orderBy('unit_type')
+            ->get(['pk', 'unit_type']);
+
+        $billMonths = EstateMonthReadingDetailsOther::select('bill_year', 'bill_month')
+            ->whereNotNull('bill_year')
+            ->whereNotNull('bill_month')
+            ->groupBy('bill_year', 'bill_month')
+            ->orderBy('bill_year', 'desc')
+            ->get();
+
+        $unitSubTypes = DB::table('estate_unit_sub_type_master')
+            ->orderBy('unit_sub_type')
+            ->get(['pk', 'unit_sub_type']);
+
+        return view('admin.estate.update_meter_reading_of_other', compact(
+            'campuses', 'unitTypes', 'billMonths', 'unitSubTypes'
+        ));
+    }
+
+    /**
+     * Update Meter Reading - main page (employee/regular possession).
+     */
+    public function updateMeterReading()
+    {
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+
+        $unitTypes = DB::table('estate_unit_type_master')
+            ->orderBy('unit_type')
+            ->get(['pk', 'unit_type']);
+
+        $billMonths = EstateMonthReadingDetails::select('bill_year', 'bill_month')
+            ->whereNotNull('bill_year')
+            ->whereNotNull('bill_month')
+            ->groupBy('bill_year', 'bill_month')
+            ->orderBy('bill_year', 'desc')
+            ->get();
+
+        $unitSubTypes = DB::table('estate_unit_sub_type_master')
+            ->orderBy('unit_sub_type')
+            ->get(['pk', 'unit_sub_type']);
+
+        return view('admin.estate.update_meter_reading', compact(
+            'campuses', 'unitTypes', 'billMonths', 'unitSubTypes'
+        ));
+    }
+
+    /**
+     * API: Get meter reading list for "Update Meter Reading" (filtered).
+     */
+    public function getMeterReadingList(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $billYear = $request->get('bill_year');
+        $meterReadingDate = $request->get('meter_reading_date');
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        $unitTypeId = $request->get('unit_type_id');
+        $unitSubTypeId = $request->get('unit_sub_type_id');
+
+        // estate_unit_master may be empty - use estate_eligibility_mapping for unit type → unit sub type
+        $unitSubTypeIdsForUnitType = null;
+        if ($unitTypeId) {
+            $unitSubTypeIdsForUnitType = DB::table('estate_eligibility_mapping')
+                ->where('estate_unit_type_master_pk', $unitTypeId)
+                ->whereNotNull('estate_unit_sub_type_master_pk')
+                ->distinct()
+                ->pluck('estate_unit_sub_type_master_pk')
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
+        $query = EstateMonthReadingDetails::query()
+            ->from('estate_month_reading_details as emrd')
+            ->select([
+                'emrd.pk',
+                'emrd.from_date',
+                'emrd.last_month_elec_red',
+                'emrd.curr_month_elec_red',
+                'emrd.last_month_elec_red2',
+                'emrd.curr_month_elec_red2',
+                'emrd.house_no',
+                'emrd.meter_one as emrd_meter_one',
+                'emrd.meter_two as emrd_meter_two',
+                'ehm.meter_one as ehm_meter_one',
+                'ehm.meter_two as ehm_meter_two',
+                'ehrd.emp_name',
+            ])
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->orderBy('emrd.house_no');
+
+        if ($billMonth) {
+            $query->where('emrd.bill_month', $billMonth);
+        }
+        if ($billYear) {
+            $query->where('emrd.bill_year', $billYear);
+        }
+        if ($meterReadingDate) {
+            $query->whereDate('emrd.to_date', $meterReadingDate);
+        }
+        if ($campusId) {
+            $query->where('ehm.estate_campus_master_pk', $campusId);
+        }
+        if ($blockId) {
+            $query->where('ehm.estate_block_master_pk', $blockId);
+        }
+        if ($unitTypeId && !empty($unitSubTypeIdsForUnitType)) {
+            $query->whereIn('ehm.estate_unit_sub_type_master_pk', $unitSubTypeIdsForUnitType);
+        }
+        if ($unitSubTypeId) {
+            $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypeId);
+        }
+
+        $rows = collect();
+        foreach ($query->get() as $row) {
+            // Use estate_house_master meter numbers when estate_month_reading_details has 0/null
+            $meterOne = $row->emrd_meter_one ?? $row->ehm_meter_one;
+            $meterTwo = $row->emrd_meter_two ?? $row->ehm_meter_two;
+            $hasMeterOne = $meterOne !== null && $meterOne !== '' && (int) $meterOne !== 0;
+            $hasMeterTwo = $meterTwo !== null && $meterTwo !== '' && (int) $meterTwo !== 0;
+
+            $base = [
+                'pk' => $row->pk,
+                'house_no' => $row->house_no ?? 'N/A',
+                'name' => $row->emp_name ?? 'N/A',
+                'last_reading_date' => $row->from_date ? \Carbon\Carbon::parse($row->from_date)->format('d/m/Y') : 'N/A',
+            ];
+            $pushed = false;
+            // Meter 1 - New Meter No & New Meter Reading stay blank; user enters, Save updates DB
+            if ($hasMeterOne) {
+                $rows->push(array_merge($base, [
+                    'meter_slot' => 1,
+                    'old_meter_no' => (string) $meterOne,
+                    'electric_meter_reading' => $row->last_month_elec_red !== null ? $row->last_month_elec_red : 'N/A',
+                    'new_meter_no' => '',
+                    'new_meter_reading' => '',
+                ]));
+                $pushed = true;
+            }
+            // Meter 2
+            if ($hasMeterTwo) {
+                $rows->push(array_merge($base, [
+                    'meter_slot' => 2,
+                    'old_meter_no' => (string) $meterTwo,
+                    'electric_meter_reading' => $row->last_month_elec_red2 !== null ? $row->last_month_elec_red2 : 'N/A',
+                    'new_meter_no' => '',
+                    'new_meter_reading' => '',
+                ]));
+                $pushed = true;
+            }
+            // Fallback when neither meter has value
+            if (!$pushed) {
+                $lastMeter = $meterOne ?? $meterTwo ?? 'N/A';
+                $lastReading = $row->last_month_elec_red ?? $row->last_month_elec_red2 ?? 'N/A';
+                $rows->push(array_merge($base, [
+                    'meter_slot' => 1,
+                    'old_meter_no' => (string) $lastMeter,
+                    'electric_meter_reading' => $lastReading,
+                    'new_meter_no' => '',
+                    'new_meter_reading' => '',
+                ]));
+            }
+        }
+
+        return response()->json(['status' => true, 'data' => $rows->values()]);
+    }
+
+    /**
+     * API: Get blocks for meter reading filter (by campus) - regular possession.
+     */
+    public function getMeterReadingBlocks(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        if (!$campusId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $blocks = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->where('h.estate_campus_master_pk', $campusId)
+            ->select('b.pk', 'b.block_name')
+            ->distinct()
+            ->orderBy('b.block_name')
+            ->get();
+        return response()->json(['status' => true, 'data' => $blocks]);
+    }
+
+    /**
+     * API: Get meter reading dates for selected bill month - regular possession.
+     */
+    public function getMeterReadingDates(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $billYear = $request->get('bill_year');
+        if (!$billMonth || !$billYear) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $dates = EstateMonthReadingDetails::where('bill_month', $billMonth)
+            ->where('bill_year', $billYear)
+            ->select('to_date')
+            ->distinct()
+            ->orderBy('to_date')
+            ->get()
+            ->map(fn($r) => ['value' => $r->to_date->format('Y-m-d'), 'label' => $r->to_date->format('d/m/Y')]);
+        return response()->json(['status' => true, 'data' => $dates]);
+    }
+
+    /**
+     * API: Get unit sub types for meter reading filter (by campus + block) - regular possession.
+     */
+    public function getMeterReadingUnitSubTypes(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        if (!$campusId || !$blockId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $items = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
+            ->join('estate_unit_sub_type_master as u', 'h.estate_unit_sub_type_master_pk', '=', 'u.pk')
+            ->where('h.estate_campus_master_pk', $campusId)
+            ->where('h.estate_block_master_pk', $blockId)
+            ->select('u.pk', 'u.unit_sub_type')
+            ->distinct()
+            ->orderBy('u.unit_sub_type')
+            ->get();
+        return response()->json(['status' => true, 'data' => $items]);
+    }
+
+    /**
+     * Store/Update meter readings for "Update Meter Reading" (regular possession).
+     */
+    public function storeMeterReadings(Request $request)
+    {
+        $validated = $request->validate([
+            'readings' => 'required|array',
+            'readings.*.pk' => 'required|exists:estate_month_reading_details,pk',
+            'readings.*.meter_slot' => 'nullable|in:1,2',
+            'readings.*.curr_month_elec_red' => 'nullable|numeric|min:0',
+            'readings.*.new_meter_no' => 'nullable|string|max:50',
+        ]);
+
+        foreach ($validated['readings'] as $item) {
+            $update = [];
+            $meterSlot = (int) ($item['meter_slot'] ?? 1);
+            if ($meterSlot === 2) {
+                $update['curr_month_elec_red2'] = isset($item['curr_month_elec_red']) && $item['curr_month_elec_red'] !== '' ? (int) $item['curr_month_elec_red'] : null;
+                if (!empty($item['new_meter_no'])) {
+                    $update['meter_two'] = $item['new_meter_no'];
+                }
+            } else {
+                $update['curr_month_elec_red'] = isset($item['curr_month_elec_red']) && $item['curr_month_elec_red'] !== '' ? (int) $item['curr_month_elec_red'] : null;
+                if (!empty($item['new_meter_no'])) {
+                    $update['meter_one'] = $item['new_meter_no'];
+                }
+            }
+            if (!empty($update)) {
+                EstateMonthReadingDetails::where('pk', $item['pk'])->update($update);
+            }
+        }
 
         return redirect()
             ->route('admin.estate.update-meter-reading')

@@ -63,13 +63,9 @@ class EstateChangeRequestDataTable extends DataTable
                 if ($status === 2) {
                     return '<span class="badge bg-danger">Disapproved</span>';
                 }
-                $approveUrl = route('admin.estate.change-request.approve', ['id' => $row->pk]);
                 $reqId = e($row->estate_change_req_ID ?? 'N/A');
                 return '<div class="d-flex flex-wrap gap-1 justify-content-center">
-                    <form method="POST" action="' . $approveUrl . '" class="d-inline" data-confirm="Approve this change request?">
-                        ' . csrf_field() . '
-                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                    </form>
+                    <button type="button" class="btn btn-sm btn-success btn-approve-change-request" data-id="' . (int) $row->pk . '" data-request-id="' . $reqId . '">Approve</button>
                     <button type="button" class="btn btn-sm btn-outline-danger btn-disapprove-change-request" data-id="' . (int) $row->pk . '" data-request-id="' . $reqId . '">Disapprove</button>
                 </div>';
             })
