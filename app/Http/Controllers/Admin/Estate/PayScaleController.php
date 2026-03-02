@@ -3,69 +3,58 @@
 namespace App\Http\Controllers\Admin\Estate;
 
 use App\Http\Controllers\Controller;
-use App\Models\EligibilityCriterion;
-use App\Models\SalaryGrade;
-use App\Models\UnitType;
-use App\Models\UnitSubType;
+use App\Models\PayScale;
 use Illuminate\Http\Request;
 
 class PayScaleController extends Controller
 {
     public function index()
     {
-        $items = EligibilityCriterion::with(['salaryGrade', 'unitType', 'unitSubType'])
-            ->orderBy('pk')
-            ->paginate(request('per_page', 10));
+        $items = PayScale::orderBy('pay_scale_range')->paginate(request('per_page', 10));
         return view('admin.estate.define_pay_scale.index', compact('items'));
     }
 
     public function create()
     {
         $item = null;
-        $salaryGrades = SalaryGrade::orderBy('salary_grade')->get()->mapWithKeys(fn ($s) => [$s->pk => $s->display_label_text]);
-        $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
-        $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
-        return view('admin.estate.define_pay_scale.form', compact('item', 'salaryGrades', 'unitTypes', 'unitSubTypes'));
+        return view('admin.estate.define_pay_scale.form', compact('item'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'salary_grade_master_pk' => 'required|exists:salary_grade_master,pk',
-            'estate_unit_type_master_pk' => 'required|exists:estate_unit_type_master,pk',
-            'estate_unit_sub_type_master_pk' => 'required|exists:estate_unit_sub_type_master,pk',
+            'pay_scale_range' => 'required|string|max:100',
+            'pay_scale_level' => 'required|string|max:50',
+            'display_label' => 'nullable|string|max:255',
         ]);
-        EligibilityCriterion::create($validated);
-        return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Eligibility mapping added successfully.');
+        PayScale::create($validated);
+        return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Pay scale added successfully.');
     }
 
     public function edit(string $id)
     {
-        $item = EligibilityCriterion::findOrFail($id);
-        $salaryGrades = SalaryGrade::orderBy('salary_grade')->get()->mapWithKeys(fn ($s) => [$s->pk => $s->display_label_text]);
-        $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
-        $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
-        return view('admin.estate.define_pay_scale.form', compact('item', 'salaryGrades', 'unitTypes', 'unitSubTypes'));
+        $item = PayScale::findOrFail($id);
+        return view('admin.estate.define_pay_scale.form', compact('item'));
     }
 
     public function update(Request $request, string $id)
     {
-        $item = EligibilityCriterion::findOrFail($id);
+        $item = PayScale::findOrFail($id);
         $validated = $request->validate([
-            'salary_grade_master_pk' => 'required|exists:salary_grade_master,pk',
-            'estate_unit_type_master_pk' => 'required|exists:estate_unit_type_master,pk',
-            'estate_unit_sub_type_master_pk' => 'required|exists:estate_unit_sub_type_master,pk',
+            'pay_scale_range' => 'required|string|max:100',
+            'pay_scale_level' => 'required|string|max:50',
+            'display_label' => 'nullable|string|max:255',
         ]);
         $item->update($validated);
-        return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Eligibility mapping updated successfully.');
+        return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Pay scale updated successfully.');
     }
 
     public function destroy(Request $request, string $id)
     {
-        EligibilityCriterion::findOrFail($id)->delete();
+        PayScale::findOrFail($id)->delete();
         if ($request->ajax()) {
-            return response()->json(['success' => true, 'message' => 'Eligibility mapping deleted successfully.']);
+            return response()->json(['success' => true, 'message' => 'Pay scale deleted successfully.']);
         }
-        return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Eligibility mapping deleted successfully.');
+        return redirect()->route('admin.estate.define-pay-scale.index')->with('success', 'Pay scale deleted successfully.');
     }
 }

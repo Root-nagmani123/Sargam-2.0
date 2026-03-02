@@ -157,66 +157,8 @@
 .bill-footer .sign-sub { font-size: 8pt; margin-top: 2px; color: #718096; }
 </style>
 <div class="container-fluid">
-    <!-- Breadcrumb (hidden when printing) -->
-    <div class="no-print">
-        <x-breadcrum title="Estate Bill Report for Print"></x-breadcrum>
-    </div>
-
-    <!-- Filters (hidden when printing) -->
-    <div class="no-print card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-            <h2 class="h6 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
-                <i class="material-symbols-rounded fs-5">filter_list</i>
-                Filters
-            </h2>
-        </div>
-        <div class="card-body p-4">
-            <form method="get" action="{{ route('admin.estate.reports.bill-report-print') }}" class="row g-3 g-md-4 align-items-end">
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="month" class="form-label fw-medium">Select Month</label>
-                    <select class="form-select" id="month" name="month" aria-label="Select Month">
-                        <option value="">ΓÇö Select Month ΓÇö</option>
-                        @foreach($months as $m)
-                            <option value="{{ $m }}" {{ old('month', request('month')) === $m ? 'selected' : '' }}>{{ $m }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <label for="year" class="form-label fw-medium">Select Year</label>
-                    <select class="form-select" id="year" name="year" aria-label="Select Year">
-                        <option value="">ΓÇö Select Year ΓÇö</option>
-                        @foreach($years as $y)
-                            <option value="{{ $y }}" {{ old('year', request('year')) == $y ? 'selected' : '' }}>{{ $y }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="employee_type_pk" class="form-label fw-medium">Select Employee Type</label>
-                    <select class="form-select" id="employee_type_pk" name="employee_type_pk" aria-label="Select Employee Type">
-                        <option value="">ΓÇö Select Employee Type ΓÇö</option>
-                        @foreach($employeeTypes as $et)
-                            <option value="{{ $et->pk }}" {{ old('employee_type_pk', request('employee_type_pk')) == $et->pk ? 'selected' : '' }}>{{ $et->unit_sub_type }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="employee_pk" class="form-label fw-medium">Select Employee</label>
-                    <select class="form-select" id="employee_pk" name="employee_pk" aria-label="Select Employee">
-                        <option value="">ΓÇö Select Employee ΓÇö</option>
-                        @foreach($employees as $emp)
-                            <option value="{{ $emp->pk }}" {{ old('employee_pk', request('employee_pk')) == $emp->pk ? 'selected' : '' }}>{{ $emp->emp_name }} {{ $emp->employee_id ? '(' . trim($emp->employee_id) . ')' : '' }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
-                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
-                        Show Bill
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Breadcrumb -->
+<x-breadcrum title="Estate Bill Report for Print"></x-breadcrum>
 
     @if($bill)
     <!-- Bill for print (visible on screen and in print) -->

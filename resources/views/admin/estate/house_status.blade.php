@@ -25,8 +25,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr id="noDataRow">
-                            <td colspan="8" class="text-center text-muted">Loading...</td>
+                        <tr>
+                            <td>Type-I</td>
+                            <td>72,12,14,0,09,11,13A</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td>3</td>
                         </tr>
                     </tbody>
                 </table>
@@ -65,24 +72,35 @@ $(document).ready(function() {
                     $.each(res.data, function(i, row) {
                         tbody.append(
                             '<tr>' +
-                                '<td>' + (row.types || 'N/A') + '</td>' +
-                                '<td>' + (row.grade_pay || '-') + '</td>' +
-                                '<td>' + (row.house_available != null ? row.house_available : '0') + '</td>' +
-                                '<td>' + (row.house_under_construction != null ? row.house_under_construction : '0') + '</td>' +
-                                '<td>' + (row.total_projected != null ? row.total_projected : '0') + '</td>' +
-                                '<td>' + (row.allotted_lbsnaa != null ? row.allotted_lbsnaa : '0') + '</td>' +
-                                '<td>' + (row.other != null ? row.other : '0') + '</td>' +
-                                '<td>' + (row.vacant != null ? row.vacant : '0') + '</td>' +
+                            '<td>' + (row.types || 'N/A') + '</td>' +
+                            '<td>' + (row.grade_pay || '-') + '</td>' +
+                            '<td>' + (row.house_available != null ? row
+                                .house_available : '0') + '</td>' +
+                            '<td>' + (row.house_under_construction != null ? row
+                                .house_under_construction : '0') + '</td>' +
+                            '<td>' + (row.total_projected != null ? row
+                                .total_projected : '0') + '</td>' +
+                            '<td>' + (row.allotted_lbsnaa != null ? row
+                                .allotted_lbsnaa : '0') + '</td>' +
+                            '<td>' + (row.other != null ? row.other : '0') + '</td>' +
+                            '<td>' + (row.vacant != null ? row.vacant : '0') + '</td>' +
                             '</tr>'
                         );
                     });
                 } else {
-                    tbody.append('<tr id="noDataRow"><td colspan="8" class="text-center text-muted">No data available.</td></tr>');
+                    tbody.append(
+                        '<tr id="noDataRow"><td colspan="8" class="text-center text-muted">No data available.</td></tr>'
+                        );
                 }
                 dataTableInstance = $('#houseStatusTable').DataTable({
-                    order: [[0, 'asc']],
+                    order: [
+                        [0, 'asc']
+                    ],
                     pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                    lengthMenu: [
+                        [10, 25, 50, 100, -1],
+                        [10, 25, 50, 100, "All"]
+                    ],
                     language: {
                         search: "Search:",
                         lengthMenu: "Show _MENU_ entries",
@@ -103,8 +121,10 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 destroyDataTable();
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
-                $('#houseStatusTable tbody').empty().append('<tr><td colspan="8" class="text-center text-danger">' + msg + '</td></tr>');
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON
+                    .message : 'Failed to load data.';
+                $('#houseStatusTable tbody').empty().append(
+                    '<tr><td colspan="8" class="text-center text-danger">' + msg + '</td></tr>');
             }
         });
     }

@@ -3,6 +3,13 @@
 @section('title', 'Return House - Sargam')
 
 @section('setup_content')
+<style>
+    .form-check-label-border { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 0.5rem; cursor: pointer; transition: border-color .15s, background-color .15s; }
+    .form-check-label-border:hover { border-color: var(--bs-primary); }
+    .form-check-label-border:has(.form-check-input:checked) { border-color: var(--bs-primary); background-color: rgba(var(--bs-primary-rgb), 0.08); }
+    .form-check-label-border .form-check-input { margin: 0; }
+    .form-check-label-border .form-check-label-text { font-weight: 500; }
+</style>
 <div class="container-fluid py-2">
     <!-- Breadcrumb -->
     <x-breadcrum :title="'Return House'" :items="['Home', 'Estate Management', 'Return House']" />
