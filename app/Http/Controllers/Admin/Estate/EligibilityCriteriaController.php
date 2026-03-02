@@ -7,7 +7,7 @@ use App\Models\EligibilityCriterion;
 use App\Models\SalaryGrade;
 use App\Models\UnitType;
 use App\Models\UnitSubType;
-use App\DataTables\EligibilityCriteriaDataTable;
+use App\DataTables\Estate\EligibilityCriteriaDataTable;
 use Illuminate\Http\Request;
 
 class EligibilityCriteriaController extends Controller

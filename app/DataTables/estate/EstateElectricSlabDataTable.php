@@ -1,6 +1,6 @@
 <?php
 
-namespace App\DataTables;
+namespace App\DataTables\Estate;
 
 use App\Models\EstateElectricSlab;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;

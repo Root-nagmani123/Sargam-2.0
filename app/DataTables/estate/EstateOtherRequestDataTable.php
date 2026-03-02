@@ -1,6 +1,6 @@
 <?php
 
-namespace App\DataTables;
+namespace App\DataTables\Estate;
 
 use App\Models\EstateOtherRequest;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Estate;
 
-use App\DataTables\EstateElectricSlabDataTable;
+use App\DataTables\Estate\EstateElectricSlabDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateElectricSlab;
 use App\Models\UnitType;
