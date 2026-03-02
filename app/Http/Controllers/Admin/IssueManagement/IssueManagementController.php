@@ -45,6 +45,17 @@ class IssueManagementController extends Controller
         ]);
 
         $applyUserScope = function ($builder) {
+            // For Staff / Doctor / Internal Faculty: show only issues assigned to them
+            if (hasRole('Staff') || hasRole('Doctor') || hasRole('Internal Faculty')) {
+                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+                if (empty($ids)) {
+                    $ids = [Auth::user()->user_id];
+                }
+                $builder->whereIn('assigned_to', $ids);
+                return;
+            }
+
+            // For all other non-admin users: show issues where they are related (existing behaviour)
             if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
                 $ids = getEmployeeIdsForUser(Auth::user()->user_id);
                 if (empty($ids)) {
@@ -119,7 +130,7 @@ class IssueManagementController extends Controller
 
         $applyFilters($query);
 
-        $issues = $query->paginate(20);
+        $issues = $query->paginate(10);
 
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
@@ -226,16 +237,24 @@ class IssueManagementController extends Controller
                 'hostelMapping.hostelBuilding',
                 'statusHistory'
             ])->orderBy('created_date', 'desc');
-            $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-            if (empty($ids)) {
-                $ids = [Auth::user()->user_id];
-            }
+
+        $ids = getEmployeeIdsForUser(Auth::user()->user_id);
+        if (empty($ids)) {
+            $ids = [Auth::user()->user_id];
+        }
+
+        // For Staff / Doctor / Internal Faculty: CENTCOM should list only issues assigned to them
+        if (hasRole('Staff') || hasRole('Doctor') || hasRole('Internal Faculty') || hasRole('Student-OT')) {
+            $query->whereIn('assigned_to', $ids);
+        } else {
+            // Existing broader visibility for other roles
             $query->where(function ($q) use ($ids) {
                 $q->whereIn('assigned_to', $ids)
                     ->orWhereIn('employee_master_pk', $ids)
                     ->orWhereIn('issue_logger', $ids)
                     ->orWhereIn('created_by', $ids);
             });
+        }
 
         // Search (ID, description, category name, sub-category)
         if ($request->filled('search')) {
