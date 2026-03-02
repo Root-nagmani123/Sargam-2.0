@@ -5,7 +5,6 @@
 @section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="HAC Forward to Allotment" />
-    <x-estate-workflow-stepper current="hac-forward" />
 
     <x-session_message />
 
@@ -30,12 +29,12 @@
             <div class="alert alert-info border-0 rounded-3 d-flex align-items-start gap-2 mb-4" role="alert">
                 <i class="bi bi-info-circle-fill fs-5 flex-shrink-0 mt-1"></i>
                 <div>
-                    <strong>HAC workflow:</strong> This page lists estate requests that have been put in HAC. Click <strong>"Forward"</strong> on each request to move it to <strong>HAC Approved</strong>; from there the allotment team can allot a house to add the record to <strong>Possession Details</strong>.
+                    <strong>HAC workflow:</strong> This page lists estate requests that have been put in HAC. Click <strong>"Forward"</strong> on each request to send it to the allotment team for processing.
                 </div>
             </div>
 
             <div id="hac-forward-card-body">
-                <div class="table-responsive text-nowraphac-forward-table-wrap">
+                <div class="table-responsive hac-forward-table-wrap">
                     {!! $dataTable->table([
                         'class' => 'table table-bordered table-striped table-hover align-middle mb-0',
                         'aria-describedby' => 'hac-forward-caption'

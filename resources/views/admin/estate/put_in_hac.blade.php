@@ -5,7 +5,6 @@
 @section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Put In HAC" />
-    <x-estate-workflow-stepper current="put-in-hac" />
 
     <x-session_message />
 
@@ -39,7 +38,7 @@
             </div>
 
             <div id="put-in-hac-card-body">
-                <div class="table-responsive text-nowrap put-in-hac-table-wrap">
+                <div class="table-responsive put-in-hac-table-wrap">
                     {!! $dataTable->table([
                         'class' => 'table table-bordered table-striped table-hover align-middle mb-0',
                         'aria-describedby' => 'put-in-hac-caption'
