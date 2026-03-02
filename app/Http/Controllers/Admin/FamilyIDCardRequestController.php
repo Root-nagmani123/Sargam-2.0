@@ -291,8 +291,7 @@ class FamilyIDCardRequestController extends Controller
                 'family_photo' => $groupPhotoPath,
                 'employee_dob' => !empty($member['dob']) ? $member['dob'] : null,
                 'emp_id_apply' => $employeeId,
-                'employee_type' => $employeeType,
-                'department_approval_emp_pk' => $approvalAuthorityPk,
+               
             ]);
             $count++;
         }
