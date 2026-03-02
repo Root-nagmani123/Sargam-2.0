@@ -28,8 +28,8 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="pendingMeterReadingTable">
-                    <thead class="table-primary">
+                <table class="table" id="pendingMeterReadingTable">
+                    <thead>
                         <tr>
                             <th>S.No.</th>
                             <th>Employee Type</th>
