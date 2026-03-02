@@ -213,8 +213,165 @@ class EstateController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.estate.add-other-estate-request')
-            ->with('success', 'Estate request successfully saved.');
+            ->route('admin.estate.update-meter-reading')
+            ->with('success', 'Meter readings updated successfully.');
+    }
+
+    /**
+     * API: Get meter reading list for "Update Meter Reading of Other" (filtered).
+     */
+    public function getMeterReadingListOther(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $billYear = $request->get('bill_year');
+        $meterReadingDate = $request->get('meter_reading_date');
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        $unitTypeId = $request->get('unit_type_id');
+        $unitSubTypeId = $request->get('unit_sub_type_id');
+
+        $query = EstateMonthReadingDetailsOther::query()
+            ->select([
+                'estate_month_reading_details_other.pk',
+                'estate_month_reading_details_other.estate_possession_other_pk',
+                'estate_month_reading_details_other.from_date',
+                'estate_month_reading_details_other.to_date',
+                'estate_month_reading_details_other.last_month_elec_red',
+                'estate_month_reading_details_other.curr_month_elec_red',
+                'estate_month_reading_details_other.house_no',
+                'estate_month_reading_details_other.meter_one',
+                'estate_month_reading_details_other.meter_two',
+            ])
+            ->join('estate_possession_other as epo', 'estate_month_reading_details_other.estate_possession_other_pk', '=', 'epo.pk')
+            ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
+            ->orderBy('estate_month_reading_details_other.house_no');
+
+        if ($billMonth) {
+            $query->where('estate_month_reading_details_other.bill_month', $billMonth);
+        }
+        if ($billYear) {
+            $query->where('estate_month_reading_details_other.bill_year', $billYear);
+        }
+        if ($meterReadingDate) {
+            $query->whereDate('estate_month_reading_details_other.to_date', $meterReadingDate);
+        }
+        if ($campusId) {
+            $query->where('epo.estate_campus_master_pk', $campusId);
+        }
+        if ($blockId) {
+            $query->where('epo.estate_block_master_pk', $blockId);
+        }
+        if ($unitTypeId) {
+            $query->where('epo.estate_unit_type_master_pk', $unitTypeId);
+        }
+        if ($unitSubTypeId) {
+            $query->where('epo.estate_unit_sub_type_master_pk', $unitSubTypeId);
+        }
+
+        $query->with('estatePossessionOther.estateOtherRequest');
+        $rows = $query->get()->map(function ($row) {
+            $poss = $row->estatePossessionOther;
+            $req = $poss ? $poss->estateOtherRequest : null;
+            $last = $row->last_month_elec_red !== null ? (int) $row->last_month_elec_red : null;
+            $curr = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
+            $unit = ($last !== null && $curr !== null && $curr >= $last)
+                ? ($curr - $last)
+                : null;
+
+            return [
+                'pk' => $row->pk,
+                'house_no' => $row->house_no ?? 'N/A',
+                'name' => $req ? ($req->emp_name ?? 'N/A') : 'N/A',
+                'last_reading_date' => $row->from_date ? $row->from_date->format('d/m/Y') : 'N/A',
+                'meter_no' => $row->meter_one ?? $row->meter_two ?? 'N/A',
+                'last_month_reading' => $last !== null ? $last : 'N/A',
+                'curr_month_reading' => $curr,
+                'unit' => $unit !== null ? $unit : 'N/A',
+            ];
+        });
+
+        return response()->json(['status' => true, 'data' => $rows]);
+    }
+
+    /**
+     * API: Get blocks for meter reading filter (by campus).
+     */
+    public function getMeterReadingBlocksOther(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        if (!$campusId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $blocks = DB::table('estate_possession_other as epo')
+            ->join('estate_block_master as b', 'epo.estate_block_master_pk', '=', 'b.pk')
+            ->where('epo.estate_campus_master_pk', $campusId)
+            ->select('b.pk', 'b.block_name')
+            ->distinct()
+            ->orderBy('b.block_name')
+            ->get();
+        return response()->json(['status' => true, 'data' => $blocks]);
+    }
+
+    /**
+     * API: Get meter reading dates for selected bill month.
+     */
+    public function getMeterReadingDatesOther(Request $request)
+    {
+        $billMonth = $request->get('bill_month');
+        $billYear = $request->get('bill_year');
+        if (!$billMonth || !$billYear) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $dates = EstateMonthReadingDetailsOther::where('bill_month', $billMonth)
+            ->where('bill_year', $billYear)
+            ->select('to_date')
+            ->distinct()
+            ->orderBy('to_date')
+            ->get()
+            ->map(fn($r) => ['value' => $r->to_date->format('Y-m-d'), 'label' => $r->to_date->format('d/m/Y')]);
+        return response()->json(['status' => true, 'data' => $dates]);
+    }
+
+    /**
+     * API: Get unit sub types for meter reading filter (by campus + block).
+     */
+    public function getMeterReadingUnitSubTypesOther(Request $request)
+    {
+        $campusId = $request->get('campus_id');
+        $blockId = $request->get('block_id');
+        if (!$campusId || !$blockId) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+        $items = DB::table('estate_possession_other as epo')
+            ->join('estate_unit_sub_type_master as u', 'epo.estate_unit_sub_type_master_pk', '=', 'u.pk')
+            ->where('epo.estate_campus_master_pk', $campusId)
+            ->where('epo.estate_block_master_pk', $blockId)
+            ->select('u.pk', 'u.unit_sub_type')
+            ->distinct()
+            ->orderBy('u.unit_sub_type')
+            ->get();
+        return response()->json(['status' => true, 'data' => $items]);
+    }
+
+    /**
+     * Store/Update meter readings for "Update Meter Reading of Other".
+     */
+    public function storeMeterReadingsOther(Request $request)
+    {
+        $validated = $request->validate([
+            'readings' => 'required|array',
+            'readings.*.pk' => 'required|exists:estate_month_reading_details_other,pk',
+            'readings.*.curr_month_elec_red' => 'nullable|integer|min:0',
+        ]);
+
+        foreach ($validated['readings'] as $item) {
+            EstateMonthReadingDetailsOther::where('pk', $item['pk'])
+                ->update(['curr_month_elec_red' => $item['curr_month_elec_red'] ?? null]);
+        }
+
+        return redirect()
+            ->route('admin.estate.update-meter-reading-of-other')
+            ->with('success', 'Meter readings updated successfully.');
     }
 
     /**
