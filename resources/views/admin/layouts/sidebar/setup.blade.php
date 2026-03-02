@@ -89,18 +89,16 @@
                                                     <span class="mini-nav-title sidebar-google-label">FC Forms</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item" id="setup-mini-9">
+                                            <li class="mini-nav-item {{ request()->is('admin/mess*') ? 'selected' : '' }}"
+                                                id="setup-mini-13">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right" data-bs-title="Mess Management">
-
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 32px;">
-                                                            restaurant
-                                                        </i>
-                                                    </div>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span
+                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i
+                                                            class="material-icons menu-icon material-symbols-rounded">award_meal</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Mess Management</span>
                                                 </a>
                                             </li>
                                             @endif
@@ -127,6 +125,15 @@
                                                 </a>
                                             </li>
                                             @endif
+                                            <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}" id="setup-mini-11">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Estate Management</span>
+                                                </a>
+                                            </li>
 
                                         </div>
                                     </div>
@@ -190,6 +197,10 @@
                     <!-- Mess Management -->
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mess_management />
+
+                    <!-- Estate Management -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_estate_management />
 
 
                 </div>
