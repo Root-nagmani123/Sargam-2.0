@@ -3,14 +3,14 @@
 @section('title', 'MDO Duty Type')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mdo-duty-type-index">
     <x-breadcrum title="MDO Duty Type"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
+                    <div class="row mdo-duty-type-header-row">
                         <div class="col-6">
                             <!-- left column empty or header title above -->
                             <h4>MDO Duty Type</h4>
@@ -18,8 +18,8 @@
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-center gap-2">
                                 <!-- Add Group Mapping -->
-                                <a href="javascript:void(0)" 
-                                    class="btn btn-primary add-btn d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
+                                <a href="{{ route('master.mdo_duty_type.create') }}" 
+                                    class="btn btn-primary add-btn d-flex align-items-center">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">add</i>
                                     Add MDO Duty Type
