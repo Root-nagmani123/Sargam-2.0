@@ -145,7 +145,9 @@ $(document).ready(function() {
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
     const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
 
+    // For this grid we avoid DataTables to prevent focus issues while typing.
     let dataTable = null;
+    window.otherMeterRowData = window.otherMeterRowData || {};
 
     $('#bill_month').on('change', function() {
         const billMonth = $(this).val();
@@ -224,55 +226,48 @@ $(document).ready(function() {
             $('#noDataMessage').hide();
             const tbody = $('#updateMeterReadingOtherTable tbody');
             tbody.html('');
+            window.otherMeterRowData = window.otherMeterRowData || {};
             res.data.forEach(function(row, idx) {
                 const lastReading = typeof row.last_month_reading === 'number' ? row.last_month_reading : (parseInt(row.last_month_reading, 10) || null);
-                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'">' +
+                const currVal = (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '');
+                const rowKey = row.pk;
+                window.otherMeterRowData[rowKey] = { curr_month_elec_red: currVal };
+                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-pk="'+ row.pk +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ (row.meter_no || 'N/A') +'</td>' +
                     '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
-                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '') +'" min="0" placeholder="Enter">' +
+                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ String(currVal).replace(/"/g, '&quot;') +'" min="0" step="1" placeholder="Enter">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'"></td>' +
                     '<td class="unit-cell">'+ (row.unit || 'N/A') +'</td>' +
                     '</tr>';
                 tbody.append(tr);
             });
             $('#meterReadingSaveForm').show();
-            initDataTable();
         }).fail(function() {
             alert('Failed to load data.');
         });
     });
 
-    function initDataTable() {
-        if (dataTable) dataTable.destroy();
-        dataTable = $('#updateMeterReadingOtherTable').DataTable({
-            order: [[1, 'asc']],
-            pageLength: 25,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-            paging: true,
-            language: {
-                search: "Search:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                infoEmpty: "Showing 0 to 0 of 0 entries",
-                infoFiltered: "(filtered from _MAX_ total entries)",
-                paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
-            },
-            responsive: true,
-            autoWidth: false,
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
-        });
-    }
-
     $('#select_all').on('change', function() {
         $('.row-check').prop('checked', $(this).prop('checked'));
     });
 
+    function syncOtherRowDataFromInputs($row) {
+        var pk = $row.data('pk');
+        if (!pk) return;
+        window.otherMeterRowData = window.otherMeterRowData || {};
+        if (!window.otherMeterRowData[pk]) {
+            window.otherMeterRowData[pk] = { curr_month_elec_red: '' };
+        }
+        window.otherMeterRowData[pk].curr_month_elec_red = $row.find('.curr-reading').val() || '';
+    }
+
     $(document).on('input change', '.curr-reading', function() {
         const $row = $(this).closest('tr');
+        syncOtherRowDataFromInputs($row);
         const lastVal = $row.data('last-reading');
         const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
         const currVal = $(this).val();
@@ -285,14 +280,7 @@ $(document).ready(function() {
     });
 
     $('#meterReadingSaveForm').on('submit', function(e) {
-        if (dataTable && dataTable.page.len() !== -1) {
-            e.preventDefault();
-            dataTable.page.len(-1).draw('page');
-            const $form = $(this);
-            setTimeout(function() {
-                $form.off('submit').submit();
-            }, 150);
-        }
+        // No DataTable pagination; submit normally.
     });
 });
 </script>

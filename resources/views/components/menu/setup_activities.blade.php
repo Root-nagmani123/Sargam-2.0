@@ -12,7 +12,14 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
+                            @php
+                                $showUserManagement = hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
+                                $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('HAC Person') || $estateSelfServiceRoles;
+                                $isEstateAdmin = hasRole('Estate');
+                                $isHACPerson = hasRole('HAC Person');
+                            @endphp
+                             @if($showUserManagement)
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -134,11 +141,17 @@
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
                                 </a></li>
+                            @endif
 
-                            {{-- ESTATE MANAGEMENT --}}
+                            {{-- ESTATE: visible to Estate, HAC Person, User (RBAC per item) --}}
+                            @if($showEstateSection)
                             @php
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
+                                $canSeeAllEstate = $isEstateAdmin || $showUserManagement;
+                                $canSeeHAC = $isHACPerson || $canSeeAllEstate;
+                                $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles;
                             @endphp
+                            {{-- ESTATE MANAGEMENT --}}
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -152,14 +165,17 @@
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="estateManagementCollapse">
-                                {{-- Main flow: Request → Put in HAC → HAC Forward → HAC Approved → Possession Details --}}
+                            <ul class="collapse list-unstyled ps-3 {{ $estateManagementOpen ? 'show' : '' }}" id="estateManagementCollapse">
+                                {{-- User: own data | HAC Person: HAC items | Estate / Admin: all --}}
+                                @if($canSeeSelfOnly)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-estate') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Request For Estate</span>
                                     </a>
                                 </li>
+                                @endif
+                                @if($canSeeHAC)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.put-in-hac') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.put-in-hac') }}">
@@ -178,36 +194,36 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">HAC Approved</span>
                                     </a>
                                 </li>
+                                @endif
+                                @if($canSeeAllEstate)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.possession-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Possession Details</span>
                                     </a>
                                 </li>
-                                <li class="sidebar-item border-top mt-2 pt-2">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.estate-approval-setting') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.estate-approval-setting') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Approval Setting</span>
-                                    </a>
-                                </li>
+                                @endif
+                                @if($canSeeSelfOnly)
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.add-approved-request-house') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.add-approved-request-house') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Add Approved Request House</span>
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-no') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.update-meter-no') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter No.</span>
                                     </a>
                                 </li>
+                                @endif
+                                @if($canSeeAllEstate)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-view') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.possession-view') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Possession View (Add)</span>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.possession-for-others') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Other</span>
                                     </a>
-                                </li> -->
+                                </li>
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.list-meter-reading') }}">
@@ -225,26 +241,23 @@
                                         href="{{ route('admin.estate.update-meter-reading-of-other') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
                                     </a>
-                                </li> -->
+                                </li>
+                                @endif
+                                @if($canSeeSelfOnly)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.list-meter-reading') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">List Meter Reading</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.update-meter-reading') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading</span>
-                                    </a>
-                                </li> -->
-                                
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.generate-estate-bill') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill</span>
                                     </a>
                                 </li>
+                                @endif
+                                @if($canSeeAllEstate)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill-for-other') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.generate-estate-bill-for-other') }}">
@@ -275,21 +288,27 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Electric Slab</span>
                                     </a>
                                 </li>
+                                @endif
+                                @if($canSeeSelfOnly)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-house') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-house') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Request For House</span>
                                     </a>
                                 </li>
+                                @endif
+                                @if($canSeeSelfOnly)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-details') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.change-request-details') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Change Request Details</span>
                                     </a>
                                 </li>
+                                @endif
                             </ul>
 
-                            {{-- ESTATE MASTER --}}
+                            {{-- ESTATE MASTER (Estate / Admin only) --}}
+                            @if($canSeeAllEstate)
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -353,8 +372,10 @@
                                     </a>
                                 </li>
                             </ul>
+                            @endif
 
-                            {{-- ESTATE REPORTS --}}
+                            {{-- ESTATE REPORTS (Estate / Admin only) --}}
+                            @if($canSeeAllEstate)
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -400,7 +421,8 @@
                                     </a>
                                 </li>
                             </ul>
-                            
+                            @endif
+
                             @endif
 
                         </ul>

@@ -65,6 +65,7 @@
                 <div class="row g-3 mb-3">
                     <div class="col-12 col-md-6">
                         <label for="estate_campus_master_pk" class="form-label">Estate Name <span class="text-danger">*</span></label>
+                        <input type="hidden" id="estate_campus_master_pk_hidden" value="">
                         <select class="form-select" id="estate_campus_master_pk" name="estate_campus_master_pk" required>
                             <option value="">---select---</option>
                             @foreach($campuses as $c)
@@ -74,6 +75,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_type_master_pk" class="form-label">Unit Type <span class="text-danger">*</span></label>
+                        <input type="hidden" id="estate_unit_type_master_pk_hidden" value="">
                         <select class="form-select" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
                             <option value="">---select---</option>
                         </select>
@@ -83,12 +85,14 @@
                 <div class="row g-3 mb-3">
                     <div class="col-12 col-md-6">
                         <label for="estate_block_master_pk" class="form-label">Building Name <span class="text-danger">*</span></label>
+                        <input type="hidden" id="estate_block_master_pk_hidden" value="">
                         <select class="form-select" id="estate_block_master_pk" name="estate_block_master_pk" required>
                             <option value="">---select---</option>
                         </select>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_sub_type_master_pk" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
+                        <input type="hidden" id="estate_unit_sub_type_master_pk_hidden" value="">
                         <select class="form-select" id="estate_unit_sub_type_master_pk" name="estate_unit_sub_type_master_pk" required>
                             <option value="">---select---</option>
                         </select>
@@ -98,6 +102,7 @@
                 <div class="row g-3 mb-3">
                     <div class="col-12 col-md-6">
                         <label for="estate_house_master_pk" class="form-label">House No. <span class="text-danger">*</span></label>
+                        <input type="hidden" id="estate_house_master_pk_hidden" value="">
                         <select class="form-select" id="estate_house_master_pk" name="estate_house_master_pk" required>
                             <option value="">---select---</option>
                         </select>
@@ -171,6 +176,42 @@ $(document).ready(function() {
         housePk: oldHouse ? String(oldHouse) : ''
     };
 
+    function isRequesterSelected() {
+        const v = $('#estate_home_request_details_pk').val();
+        return v !== null && String(v).trim() !== '';
+    }
+
+    function syncLockedHiddenSelects() {
+        $('#estate_campus_master_pk_hidden').val($('#estate_campus_master_pk').val() || '');
+        $('#estate_unit_type_master_pk_hidden').val($('#estate_unit_type_master_pk').val() || '');
+        $('#estate_block_master_pk_hidden').val($('#estate_block_master_pk').val() || '');
+        $('#estate_unit_sub_type_master_pk_hidden').val($('#estate_unit_sub_type_master_pk').val() || '');
+        $('#estate_house_master_pk_hidden').val($('#estate_house_master_pk').val() || '');
+    }
+
+    function setLockedFieldNames(locked) {
+        // Disabled selects don't submit, so submit values via hidden inputs (only when locked).
+        $('#estate_campus_master_pk_hidden').prop('name', locked ? 'estate_campus_master_pk' : null);
+        $('#estate_unit_type_master_pk_hidden').prop('name', locked ? 'estate_unit_type_master_pk' : null);
+        $('#estate_block_master_pk_hidden').prop('name', locked ? 'estate_block_master_pk' : null);
+        $('#estate_unit_sub_type_master_pk_hidden').prop('name', locked ? 'estate_unit_sub_type_master_pk' : null);
+        $('#estate_house_master_pk_hidden').prop('name', locked ? 'estate_house_master_pk' : null);
+    }
+
+    function lockPrefilledFields(locked) {
+        // Lock estate/house fields that come from requester; requester dropdown and meter reading stay editable.
+        $('#estate_campus_master_pk, #estate_unit_type_master_pk, #estate_block_master_pk, #estate_unit_sub_type_master_pk, #estate_house_master_pk')
+            .prop('disabled', locked)
+            .toggleClass('bg-body-secondary', locked);
+
+        $('#allotment_date, #possession_date')
+            .prop('readonly', locked)
+            .toggleClass('bg-body-secondary', locked);
+
+        setLockedFieldNames(locked);
+        syncLockedHiddenSelects();
+    }
+
     $('#estate_home_request_details_pk').change(function() {
         const opt = $(this).find('option:selected');
         $('#request_id_display').val(opt.attr('data-request-id') || '');
@@ -191,6 +232,8 @@ $(document).ready(function() {
         } else {
             $('#estate_house_master_pk').html('<option value="">---select---</option>');
         }
+
+        lockPrefilledFields(isRequesterSelected());
     }).trigger('change');
 
     $('#estate_campus_master_pk').change(function() {
@@ -209,6 +252,7 @@ $(document).ready(function() {
             $('#estate_unit_type_master_pk').val(list[0].pk);
         }
         loadBlocks();
+        syncLockedHiddenSelects();
     });
 
     if (preferred.campusPk) {
@@ -222,6 +266,7 @@ $(document).ready(function() {
         $('#estate_unit_sub_type_master_pk').html('<option value="">---select---</option>');
         $('#estate_house_master_pk').html('<option value="">---select---</option>');
         loadBlocks();
+        syncLockedHiddenSelects();
     });
 
     function loadBlocks() {
@@ -243,6 +288,7 @@ $(document).ready(function() {
         $('#estate_unit_sub_type_master_pk').html('<option value="">---select---</option>');
         $('#estate_house_master_pk').html('<option value="">---select---</option>');
         loadUnitSubTypes();
+        syncLockedHiddenSelects();
     });
 
     function loadUnitSubTypes() {
@@ -268,6 +314,11 @@ $(document).ready(function() {
     $('#estate_unit_sub_type_master_pk').change(function() {
         $('#estate_house_master_pk').html('<option value="">---select---</option>');
         loadHouses();
+        syncLockedHiddenSelects();
+    });
+
+    $('#estate_house_master_pk').change(function() {
+        syncLockedHiddenSelects();
     });
 
     function loadHouses() {
@@ -292,8 +343,12 @@ $(document).ready(function() {
                     $('#estate_house_master_pk').append('<option value="' + h.pk + '" ' + sel + '>' + h.house_no + '</option>');
                 });
             }
+            syncLockedHiddenSelects();
         });
     }
+
+    // Ensure proper initial lock state on load.
+    lockPrefilledFields(isRequesterSelected());
 });
 </script>
 @endpush
