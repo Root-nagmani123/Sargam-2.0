@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin\Estate;
 use App\DataTables\EstateElectricSlabDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateElectricSlab;
-use App\Models\UnitType;
 use Illuminate\Http\Request;
 
 class EstateElectricSlabController extends Controller
@@ -18,8 +17,7 @@ class EstateElectricSlabController extends Controller
     public function create()
     {
         $item = null;
-        $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
-        return view('admin.estate.define_electric_slab.form', compact('item', 'unitTypes'));
+        return view('admin.estate.define_electric_slab.form', compact('item'));
     }
 
     public function store(Request $request)
@@ -28,9 +26,9 @@ class EstateElectricSlabController extends Controller
             'start_unit_range' => 'required|integer|min:0',
             'end_unit_range' => 'required|integer|min:0|gte:start_unit_range',
             'rate_per_unit' => 'required|numeric|min:0',
-            'estate_unit_type_master_pk' => 'nullable|integer|exists:estate_unit_type_master,pk',
+            'house' => 'nullable',
         ]);
-        $validated['estate_unit_type_master_pk'] = $request->filled('estate_unit_type_master_pk') ? (int) $request->input('estate_unit_type_master_pk') : null;
+        $validated['house'] = $request->boolean('house') ? 1 : 0;
         EstateElectricSlab::create($validated);
         return redirect()->route('admin.estate.define-electric-slab.index')->with('success', 'Electric slab added successfully.');
     }
@@ -38,8 +36,7 @@ class EstateElectricSlabController extends Controller
     public function edit(string $id)
     {
         $item = EstateElectricSlab::findOrFail($id);
-        $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
-        return view('admin.estate.define_electric_slab.form', compact('item', 'unitTypes'));
+        return view('admin.estate.define_electric_slab.form', compact('item'));
     }
 
     public function update(Request $request, string $id)
@@ -49,9 +46,9 @@ class EstateElectricSlabController extends Controller
             'start_unit_range' => 'required|integer|min:0',
             'end_unit_range' => 'required|integer|min:0|gte:start_unit_range',
             'rate_per_unit' => 'required|numeric|min:0',
-            'estate_unit_type_master_pk' => 'nullable|integer|exists:estate_unit_type_master,pk',
+            'house' => 'nullable',
         ]);
-        $validated['estate_unit_type_master_pk'] = $request->filled('estate_unit_type_master_pk') ? (int) $request->input('estate_unit_type_master_pk') : null;
+        $validated['house'] = $request->boolean('house') ? 1 : 0;
         $item->update($validated);
         return redirect()->route('admin.estate.define-electric-slab.index')->with('success', 'Electric slab updated successfully.');
     }

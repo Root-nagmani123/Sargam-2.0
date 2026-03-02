@@ -9,25 +9,17 @@
     <x-session_message />
 
     <div class="card">
-        <div class="card-header">
-            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
-                        <i class="bi bi-check2-circle me-1"></i> HAC Approved
-                    </span>
-                    <h1 class="h5 fw-bold mb-0 text-body">Change Requests</h1>
+        <div class="card-body p-4 p-lg-5">
+            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 fw-semibold mb-1">Change Requests (Approved by HAC)</h1>
                 </div>
             </div>
-        </div>
-        <div class="card-body p-4 p-lg-5">
-            <p class="text-body-secondary small mb-4 lh-sm">
-                Change requests and new requests in one table. Use <strong class="text-success">Approve</strong> / <strong class="text-danger">Disapprove</strong> for change requests, or <strong class="text-primary">Allot</strong> for new requests to add to Possession Details.
-            </p>
-
-            <div class="estate-hac-approved-table-wrapper table-responsive">
+            <hr class="my-2">
+            <div class="table-responsive">
                 {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0',
-                    'aria-describedby' => 'hac-approved-caption'
+                    'class' => 'table text-nowrap w-100 estate-change-request-table',
+                    'aria-describedby' => 'change-request-caption'
                 ]) !!}
             </div>
             <div id="hac-approved-caption" class="visually-hidden">HAC Approved – change and new requests</div>

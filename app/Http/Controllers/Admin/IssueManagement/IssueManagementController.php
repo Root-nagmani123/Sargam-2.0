@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\IssueManagement;
 
 use App\Http\Controllers\Controller;
+use App\DataTables\IssueManagementDataTable;
+use App\Exports\IssueManagementExport;
 use App\Models\{
     IssueLogManagement,
     IssueCategoryMaster,
@@ -25,57 +27,13 @@ class IssueManagementController extends Controller
     /**
      * Display a listing of all issues.
      */
-    public function index(Request $request)
+    public function index(IssueManagementDataTable $dataTable)
     {
-        $query = IssueLogManagement::with([
-            'category',
-            'priority',
-            'reproducibility',
-            'subCategoryMappings.subCategory',
-            'buildingMapping.building',
-            'hostelMapping.hostelBuilding',
-            'statusHistory'
-        ])->orderBy('created_date', 'desc');
-
-        // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
-        $tab = $request->get('tab', 'active');
-        if ($tab === 'archive') {
-            $query->where('issue_status', 2); // Completed only
-        } else {
-            $query->whereIn('issue_status', [0, 1, 3, 6]); // Reported, In Progress, Pending, Reopened
-        }
-
-        // Filter by status (further refines within the tab)
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('issue_status', $request->status);
-        }
-
-        // Filter by category
-        if ($request->has('category') && $request->category !== '') {
-            $query->where('issue_category_master_pk', $request->category);
-        }
-
-        // Filter by priority
-        if ($request->has('priority') && $request->priority !== '') {
-            $query->where('issue_priority_master_pk', $request->priority);
-        }
-
-        // Filter by date range
-        if ($request->has('date_from') && $request->date_from !== '') {
-            $query->whereDate('created_date', '>=', $request->date_from);
-        }
-        if ($request->has('date_to') && $request->date_to !== '') {
-            $query->whereDate('created_date', '<=', $request->date_to);
-        }
-
-        $issues = $query->paginate(20);
-
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        $baseQuery = IssueLogManagement::query();
-        $activeCount = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6])->count();
-        $archiveCount = (clone $baseQuery)->where('issue_status', 2)->count();
+        return $dataTable->render('admin.issue_management.index', compact('categories', 'priorities'));
+    }
 
         return view('admin.issue_management.index', compact('issues', 'categories', 'priorities', 'tab', 'activeCount', 'archiveCount'));
     }

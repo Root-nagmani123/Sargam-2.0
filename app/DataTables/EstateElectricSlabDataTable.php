@@ -28,40 +28,38 @@ class EstateElectricSlabDataTable extends DataTable
             ->editColumn('rate_per_unit', function ($row) {
                 return number_format((float) $row->rate_per_unit, 2);
             })
-            ->addColumn('merge_with_house', function ($row) {
-                return $row->unitType ? e($row->unitType->unit_type) : '—';
-            })
-            ->addColumn('action', function ($row) {
+            ->addColumn('actions', function ($row) {
                 $editUrl = route('admin.estate.define-electric-slab.edit', $row->pk);
                 $deleteUrl = route('admin.estate.define-electric-slab.destroy', $row->pk);
                 $token = csrf_token();
 
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="' . e($editUrl) . '" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                return '<div class="d-flex gap-1 flex-wrap">
+                    <a href="' . e($editUrl) . '" class="text-primary" title="Edit">
+                        <i class="material-icons material-symbols-rounded">edit</i>
+                    </a>
                     <form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this electric slab?\');">
                         <input type="hidden" name="_token" value="' . e($token) . '">
                         <input type="hidden" name="_method" value="DELETE">
-                        <a href="javascript:void(0)" class="text-primary" title="Delete"> <i class="material-icons material-symbols-rounded">delete</i></a>
-                       
+                        <a href="javascript:void(0)" class="text-primary" title="Delete">
+                            <i class="material-icons material-symbols-rounded">delete</i>
+                        </a>
                     </form>
                 </div>';
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['actions'])
             ->setRowId('pk');
     }
 
     public function query(EstateElectricSlab $model): QueryBuilder
     {
-        return $model->newQuery()
-            ->with('unitType')
-            ->orderBy('start_unit_range');
+        return $model->newQuery()->orderBy('start_unit_range');
     }
 
     public function html(): HtmlBuilder
     {
         return $this->builder()
             ->setTableId('electricSlabTable')
-            ->addTableClass('table align-middle mb-0')
+            ->addTableClass('table text-nowrap w-100')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
@@ -86,18 +84,17 @@ class EstateElectricSlabDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row flex-wrap align-items-center gap-2"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
+                'dom' => '<"row mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('60px'),
-            Column::computed('unit_range')->title('UNIT RANGE')->orderable(true)->searchable(true),
-            Column::make('rate_per_unit')->title('RATE/UNIT')->orderable(true)->searchable(true),
-            Column::computed('merge_with_house')->title('MERGE WITH HOUSE')->orderable(false)->searchable(false),
-            Column::computed('action')->title('EDIT')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('80px'),
+            Column::computed('unit_range')->title('Unit range')->orderable(true)->searchable(true),
+            Column::make('rate_per_unit')->title('Rate/unit')->orderable(true)->searchable(true),
+            Column::computed('actions')->title('Actions')->orderable(false)->searchable(false),
         ];
     }
 
