@@ -104,7 +104,7 @@
                                             @endif
 
                                             @endif
-                                            @if(hasRole('Staff'))
+                                            @if(hasRole('Staff') || hasRole('Doctor') || hasRole('Internal Faculty'))
                                             <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
