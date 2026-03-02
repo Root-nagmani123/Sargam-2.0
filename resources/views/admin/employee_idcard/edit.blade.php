@@ -208,8 +208,8 @@
                         @enderror
                     </div>
                     <div class="col-md-6">
-                        <label for="approval_authority" class="form-label">Approval Authority</label>
-                        <select name="approval_authority" id="approval_authority" class="form-select @error('approval_authority') is-invalid @enderror">
+                        <label for="approval_authority" class="form-label">Approval Authority <span class="text-danger">*</span></label>
+                        <select name="approval_authority" id="approval_authority" class="form-select @error('approval_authority') is-invalid @enderror" required>
                             <option value="">--Select--</option>
                             @foreach($approvalAuthorityEmployees ?? [] as $emp)
                                 @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp

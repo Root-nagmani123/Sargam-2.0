@@ -278,7 +278,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
         $contQuery->orderByDesc('created_date');
 
-        // Contractual Duplicate: shown at Approval 2 for visibility only (no actions)
+        // Contractual Duplicate: shown at Approval 2 WITH actions (Approve/Reject) at Level 2
         $dupContHasA2 = DB::table('security_dup_other_id_apply_approval')->where('status', 2)->pluck('security_con_id_apply_pk');
         $dupContQuery = DB::table('security_dup_other_id_apply')->where('id_status', 1);
         if ($dupContHasA2->isNotEmpty()) {
@@ -310,13 +310,14 @@ class EmployeeIDCardApprovalController extends Controller
         $contRows = $contQuery->get();
         $dupContRows = $dupContQuery->get();
         
-        // Mark contractual requests as view-only (no approve/reject actions at Approval 2)
+        // Mark contractual REGULAR requests as view-only (no approve/reject actions at Approval 2)
         $contDtos = $contRows->map(function ($r) {
             $dto = IdCardSecurityMapper::toContractualRequestDto($r);
             $dto->is_view_only = true; // Contractual requests are view-only at Approval 2
             return $dto;
         });
-        // For duplicate contractual records (stdClass from DB query), create DTOs directly without mapper
+        // For duplicate contractual records (stdClass from DB query), create DTOs directly without mapper.
+        // These SHOULD be actionable at Approval II, so we do NOT mark them as view-only.
         $dupContDtos = $dupContRows->map(function ($r) {
             $dto = (object) [
                 // Use "c-<applyId>" as base id so view can build c-dup- prefix
@@ -337,7 +338,6 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_by' => null,
                 'requested_section' => $r->section,
                 'request_type' => 'duplicate',
-                'is_view_only' => true, // Contractual requests are view-only at Approval 2
             ];
             return $dto;
         });
@@ -520,8 +520,14 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_by' => $employeePk,
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
+            // For contractual regular ID cards, Level 1 is the FINAL approval.
+            // Mark the underlying request as Approved so it appears in the requestor's Archived tab
+            // and is no longer considered Pending in Approval flows.
+            DB::table('security_con_oth_id_apply')
+                ->where('pk', $pk)
+                ->update(['id_status' => 2]);
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
-                ->with('success', 'Request approved successfully. It will now move to Approver 2.');
+                ->with('success', 'Contractual ID Card request approved successfully. ID card is now fully approved.');
         }
 
         $row = SecurityParmIdApply::findOrFail($decrypted);

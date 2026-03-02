@@ -168,25 +168,23 @@ class DuplicateVehiclePassController extends Controller
         $user = Auth::user();
         $createdBy = $user->user_id ?? null;
 
-        // Multi-validation: prevent duplicate vehicle pass requests for same vehicle number
-        // while an existing pass (regular or duplicate) is still pending/approved.
+        // Multi-validation: prevent MULTIPLE duplicate/extended passes for same vehicle number
+        // while an existing duplicate pass is still pending/approved.
         $vehicleNo = $validated['vehicle_number'];
 
-        $alreadyExists = VehiclePassTWApply::where('vehicle_no', $vehicleNo)
-                ->whereIn('vech_card_status', [1, 2]) // pending or approved
-                ->exists()
-            || VehiclePassFWApply::where('vehicle_no', $vehicleNo)
-                ->whereIn('vech_card_status', [1, 2])
-                ->exists()
-            || VehiclePassDuplicateApplyTwfw::where('vehicle_no', $vehicleNo)
-                ->whereIn('vech_card_status', [1, 2])
-                ->exists();
+        // NOTE:
+        // - Regular Vehicle Pass multi-validation (against TW/FW tables) is handled in VehiclePassController@store.
+        // - Here we ONLY block when another duplicate/extended pass for the SAME vehicle number
+        //   is already Pending or Approved, so user cannot stack multiple duplicate requests.
+        $duplicateExists = VehiclePassDuplicateApplyTwfw::where('vehicle_no', $vehicleNo)
+            ->whereIn('vech_card_status', [1, 2]) // pending or approved duplicate/extended pass
+            ->exists();
 
-        if ($alreadyExists) {
+        if ($duplicateExists) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'vehicle_number' => 'A pending or approved vehicle pass already exists for this vehicle number. Duplicate vehicle pass cannot be requested.',
+                    'vehicle_number' => 'A pending or approved duplicate vehicle pass already exists for this vehicle number. Another duplicate vehicle pass cannot be requested.',
                 ]);
         }
 

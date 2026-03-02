@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\{
     DashboardStatisticsController,
     ParticipantHistoryController,
     CourseRepositoryController,
+    DuplicateIDCardRequestController,
     EmployeeIDCardRequestController,
     FamilyIDCardRequestController,
     WhosWhoController,

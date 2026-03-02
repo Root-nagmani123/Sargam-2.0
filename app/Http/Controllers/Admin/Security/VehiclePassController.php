@@ -245,6 +245,15 @@ class VehiclePassController extends Controller
                 }
             }
         }
+        // For "Others" applicant_type: if a valid ID card number is provided, try to auto-resolve basic employee info
+        if ($applicantType === 'others' && $employeeIdCard && !$empMasterPk) {
+            $empFromId = EmployeeMaster::where('emp_id', $employeeIdCard)->first();
+            if ($empFromId) {
+                $applicantName = $applicantName ?: trim($empFromId->first_name . ' ' . ($empFromId->last_name ?? ''));
+                $designation = $designation ?: ($empFromId->designation->designation_name ?? null);
+                $department = $department ?: ($empFromId->department->department_name ?? null);
+            }
+        }
 
         $govVeh = $applicantType === 'government_vehicle' ? 1 : 0;
 
@@ -440,8 +449,10 @@ class VehiclePassController extends Controller
 
         $vehiclePass->employee_id_card = $employeeIdCard ?? $vehiclePass->employee_id_card;
         $vehiclePass->emp_master_pk = $empMasterPk;
-       
-       
+        $vehiclePass->applicant_type = $applicantType;
+        $vehiclePass->applicant_name = $applicantName;
+        $vehiclePass->designation = $designation;
+        $vehiclePass->department = $department;
         $vehiclePass->vehicle_type = $validated['vehicle_type'];
         $vehiclePass->vehicle_no = $validated['vehicle_no'];
         $vehiclePass->veh_card_valid_from = $validated['veh_card_valid_from'];

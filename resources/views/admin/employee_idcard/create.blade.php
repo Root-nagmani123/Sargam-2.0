@@ -130,14 +130,19 @@
                             @error('blood_group')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-6">
+                            <label for="id_card_valid_from_perm" class="form-label">ID Card Valid From</label>
+                            <input type="date" name="id_card_valid_from" id="id_card_valid_from_perm" class="form-control idcard-perm-field" value="{{ old('id_card_valid_from', now()->format('Y-m-d')) }}" placeholder="DD/MM/YYYY">
+                            @error('id_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-6">
                             <label for="id_card_valid_upto_perm" class="form-label">ID Card Valid Upto</label>
-                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field idcard-autofill-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_perm" class="form-control idcard-perm-field" data-field="id_card_valid_upto" value="{{ $oldIdValid }}" placeholder="DD/MM/YYYY">
                             @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-6">
                             <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
                             <label for="photo_perm" class="idcard-upload-zone position-relative d-block cursor-pointer mb-0" id="photoUploadAreaPerm" style="cursor:pointer;">
-                                <input type="file" name="photo" id="photo_perm" class="d-none idcard-perm-field" data-field="photo" accept="image/*" required>
+                                <input type="file" name="photo_perm" id="photo_perm" class="d-none idcard-perm-field" data-field="photo" accept="image/*" required>
                                 <div class="idcard-upload-placeholder" id="photoPlaceholderPerm">
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                     <p class="mt-2 mb-0">Click to upload or drag and drop</p>
@@ -158,10 +163,11 @@
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                     <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                                 </div>
-                                <div class="idcard-upload-preview idcard-doc-preview d-none" id="joiningLetterPreviewPerm">
-                                    <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
-                                    <span class="idcard-doc-name" id="joiningLetterFileNamePerm"></span>
-                                    <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                <div class="idcard-upload-preview idcard-doc-preview idcard-joining-doc-selected d-none" id="joiningLetterPreviewPerm">
+                                    <i class="material-icons material-symbols-rounded idcard-doc-icon text-success">description</i>
+                                    <span class="small text-muted d-block">Selected file:</span>
+                                    <span class="idcard-doc-name fw-semibold text-success" id="joiningLetterFileNamePerm"></span>
+                                    <div class="d-flex gap-2 justify-content-center flex-wrap mt-1">
                                         <button type="button" class="btn btn-sm btn-outline-primary" id="joiningLetterPreviewBtnPerm" aria-label="Preview joining letter">
                                             <i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">visibility</i> Preview
                                         </button>
@@ -170,7 +176,7 @@
                                 </div>
                             </label>
                             <small class="text-muted d-block">Allowed: PDF, DOC, DOCX. Max size: 5 MB</small>
-                            <div id="joiningLetterSuccessPerm" class="small text-success mt-1 d-none" role="status"><i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">check_circle</i> Joining document added successfully.</div>
+                            <div id="joiningLetterSuccessPerm" class="small text-success mt-1 d-none fw-medium" role="status"><i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">check_circle</i> <span id="joiningLetterSuccessTextPerm">Joining document selected — will be uploaded on submit.</span></div>
                             @error('joining_letter')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -250,8 +256,8 @@
                             @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label for="approval_authority_cont" class="form-label">Approval Authority</label>
-                            <select name="approval_authority" id="approval_authority_cont" class="form-select idcard-cont-field" disabled>
+                            <label for="approval_authority_cont" class="form-label">Approval Authority <span class="text-danger">*</span></label>
+                            <select name="approval_authority" id="approval_authority_cont" class="form-select idcard-cont-field" disabled required>
                                 <option value="">--Select--</option>
                                 @foreach($approvalAuthorityEmployees ?? [] as $emp)
                                     @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
@@ -279,7 +285,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
                             <label for="photo_cont" class="idcard-upload-zone position-relative d-block cursor-pointer mb-0" id="photoUploadAreaCont" style="cursor:pointer;">
-                                <input type="file" name="photo" id="photo_cont" class="d-none idcard-cont-field" accept="image/*" required>
+                                <input type="file" name="photo_cont" id="photo_cont" class="d-none idcard-cont-field" accept="image/*" required>
                                 <div class="idcard-upload-placeholder" id="photoPlaceholderCont">
                                     <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                     <p class="mt-2 mb-0">Click to upload or drag and drop</p>
@@ -469,6 +475,8 @@
 .idcard-doc-preview { flex-direction: column; gap: 0.5rem; }
 .idcard-doc-icon { font-size: 3rem !important; color: #6c757d; }
 .idcard-doc-name { font-size: 0.875rem; color: #495057; text-align: center; word-break: break-all; padding: 0 1.5rem; }
+.idcard-joining-doc-selected { background: #d4edda; border: 1px solid #28a745; border-radius: 0.5rem; min-height: 140px; }
+.idcard-joining-doc-selected .idcard-doc-name { color: #155724; }
 .duplication-reason-field .form-select.w-auto { min-width: 180px; }
 </style>
 
@@ -708,10 +716,6 @@
             var el = document.getElementById(id);
             if (el) el.disabled = !isDupExt;
         });
-        var permValid = document.getElementById('id_card_valid_upto_perm');
-        var contValid = document.getElementById('id_card_valid_upto_cont');
-        if (permValid) permValid.disabled = (reqPerm && showDup.includes(reqPerm.value));
-        if (contValid) contValid.disabled = (reqCont && showDup.includes(reqCont.value));
     }
     document.getElementById('request_for_perm').addEventListener('change', toggleDuplicationExtension);
     document.getElementById('request_for_cont').addEventListener('change', toggleDuplicationExtension);
@@ -847,7 +851,14 @@
     document.getElementById('joining_letter_perm').addEventListener('change', function() {
         showDocPreview(this, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
         var successEl = document.getElementById('joiningLetterSuccessPerm');
-        if (successEl) successEl.classList.toggle('d-none', !this.files || !this.files.length);
+        var successText = document.getElementById('joiningLetterSuccessTextPerm');
+        if (this.files && this.files.length) {
+            if (successEl) successEl.classList.remove('d-none');
+            if (successText) successText.textContent = 'Selected file: ' + this.files[0].name + ' — will be uploaded on submit.';
+        } else {
+            if (successEl) successEl.classList.add('d-none');
+            if (successText) successText.textContent = 'Joining document selected — will be uploaded on submit.';
+        }
     });
     document.getElementById('joining_letter_cont').addEventListener('change', function() {
         showDocPreview(this, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
@@ -897,7 +908,9 @@
         input.value = '';
         clearDocPreview('joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
         var successEl = document.getElementById('joiningLetterSuccessPerm');
+        var successText = document.getElementById('joiningLetterSuccessTextPerm');
         if (successEl) successEl.classList.add('d-none');
+        if (successText) successText.textContent = 'Joining document selected — will be uploaded on submit.';
     });
     document.getElementById('joiningLetterRemoveCont').addEventListener('click', function(e) {
         e.stopPropagation();
@@ -934,8 +947,18 @@
                 input.files = files;
                 if (item.inputId === 'photo_perm') showPhotoPreview(input, 'photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
                 else if (item.inputId === 'photo_cont') showPhotoPreview(input, 'photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
-                else if (item.inputId === 'joining_letter_perm') showDocPreview(input, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
-                else if (item.inputId === 'joining_letter_cont') showDocPreview(input, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+                else if (item.inputId === 'joining_letter_perm') {
+                    showDocPreview(input, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+                    var successEl = document.getElementById('joiningLetterSuccessPerm');
+                    var successText = document.getElementById('joiningLetterSuccessTextPerm');
+                    if (files[0] && successEl) { successEl.classList.remove('d-none'); if (successText) successText.textContent = 'Selected file: ' + files[0].name + ' — will be uploaded on submit.'; }
+                }
+                else if (item.inputId === 'joining_letter_cont') {
+                    showDocPreview(input, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+                    var successElCont = document.getElementById('joiningLetterSuccessCont');
+                    var successTextCont = document.getElementById('joiningLetterSuccessTextCont');
+                    if (files[0] && successElCont) { successElCont.classList.remove('d-none'); if (successTextCont) successTextCont.textContent = 'Selected file: ' + files[0].name + ' — will be uploaded on submit.'; }
+                }
                 else showDocPreview(input, 'documentsPlaceholder', 'documentsPreview', 'documentsFileName');
             }
             this.classList.remove('idcard-upload-zone-active');

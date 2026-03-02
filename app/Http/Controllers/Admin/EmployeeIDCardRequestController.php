@@ -130,8 +130,8 @@ class EmployeeIDCardRequestController extends Controller
             ->filter(fn ($r) => ($r->request_for ?? '') === 'Extension' && ($r->status ?? '') === 'Approved')
             ->values();
 
-        $perPage = (int) $request->get('per_page', 15);
-        $perPage = $perPage >= 5 && $perPage <= 100 ? $perPage : 15;
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = $perPage >= 5 && $perPage <= 100 ? $perPage : 10;
 
         $activeRequests = static::paginateCollection($activeCollection, (int) $request->get('active_page', 1) ?: 1, $perPage, $request->url(), 'active_page');
         $activeRequests->withQueryString();
@@ -281,6 +281,7 @@ class EmployeeIDCardRequestController extends Controller
 
     public function store(Request $request)
     {
+       
         $validated = $request->validate([
             'employee_type' => 'required|in:Permanent Employee,Contractual Employee',
             'card_type' => 'required|string|max:100',
@@ -299,9 +300,11 @@ class EmployeeIDCardRequestController extends Controller
             'telephone_number' => 'nullable|string|max:20',
             'blood_group' => 'nullable|string|max:10',
             'section' => 'nullable|string|max:255',
-            'approval_authority' => 'nullable|string|max:255',
+            'approval_authority' => 'required_if:employee_type,Contractual Employee|nullable|string|max:255',
             'vendor_organization_name' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'photo_perm' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'photo_cont' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'joining_letter' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'fir_receipt' => 'required_if:duplication_reason,Lost|nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'payment_receipt' => 'nullable|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
@@ -310,6 +313,7 @@ class EmployeeIDCardRequestController extends Controller
             'employee_master_pk' => 'nullable|integer|exists:employee_master,pk',
         ], [
             'fir_receipt.required_if' => 'FIR Receipt is required when the card is reported as Lost.',
+            'approval_authority.required_if' => 'Approval Authority is required for Contractual Employees.',
         ]);
 
         $authEmpPk = Auth::user()->user_id ?? Auth::id();
@@ -344,7 +348,11 @@ class EmployeeIDCardRequestController extends Controller
         $isDupOrExt = in_array(($validated['request_for'] ?? 'Own ID Card'), ['Replacement', 'Duplication', 'Extension'], true);
 
         $photoPath = null;
-        if ($request->hasFile('photo')) {
+        if ($employeeType === 'Permanent Employee' && $request->hasFile('photo_perm')) {
+            $photoPath = $request->file('photo_perm')->store('idcard/photos', 'public');
+        } elseif ($employeeType === 'Contractual Employee' && $request->hasFile('photo_cont')) {
+            $photoPath = $request->file('photo_cont')->store('idcard/photos', 'public');
+        } elseif ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('idcard/photos', 'public');
         }
         $joiningLetterPath = null;
@@ -359,6 +367,10 @@ class EmployeeIDCardRequestController extends Controller
         }
         if (!empty($validated['id_card_valid_upto'])) {
             $cardValidTo = static::parseDateToYmd($validated['id_card_valid_upto']);
+        }
+        // Permanent Own ID Card: default card_valid_from to today if not provided
+        if ($cardValidFrom === null && $employeeType === 'Permanent Employee' && !$isDupOrExt) {
+            $cardValidFrom = now()->format('Y-m-d');
         }
 
         $now = now()->format('Y-m-d H:i:s');
@@ -549,7 +561,7 @@ class EmployeeIDCardRequestController extends Controller
             if ($employeeType === 'Permanent Employee') {
                 $nextId = (int) DB::table('security_parm_id_apply')->max('pk') + 1;
                 $empIdApply = 'PID' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
-
+print_r($cardValidTo);die;
                 $emp = EmployeeMaster::select(['pk', 'designation_master_pk'])->find($employeePk);
                 SecurityParmIdApply::create([
                     'emp_id_apply' => $empIdApply,
@@ -747,7 +759,7 @@ class EmployeeIDCardRequestController extends Controller
             'telephone_number' => 'nullable|string|max:20',
             'blood_group' => 'nullable|string|max:10',
             'section' => 'nullable|string|max:255',
-            'approval_authority' => 'nullable|string|max:255',
+            'approval_authority' => 'required_if:employee_type,Contractual Employee|nullable|string|max:255',
             'vendor_organization_name' => 'nullable|string|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'joining_letter' => 'nullable|mimes:pdf,doc,docx|max:5120',
@@ -756,6 +768,8 @@ class EmployeeIDCardRequestController extends Controller
             'documents' => 'nullable|mimes:pdf,doc,docx|max:5120',
             'status' => 'nullable|in:Pending,Approved,Rejected,Issued',
             'remarks' => 'nullable|string',
+        ], [
+            'approval_authority.required_if' => 'Approval Authority is required for Contractual Employees.',
         ]);
 
         $res = static::resolveId($id);
