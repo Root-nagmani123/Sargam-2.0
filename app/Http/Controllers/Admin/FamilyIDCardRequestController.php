@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Exports\FamilyIDCardExport;
 use App\Models\EmployeeMaster;
 use App\Models\SecurityFamilyIdApply;
+use App\Models\SecurityParmIdApply;
 use App\Support\IdCardSecurityMapper;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -157,14 +159,18 @@ class FamilyIDCardRequestController extends Controller
         $userDepartmentName = null;
         $approvalAuthorityEmployees = collect();
         $defaultApprovalAuthorityPk = null;
+        $defaultEmployeeIdPermanent = '';
+        $defaultEmployeeIdContractual = '';
+        $defaultDesignation = '';
         $authUserId = Auth::user()->user_id ?? null;
         if ($authUserId) {
-            $authEmp = EmployeeMaster::with('department')
+            $authEmp = EmployeeMaster::with(['department', 'designation'])
                 ->where('pk', $authUserId)
                 ->orWhere('pk_old', $authUserId)
                 ->first();
             if ($authEmp) {
                 $defaultApprovalAuthorityPk = $authEmp->pk;
+                $defaultDesignation = $authEmp->designation->designation_name ?? '';
                 if ($authEmp->department_master_pk) {
                     $userDepartmentName = $authEmp->department->department_name ?? null;
                     $approvalAuthorityEmployees = EmployeeMaster::with('designation')
@@ -175,6 +181,24 @@ class FamilyIDCardRequestController extends Controller
                         ->orderBy('last_name')
                         ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
                 }
+                // Government (Permanent): approved ID from security_parm_id_apply
+                $parmRow = DB::table('security_parm_id_apply')
+                    ->where('employee_master_pk', $authEmp->pk)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->orderBy('created_date', 'desc')
+                    ->first(['id_card_no', 'emp_id_apply']);
+                if ($parmRow) {
+                    $defaultEmployeeIdPermanent = $parmRow->id_card_no ?? $parmRow->emp_id_apply ?? '';
+                }
+                // Contractual: approved ID from security_con_oth_id_apply (created_by = employee pk)
+                $conRow = DB::table('security_con_oth_id_apply')
+                    ->where('created_by', $authEmp->pk)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->orderBy('created_date', 'desc')
+                    ->first(['id_card_no', 'emp_id_apply']);
+                if ($conRow) {
+                    $defaultEmployeeIdContractual = $conRow->id_card_no ?? $conRow->emp_id_apply ?? '';
+                }
             }
         }
 
@@ -182,6 +206,9 @@ class FamilyIDCardRequestController extends Controller
             'userDepartmentName' => $userDepartmentName,
             'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
             'defaultApprovalAuthorityPk' => $defaultApprovalAuthorityPk,
+            'defaultEmployeeIdPermanent' => $defaultEmployeeIdPermanent,
+            'defaultEmployeeIdContractual' => $defaultEmployeeIdContractual,
+            'defaultDesignation' => $defaultDesignation,
         ]);
     }
 

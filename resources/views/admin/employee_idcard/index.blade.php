@@ -317,6 +317,8 @@
                                     <th class="py-3">Request date</th>
                                     <th class="py-3">Employee Name</th>
                                     <th class="py-3">Designation</th>
+                                     <th class="py-3">Duplication</th>
+                                    <th class="py-3">Extension</th>
                                     <th class="py-3">Status</th>
                                     <th class="text-end py-3 pe-4">Actions</th>
                                 </tr>
@@ -337,6 +339,43 @@
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td class="fw-medium text-body-emphasis">{{ $request->name }}</td>
                                         <td class="text-body-secondary">{{ $request->designation ?? '--' }}</td>
+                                        <td class="text-center">
+                                            @if($request->status === 'Approved')
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-info idcard-archive-ext-btn"
+                                                        title="Request Extension"
+                                                        data-request-id="{{ $request->id }}"
+                                                        data-name="{{ $request->name }}"
+                                                        data-designation="{{ $request->designation ?? '--' }}"
+                                                        data-valid-upto="{{ $request->id_card_valid_upto ?? '' }}"
+                                                        data-status="{{ $request->status ?? '--' }}"
+                                                        data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
+                                                        data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">hourglass_bottom</i>
+                                                </button>
+                                            @else
+                                                <span class="text-body-tertiary">--</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($request->status === 'Approved')
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-warning idcard-archive-dup-btn"
+                                                        title="Request Duplicate"
+                                                        data-request-id="{{ $request->id }}"
+                                                        data-name="{{ $request->name }}"
+                                                        data-designation="{{ $request->designation ?? '--' }}"
+                                                        data-valid-upto="{{ $request->id_card_valid_upto ?? '' }}"
+                                                        data-status="{{ $request->status ?? '--' }}"
+                                                        data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
+                                                        data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">content_copy</i>
+                                                </button>
+                                            @else
+                                                <span class="text-body-tertiary">--</span>
+                                            @endif
+                                        </td>
+
                                         <td>
                                             @php
                                                 $statusClass = match($request->status) {
@@ -717,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Only Duplication / Extension actions should open the Amend modal.
     // Normal "View" links should navigate to full details page.
     document.body.addEventListener('click', function(e) {
-        var target = e.target.closest('a.amend-dup-ext-btn');
+        var target = e.target.closest('a.amend-dup-ext-btn, button.idcard-archive-ext-btn, button.idcard-archive-dup-btn');
         if (target) {
             e.preventDefault();
             currentAmendBtn = target;

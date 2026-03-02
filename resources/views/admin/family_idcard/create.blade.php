@@ -42,14 +42,16 @@
                 <h6 class="fw-semibold mb-4">Please add the Request For Family Member ID Card.</h6>
 
                 @php
-                    $oldEmployeeId = old('employee_id', 'ITS005');
-                    $oldDesignation = old('designation', 'Assistant Programmer');
+                    $isPermanent = old('employee_type', 'Permanent Employee') === 'Permanent Employee';
+                    $defaultEmployeeId = $isPermanent ? ($defaultEmployeeIdPermanent ?? '') : ($defaultEmployeeIdContractual ?? '');
+                    $oldEmployeeId = old('employee_id', $defaultEmployeeId);
+                    $oldDesignation = old('designation', $defaultDesignation ?? '');
                     $oldCardType = old('card_type', 'Family');
                     $oldSection = old('section', $userDepartmentName ?? 'NIELIT');
                     $oldApprovalAuthority = old('approval_authority', $defaultApprovalAuthorityPk ?? '');
                 @endphp
 
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-4" data-employee-id-permanent="{{ e($defaultEmployeeIdPermanent ?? '') }}" data-employee-id-contractual="{{ e($defaultEmployeeIdContractual ?? '') }}" data-designation="{{ e($defaultDesignation ?? '') }}">
                     <div class="col-md-6">
                         <label for="employee_id" class="form-label">Employee ID <span class="text-danger">*</span></label>
                         <input type="text" name="employee_id" id="employee_id" class="form-control" value="{{ $oldEmployeeId }}" placeholder="Enter your ID Card No." required>
@@ -336,7 +338,7 @@
 (function() {
     'use strict';
 
-    // Employee type toggle: show Approval Authority when Contractual
+    // Employee type toggle: show Approval Authority when Contractual; update Employee ID & Designation
     function toggleFmlApprovalAuthority() {
         var contRad = document.getElementById('emp_type_cont');
         var wrap = document.getElementById('fmlApprovalAuthorityWrap');
@@ -351,6 +353,21 @@
             sel.disabled = true;
             sel.required = false;
             sel.value = '';
+        }
+        var row = document.querySelector('.row.g-3.mb-4[data-employee-id-permanent]');
+        var empIdInp = document.getElementById('employee_id');
+        var desigInp = document.getElementById('designation');
+        if (row && empIdInp && desigInp) {
+            var idPerm = row.getAttribute('data-employee-id-permanent') || '';
+            var idCont = row.getAttribute('data-employee-id-contractual') || '';
+            var desig = row.getAttribute('data-designation') || '';
+            if (contRad.checked) {
+                empIdInp.value = idCont;
+                desigInp.value = desig;
+            } else {
+                empIdInp.value = idPerm;
+                desigInp.value = desig;
+            }
         }
     }
     document.getElementById('emp_type_govt')?.addEventListener('change', toggleFmlApprovalAuthority);

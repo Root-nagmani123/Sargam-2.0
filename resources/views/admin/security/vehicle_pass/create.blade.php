@@ -445,6 +445,7 @@
             }
         } else {
             if (empMasterPkInput) empMasterPkInput.value = '';
+            // For "Others" keep fields editable; do not force-readonly
             setApplicantFields('', '', '', '', false);
         }
         toggleIdCardAlerts();
@@ -454,6 +455,32 @@
     if (applicantTypeOthers) applicantTypeOthers.addEventListener('change', updateApplicantTypeFields);
     if (applicantTypeGovernment) applicantTypeGovernment.addEventListener('change', updateApplicantTypeFields);
     updateApplicantTypeFields();
+
+    // Auto-fill "Others" applicant details when a known ID Card Number is entered
+    var idCardInput = document.getElementById('employee_id_card');
+    if (idCardInput) {
+        idCardInput.addEventListener('blur', function () {
+            if (!applicantTypeOthers || !applicantTypeOthers.checked) return;
+            var idVal = (this.value || '').trim();
+            if (!idVal) return;
+            // Use preloaded employee data (by emp_id) if available
+            var empMap = @json($empDataForJs);
+            var match = null;
+            Object.keys(empMap || {}).forEach(function (pk) {
+                if (!match && empMap[pk].emp_id === idVal) {
+                    match = empMap[pk];
+                }
+            });
+            if (match) {
+                var nameEl = document.getElementById('applicant_name');
+                var desEl = document.getElementById('designation');
+                var deptEl = document.getElementById('department');
+                if (nameEl && !nameEl.value) nameEl.value = match.name || '';
+                if (desEl && !desEl.value) desEl.value = match.designation || '';
+                if (deptEl && !deptEl.value) deptEl.value = match.department || '';
+            }
+        });
+    }
 
     // Add new vehicle type (modal + AJAX)
     var addVehicleTypeBtn = document.getElementById('addVehicleTypeBtn');

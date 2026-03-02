@@ -171,6 +171,21 @@ class DuplicateIDCardRequestController extends Controller
             }
 
             $emp = $row->employee;
+            // Prefer main table validity; if missing, fall back to latest approved duplicate/extension record
+            $validFrom = $row->card_valid_from;
+            $validTo = $row->card_valid_to;
+            if (!$validFrom || !$validTo) {
+                $dup = DB::table('security_dup_perm_id_apply')
+                    ->where('id_card_no', $cardNo)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->orderByDesc('card_valid_to')
+                    ->first(['card_valid_from', 'card_valid_to']);
+                if ($dup) {
+                    $validFrom = $validFrom ?: ($dup->card_valid_from ?? null);
+                    $validTo = $validTo ?: ($dup->card_valid_to ?? null);
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -180,8 +195,8 @@ class DuplicateIDCardRequestController extends Controller
                     'blood_group' => $row->blood_group ?? '',
                     'mobile_number' => $row->mobile_no ?? '',
                     'father_name' => $emp->father_name ?? null,
-                    'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : null,
-                    'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : null,
+                    'card_valid_from' => $validFrom ? \Carbon\Carbon::parse($validFrom)->format('Y-m-d') : null,
+                    'card_valid_to' => $validTo ? \Carbon\Carbon::parse($validTo)->format('Y-m-d') : null,
                 ],
             ]);
         }

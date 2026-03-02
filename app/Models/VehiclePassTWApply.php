@@ -3,9 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class VehiclePassTWApply extends Model
 {
+    /** Cache for name resolved by employee_id_card (emp_id / id_card_no) to avoid N+1 in lists. */
+    protected static array $nameByEmployeeIdCardCache = [];
     protected $table = 'vehicle_pass_tw_apply';
     protected $primaryKey = 'vehicle_tw_pk';
     public $incrementing = false;
@@ -94,19 +98,72 @@ class VehiclePassTWApply extends Model
     }
 
     /**
-     * Display name: from employee relation (name + ID), or applicant_name for Others, else employee_id_card.
+     * Resolve employee name by matching employee_id_card to emp_id (employee_master) or id_card_no (security_parm_id_apply).
+     * Result cached per request to avoid N+1 in lists.
+     */
+    public static function resolveNameByEmployeeIdCard(?string $employeeIdCard): ?string
+    {
+        if ($employeeIdCard === null || trim($employeeIdCard) === '') {
+            return null;
+        }
+        $key = trim($employeeIdCard);
+        if (isset(self::$nameByEmployeeIdCardCache[$key])) {
+            return self::$nameByEmployeeIdCardCache[$key];
+        }
+        $name = null;
+        if (Schema::hasColumn((new EmployeeMaster)->getTable(), 'emp_id')) {
+            $emp = EmployeeMaster::where('emp_id', $key)->first(['pk', 'first_name', 'last_name']);
+            if ($emp) {
+                $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+            }
+        }
+        if (($name === null || $name === '') && Schema::hasTable('security_parm_id_apply')) {
+            $row = DB::table('security_parm_id_apply')
+                ->where('id_card_no', $key)
+                ->value('employee_master_pk');
+            if ($row) {
+                $emp = EmployeeMaster::find($row, ['pk', 'first_name', 'last_name']);
+                if ($emp) {
+                    $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+                }
+            }
+        }
+        if (($name === null || $name === '') && Schema::hasTable('security_con_oth_id_apply')) {
+            $row = DB::table('security_con_oth_id_apply')
+                ->where('id_card_no', $key)
+                ->value('created_by');
+            if ($row) {
+                $emp = EmployeeMaster::find($row, ['pk', 'first_name', 'last_name']);
+                if ($emp) {
+                    $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+                }
+            }
+        }
+        self::$nameByEmployeeIdCardCache[$key] = ($name !== null && $name !== '') ? $name : null;
+        return self::$nameByEmployeeIdCardCache[$key];
+    }
+
+    /**
+     * Display name: from employee relation, applicant_name, or name resolved by employee_id_card (emp_id / id_card_no), else card/--.
      */
     public function getDisplayNameAttribute()
     {
         if ($this->employee) {
             $name = trim($this->employee->first_name . ' ' . ($this->employee->last_name ?? ''));
-            $id = $this->employee_id_card ?: ($this->employee->emp_id ?? '');
-            return $id ? $name . ' (' . $id . ')' : $name;
+            if ($name !== '') {
+                $id = $this->employee_id_card ?: ($this->employee->emp_id ?? '');
+                return $id ? $name . ' (' . $id . ')' : $name;
+            }
         }
-        // Others / Government Vehicle: show applicant name, not ID card number
         $applicantName = trim((string) ($this->applicant_name ?? ''));
         if ($applicantName !== '') {
             return $this->employee_id_card ? $applicantName . ' (' . $this->employee_id_card . ')' : $applicantName;
+        }
+        if ($this->employee_id_card) {
+            $resolvedName = self::resolveNameByEmployeeIdCard($this->employee_id_card);
+            if ($resolvedName !== null && $resolvedName !== '') {
+                return $resolvedName . ' (' . $this->employee_id_card . ')';
+            }
         }
         return $this->employee_id_card ?: '--';
     }
