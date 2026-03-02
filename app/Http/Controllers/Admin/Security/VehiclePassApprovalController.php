@@ -35,12 +35,13 @@ class VehiclePassApprovalController extends Controller
         $regularRows = $regularQuery->get();
         $duplicateRows = $duplicateQuery->get();
 
-        // Convert regular rows to DTOs
+        // Convert regular rows to DTOs (include employee/applicant name for list)
         $regularDtos = $regularRows->map(function ($r) {
             return (object) [
                 'id' => $r->vehicle_tw_pk,
                 'vehicle_number' => $r->vehicle_no ?? '--',
                 'employee_id' => $r->employee_id_card ?? '--',
+                'employee_name' => $r->display_name ?? '--',
                 'vehicle_type' => $r->vehicleType ? ($r->vehicleType->vehicle_type ?? '--') : '--',
                 'status' => 'Pending',
                 'created_date' => $r->created_date,
@@ -48,12 +49,22 @@ class VehiclePassApprovalController extends Controller
             ];
         });
 
-        // Convert duplicate rows to DTOs
+        // Convert duplicate rows to DTOs (include employee name from relation or id_card)
         $duplicateDtos = $duplicateRows->map(function ($r) {
+            $empName = '--';
+            if ($r->employee) {
+                $empName = trim(($r->employee->first_name ?? '') . ' ' . ($r->employee->last_name ?? ''));
+                if ($empName === '') {
+                    $empName = $r->employee_id_card ?? '--';
+                }
+            } else {
+                $empName = $r->employee_id_card ?? '--';
+            }
             return (object) [
                 'id' => $r->vehicle_tw_pk,
                 'vehicle_number' => $r->vehicle_no ?? '--',
                 'employee_id' => $r->employee_id_card ?? '--',
+                'employee_name' => $empName,
                 'vehicle_type' => $r->vehicleType ? ($r->vehicleType->vehicle_type ?? '--') : '--',
                 'status' => 'Pending',
                 'created_date' => $r->created_date,
@@ -81,6 +92,7 @@ class VehiclePassApprovalController extends Controller
 
     public function show($id)
     {
+        $id = urldecode($id);
         try {
             $decryptedId = decrypt($id);
         } catch (\Exception $e) {
@@ -144,10 +156,12 @@ class VehiclePassApprovalController extends Controller
 
     public function approve(Request $request, $id)
     {
+        $id = urldecode($id);
         try {
             $decryptedId = decrypt($id);
         } catch (\Exception $e) {
-            abort(404);
+            return redirect()->route('admin.security.vehicle_pass_approval.index')
+                ->with('error', 'Invalid or expired link. Please try again from the list.');
         }
 
         $validated = $request->validate([
@@ -181,8 +195,8 @@ class VehiclePassApprovalController extends Controller
             return redirect()->route('admin.security.vehicle_pass_approval.index')
                 ->with('success', 'Duplicate Vehicle Pass approved successfully');
         } else {
-            // Regular vehicle pass
-            $pk = (int) $decryptedId;
+            // Regular vehicle pass (vehicle_tw_pk is string e.g. TW00001)
+            $pk = is_numeric($decryptedId) ? (int) $decryptedId : (string) $decryptedId;
             $application = VehiclePassTWApply::findOrFail($pk);
 
             if ($application->vech_card_status != 1) {
@@ -202,7 +216,7 @@ class VehiclePassApprovalController extends Controller
                 $approval->status = 2;
                 $approval->veh_recommend_status = 2;
                 $approval->veh_approval_remarks = $validated['veh_approval_remarks'];
-                $approval->veh_approved_by = $employeePk;
+                $approval->modified_by = (string) $employeePk;
                 $approval->modified_date = now();
                 $approval->save();
             } else {
@@ -211,7 +225,8 @@ class VehiclePassApprovalController extends Controller
                     'status' => 2,
                     'veh_recommend_status' => 2,
                     'veh_approval_remarks' => $validated['veh_approval_remarks'],
-                    'veh_approved_by' => $employeePk,
+                    'veh_emp_approval_pk' => $employeePk,
+                    'created_by' => $employeePk,
                     'created_date' => now(),
                 ]);
             }
@@ -223,10 +238,12 @@ class VehiclePassApprovalController extends Controller
 
     public function reject(Request $request, $id)
     {
+        $id = urldecode($id);
         try {
             $decryptedId = decrypt($id);
         } catch (\Exception $e) {
-            abort(404);
+            return redirect()->route('admin.security.vehicle_pass_approval.index')
+                ->with('error', 'Invalid or expired link. Please try again from the list.');
         }
 
         $validated = $request->validate([
@@ -259,8 +276,8 @@ class VehiclePassApprovalController extends Controller
             return redirect()->route('admin.security.vehicle_pass_approval.index')
                 ->with('success', 'Duplicate Vehicle Pass rejected');
         } else {
-            // Regular vehicle pass
-            $pk = (int) $decryptedId;
+            // Regular vehicle pass (vehicle_tw_pk is string e.g. TW00001)
+            $pk = is_numeric($decryptedId) ? (int) $decryptedId : (string) $decryptedId;
             $application = VehiclePassTWApply::findOrFail($pk);
 
             if ($application->vech_card_status != 1) {
@@ -279,7 +296,7 @@ class VehiclePassApprovalController extends Controller
                 $approval->status = 3;
                 $approval->veh_recommend_status = 3;
                 $approval->veh_approval_remarks = $validated['veh_approval_remarks'];
-                $approval->veh_approved_by = $employeePk;
+                $approval->modified_by = (string) $employeePk;
                 $approval->modified_date = now();
                 $approval->save();
             } else {
@@ -288,7 +305,8 @@ class VehiclePassApprovalController extends Controller
                     'status' => 3,
                     'veh_recommend_status' => 3,
                     'veh_approval_remarks' => $validated['veh_approval_remarks'],
-                    'veh_approved_by' => $employeePk,
+                    'veh_emp_approval_pk' => $employeePk,
+                    'created_by' => $employeePk,
                     'created_date' => now(),
                 ]);
             }

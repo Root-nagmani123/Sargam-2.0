@@ -170,6 +170,7 @@
                                 </div>
                             </label>
                             <small class="text-muted d-block">Allowed: PDF, DOC, DOCX. Max size: 5 MB</small>
+                            <div id="joiningLetterSuccessPerm" class="small text-success mt-1 d-none" role="status"><i class="material-icons material-symbols-rounded" style="font-size:1rem;vertical-align:middle;">check_circle</i> Joining document added successfully.</div>
                             @error('joining_letter')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                     </div>
@@ -226,7 +227,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="id_card_valid_upto_cont" class="form-label">ID Card Valid Upto</label>
-                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field idcard-autofill-field" value="{{ $oldIdValid }}" >
+                            <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_cont" class="form-control idcard-cont-field " value="{{ $oldIdValid }}" >
                         </div>
                         <div class="col-md-6">
                             <label for="mobile_number_cont" class="form-label">Mobile Number</label>
@@ -845,9 +846,13 @@
     });
     document.getElementById('joining_letter_perm').addEventListener('change', function() {
         showDocPreview(this, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+        var successEl = document.getElementById('joiningLetterSuccessPerm');
+        if (successEl) successEl.classList.toggle('d-none', !this.files || !this.files.length);
     });
     document.getElementById('joining_letter_cont').addEventListener('change', function() {
         showDocPreview(this, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+        var successEl = document.getElementById('joiningLetterSuccessCont');
+        if (successEl) successEl.classList.toggle('d-none', !this.files || !this.files.length);
     });
 
     function openDocPreview(inputId) {
@@ -891,12 +896,16 @@
         var input = document.getElementById('joining_letter_perm');
         input.value = '';
         clearDocPreview('joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+        var successEl = document.getElementById('joiningLetterSuccessPerm');
+        if (successEl) successEl.classList.add('d-none');
     });
     document.getElementById('joiningLetterRemoveCont').addEventListener('click', function(e) {
         e.stopPropagation();
         var input = document.getElementById('joining_letter_cont');
         input.value = '';
         clearDocPreview('joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+        var successEl = document.getElementById('joiningLetterSuccessCont');
+        if (successEl) successEl.classList.add('d-none');
     });
 
     var uploadAreas = [

@@ -48,22 +48,15 @@ class FamilyIDCardApprovalController extends Controller
             return $r->emp_id_apply . '|' . ($r->created_by ?? '') . '|' . $date;
         };
         $groups = $pendingRows->groupBy($groupKey);
-        $creatorUserIds = $pendingRows->pluck('created_by')->filter()->unique();
+        $creatorPks = $pendingRows->pluck('created_by')->filter()->unique();
         $creators = collect();
-        if ($creatorUserIds->isNotEmpty()) {
-            // created_by in SecurityFamilyIdApply stores user_id (like 'ITS005'), not pk
-            $ucs = DB::table('user_credentials')->whereIn('user_id', $creatorUserIds)->get(['user_id', 'pk']);
-            $empPks = $ucs->pluck('pk')->filter()->unique();
-            $empNames = collect();
-            if ($empPks->isNotEmpty()) {
-                $emps = DB::table('employee_master')->whereIn('pk', $empPks)->get(['pk', 'first_name', 'last_name']);
-                foreach ($emps as $e) {
-                    $empNames[(string) $e->pk] = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
-                }
-            }
-            foreach ($ucs as $uc) {
-                $name = $empNames[(string) ($uc->pk ?? '')] ?? null;
-                $creators[(string) $uc->user_id] = $name ?: ('User #' . $uc->user_id);
+        if ($creatorPks->isNotEmpty()) {
+            // created_by stores employee pk (from user_credentials.user_id which maps to employee_master.pk)
+            // Look up directly in employee_master
+            $emps = DB::table('employee_master')->whereIn('pk', $creatorPks)->get(['pk', 'first_name', 'last_name']);
+            foreach ($emps as $e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
+                $creators[(string) $e->pk] = $fullName ?: ('Employee #' . $e->pk);
             }
         }
 

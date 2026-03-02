@@ -94,7 +94,7 @@ class VehiclePassTWApply extends Model
     }
 
     /**
-     * Display name: from employee relation (name + ID) or employee_id_card only (e.g. Others).
+     * Display name: from employee relation (name + ID), or applicant_name for Others, else employee_id_card.
      */
     public function getDisplayNameAttribute()
     {
@@ -102,6 +102,11 @@ class VehiclePassTWApply extends Model
             $name = trim($this->employee->first_name . ' ' . ($this->employee->last_name ?? ''));
             $id = $this->employee_id_card ?: ($this->employee->emp_id ?? '');
             return $id ? $name . ' (' . $id . ')' : $name;
+        }
+        // Others / Government Vehicle: show applicant name, not ID card number
+        $applicantName = trim((string) ($this->applicant_name ?? ''));
+        if ($applicantName !== '') {
+            return $this->employee_id_card ? $applicantName . ' (' . $this->employee_id_card . ')' : $applicantName;
         }
         return $this->employee_id_card ?: '--';
     }

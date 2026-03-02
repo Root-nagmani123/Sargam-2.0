@@ -3,6 +3,7 @@
 @section('setup_content')
 <div class="container-fluid idcard-create-page">
     <x-breadcrum title="Edit ID Card Request"></x-breadcrum>
+    <x-session_message />
 
     <form action="{{ route('admin.employee_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         @csrf
@@ -91,8 +92,19 @@
                     </div>
                     <div class="col-md-6">
                         <label for="designation" class="form-label">Designation</label>
-                        <input type="text" name="designation" id="designation" class="form-control @error('designation') is-invalid @enderror" 
-                               value="{{ old('designation', $request->designation) }}">
+                        <select name="designation" id="designation" class="form-select @error('designation') is-invalid @enderror">
+                            <option value="">-- Select Designation --</option>
+                            @php
+                                $currentDesignation = old('designation', $request->designation ?? '');
+                                $designationList = $designations ?? [];
+                                if ($currentDesignation && !isset($designationList[$currentDesignation])) {
+                                    $designationList = [$currentDesignation => $currentDesignation] + $designationList;
+                                }
+                            @endphp
+                            @foreach($designationList as $pk => $name)
+                                <option value="{{ $name }}" {{ $currentDesignation == $name ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
                         @error('designation')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror

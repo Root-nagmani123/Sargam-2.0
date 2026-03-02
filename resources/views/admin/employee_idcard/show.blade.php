@@ -359,12 +359,7 @@
                                 </div>
                             </div>
                        @else
-                            <div class="col-12">
-                                <div class="card border-0 bg-light rounded-2 p-3 text-center">
-                                    <i class="material-icons material-symbols-rounded text-muted" style="font-size:48px; opacity: 0.5;">description</i>
-                                    <small class="d-block mt-2 text-muted">No documents uploaded</small>
-                                </div>
-                            </div>
+                           
                         @endif
                     </div>
                 </div>

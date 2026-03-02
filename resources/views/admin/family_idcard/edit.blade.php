@@ -32,6 +32,20 @@
                         </select>
                         @error('card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+                    @if($employeeType === 'Contractual Employee')
+                    <div class="col-md-6">
+                        <label for="approval_authority" class="form-label">Approval Authority <span class="text-danger">*</span></label>
+                        <select name="approval_authority" id="approval_authority" class="form-select">
+                            <option value="">-- Select Authority --</option>
+                            @foreach($approvalAuthorityEmployees ?? [] as $emp)
+                                @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
+                                <option value="{{ $emp->pk }}" {{ $currentApprovalAuthorityPk == $emp->pk ? 'selected' : '' }}>{{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}</option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Approval authority on behalf of your section</small>
+                        @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    @endif
                     <div class="col-md-6">
                         <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="name" class="form-control" value="{{ old('name', $request->name) }}" placeholder="Enter Family Member Name" required>

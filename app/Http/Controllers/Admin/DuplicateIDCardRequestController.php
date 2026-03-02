@@ -186,23 +186,28 @@ class DuplicateIDCardRequestController extends Controller
             ]);
         }
 
-        // Family ID Cards
+        // Family ID Cards: match by id_card_no (printed number) or fml_id_apply (application ID e.g. FMD00001)
         if ($type === 'Family') {
-            $row = SecurityFamilyIdApply::where('id_card_no', $cardNo)
+            $row = SecurityFamilyIdApply::where(function ($q) use ($cardNo) {
+                $q->where('id_card_no', $cardNo)
+                    ->orWhereRaw('TRIM(COALESCE(id_card_no, "")) = ?', [$cardNo])
+                    ->orWhere('fml_id_apply', $cardNo);
+            })
+                ->orderByRaw('CASE WHEN id_status = 2 THEN 0 ELSE 1 END')
                 ->orderByDesc('created_date')
                 ->first();
             if (!$row) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No family ID card found with this number.',
+                    'message' => 'No family ID card found with this number. Enter the card number or application ID (e.g. FMD00001).',
                 ], 404);
             }
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'employee_name' => $row->family_name ?? '',
-                    'designation' => '',
+                    'employee_name' => trim($row->family_name ?? ''),
+                    'designation' => trim($row->family_relation ?? ''),
                     'date_of_birth' => $row->employee_dob ? $row->employee_dob->format('Y-m-d') : null,
                     'blood_group' => $row->blood_group ?? '',
                     'mobile_number' => $row->mobile_no ?? '',

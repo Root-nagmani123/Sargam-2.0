@@ -23,6 +23,8 @@
             <div class="row g-3">
                 <div class="col-md-6"><strong>Employee ID:</strong> {{ $request->employee_id ?? '--' }}</div>
                 <div class="col-md-6"><strong>Employee Name:</strong> {{ $request->employee_name ?? '--' }}</div>
+                <div class="col-md-6"><strong>Guardian Name:</strong> {{ $request->guardian_name ?? '--' }}</div>
+                <div class="col-md-6"><strong>Guardian Designation:</strong> {{ $request->guardian_designation ?? '--' }}</div>
                 <div class="col-md-6"><strong>Designation:</strong> {{ $request->designation ?? '--' }}</div>
                 <div class="col-md-6"><strong>Card Type:</strong> {{ $request->card_type ?? '--' }}</div>
                 <div class="col-md-6"><strong>Family Member Name:</strong> {{ $request->name ?? '--' }}</div>

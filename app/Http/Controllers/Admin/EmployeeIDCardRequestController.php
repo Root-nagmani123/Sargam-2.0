@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Exports\EmployeeIDCardExport;
+use App\Models\DesignationMaster;
 use App\Models\SecurityParmIdApply;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\SecurityParmIdApplyApproval;
@@ -242,6 +243,21 @@ class EmployeeIDCardRequestController extends Controller
             return response()->json(['employee' => null]);
         }
         $dupPermIdApply = DB::table('security_dup_perm_id_apply')->where('employee_master_pk', $emp->pk)->orWhere('employee_master_pk', $emp->pk_old)->orderBy('pk', 'desc')->first();
+        // Valid upto: from duplicate table first, else from approved main ID card (security_parm_id_apply)
+        $idCardValidUpto = null;
+        if ($dupPermIdApply && !empty($dupPermIdApply->card_valid_to)) {
+            $idCardValidUpto = \Carbon\Carbon::parse($dupPermIdApply->card_valid_to)->format('Y-m-d');
+        } else {
+            $parmApply = DB::table('security_parm_id_apply')
+                ->where('employee_master_pk', $emp->pk)
+                ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                ->whereNotNull('card_valid_to')
+                ->orderBy('card_valid_to', 'desc')
+                ->first(['card_valid_to']);
+            if ($parmApply && !empty($parmApply->card_valid_to)) {
+                $idCardValidUpto = \Carbon\Carbon::parse($parmApply->card_valid_to)->format('Y-m-d');
+            }
+        }
         $name = trim($emp->first_name . ' ' . ($emp->middle_name ?? '') . ' ' . ($emp->last_name ?? ''));
         $designation = $emp->designation->designation_name ?? null;
         $dob = $emp->dob ? \Carbon\Carbon::parse($emp->dob)->format('Y-m-d') : null;
@@ -258,7 +274,7 @@ class EmployeeIDCardRequestController extends Controller
                 'academy_joining' => $doj,
                 'mobile_number' => $mobile,
                 'telephone_number' => $telephone,
-                'id_card_valid_upto' => $dupPermIdApply->card_valid_to ?? null,
+                'id_card_valid_upto' => $idCardValidUpto,
             ],
         ]);
     }
@@ -602,9 +618,13 @@ class EmployeeIDCardRequestController extends Controller
             }
         });
 
+        $successMsg = 'Employee ID Card request created successfully!';
+        if ($joiningLetterPath) {
+            $successMsg .= ' Joining document uploaded successfully.';
+        }
         return redirect()
             ->route('admin.employee_idcard.index')
-            ->with('success', 'Employee ID Card request created successfully!');
+            ->with('success', $successMsg);
     }
 
     /**
@@ -688,11 +708,13 @@ class EmployeeIDCardRequestController extends Controller
             'approvals.approver:pk,first_name,last_name'
         ])->findOrFail($res['pk']);
         $request = IdCardSecurityMapper::toEmployeeRequestDto($row);
+        $designations = DesignationMaster::active()->orderBy('designation_name')->pluck('designation_name', 'designation_name')->all();
         return view('admin.employee_idcard.edit', [
             'request' => $request,
             'cardTypes' => $cardTypes,
             'userDepartmentName' => $userDepartmentName,
             'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+            'designations' => $designations,
         ]);
     }
 
@@ -772,16 +794,25 @@ class EmployeeIDCardRequestController extends Controller
                 'department_approval_emp_pk' => array_key_exists('approval_authority', $validated) ? (!empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null) : $row->department_approval_emp_pk,
                 'section' => $userDepartmentPkForUpdate ?? $row->section,
             ];
+            $documentsUploadedList = [];
             if ($request->hasFile('photo')) {
                 $up['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
+                $documentsUploadedList[] = 'Photo';
             }
             if ($request->hasFile('documents')) {
                 $up['doc_path'] = $request->file('documents')->store('idcard/documents', 'public');
+                $documentsUploadedList[] = 'Documents';
             }
             DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->update($up);
+            
+            $successMsg = 'Employee ID Card request updated successfully!';
+            if (!empty($documentsUploadedList)) {
+                $successMsg .= ' ' . implode(' and ', $documentsUploadedList) . ' uploaded successfully.';
+            }
+            
             return redirect()
                 ->route('admin.employee_idcard.show', $res['id'])
-                ->with('success', 'Employee ID Card request updated successfully!');
+                ->with('success', $successMsg);
         }
 
         $row = SecurityParmIdApply::findOrFail($res['pk']);
@@ -819,18 +850,32 @@ class EmployeeIDCardRequestController extends Controller
         $row->mobile_no = $validated['mobile_number'] ?? null;
         $row->telephone_no = $validated['telephone_number'] ?? null;
         $row->blood_group = $validated['blood_group'] ?? null;
+        if (array_key_exists('designation', $validated) && !empty($validated['designation'])) {
+            $designationPk = DesignationMaster::where('designation_name', $validated['designation'])->value('pk');
+            if ($designationPk) {
+                $row->designation_pk = $designationPk;
+            }
+        }
+        $documentsUploadedList = [];
         if ($request->hasFile('photo')) {
             $row->id_photo_path = $request->file('photo')->store('idcard/photos', 'public');
+            $documentsUploadedList[] = 'Photo';
         }
         if ($request->hasFile('joining_letter')) {
             $row->joining_letter_path = $request->file('joining_letter')->store('idcard/joining_letters', 'public');
+            $documentsUploadedList[] = 'Joining Letter';
         }
         $row->save();
 
+        $successMsg = 'Employee ID Card request updated successfully!';
+        if (!empty($documentsUploadedList)) {
+            $successMsg .= ' ' . implode(' and ', $documentsUploadedList) . ' uploaded successfully.';
+        }
+        
         // Use emp_id_apply (business key) for redirect so show() can resolve correctly.
         return redirect()
             ->route('admin.employee_idcard.show', $row->emp_id_apply)
-            ->with('success', 'Employee ID Card request updated successfully!');
+            ->with('success', $successMsg);
     }
 
     public function amendDuplicationExtension(Request $request, $id)

@@ -32,6 +32,7 @@
                         <tr>
                             <th>Vehicle Number</th>
                             <th>Request Type</th>
+                            <th>Employee Name</th>
                             <th>Employee ID</th>
                             <th>Vehicle Type</th>
                             <th>Applied On</th>
@@ -49,6 +50,7 @@
                                         <span class="badge bg-info">Regular</span>
                                     @endif
                                 </td>
+                                <td>{{ $app->employee_name ?? '--' }}</td>
                                 <td><code>{{ $app->employee_id ?? '--' }}</code></td>
                                 <td>{{ $app->vehicle_type ?? '--' }}</td>
                                 <td>{{ $app->created_date ? \Carbon\Carbon::parse($app->created_date)->format('d-m-Y H:i') : '--' }}</td>
@@ -63,12 +65,12 @@
                                            class="btn btn-sm btn-info" title="View Details">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i> View
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-success" 
-                                                onclick="approveApplication('{{ $encryptId }}')" title="Approve">
+                                        <button type="button" class="btn btn-sm btn-success btn-veh-approve" 
+                                                data-encrypted-id="{{ $encryptId }}" title="Approve">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i> Approve
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-danger" 
-                                                onclick="rejectApplication('{{ $encryptId }}')" title="Reject">
+                                        <button type="button" class="btn btn-sm btn-danger btn-veh-reject" 
+                                                data-encrypted-id="{{ $encryptId }}" title="Reject">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i> Reject
                                         </button>
                                     </div>
@@ -76,7 +78,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted">No pending applications found.</td>
+                                <td colspan="8" class="text-center text-muted">No pending applications found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -150,18 +152,27 @@
 
 @push('scripts')
 <script>
-function approveApplication(encryptedId) {
-    const safeId = encodeURIComponent(encryptedId);
-    const url = "{{ route('admin.security.vehicle_pass_approval.approve', ':id') }}".replace(':id', safeId);
-    $('#approveForm').attr('action', url);
-    $('#approveModal').modal('show');
-}
+(function () {
+    var approveUrlTemplate = "{{ route('admin.security.vehicle_pass_approval.approve', ['id' => '__ID__']) }}";
+    var rejectUrlTemplate = "{{ route('admin.security.vehicle_pass_approval.reject', ['id' => '__ID__']) }}";
 
-function rejectApplication(encryptedId) {
-    const safeId = encodeURIComponent(encryptedId);
-    const url = "{{ route('admin.security.vehicle_pass_approval.reject', ':id') }}".replace(':id', safeId);
-    $('#rejectForm').attr('action', url);
-    $('#rejectModal').modal('show');
-}
+    $(document).on('click', '.btn-veh-approve', function () {
+        var encryptedId = this.getAttribute('data-encrypted-id');
+        if (!encryptedId) return;
+        var safeId = encodeURIComponent(encryptedId);
+        var url = approveUrlTemplate.replace('__ID__', safeId);
+        $('#approveForm').attr('action', url);
+        $('#approveModal').modal('show');
+    });
+
+    $(document).on('click', '.btn-veh-reject', function () {
+        var encryptedId = this.getAttribute('data-encrypted-id');
+        if (!encryptedId) return;
+        var safeId = encodeURIComponent(encryptedId);
+        var url = rejectUrlTemplate.replace('__ID__', safeId);
+        $('#rejectForm').attr('action', url);
+        $('#rejectModal').modal('show');
+    });
+})();
 </script>
 @endpush

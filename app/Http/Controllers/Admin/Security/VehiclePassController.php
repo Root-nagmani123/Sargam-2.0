@@ -106,6 +106,7 @@ class VehiclePassController extends Controller
         $employees = EmployeeMaster::with(['designation', 'department'])->where('status', 1)->get();
 
         $currentUserEmployee = null;
+        $currentUserIdCard = null;
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
         if ($employeePk) {
@@ -118,10 +119,36 @@ class VehiclePassController extends Controller
                     'department' => $emp->department->department_name ?? '',
                     'emp_id' => $emp->emp_id ?? '',
                 ];
+
+                // Check for valid ID card (permanent or contractual)
+                $permIdCard = DB::table('security_parm_id_apply')
+                    ->where('employee_master_pk', $employeePk)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->whereNotNull('card_valid_to')
+                    ->where('card_valid_to', '>=', now()->format('Y-m-d'))
+                    ->orderByDesc('card_valid_to')
+                    ->first(['card_valid_to', 'id_card_no']);
+
+                $contIdCard = DB::table('security_con_oth_id_apply')
+                    ->where('emp_id_apply', $emp->emp_id ?? '')
+                    ->where('id_status', 2) // Approved
+                    ->whereNotNull('card_valid_to')
+                    ->where('card_valid_to', '>=', now()->format('Y-m-d'))
+                    ->orderByDesc('card_valid_to')
+                    ->first(['card_valid_to', 'id_card_no']);
+
+                // Use whichever ID card is available (prefer permanent if both exist)
+                $idCard = $permIdCard ?: $contIdCard;
+                if ($idCard) {
+                    $currentUserIdCard = (object) [
+                        'valid_to' => $idCard->card_valid_to,
+                        'id_card_no' => $idCard->id_card_no,
+                    ];
+                }
             }
         }
 
-        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'employees', 'currentUserEmployee'));
+        return view('admin.security.vehicle_pass.create', compact('vehicleTypes', 'employees', 'currentUserEmployee', 'currentUserIdCard'));
     }
 
     public function store(Request $request)
@@ -168,19 +195,54 @@ class VehiclePassController extends Controller
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
             }
 
-            // Employee ID card must be valid (approved, not expired) for employee/government_vehicle applicants
-            $validIdCard = DB::table('security_parm_id_apply')
+            // Check for valid ID card (permanent or contractual)
+            $validIdCard = null;
+            
+            // First check permanent employee ID card
+            $permIdCard = DB::table('security_parm_id_apply')
                 ->where('employee_master_pk', $empMasterPk)
                 ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
                 ->where(function ($q) {
                     $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
                 })
-                ->exists();
+                ->orderByDesc('card_valid_to')
+                ->first(['card_valid_to', 'id_card_no']);
+
+            // If not found, check contractual employee ID card
+            if (!$permIdCard && $emp) {
+                $contIdCard = DB::table('security_con_oth_id_apply')
+                    ->where('emp_id_apply', $emp->emp_id ?? '')
+                    ->where('id_status', 2)
+                    ->where(function ($q) {
+                        $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
+                    })
+                    ->orderByDesc('card_valid_to')
+                    ->first(['card_valid_to', 'id_card_no']);
+                
+                $validIdCard = $contIdCard;
+            } else {
+                $validIdCard = $permIdCard;
+            }
 
             if (!$validIdCard) {
                 throw ValidationException::withMessages([
                     'applicant_type' => ['A valid (approved and not expired) Employee ID Card is required to apply for Vehicle Pass.'],
                 ]);
+            }
+
+            // Validate that vehicle pass valid_to does not exceed ID card valid_to
+            if ($validIdCard->card_valid_to) {
+                $idCardValidTo = \Carbon\Carbon::parse($validIdCard->card_valid_to);
+                $vehiclePassValidTo = \Carbon\Carbon::parse($validated['vech_card_valid_to']);
+                
+                if ($vehiclePassValidTo->greaterThan($idCardValidTo)) {
+                    throw ValidationException::withMessages([
+                        'vech_card_valid_to' => [
+                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until ' 
+                            . $idCardValidTo->format('d/m/Y') . '.'
+                        ],
+                    ]);
+                }
             }
         }
 
@@ -202,6 +264,10 @@ class VehiclePassController extends Controller
         $vehiclePass->vehicle_tw_pk = $vehicleTwPk;
         $vehiclePass->employee_id_card = $employeeIdCard ?? '';
         $vehiclePass->emp_master_pk = $empMasterPk;
+        $vehiclePass->applicant_type = $applicantType;
+        $vehiclePass->applicant_name = $applicantName;
+        $vehiclePass->designation = $designation;
+        $vehiclePass->department = $department;
         $vehiclePass->vehicle_type = $validated['vehicle_type'];
         $vehiclePass->vehicle_no = $validated['vehicle_no'];
         $vehiclePass->vehicle_req_id = $vehicleReqId;
@@ -314,19 +380,54 @@ class VehiclePassController extends Controller
                 $employeeIdCard = $employeeIdCard ?: ($emp->emp_id ?? null);
             }
 
-            // Employee ID card must be valid (approved, not expired) for employee/government_vehicle applicants
-            $validIdCard = DB::table('security_parm_id_apply')
+            // Check for valid ID card (permanent or contractual)
+            $validIdCard = null;
+            
+            // First check permanent employee ID card
+            $permIdCard = DB::table('security_parm_id_apply')
                 ->where('employee_master_pk', $empMasterPk)
                 ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
                 ->where(function ($q) {
                     $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
                 })
-                ->exists();
+                ->orderByDesc('card_valid_to')
+                ->first(['card_valid_to', 'id_card_no']);
+
+            // If not found, check contractual employee ID card
+            if (!$permIdCard && $emp) {
+                $contIdCard = DB::table('security_con_oth_id_apply')
+                    ->where('emp_id_apply', $emp->emp_id ?? '')
+                    ->where('id_status', 2)
+                    ->where(function ($q) {
+                        $q->whereNull('card_valid_to')->orWhere('card_valid_to', '>=', now()->format('Y-m-d'));
+                    })
+                    ->orderByDesc('card_valid_to')
+                    ->first(['card_valid_to', 'id_card_no']);
+                
+                $validIdCard = $contIdCard;
+            } else {
+                $validIdCard = $permIdCard;
+            }
 
             if (!$validIdCard) {
                 throw ValidationException::withMessages([
                     'applicant_type' => ['A valid (approved and not expired) Employee ID Card is required to apply for Vehicle Pass.'],
                 ]);
+            }
+
+            // Validate that vehicle pass valid_to does not exceed ID card valid_to
+            if ($validIdCard->card_valid_to) {
+                $idCardValidTo = \Carbon\Carbon::parse($validIdCard->card_valid_to);
+                $vehiclePassValidTo = \Carbon\Carbon::parse($validated['vech_card_valid_to']);
+                
+                if ($vehiclePassValidTo->greaterThan($idCardValidTo)) {
+                    throw ValidationException::withMessages([
+                        'vech_card_valid_to' => [
+                            'Vehicle Pass validity cannot exceed your ID Card validity. Your ID Card is valid until ' 
+                            . $idCardValidTo->format('d/m/Y') . '.'
+                        ],
+                    ]);
+                }
             }
         }
 
@@ -342,6 +443,10 @@ class VehiclePassController extends Controller
 
         $vehiclePass->employee_id_card = $employeeIdCard ?? $vehiclePass->employee_id_card;
         $vehiclePass->emp_master_pk = $empMasterPk;
+        $vehiclePass->applicant_type = $applicantType;
+        $vehiclePass->applicant_name = $applicantName;
+        $vehiclePass->designation = $designation;
+        $vehiclePass->department = $department;
         $vehiclePass->vehicle_type = $validated['vehicle_type'];
         $vehiclePass->vehicle_no = $validated['vehicle_no'];
         $vehiclePass->veh_card_valid_from = $validated['veh_card_valid_from'];

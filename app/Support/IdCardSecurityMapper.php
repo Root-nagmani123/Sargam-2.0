@@ -14,6 +14,24 @@ use stdClass;
 class IdCardSecurityMapper
 {
     /**
+     * Format a date value (Carbon, DateTime, string, or null) to d/m/Y for display.
+     */
+    public static function formatDateForDisplay($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        try {
+            if ($value instanceof \DateTimeInterface) {
+                return $value->format('d/m/Y');
+            }
+            return \Carbon\Carbon::parse($value)->format('d/m/Y');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
      * Generate ID card number for government (Permanent) employees.
      * Format: DDMMYYYY(dob) + first 4 letters of name (uppercase).
      * Example: 20022026MAYA (20-Feb-2026, name "Maya").
@@ -73,8 +91,8 @@ class IdCardSecurityMapper
         $dto->card_type = $cardTypeName;
         $dto->request_for = 'Own ID Card';
         $dto->duplication_reason = null;
-        $dto->id_card_valid_upto = $row->card_valid_to ? $row->card_valid_to->format('d/m/Y') : null;
-        $dto->id_card_valid_from = $row->card_valid_from ? $row->card_valid_from->format('d/m/Y') : null;
+        $dto->id_card_valid_upto = static::formatDateForDisplay($row->card_valid_to ?? null);
+        $dto->id_card_valid_from = static::formatDateForDisplay($row->card_valid_from ?? null);
         $dto->id_card_number = $row->id_card_no;
         $dto->date_of_birth = $row->employee_dob;
         $dto->mobile_number = $row->mobile_no;
@@ -181,8 +199,8 @@ class IdCardSecurityMapper
         $dto->card_type = $cardTypeName;
         $dto->request_for = 'Own ID Card';
         $dto->duplication_reason = null;
-        $dto->id_card_valid_upto = isset($row->card_valid_to) ? \Carbon\Carbon::parse($row->card_valid_to)->format('d/m/Y') : null;
-        $dto->id_card_valid_from = isset($row->card_valid_from) ? \Carbon\Carbon::parse($row->card_valid_from)->format('d/m/Y') : null;
+        $dto->id_card_valid_upto = static::formatDateForDisplay($row->card_valid_to ?? null);
+        $dto->id_card_valid_from = static::formatDateForDisplay($row->card_valid_from ?? null);
         $dto->id_card_number = $row->id_card_no ?? null;
         $dto->date_of_birth = $row->employee_dob ?? null;
         $dto->mobile_number = $row->mobile_no ?? null;
@@ -283,6 +301,36 @@ class IdCardSecurityMapper
         };
         $dto->status = $dto->status_label;
         $dto->id_photo_path = $row->id_photo_path ?? null;
+        
+        // Fetch guardian (primary employee) details
+        $guardianName = '--';
+        $guardianDesignation = '--';
+        if (!empty($row->emp_id_apply)) {
+            $employee = DB::table('employee_master')
+                ->where('emp_id', $row->emp_id_apply)
+                ->first(['first_name', 'last_name', 'designation_master_pk']);
+            
+            if ($employee) {
+                $guardianName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+                if ($guardianName === '') {
+                    $guardianName = $row->emp_id_apply;
+                }
+                
+                // Get designation name
+                if (!empty($employee->designation_master_pk)) {
+                    $designation = DB::table('designation_master')
+                        ->where('pk', $employee->designation_master_pk)
+                        ->value('designation_name');
+                    if ($designation) {
+                        $guardianDesignation = $designation;
+                    }
+                }
+            }
+        }
+        
+        $dto->guardian_name = $guardianName;
+        $dto->guardian_designation = $guardianDesignation;
+        
         return $dto;
     }
 }

@@ -23,10 +23,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class EmployeeIDCardApprovalController extends Controller
 {
     /**
-     * Approval I: Contractual requests where current user is the Approval Authority.
+     * Approval I: Only contractual employee requests where current user is the Approval Authority.
      * Includes:
-     *  - security_con_oth_id_apply (Contractual ID Card requests)
-     *  - security_dup_other_id_apply (Contractual Duplicate ID Card requests)
+     *  - security_con_oth_id_apply (Contractual regular ID Card requests)
+     *  - security_dup_other_id_apply where card_type = 'Contractual' (Contractual Duplicate ID Card requests only)
+     * Does NOT include: Permanent duplicate, Family duplicate (those go to Approval 2 only).
      * Filtered by department_approval_emp_pk = current user's employee pk
      */
     public function approval1(Request $request)
@@ -34,44 +35,24 @@ class EmployeeIDCardApprovalController extends Controller
         $user = Auth::user();
         $currentEmployeePk = $user->user_id ?? $user->pk ?? null;
 
-        // Contractual ID Card requests - Approval 1 (regular contractual only; Contractual/Family duplicate go to Approval 2)
+        // Contractual regular ID Card requests - Approval 1
         $contA1Done = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
             ->pluck('security_parm_id_apply_pk');
         $contQuery = DB::table('security_con_oth_id_apply')
             ->where('id_status', 1)
-            ->whereNotIn('emp_id_apply', $contA1Done)
-            ->where('department_approval_emp_pk', $currentEmployeePk)
-            ->orderByDesc('created_date');
-
-        // Permanent Duplicate ID Card requests - Approval 1 (Contractual/Family duplicate go directly to Approval 2)
-        $dupPermA1Done = DB::table('security_dup_perm_id_apply_approval')
-            ->where('status', 1)
-            ->pluck('security_parm_id_apply_pk');
-        $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
-            ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
-            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
-            ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk')
-            ->where('dup.id_status', 1)
-            ->whereNotIn('dup.emp_id_apply', $dupPermA1Done)
-            ->orderByDesc('dup.created_date')
-            ->select([
-                'dup.*',
-                'emp.first_name',
-                'emp.last_name',
-                'desig.designation_name',
-                'dept.department_name',
-            ]);
+            ->where('department_approval_emp_pk', $currentEmployeePk);
+        if ($contA1Done->isNotEmpty()) {
+            $contQuery->whereNotIn('emp_id_apply', $contA1Done);
+        }
+        $contQuery->orderByDesc('created_date');
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $contQuery->where(function ($q) use ($search) {
-                $q->where('employee_name', 'like', '%' . $search . '%')
-                    ->orWhere('id_card_no', 'like', '%' . $search . '%');
-            });
-            $dupPermQuery->where(function ($q) use ($search) {
-                $q->where('dup.employee_name', 'like', '%' . $search . '%')
-                    ->orWhere('dup.id_card_no', 'like', '%' . $search . '%');
+            $search = trim($request->search);
+            $searchLike = '%' . $search . '%';
+            $contQuery->where(function ($q) use ($searchLike) {
+                $q->where('employee_name', 'like', $searchLike)
+                    ->orWhere('id_card_no', 'like', $searchLike);
             });
         }
 
@@ -79,49 +60,79 @@ class EmployeeIDCardApprovalController extends Controller
         if ($request->filled('date_from')) {
             $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
             $contQuery->where('created_date', '>=', $from);
-            $dupPermQuery->where('dup.created_date', '>=', $from);
         }
         if ($request->filled('date_to')) {
             $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
             $contQuery->where('created_date', '<=', $to);
-            $dupPermQuery->where('dup.created_date', '<=', $to);
         }
         if ($request->filled('card_type')) {
             $contQuery->where('permanent_type', $request->card_type);
         }
 
         $contRows = $contQuery->get();
-        $dupPermRows = $dupPermQuery->get();
-
         $contDtos = $contRows->map(fn ($r) => IdCardSecurityMapper::toContractualRequestDto($r));
-        // Permanent Duplicate - Approval 1 (id must be emp_id_apply for p-dup- lookup in approve1)
-        $dupPermDtos = $dupPermRows->map(function ($r) {
-            $fullName = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
-            if ($fullName === '') {
-                $fullName = $r->employee_name ?? '--';
-            }
-            return (object) [
-                'id' => $r->emp_id_apply,
-                'name' => $fullName,
-                'designation' => $r->designation_name ?? null,
-                'father_name' => null,
-                'id_card_number' => $r->id_card_no,
-                'card_type' => null,
-                'date_of_birth' => $r->employee_dob,
-                'blood_group' => $r->blood_group,
-                'mobile_number' => $r->mobile_no,
-                'telephone_number' => null,
-                'id_card_valid_from' => $r->card_valid_from,
-                'id_card_valid_upto' => $r->card_valid_to,
-                'photo' => $r->id_photo_path,
-                'created_at' => $r->created_date ? \Carbon\Carbon::parse($r->created_date) : null,
-                'requested_by' => $fullName,
-                'requested_section' => $r->department_name ?? null,
-                'request_type' => 'duplicate',
-            ];
+
+        // Contractual Duplicate ID Card requests only (not Permanent/Family) - same approving authority
+        $dupContA1Done = DB::table('security_dup_other_id_apply_approval')
+            ->where('status', 1)
+            ->pluck('security_con_id_apply_pk');
+        $dupContQuery = DB::table('security_dup_other_id_apply')
+            ->where('id_status', 1)
+            ->where('card_type', 'Contractual')
+            ->where('department_approval_emp_pk', $currentEmployeePk);
+        if ($dupContA1Done->isNotEmpty()) {
+            $dupContQuery->whereNotIn('emp_id_apply', $dupContA1Done);
+        }
+        $dupContQuery->orderByDesc('created_date');
+
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $searchLike = '%' . $search . '%';
+            $dupContQuery->where(function ($q) use ($searchLike) {
+                $q->where('employee_name', 'like', $searchLike)
+                    ->orWhere('id_card_no', 'like', $searchLike);
+            });
+        }
+        if ($request->filled('date_from')) {
+            $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+            $dupContQuery->where('created_date', '>=', $from);
+        }
+        if ($request->filled('date_to')) {
+            $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+            $dupContQuery->where('created_date', '<=', $to);
+        }
+
+        $dupContRows = $dupContQuery->get();
+        $dupContDtos = $dupContRows->map(function ($r) {
+            $dto = new \stdClass();
+            $dto->id = 'c-' . $r->emp_id_apply;
+            $dto->pk = 0;
+            $dto->emp_id_apply = $r->emp_id_apply ?? '';
+            $dto->name = $r->employee_name ?? '--';
+            $dto->designation = $r->designation_name ?? '--';
+            $dto->photo = $r->id_photo_path ?? null;
+            $dto->joining_letter = null;
+            $dto->created_at = isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null;
+            $dto->card_type = $r->card_type ?? 'Contractual';
+            $dto->request_for = 'Duplication';
+            $dto->duplication_reason = $r->card_reason ?? null;
+            $dto->id_card_valid_upto = isset($r->card_valid_to) ? \Carbon\Carbon::parse($r->card_valid_to)->format('d/m/Y') : null;
+            $dto->id_card_valid_from = isset($r->card_valid_from) ? \Carbon\Carbon::parse($r->card_valid_from)->format('d/m/Y') : null;
+            $dto->id_card_number = $r->id_card_no ?? null;
+            $dto->date_of_birth = $r->employee_dob ?? null;
+            $dto->mobile_number = $r->mobile_no ?? null;
+            $dto->telephone_number = null;
+            $dto->blood_group = $r->blood_group ?? null;
+            $dto->remarks = $r->remarks ?? null;
+            $dto->created_by = $r->created_by ?? null;
+            $dto->id_status = (int) ($r->id_status ?? 0);
+            $dto->status = 'Pending';
+            $dto->request_type = 'duplicate';
+            $dto->father_name = null;
+            return $dto;
         });
 
-        $merged = $contDtos->concat($dupPermDtos)->sortByDesc('created_at')->values();
+        $merged = $contDtos->concat($dupContDtos)->sortByDesc('created_at')->values();
 
         $perPage = (int) $request->get('per_page', 10);
         $perPage = in_array($perPage, [10, 25, 50, 100]) ? $perPage : 10;
@@ -155,17 +166,17 @@ class EmployeeIDCardApprovalController extends Controller
             ->whereNotIn('emp_id_apply', $hasA2)
             ->orderBy('created_date', 'desc');
 
-        // Permanent Duplicate: has A1, no A2 (A1 done in Approval 1)
-        $dupPermA1 = DB::table('security_dup_perm_id_apply_approval')->where('status', 1)->pluck('security_parm_id_apply_pk');
+        // Permanent Duplicate: goes directly to Approval 2 (no A1 required, like permanent regular)
         $dupPermA2 = DB::table('security_dup_perm_id_apply_approval')->where('status', 2)->pluck('security_parm_id_apply_pk');
         $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
             ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
             ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
             ->leftJoin('department_master as dept', 'emp.department_master_pk', '=', 'dept.pk')
-            ->where('dup.id_status', 1)
-            ->whereIn('dup.emp_id_apply', $dupPermA1)
-            ->whereNotIn('dup.emp_id_apply', $dupPermA2)
-            ->orderByDesc('dup.created_date')
+            ->where('dup.id_status', 1);
+        if ($dupPermA2->isNotEmpty()) {
+            $dupPermQuery->whereNotIn('dup.emp_id_apply', $dupPermA2);
+        }
+        $dupPermQuery->orderByDesc('dup.created_date')
             ->select([
                 'dup.*',
                 'emp.first_name',
@@ -175,17 +186,19 @@ class EmployeeIDCardApprovalController extends Controller
             ]);
 
         if ($request->filled('search')) {
-            $search = $request->search;
-            $permQuery->where(function ($q) use ($search) {
-                $q->whereHas('employee', function ($eq) use ($search) {
-                    $eq->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%");
+            $search = trim($request->search);
+            $searchLike = '%' . $search . '%';
+            // Match full name (first_name + ' ' + last_name) so "RAJ SHOD" finds "Raj Shod"
+            $permQuery->where(function ($q) use ($search, $searchLike) {
+                $q->whereHas('employee', function ($eq) use ($searchLike) {
+                    $eq->whereRaw("CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) LIKE ?", [$searchLike]);
                 })
-                    ->orWhere('id_card_no', 'like', "%{$search}%");
+                    ->orWhere('id_card_no', 'like', $searchLike);
             });
-            $dupPermQuery->where(function ($q) use ($search) {
-                $q->where('dup.id_card_no', 'like', '%' . $search . '%')
-                    ->orWhere('dup.employee_name', 'like', '%' . $search . '%');
+            // security_dup_perm_id_apply: match full name from joined emp (employee_master)
+            $dupPermQuery->where(function ($q) use ($searchLike) {
+                $q->where('dup.id_card_no', 'like', $searchLike)
+                    ->orWhereRaw("CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, '')) LIKE ?", [$searchLike]);
             });
         }
 
@@ -236,9 +249,101 @@ class EmployeeIDCardApprovalController extends Controller
             return $dto;
         });
 
-        // At Approval II level, only Permanent regular and Permanent duplicate ID cards should appear.
-        // Contractual (regular and duplicate) are fully handled at Approval I.
-        $merged = $permDtos->concat($dupPermDtos)->sortByDesc(function ($d) {
+        // Contractual Regular: has A1, no A2 - shown at Approval 2 for visibility only (no actions)
+        $contHasA1 = DB::table('security_con_oth_id_apply_approval')->where('status', 1)->pluck('security_parm_id_apply_pk');
+        $contHasA2 = DB::table('security_con_oth_id_apply_approval')->where('status', 2)->pluck('security_parm_id_apply_pk');
+        $contQuery = DB::table('security_con_oth_id_apply')->where('id_status', 1);
+        if ($contHasA1->isNotEmpty()) {
+            $contQuery->whereIn('emp_id_apply', $contHasA1);
+            if ($contHasA2->isNotEmpty()) {
+                $contQuery->whereNotIn('emp_id_apply', $contHasA2);
+            }
+        } else {
+            $contQuery->whereRaw('0 = 1'); // no A1 approvals yet => no rows
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $contQuery->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', '%' . $search . '%')
+                    ->orWhere('id_card_no', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('date_from')) {
+            $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+            $contQuery->where('created_date', '>=', $from);
+        }
+        if ($request->filled('date_to')) {
+            $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+            $contQuery->where('created_date', '<=', $to);
+        }
+        $contQuery->orderByDesc('created_date');
+
+        // Contractual Duplicate: shown at Approval 2 for visibility only (no actions)
+        $dupContHasA2 = DB::table('security_dup_other_id_apply_approval')->where('status', 2)->pluck('security_con_id_apply_pk');
+        $dupContQuery = DB::table('security_dup_other_id_apply')->where('id_status', 1);
+        if ($dupContHasA2->isNotEmpty()) {
+            $dupContQuery->whereNotIn('emp_id_apply', $dupContHasA2);
+        }
+        $dupContQuery->where(function ($q) use ($currentEmployeePk) {
+            $q->where('department_approval_emp_pk', $currentEmployeePk);
+            if (hasRole('Admin')) {
+                $q->orWhereNull('department_approval_emp_pk');
+            }
+        });
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $dupContQuery->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', '%' . $search . '%')
+                    ->orWhere('id_card_no', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('date_from')) {
+            $from = \Carbon\Carbon::parse($request->date_from)->startOfDay()->toDateTimeString();
+            $dupContQuery->where('created_date', '>=', $from);
+        }
+        if ($request->filled('date_to')) {
+            $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
+            $dupContQuery->where('created_date', '<=', $to);
+        }
+        $dupContQuery->orderByDesc('created_date');
+
+        $contRows = $contQuery->get();
+        $dupContRows = $dupContQuery->get();
+        
+        // Mark contractual requests as view-only (no approve/reject actions at Approval 2)
+        $contDtos = $contRows->map(function ($r) {
+            $dto = IdCardSecurityMapper::toContractualRequestDto($r);
+            $dto->is_view_only = true; // Contractual requests are view-only at Approval 2
+            return $dto;
+        });
+        // For duplicate contractual records (stdClass from DB query), create DTOs directly without mapper
+        $dupContDtos = $dupContRows->map(function ($r) {
+            $dto = (object) [
+                // Use "c-<applyId>" as base id so view can build c-dup- prefix
+                'id' => 'c-' . $r->emp_id_apply,
+                'name' => $r->employee_name ?? '--',
+                'designation' => $r->designation_name ?? '--',
+                'father_name' => null,
+                'id_card_number' => $r->id_card_no,
+                'card_type' => null,
+                'date_of_birth' => $r->employee_dob,
+                'blood_group' => $r->blood_group,
+                'mobile_number' => $r->mobile_no,
+                'telephone_number' => null,
+                'id_card_valid_from' => $r->card_valid_from,
+                'id_card_valid_upto' => $r->card_valid_to,
+                'photo' => $r->id_photo_path,
+                'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
+                'requested_by' => null,
+                'requested_section' => $r->section,
+                'request_type' => 'duplicate',
+                'is_view_only' => true, // Contractual requests are view-only at Approval 2
+            ];
+            return $dto;
+        });
+
+        // At Approval II level, permanent regular and permanent duplicate (actionable), plus contractual regular and duplicate (view-only)
+        $merged = $permDtos->concat($dupPermDtos)->concat($contDtos)->concat($dupContDtos)->sortByDesc(function ($d) {
             return $d->created_at ? (\Carbon\Carbon::parse($d->created_at)->timestamp ?? 0) : 0;
         })->values();
 
@@ -355,25 +460,28 @@ class EmployeeIDCardApprovalController extends Controller
         $user = Auth::user();
         $employeePk = $user->user_id ?? $user->pk ?? null;
 
-        // Permanent Duplicate ID Card request (p-dup- prefix) - Approval 1: insert A1 only
-        // Identifier after "p-dup-" is emp_id_apply (e.g. DUP00001), not numeric pk
-        if (is_string($decrypted) && str_starts_with($decrypted, 'p-dup-')) {
+        // Contractual Duplicate ID Card request (c-dup- prefix) - Approval 1 only for contractual
+        if (is_string($decrypted) && str_starts_with($decrypted, 'c-dup-')) {
             $applyId = substr($decrypted, 6);
-            $row = DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->first();
+            $row = DB::table('security_dup_other_id_apply')->where('emp_id_apply', $applyId)->first();
             if (!$row || (int) $row->id_status !== 1) {
                 return redirect()->back()->with('error', 'This request is not pending your approval.');
             }
-            $hasA1 = DB::table('security_dup_perm_id_apply_approval')
-                ->where('security_parm_id_apply_pk', $row->emp_id_apply)
+            if ((int) $row->department_approval_emp_pk !== (int) $employeePk) {
+                return redirect()->back()->with('error', 'Only the designated Approval Authority can approve this request.');
+            }
+            $hasA1 = DB::table('security_dup_other_id_apply_approval')
+                ->where('security_con_id_apply_pk', $row->emp_id_apply)
                 ->where('status', 1)
                 ->exists();
             if ($hasA1) {
                 return redirect()->back()->with('error', 'This request has already been approved at Level 1.');
             }
-            DB::table('security_dup_perm_id_apply_approval')->insert([
-                'security_parm_id_apply_pk' => $row->emp_id_apply,
+            DB::table('security_dup_other_id_apply_approval')->insert([
+                'security_con_id_apply_pk' => $row->emp_id_apply,
                 'status' => 1,
                 'approval_remarks' => null,
+                'recommend_status' => 1,
                 'approval_emp_pk' => $employeePk,
                 'created_by' => $employeePk,
                 'created_date' => now()->format('Y-m-d H:i:s'),
@@ -381,10 +489,11 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
-                ->with('success', 'Permanent Duplicate ID Card approved at Level 1. It will now move to Approval 2.');
+                ->with('success', 'Duplicate ID Card request approved at Level 1. It will now move to Approver 2.');
         }
-        // Contractual Regular ID Card request (c- prefix)
-        elseif (is_string($decrypted) && str_starts_with($decrypted, 'c-')) {
+
+        // Contractual Regular ID Card request (c- prefix, not c-dup-)
+        if (is_string($decrypted) && str_starts_with($decrypted, 'c-')) {
             $pk = (int) substr($decrypted, 2);
             $row = DB::table('security_con_oth_id_apply')->where('pk', $pk)->first();
             if (!$row || (int) $row->id_status !== 1) {
@@ -489,7 +598,7 @@ class EmployeeIDCardApprovalController extends Controller
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Duplicate ID Card request approved successfully.');
         }
-        // Permanent Duplicate ID Card request (p-dup- prefix)
+        // Permanent Duplicate ID Card request (p-dup- prefix) - goes directly to Approval 2 (no A1 check needed)
         // Identifier after "p-dup-" is emp_id_apply (e.g. DUP00001), not numeric pk
         elseif (is_string($pk) && str_starts_with($pk, 'p-dup-')) {
             $applyId = substr($pk, 6);
@@ -501,6 +610,7 @@ class EmployeeIDCardApprovalController extends Controller
             if ($hasA2) {
                 return redirect()->back()->with('error', 'This request has already been approved.');
             }
+            // Permanent duplicate goes directly to Approval 2 (status=2), no A1 prerequisite needed
             DB::table('security_dup_perm_id_apply_approval')->insert([
                 'security_parm_id_apply_pk' => $row->emp_id_apply,
                 'status' => 2,
@@ -605,7 +715,7 @@ class EmployeeIDCardApprovalController extends Controller
         $user = Auth::user();
         $employeePk = $user->user_id ?? $user->pk ?? null;
 
-        // Contractual/Family Duplicate reject (Approval 2 only)
+        // Contractual/Family Duplicate reject (Approval 1 or 2)
         if (is_string($pk) && str_starts_with($pk, 'c-dup-')) {
             $applyId = substr($pk, 6);
             $row = DB::table('security_dup_other_id_apply')->where('emp_id_apply', $applyId)->first();
@@ -615,9 +725,16 @@ class EmployeeIDCardApprovalController extends Controller
             if ((int) $row->department_approval_emp_pk !== (int) $employeePk && !hasRole('Admin')) {
                 return redirect()->back()->with('error', 'Only the designated section authority can reject this request.');
             }
+            $hasA1 = DB::table('security_dup_other_id_apply_approval')->where('security_con_id_apply_pk', $row->emp_id_apply)->where('status', 1)->exists();
             $hasA2 = DB::table('security_dup_other_id_apply_approval')->where('security_con_id_apply_pk', $row->emp_id_apply)->where('status', 2)->exists();
             if ($hasA2) {
                 return redirect()->back()->with('error', 'This request has already been approved.');
+            }
+            if ($stage === 1 && $hasA1) {
+                return redirect()->back()->with('error', 'This request has already been approved at Level 1.');
+            }
+            if ($stage === 2 && !$hasA1) {
+                return redirect()->back()->with('error', 'This request must be approved at Level 1 first.');
             }
             DB::table('security_dup_other_id_apply_approval')->insert([
                 'security_con_id_apply_pk' => $row->emp_id_apply,
@@ -630,10 +747,11 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
             DB::table('security_dup_other_id_apply')->where('emp_id_apply', $applyId)->update(['id_status' => 3]);
-            return redirect()->route('admin.security.employee_idcard_approval.approval2')->with('success', 'Request rejected.');
+            $route = $stage === 1 ? 'admin.security.employee_idcard_approval.approval1' : 'admin.security.employee_idcard_approval.approval2';
+            return redirect()->route($route)->with('success', 'Request rejected.');
         }
 
-        // Permanent Duplicate reject (Approval 1 or 2)
+        // Permanent Duplicate reject (Approval 2 only - permanent duplicates go directly to Approval 2)
         if (is_string($pk) && str_starts_with($pk, 'p-dup-')) {
             $applyId = substr($pk, 6);
             $row = DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->first();
@@ -655,8 +773,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
             DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->update(['id_status' => 3]);
-            $route = $stage === 1 ? 'admin.security.employee_idcard_approval.approval1' : 'admin.security.employee_idcard_approval.approval2';
-            return redirect()->route($route)->with('success', 'Request rejected.');
+            return redirect()->route('admin.security.employee_idcard_approval.approval2')->with('success', 'Request rejected.');
         }
 
         if (is_string($pk) && str_starts_with($pk, 'c-')) {
@@ -824,49 +941,46 @@ class EmployeeIDCardApprovalController extends Controller
 
         $contData = $contQuery->get()->toArray();
 
-        // Permanent Duplicate ID Card requests for Approval 1 (same base as approval1() list)
-        $dupPermA1Done = DB::table('security_dup_perm_id_apply_approval')
+        // Contractual Duplicate ID Card requests only (same as approval1 list - not permanent/family)
+        $dupContA1Done = DB::table('security_dup_other_id_apply_approval')
             ->where('status', 1)
-            ->pluck('security_parm_id_apply_pk');
-        $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
-            ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
-            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
-            ->where('dup.id_status', 1)
-            ->whereNotIn('dup.emp_id_apply', $dupPermA1Done)
+            ->pluck('security_con_id_apply_pk');
+        $dupContQuery = DB::table('security_dup_other_id_apply')
+            ->where('id_status', 1)
+            ->where('card_type', 'Contractual')
+            ->where('department_approval_emp_pk', $currentEmployeePk)
+            ->whereNotIn('emp_id_apply', $dupContA1Done)
             ->select(
-                'dup.emp_id_apply as id',
-                DB::raw("TRIM(CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, ''))) as name"),
-                'desig.designation_name as designation',
-                'dup.id_card_no',
-                'dup.employee_dob',
-                'dup.blood_group',
-                'dup.mobile_no',
-                'dup.created_date',
+                'emp_id_apply as id',
+                'employee_name as name',
+                'designation_name as designation',
+                'id_card_no',
+                'employee_dob',
+                'blood_group',
+                'mobile_no',
+                'created_date',
                 DB::raw("'Duplicate' as type"),
-                DB::raw('NULL as card_type')
+                'card_type'
             );
 
         if (!empty($search)) {
-            $dupPermQuery->where(function ($q) use ($search) {
-                $q->where('dup.employee_name', 'like', '%' . $search . '%')
-                  ->orWhere('dup.id_card_no', 'like', '%' . $search . '%')
-                  ->orWhere('emp.first_name', 'like', '%' . $search . '%')
-                  ->orWhere('emp.last_name', 'like', '%' . $search . '%');
+            $dupContQuery->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', '%' . $search . '%')
+                  ->orWhere('id_card_no', 'like', '%' . $search . '%');
             });
         }
-
         if (!empty($dateFrom)) {
             $from = \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
-            $dupPermQuery->where('dup.created_date', '>=', $from);
+            $dupContQuery->where('created_date', '>=', $from);
         }
         if (!empty($dateTo)) {
             $to = \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
-            $dupPermQuery->where('dup.created_date', '<=', $to);
+            $dupContQuery->where('created_date', '<=', $to);
         }
 
-        $dupPermData = $dupPermQuery->get()->toArray();
+        $dupContData = $dupContQuery->get()->toArray();
 
-        $data = array_merge($contData, $dupPermData);
+        $data = array_merge($contData, $dupContData);
 
         return $this->outputExport($data, 'Approval_I_' . now()->format('Y-m-d'), $format);
     }

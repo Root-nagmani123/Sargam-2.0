@@ -49,6 +49,33 @@
             <div class="card-body p-4">
                 <h6 class="fw-semibold mb-4">Please enter new configuration for vehicle</h6>
 
+                {{-- ID Card Validity Information Alert --}}
+                @if(isset($currentUserIdCard) && $currentUserIdCard && in_array($oldApplicantType, ['employee', 'government_vehicle']))
+                <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" id="idCardInfoAlert">
+                    <div class="d-flex align-items-start">
+                        <i class="material-icons material-symbols-rounded me-2" style="font-size: 24px;">info</i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-1">Your ID Card Information</h6>
+                            <p class="mb-1"><strong>ID Card No:</strong> {{ $currentUserIdCard->id_card_no }}</p>
+                            <p class="mb-0"><strong>Valid Until:</strong> {{ \Carbon\Carbon::parse($currentUserIdCard->valid_to)->format('d/m/Y') }}</p>
+                            <p class="small text-muted mb-0 mt-1"><em>Note: Vehicle pass validity cannot exceed your ID card validity date.</em></p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @elseif(in_array($oldApplicantType, ['employee', 'government_vehicle']) && (!isset($currentUserIdCard) || !$currentUserIdCard))
+                <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert" id="idCardWarningAlert">
+                    <div class="d-flex align-items-start">
+                        <i class="material-icons material-symbols-rounded me-2" style="font-size: 24px;">warning</i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-1">No Valid ID Card Found</h6>
+                            <p class="mb-0">You do not have a valid approved ID card. Please apply for an ID card before creating a vehicle pass.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
+
                 {{-- Employee / Government Vehicle: logged-in user's details auto-fill; no employee selection. Others: user fills manually. --}}
                 <input type="hidden" name="emp_master_pk" id="emp_master_pk" value="{{ in_array($oldApplicantType, ['employee', 'government_vehicle']) && isset($currentUserEmployee) && $currentUserEmployee ? $currentUserEmployee->pk : old('emp_master_pk', '') }}">
 
@@ -348,6 +375,9 @@
     var applicantTypeGovernment = document.getElementById('applicant_type_government');
     var empMasterPkInput = document.getElementById('emp_master_pk');
     var currentUserEmployee = @json($currentUserEmployee ?? null);
+    var currentUserIdCard = @json($currentUserIdCard ?? null);
+    var idCardInfoAlert = document.getElementById('idCardInfoAlert');
+    var idCardWarningAlert = document.getElementById('idCardWarningAlert');
 
     function isEmployeeOrGovVehicle() {
         return (applicantTypeEmployee && applicantTypeEmployee.checked) || (applicantTypeGovernment && applicantTypeGovernment.checked);
@@ -362,6 +392,40 @@
         if (nameEl) { nameEl.value = name || ''; nameEl.readOnly = !!readonly; }
         if (desEl) { desEl.value = designation || ''; desEl.readOnly = !!readonly; }
         if (deptEl) { deptEl.value = department || ''; deptEl.readOnly = !!readonly; }
+    }
+
+    function toggleIdCardAlerts() {
+        var validToInput = document.getElementById('vech_card_valid_to');
+        
+        if (isEmployeeOrGovVehicle()) {
+            // Show ID card info alert if user has valid ID card
+            if (currentUserIdCard && idCardInfoAlert) {
+                idCardInfoAlert.style.display = '';
+                
+                // Set max date on vehicle pass valid_to field
+                if (validToInput && currentUserIdCard.valid_to) {
+                    validToInput.setAttribute('max', currentUserIdCard.valid_to);
+                }
+            }
+            // Show warning alert if user doesn't have valid ID card
+            if (!currentUserIdCard && idCardWarningAlert) {
+                idCardWarningAlert.style.display = '';
+                
+                // Remove max constraint if no ID card
+                if (validToInput) {
+                    validToInput.removeAttribute('max');
+                }
+            }
+        } else {
+            // Hide both alerts for "Others" applicant type
+            if (idCardInfoAlert) idCardInfoAlert.style.display = 'none';
+            if (idCardWarningAlert) idCardWarningAlert.style.display = 'none';
+            
+            // Remove max constraint for "Others"
+            if (validToInput) {
+                validToInput.removeAttribute('max');
+            }
+        }
     }
 
     function updateApplicantTypeFields() {
@@ -383,6 +447,7 @@
             if (empMasterPkInput) empMasterPkInput.value = '';
             setApplicantFields('', '', '', '', false);
         }
+        toggleIdCardAlerts();
     }
 
     if (applicantTypeEmployee) applicantTypeEmployee.addEventListener('change', updateApplicantTypeFields);

@@ -4,6 +4,7 @@
 <div class="container-fluid idcard-index-page">
     <!-- Breadcrumb + Search (reference: Setup > User Management, search icon right) -->
     <x-breadcrum title="Request Employee ID Card"></x-breadcrum>
+    <x-session_message />
 
     <div class="card border border-body-secondary rounded-4 shadow-sm idcard-index-card overflow-hidden">
         <div class="card-body">
@@ -121,8 +122,8 @@
                                     <th>Designation</th>
                                     <th>Card Type</th>
                                     <th>Request For</th>
-                                    <th>Duplication</th>
-                                    <th>Extension</th>
+                                    {{--<th>Duplication</th>
+                                    <th>Extension</th> --}}
                                     <th>Valid Upto</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -146,67 +147,7 @@
                                         <td>{{ $request->designation ?? '--' }}</td>
                                         <td>{{ $request->card_type ?? '--' }}</td>
                                         <td>{{ $request->request_for ?? '--' }}</td>
-                                        <td>
-                                            <a href="#" class="amend-dup-ext-btn text-decoration-none" data-request-id="{{ $request->id }}" data-type="duplication" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '' }}" data-extension="{{ $request->id_card_valid_upto ?? '' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-request-for="{{ $request->request_for }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-status="{{ $request->status ?? '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                @if(in_array($request->request_for, ['Replacement', 'Duplication']) && $request->duplication_reason)
-                                                    @php $dupBadge = match($request->duplication_reason ?? '') { 'Lost' => 'danger', 'Damage' => 'warning', 'Expired Card' => 'info', default => 'secondary' }; @endphp
-                                                    <span class="badge bg-{{ $dupBadge }} text-dark">{{ $request->duplication_reason }}</span>
-                                                @else
-                                                    <span class="text-primary">Duplication</span>
-                                                @endif
-                                            </a>
-                                        </td>
-                                        <td>
-                                            @php
-                                                $validUptoDisplay = $request->id_card_valid_upto;
-                                                $isCurrentlyValid = false;
-
-                                                if ($validUptoDisplay) {
-                                                    try {
-                                                        // Try common display format d/m/Y first
-                                                        $parsed = \Carbon\Carbon::createFromFormat('d/m/Y', $validUptoDisplay);
-                                                    } catch (\Exception $e) {
-                                                        try {
-                                                            // Fallback to any other parseable format
-                                                            $parsed = \Carbon\Carbon::parse($validUptoDisplay);
-                                                        } catch (\Exception $e2) {
-                                                            $parsed = null;
-                                                        }
-                                                    }
-
-                                                    if ($parsed) {
-                                                        $isCurrentlyValid = $parsed->gte(\Carbon\Carbon::today());
-                                                    }
-                                                }
-                                            @endphp
-
-                                            @if($isCurrentlyValid)
-                                                {{-- Current valid ID card: show date only, disable extension link --}}
-                                                <span class="badge bg-info">{{ $validUptoDisplay }}</span>
-                                            @else
-                                                {{-- Expired / no validity: allow Extension action --}}
-                                                <a href="#"
-                                                   class="amend-dup-ext-btn text-decoration-none"
-                                                   data-request-id="{{ $request->id }}"
-                                                   data-type="extension"
-                                                   data-name="{{ $request->name }}"
-                                                   data-designation="{{ $request->designation ?? '--' }}"
-                                                   data-duplication="{{ $request->duplication_reason ?? '' }}"
-                                                   data-extension="{{ $request->id_card_valid_upto ?? '' }}"
-                                                   data-valid-from="{{ $request->id_card_valid_from ?? '' }}"
-                                                   data-id-number="{{ $request->id_card_number ?? '' }}"
-                                                   data-request-for="{{ $request->request_for }}"
-                                                   data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
-                                                   data-status="{{ $request->status ?? '--' }}"
-                                                   data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    @if($request->request_for == 'Extension' && $request->id_card_valid_upto)
-                                                        <span class="badge bg-info">{{ $request->id_card_valid_upto }}</span>
-                                                    @else
-                                                        <span class="text-primary">Extension</span>
-                                                    @endif
-                                                </a>
-                                            @endif
-                                        </td>
+                                        
                                         <td>{{ $request->id_card_valid_upto ?? '--' }}</td>
                                         <td>
                                             @php

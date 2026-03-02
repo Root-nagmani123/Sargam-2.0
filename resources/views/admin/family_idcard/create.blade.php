@@ -74,19 +74,19 @@
                         <input type="text" name="section" id="section" class="form-control" value="{{ $oldSection }}" placeholder="Enter Section" required>
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    {{-- Approval Authority: shown only when Contractual --}}
-                  {{--  <div class="col-md-6 fml-approval-authority-wrap" id="fmlApprovalAuthorityWrap" style="display: none;">
+                    <!-- Approval Authority: shown only when Contractual -->
+                    <div class="col-md-6 fml-approval-authority-wrap" id="fmlApprovalAuthorityWrap" style="display: none;">
                         <label for="approval_authority" class="form-label">Approval Authority <span class="text-danger">*</span></label>
-                        <select name="approval_authority" id="approval_authority" class="form-select" disabled>
-                            <option value="">-- Select --</option>
+                        <select name="approval_authority" id="approval_authority" class="form-select">
+                            <option value="">-- Select Authority --</option>
                             @foreach($approvalAuthorityEmployees ?? [] as $emp)
                                 @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
                                 <option value="{{ $emp->pk }}" {{ $oldApprovalAuthority == $emp->pk ? 'selected' : '' }}>{{ $empName }}{{ $emp->designation ? ' (' . $emp->designation->designation_name . ')' : '' }}</option>
                             @endforeach
                         </select>
-                        <small class="text-muted">On behalf of your section</small>
+                        <small class="text-muted">Approval authority on behalf of your section</small>
                         @error('approval_authority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div> --}}
+                    </div>
                     <div class="col-12">
                         <label class="form-label">Upload Group Photo <span class="text-danger">*</span></label>
                         <div class="family-idcard-upload-zone position-relative" id="groupPhotoUploadZone">

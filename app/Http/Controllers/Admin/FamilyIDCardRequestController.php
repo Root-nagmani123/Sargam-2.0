@@ -68,6 +68,7 @@ class FamilyIDCardRequestController extends Controller
             $section = '--';
             
             if ($first->created_by) {
+                // created_by stores employee pk (from user_credentials.user_id which maps to employee_master.pk)
                 $emp = EmployeeMaster::with(['designation', 'department'])
                     ->where('pk', $first->created_by)
                     ->orWhere('pk_old', $first->created_by)
@@ -200,8 +201,20 @@ class FamilyIDCardRequestController extends Controller
             'members.*.valid_from' => 'nullable|date',
             'members.*.valid_to' => 'nullable|date',
         ];
-        
+
         $request->validate($rules);
+
+        // Valid To must not be less than Valid From for each member
+        $members = $request->input('members', []);
+        foreach ($members as $index => $member) {
+            $from = $member['valid_from'] ?? null;
+            $to = $member['valid_to'] ?? null;
+            if (!empty($from) && !empty($to) && $to < $from) {
+                throw ValidationException::withMessages([
+                    "members.{$index}.valid_to" => 'Valid To date must not be earlier than Valid From date.',
+                ]);
+            }
+        }
 
         // Check for duplicate family member names
         $members = $request->input('members', []);
@@ -229,7 +242,7 @@ class FamilyIDCardRequestController extends Controller
         $employeeId = $request->input('employee_id');
         $createdBy = Auth::user()->user_id;
         $employeeType = $request->input('employee_type', 'Permanent Employee');
-        $approvalAuthorityPk = $request->input('employee_type') === 'Contractual Employee'
+        $approvalAuthorityPk = $employeeType === 'Contractual Employee'
             ? (int) $request->input('approval_authority')
             : null;
         $count = 0;
@@ -278,6 +291,8 @@ class FamilyIDCardRequestController extends Controller
                 'family_photo' => $groupPhotoPath,
                 'employee_dob' => !empty($member['dob']) ? $member['dob'] : null,
                 'emp_id_apply' => $employeeId,
+                'employee_type' => $employeeType,
+                'department_approval_emp_pk' => $approvalAuthorityPk,
             ]);
             $count++;
         }
@@ -311,6 +326,9 @@ class FamilyIDCardRequestController extends Controller
 
     public function update(Request $request, $id)
     {
+        $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        $employeeType = $row->employee_type;
+        
         $validated = $request->validate([
             'employee_id' => 'required|string|max:100',
             'designation' => 'required|string|max:255',
@@ -326,8 +344,23 @@ class FamilyIDCardRequestController extends Controller
             'status' => 'nullable|in:Pending,Approved,Rejected,Issued',
             'remarks' => 'nullable|string',
         ]);
+        
+        // Add approval authority validation for contractual employees
+        if ($employeeType === 'Contractual Employee') {
+            $approvalValidated = $request->validate([
+                'approval_authority' => 'required|integer|exists:employee_master,pk',
+            ]);
+            $approvalAuthorityPk = (int) $approvalValidated['approval_authority'];
+        }
 
-        $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        $from = $validated['valid_from'] ?? null;
+        $to = $validated['valid_to'] ?? null;
+        if (!empty($from) && !empty($to) && $to < $from) {
+            throw ValidationException::withMessages([
+                'valid_to' => 'Valid To date must not be earlier than Valid From date.',
+            ]);
+        }
+
         $row->family_name = $validated['name'];
         $row->family_relation = $validated['relation'] ?? null;
         $row->emp_id_apply = $validated['employee_id'];
@@ -336,6 +369,9 @@ class FamilyIDCardRequestController extends Controller
         $row->employee_dob = $validated['dob'] ?? null;
         $row->remarks = $validated['remarks'] ?? null;
         $row->id_card_no = $validated['family_member_id'] ?? null;
+        if ($employeeType === 'Contractual Employee' && isset($approvalAuthorityPk)) {
+            $row->department_approval_emp_pk = $approvalAuthorityPk;
+        }
         if ($request->hasFile('family_photo')) {
             $row->family_photo = $request->file('family_photo')->store('family_idcard/photos', 'public');
             $row->id_photo_path = $row->family_photo;

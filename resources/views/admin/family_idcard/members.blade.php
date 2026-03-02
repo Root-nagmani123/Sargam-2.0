@@ -69,7 +69,16 @@
                             <tr class="member-row" data-search="{{ strtolower(($member->name ?? '') . ' ' . ($member->relation ?? '') . ' ' . ($member->employee_id ?? '') . ' ' . ($member->family_member_id ?? '') . ' ' . ($member->status_label ?? '')) }}">
                                 <td class="fw-medium col-sno">{{ $index + 1 }}</td>
                                 <td class="col-request_date">{{ $member->created_at ? \Carbon\Carbon::parse($member->created_at)->format('d-m-Y') : '--' }}</td>
-                                <td class="col-guardians">--</td>
+                                <td class="col-guardians">
+                                    @if(!empty($member->guardian_name))
+                                        <strong>{{ $member->guardian_name }}</strong>
+                                        @if(!empty($member->guardian_designation))
+                                            <br><small class="text-muted">{{ $member->guardian_designation }}</small>
+                                        @endif
+                                    @else
+                                        --
+                                    @endif
+                                </td>
                                 <td class="col-id_number">{{ $parentId ?? '--' }} / {{ $member->id ?? $member->fml_id_apply ?? '--' }}</td>
                                 <td class="col-name">{{ $member->name ?? '--' }}</td>
                                 <td class="col-relation">{{ $member->relation ?? '--' }}</td>
