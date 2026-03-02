@@ -13,7 +13,7 @@ class MDODutyTypeController extends Controller
     public function index(MDODutyTypeMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.mdo_duty_type.index');
-        
+
     }
 
     public function changeStatus(Request $request)
@@ -31,20 +31,6 @@ class MDODutyTypeController extends Controller
         ]);
     }
 
-    public function changeStatus(Request $request)
-    {
-        DB::table('mdo_duty_type_master')
-            ->where('pk', $request->pk)
-            ->update([
-                'active_inactive' => $request->active_inactive,
-                'modified_date' => now()
-            ]);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Status updated successfully'
-        ]);
-    }
 
     public function create()
     {
@@ -64,7 +50,7 @@ class MDODutyTypeController extends Controller
     }
 
     public function store(Request $request)
-    { 
+    {
         try {
             $request->validate([
                 'mdo_duty_type_name' => 'required|string|max:255',
@@ -111,7 +97,7 @@ class MDODutyTypeController extends Controller
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
             return redirect()->back()->withErrors($e->getMessage());
-        }   
+        }
     }
 
     public function delete(Request $request)
@@ -123,6 +109,6 @@ class MDODutyTypeController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
-        
+
     }
 }

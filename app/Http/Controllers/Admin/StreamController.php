@@ -32,12 +32,8 @@ class StreamController extends Controller
 
     foreach ($streams as $name) {
         Stream::create([
-<<<<<<< HEAD
-            'stream_name' => $name
-=======
             'stream_name' => trim($name),
             'active_inactive' => 1,
->>>>>>> ee1c23ee (stream bugs fixed)
         ]);
     }
 
