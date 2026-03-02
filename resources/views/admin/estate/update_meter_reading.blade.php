@@ -48,29 +48,6 @@
                     </div>
                     <div class="col-md-4">
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
-                        <select class="form-select" id="unit_name" name="unit_name" required>
-                            <option value="residential" selected>Residential</option>
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Unit
-                        </small>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="unit_sub_type" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
-                        <select class="form-select" id="unit_sub_type" name="unit_sub_type" required>
-                            <option value="type_i" selected>Type-I</option>
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Select Unit Sub Type
-                        </small>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    
-                    
-                    <div class="col-md-4">
-                        <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
                             <option value="">All</option>
                             @foreach($unitTypes ?? [] as $ut)
