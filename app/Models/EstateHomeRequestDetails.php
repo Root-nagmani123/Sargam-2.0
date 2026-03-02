@@ -34,6 +34,9 @@ class EstateHomeRequestDetails extends Model
         'f_status',
         'change_status',
         'testing',
+        'pos_from',
+        'pos_to',
+        'extension',
     ];
 
     protected $casts = [
@@ -41,5 +44,7 @@ class EstateHomeRequestDetails extends Model
         'doj_pay_scale' => 'date',
         'doj_academic' => 'date',
         'doj_service' => 'date',
+        'pos_from' => 'date',
+        'pos_to' => 'date',
     ];
 }

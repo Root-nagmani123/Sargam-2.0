@@ -187,6 +187,12 @@
                                 </li>
 
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.request-for-estate') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Request For Estate</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
