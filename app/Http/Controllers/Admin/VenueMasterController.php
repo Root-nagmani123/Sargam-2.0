@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\VenueMasterDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{VenueMaster};
@@ -10,10 +11,9 @@ use Illuminate\Support\Facades\Crypt;
 
 class VenueMasterController extends Controller
 {
-    public function index() {
-
-        $venues = VenueMaster::orderBy('venue_id', 'desc')->paginate(10);
-        return view('admin.venueMaster.index', compact('venues'));
+    public function index(VenueMasterDataTable $dataTable)
+    {
+        return $dataTable->render('admin.venueMaster.index');
     }
 
     public function create() {

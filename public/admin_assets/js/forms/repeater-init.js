@@ -15,53 +15,38 @@ function education_fields() {
     }
 
     var divtest = document.createElement("div");
-    divtest.setAttribute("class", "row degree-row mb-3 removeclass" + room);
-    var rdiv = "removeclass" + room;
+    divtest.setAttribute("class", "degree-row-wrapper removeclass" + room + " mb-4 p-3 rounded-3 border bg-light bg-opacity-50");
 
     divtest.innerHTML =
-        '<form class="row">' +
-        '<div class="col-3">' +
+        '<div class="row degree-row g-3 align-items-end">' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
         '<label for="degree[]" class="form-label">Degree :</label>' +
-        '<div class="mb-3">' +
         '<input type="text" class="form-control" name="degree[]" placeholder="Degree Name">' +
-        '<small>Bachelors, Masters, PhD</small>' +
-        '</div></div>' +
-
-        '<div class="col-3">' +
+        '<small class="form-text text-muted">Bachelors, Masters, PhD</small>' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
         '<label for="university_institution_name[]" class="form-label">University/Institution Name :</label>' +
-        '<div class="mb-3">' +
         '<input type="text" class="form-control" name="university_institution_name[]" placeholder="University/Institution Name">' +
-        '</div></div>' +
-
-        '<div class="col-3">' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
         '<label class="form-label">Year of Passing :</label>' +
-        '<div class="mb-3">' +
-        '<select name="year_of_passing[]" class="form-control" required>' +
-        yearOptions +
-        '</select>' +
-        '</div></div>' +
-
-        '<div class="col-3">' +
+        '<select name="year_of_passing[]" class="form-select" required>' + yearOptions + '</select>' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
         '<label class="form-label">Percentage/CGPA :</label>' +
-        '<div class="mb-3">' +
         '<input type="number" name="percentage_CGPA[]" placeholder="Percentage/CGPA" class="form-control" min="0" max="100">' +
-        '</div></div>' +
-
-        '<div class="col-3">' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
         '<label for="certificate[]" class="form-label">Certificates/Documents Upload :</label>' +
-        '<div class="mb-3">' +
-        '<input type="file" name="certificate[]" placeholder="Certificates/Documents Upload" class="form-control">' +
+        '<input type="file" name="certificate[]" class="form-control">' +
         '<div class="existing-certificate"></div>' +
-        '</div></div>' +
-
-        '<div class="col-sm-2">' +
-        '<div class="form-group">' +
-        '<button class="btn btn-danger" type="button" onclick="remove_education_fields(' + room + ');">' +
-        '<i class="material-icons menu-icon">remove</i>' +
+        '</div>' +
+        '<div class="col-12 col-lg-9 d-flex align-items-end justify-content-end">' +
+        '<button class="btn btn-outline-danger btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1" type="button" onclick="remove_education_fields(' + room + ');">' +
+        '<i class="material-icons" style="font-size: 1rem;">remove</i> Remove' +
         '</button>' +
-        '</div></div>' +
-
-        '</form>';
+        '</div>' +
+        '</div>';
 
     objTo.appendChild(divtest);
 }
@@ -71,12 +56,7 @@ function remove_education_fields(rid) {
     $(".removeclass" + rid).remove();
 }
 
-
-
-
-
 // experience repeater
-
 
 var room = 1;
 
@@ -84,12 +64,40 @@ function experience_fields() {
     room++;
     var objTo = document.getElementById("experience_fields");
     var divtest = document.createElement("div");
-    divtest.setAttribute("class", "row experience-row mb-3 removeclass" + room);
-    var rdiv = "removeclass" + room;
+    divtest.setAttribute("class", "experience-row-wrapper removeclass" + room + " mb-4 p-3 rounded-3 border bg-light bg-opacity-50");
+
     divtest.innerHTML =
-        '<form class="row"><div class="col-3"><label for="experience" class="form-label">Years of Experience :</label><div class="mb-3"><input type="text" class="form-control" name="experience[]" placeholder="Years of Experience"></div></div><div class="col-3"><label for="specialization" class="form-label">Area of Specialization :</label><div class="mb-3"><input type="text" class="form-control" name="specialization[]" placeholder="Area of Specialization js file"></div></div><div class="col-3"><label for="institution" class="form-label">Previous Institutions :</label><div class="mb-3"><input type="text" class="form-control"  name="institution[]" placeholder="Previous Institutions"></div></div><div class="col-3"><label for="position" class="form-label">Position Held :</label><div class="mb-3"><input type="text" name="position[]" placeholder="Position Held" id="position[]" class="form-control"></div></div><div class="col-3"><label for="duration" class="form-label">Duration :</label><div class="mb-3"><input type="text" name="duration[]" placeholder="Duration" class="form-control"></div></div><div class="col-3"><label for="work" class="form-label">Nature of Work :</label><div class="mb-3"><input type="text" name="work[]" placeholder="Nature of Work" class="form-control"></div></div><div class="col-6"> <div class="form-group float-end"> <button class="btn btn-danger" type="button" onclick="remove_experience_fields(' +
-        room +
-        ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
+        '<div class="row experience-row g-3 align-items-end">' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
+        '<label for="experience" class="form-label">Years of Experience :</label>' +
+        '<input type="text" class="form-control" name="experience[]" placeholder="Years of Experience">' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
+        '<label for="specialization" class="form-label">Area of Specialization :</label>' +
+        '<input type="text" class="form-control" name="specialization[]" placeholder="Area of Specialization">' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
+        '<label for="institution" class="form-label">Previous Institutions :</label>' +
+        '<input type="text" class="form-control" name="institution[]" placeholder="Previous Institutions">' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
+        '<label for="position" class="form-label">Position Held :</label>' +
+        '<input type="text" name="position[]" placeholder="Position Held" class="form-control">' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
+        '<label for="duration" class="form-label">Duration :</label>' +
+        '<input type="number" name="duration[]" placeholder="Duration" class="form-control" min="0">' +
+        '</div>' +
+        '<div class="col-12 col-md-6 col-lg-3">' +
+        '<label for="work" class="form-label">Nature of Work :</label>' +
+        '<input type="text" name="work[]" placeholder="Nature of Work" class="form-control">' +
+        '</div>' +
+        '<div class="col-12 col-lg-6 d-flex align-items-end justify-content-end">' +
+        '<button class="btn btn-outline-danger btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1" type="button" onclick="remove_experience_fields(' + room + ');">' +
+        '<i class="material-icons" style="font-size: 1rem;">remove</i> Remove' +
+        '</button>' +
+        '</div>' +
+        '</div>';
 
     objTo.appendChild(divtest);
 }

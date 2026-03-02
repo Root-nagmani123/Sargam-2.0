@@ -35,11 +35,14 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     MemoDisciplineController,
     DashboardController,
+    DashboardStatisticsController,
+    ParticipantHistoryController,
     CourseRepositoryController,
     EstateController,
     EmployeeIDCardRequestController,
     FamilyIDCardRequestController,
     WhosWhoController,
+    DuplicateIDCardRequestController,
 };
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
@@ -47,7 +50,11 @@ use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\IssueManagement\{
     IssueManagementController,
     IssueCategoryController,
-    IssueSubCategoryController
+    IssueSubCategoryController,
+    IssueEscalationMatrixController,
+    IssuePriorityController,
+
+
 };
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
@@ -67,17 +74,61 @@ Route::get('clear-cache', function () {
     Artisan::call('optimize:clear');
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
+
+/**
+ * Full optimize flow: clear → config cache → route cache → optimize
+ * Step-by-step proper order. Use after deployment or when caches need refresh.
+ * GET /admin/system/optimize (auth required)
+ */
+Route::get('admin/system/optimize', function () {
+    $steps = [];
+    $run = function ($command, $name) use (&$steps) {
+        try {
+            \Illuminate\Support\Facades\Artisan::call($command);
+            $output = trim(\Illuminate\Support\Facades\Artisan::output());
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => true, 'output' => $output ?: 'OK'];
+        } catch (\Throwable $e) {
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => false, 'output' => $e->getMessage()];
+        }
+    };
+
+    // Step 1: Clear everything (clean slate)
+    $run('config:clear', 'Config cache clear');
+    $run('cache:clear', 'Application cache clear');
+    $run('view:clear', 'View cache clear');
+    $run('route:clear', 'Route cache clear');
+
+    // Step 2: Cache config & routes
+    $run('config:cache', 'Config cache');
+    $run('route:cache', 'Route cache');
+
+    // Step 3: View cache (if available) and optimize
+    try {
+        \Illuminate\Support\Facades\Artisan::call('view:cache');
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => true, 'output' => trim(\Illuminate\Support\Facades\Artisan::output()) ?: 'OK'];
+    } catch (\Throwable $e) {
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => false, 'output' => $e->getMessage()];
+    }
+    $run('optimize', 'Optimize (autoload + bootstrap)');
+
+    $allOk = collect($steps)->every(fn ($s) => $s['ok']);
+    if (request()->wantsJson()) {
+        return response()->json(['success' => $allOk, 'steps' => $steps]);
+    }
+    return response()->view('admin.system.optimize-result', compact('steps', 'allOk'));
+})->middleware('auth')->name('admin.system.optimize');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
-Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
+Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('section', [\App\Http\Controllers\Admin\SectionController::class, 'index'])->name('section.index');
         Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
             ->name('users.getRoles');
         Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
@@ -104,8 +155,10 @@ Route::middleware(['auth'])->group(function () {
     // })->name('admin.dashboard');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
+    Route::get('/dashboard/students/{id}/history', [ParticipantHistoryController::class, 'show'])->name('admin.dashboard.students.history');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
 
@@ -188,14 +241,12 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
+     Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
+    ->name('admin.stream.toggleStatus');
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
-
     Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
-
-
-
 
     // curriculum route
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
@@ -271,12 +322,6 @@ Route::middleware(['auth'])->group(function () {
 
     // City route
 
-    // section route
-    Route::prefix('section')->name('section.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.section.index');
-        })->name('index');
-    });
 
     // Group Mapping Routes
     Route::prefix('group-mapping')->name('group.mapping.')->controller(GroupMappingController::class)->group(function () {
@@ -293,6 +338,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
         Route::delete('delete/{id}', 'delete')->name('delete');
+       // Route::post('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
+
+     Route::post('get-courses-by-status', 'getCoursesByStatus')
+    ->name('get.courses.by.status');
+
+
+
+
+
     });
 
     //feedback route
@@ -313,10 +367,38 @@ Route::middleware(['auth'])->group(function () {
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
 
+   
     // ============================================
     // Security Management Routes (Vehicle & Visitor Pass)
     // ============================================
-    
+  // Employee ID Card Request Routes
+  Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/export', 'export')->name('export');
+    Route::get('/create', 'create')->name('create');
+    Route::get('/sub-types', 'subTypes')->name('subTypes');
+    Route::get('/me', 'me')->name('me');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::put('/update/{id}', 'update')->name('update');
+    Route::patch('/amend-dup-ext/{id}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
+    Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    Route::post('/restore/{id}', 'restore')->name('restore');
+    Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
+});
+
+// Duplicate ID Card Request Routes
+Route::prefix('admin/duplicate-idcard')->name('admin.duplicate_idcard.')->controller(DuplicateIDCardRequestController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::get('/{id}/edit', 'edit')->name('edit');
+    Route::post('/store', 'store')->name('store');
+    Route::post('/{id}/update', 'update')->name('update');
+    Route::get('/lookup/by-card-number', 'lookupByCardNumber')->name('lookup');
+});
+
+
     // Vehicle Type Master Routes
     Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -342,6 +424,7 @@ Route::middleware(['auth'])->group(function () {
     // Vehicle Pass Application Routes
     Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/export', 'export')->name('export');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/show/{id}', 'show')->name('show');
@@ -350,13 +433,50 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
+    // Duplicate Vehicle Pass Application Routes
+    Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+        Route::get('/api/vehicle-details', 'getVehicleDetails')->name('api.vehicle_details');
+    });
+
     // Vehicle Pass Approval Routes
     Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/all', 'allApplications')->name('all');
         Route::get('/show/{id}', 'show')->name('show');
+        
         Route::post('/approve/{id}', 'approve')->name('approve');
         Route::post('/reject/{id}', 'reject')->name('reject');
+    });
+
+    // Employee ID Card Approval Routes (Approval I & II)
+    Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
+        Route::get('/approval1', 'approval1')->name('approval1');
+        Route::get('/approval2', 'approval2')->name('approval2');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/export', 'export')->name('export');
+        Route::post('/approve1/{id}', 'approve1')->name('approve1');
+        Route::post('/approve2/{id}', 'approve2')->name('approve2');
+        Route::post('/reject1/{id}', 'reject1')->name('reject1');
+        Route::post('/reject2/{id}', 'reject2')->name('reject2');
+    });
+
+    // Family ID Card Approval Routes
+    Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/all', 'all')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::post('/approve/{id}', 'approve')->name('approve');
+        Route::post('/reject/{id}', 'reject')->name('reject');
+        Route::post('/approve-group/{id}', 'approveGroup')->name('approve_group');
+        Route::post('/reject-group/{id}', 'rejectGroup')->name('reject_group');
     });
 
     // Visitor/Gate Pass Routes
@@ -374,6 +494,7 @@ Route::middleware(['auth'])->group(function () {
     // ============================================
     // End Security Management Routes
     // ============================================
+
 
     // Attendance Routes
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
@@ -457,10 +578,16 @@ Route::middleware(['auth'])->group(function () {
             // })->name('admin.courseAttendanceNoticeMap.chat');
             Route::get('/user', 'user')->name('user');
             Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
-            Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
-            Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
+            Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
+            Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
+
+            Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
+            Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
+
         });
+
+
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
@@ -509,7 +636,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
-        Route::post('import', 'import')->name('import');
+        Route::post('import', 'processImport')->name('process.import');
     });
 
     Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
@@ -519,6 +646,97 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/export', 'export')->name('export');
         Route::post('/update-comment', 'updateComment')->name('update.comment');
+    });
+
+    // Mess Management
+    Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
+        // Master Data
+        Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
+        Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
+        Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
+        Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
+        Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
+        Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'store']);
+        Route::get('storeallocations/{id}/edit', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'edit'])->name('storeallocations.edit');
+        Route::put('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'update'])->name('storeallocations.update');
+        Route::delete('storeallocations/{id}', [\App\Http\Controllers\Mess\StoreAllocationController::class, 'destroy'])->name('storeallocations.destroy');
+
+        // Store Management
+        Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['show']);
+
+        Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
+
+        // NEW: Setup - Configuration Modules
+        Route::resource('vendor-item-mappings', \App\Http\Controllers\Mess\VendorItemMappingController::class);
+        Route::resource('menu-rate-lists', \App\Http\Controllers\Mess\MenuRateListController::class);
+        Route::resource('sale-counters', \App\Http\Controllers\Mess\SaleCounterController::class);
+        Route::resource('sale-counter-mappings', \App\Http\Controllers\Mess\SaleCounterMappingController::class);
+        Route::resource('credit-limits', \App\Http\Controllers\Mess\CreditLimitController::class);
+        Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
+        Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
+
+        // Purchase Order Management
+        Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
+        Route::get('purchaseorders/{id}/edit', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
+        Route::put('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'update'])->name('purchaseorders.update');
+        Route::delete('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
+        Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
+        Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
+        Route::get('purchaseorders/vendor/{vendorId}/items', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'getVendorItems'])->name('purchaseorders.vendor.items');
+
+        // Material Management (formerly Kitchen Issue)
+        Route::get('material-management/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStudentsByCourse'])->name('material-management.students-by-course');
+        Route::get('material-management/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getStoreItems'])->name('material-management.store.items');
+        Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
+        Route::get('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'returnData'])->name('material-management.return');
+        Route::put('material-management/{id}/return', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'updateReturn'])->name('material-management.update-return');
+        Route::post('material-management/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('material-management.send-for-approval');
+        Route::get('material-management/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
+        Route::get('material-management/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('material-management.bill-report');
+
+        // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
+        Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
+        Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
+        Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
+        Route::get('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'returnData'])->name('selling-voucher-date-range.return');
+        Route::put('selling-voucher-date-range/{id}/return', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'updateReturn'])->name('selling-voucher-date-range.update-return');
+
+        // Material Management Approval
+        Route::prefix('material-management-approvals')->name('material-management-approvals.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'index'])->name('index');
+            Route::get('/{id}', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'show'])->name('show');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'reject'])->name('reject');
+        });
+
+        // NEW: Billing & Finance
+        Route::get('process-mess-bills-employee', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'index'])->name('process-mess-bills-employee.index');
+        Route::get('process-mess-bills-employee/modal-data', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'modalData'])->name('process-mess-bills-employee.modal-data');
+        Route::post('process-mess-bills-employee/{id}/generate-invoice', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generateInvoice'])->name('process-mess-bills-employee.generate-invoice');
+        Route::post('process-mess-bills-employee/{id}/generate-payment', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'generatePayment'])->name('process-mess-bills-employee.generate-payment');
+        Route::get('process-mess-bills-employee/{id}/print-receipt', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'printReceipt'])->name('process-mess-bills-employee.print-receipt');
+        Route::get('process-mess-bills-employee/export', [\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class, 'export'])->name('process-mess-bills-employee.export');
+        Route::resource('monthly-bills', \App\Http\Controllers\Mess\MonthlyBillController::class);
+        Route::post('monthly-bills/generate', [\App\Http\Controllers\Mess\MonthlyBillController::class, 'generateBills'])->name('monthly-bills.generate');
+        Route::resource('finance-bookings', \App\Http\Controllers\Mess\FinanceBookingController::class);
+        Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
+        Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
+
+        // NEW: Mess RBAC - Permission Management
+        // IMPORTANT: Custom routes MUST come BEFORE resource route
+        Route::get('permissions/users-by-role', [\App\Http\Controllers\Mess\MessPermissionController::class, 'getUsersByRole'])->name('permissions.getUsersByRole');
+        Route::get('permissions/check/{action}', [\App\Http\Controllers\Mess\MessPermissionController::class, 'checkPermission'])->name('permissions.check');
+        Route::resource('permissions', \App\Http\Controllers\Mess\MessPermissionController::class);
+
+        // Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
+            Route::get('stock-summary', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummary'])->name('stock-summary');
+            Route::get('stock-summary/export', [\App\Http\Controllers\Mess\ReportController::class, 'stockSummaryExcel'])->name('stock-summary.excel');
+            Route::get('category-wise-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'categoryWisePrintSlip'])->name('category-wise-print-slip');
+            Route::get('stock-balance-till-date', [\App\Http\Controllers\Mess\ReportController::class, 'stockBalanceTillDate'])->name('stock-balance-till-date');
+            Route::get('selling-voucher-print-slip', [\App\Http\Controllers\Mess\ReportController::class, 'sellingVoucherPrintSlip'])->name('selling-voucher-print-slip');
+        });
     });
 });
 
@@ -603,14 +821,38 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
-    Route::prefix('admin/setup/caste-category')->name('admin.setup.caste_category.')->controller(CasteCategoryController::class)->group(function () {
+
+    // // Employee ID Card Request Routes
+    // Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
+    //     Route::get('/', 'index')->name('index');
+    //     Route::get('/export', 'export')->name('export');
+    //     Route::get('/create', 'create')->name('create');
+    //     Route::post('/store', 'store')->name('store');
+    //     Route::get('/show/{employeeIDCardRequest}', 'show')->name('show');
+    //     Route::get('/edit/{employeeIDCardRequest}', 'edit')->name('edit');
+    //     Route::put('/update/{employeeIDCardRequest}', 'update')->name('update');
+    //     Route::patch('/amend-dup-ext/{employeeIDCardRequest}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
+    //     Route::delete('/delete/{employeeIDCardRequest}', 'destroy')->name('destroy');
+    //     Route::post('/restore/{id}', 'restore')->name('restore');
+    //     Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
+    // });
+
+    // Family ID Card Request Routes
+    Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::get('/export', 'export')->name('export');
+        Route::get('/members/{id}', 'members')->name('members');
+        Route::post('/duplicate/{id}', 'duplicateRequest')->name('duplicate');
+        Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
+        Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
+        Route::put('/update/{familyIDCardRequest}', 'update')->name('update');
+        Route::delete('/delete/{familyIDCardRequest}', 'destroy')->name('destroy');
+        Route::post('/restore/{id}', 'restore')->name('restore');
+        Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
     });
+
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -638,27 +880,21 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
-    //change password work here 
+    //change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
-
-
-
-
-
-
 
 
     // Report walal route
 
     Route::get('/faculty_view', function () {
         return view('admin.feedback.faculty_view');
-    })->name('admin.feedback.faculty_view');
+    })->name('admin.feedback.faculty_view.page');
 
     Route::get('/feedback_details', function () {
         return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details');
+    })->name('admin.feedback.feedback_details.page');
 
     //  dashboard page route
 
@@ -667,7 +903,21 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
+
+    // Who's Who Routes
+    Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
+    Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
+    Route::get('/faculty/whos-who/cadres', [WhosWhoController::class, 'getCadres'])->name('admin.faculty.whos-who.cadres');
+    Route::get('/faculty/whos-who/counsellor-groups', [WhosWhoController::class, 'getCounsellorGroups'])->name('admin.faculty.whos-who.counsellor-groups');
+    Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
+    Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
+
+    // Participant / Dashboard Statistics (charts data)
+    Route::get('/dashboard-statistics/charts', [DashboardStatisticsController::class, 'charts'])->name('admin.dashboard-statistics.charts');
+    Route::post('/dashboard-statistics/save-from-course', [DashboardStatisticsController::class, 'saveSnapshotFromCourse'])->name('admin.dashboard-statistics.save-from-course');
+    Route::post('/dashboard-statistics/{dashboard_statistic}/set-default', [DashboardStatisticsController::class, 'setDefault'])->name('admin.dashboard-statistics.set-default');
+    Route::resource('dashboard-statistics', DashboardStatisticsController::class)->names('admin.dashboard-statistics')->parameters(['dashboard_statistics' => 'dashboard_statistic']);
 
     Route::get('/upcoming-events', function () {
         return view('admin.dashboard.upcoming_events');
@@ -689,18 +939,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
     Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
-    
+
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
 
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
-    
+
     // AJAX endpoints for course repository
     Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
-    
+
     //course repository resource routes (MUST be after AJAX routes)
     Route::resource('course-repository', CourseRepositoryController::class, [
     'parameters' => ['course-repository' => 'pk']
@@ -721,6 +972,7 @@ Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNum
 Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
 Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
 Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/filter-data', [CourseRepositoryController::class, 'filterData'])->name('admin.course-repository.user.filter-data');
 Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
 
     // Feedback Database Routes
@@ -738,44 +990,65 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
-Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+    Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+    Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
 // Change export routes to POST
-Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
     ->name('admin.feedback.export.pdf');
 
-Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+    Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
 
 // ============================================
 // Issue Management Module Routes (CENTCOM)
 // ============================================
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-    
+
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+    Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
+    Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
     Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
     Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
     Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
+
+    // AJAX Routes (must come BEFORE parameterized routes like {id})
+    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
+    Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
+    Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
+    Route::get('issue-management/floors', [IssueManagementController::class, 'getFloors'])->name('issue-management.floors');
+    Route::get('issue-management/rooms', [IssueManagementController::class, 'getRooms'])->name('issue-management.rooms');
+
+    // Parameterized Routes (must come AFTER specific routes)
     Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
     Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
     Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
-    
+    Route::put('issue-management/{id}/status', [IssueManagementController::class, 'status_update'])->name('issue-management.status_update');
+
     // AJAX Routes
     Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
     Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
-    
+
     // Category Management
     Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
     Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
     Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
-    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');
-    
-    // Sub-Category Management
+    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
     Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
     Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
     Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
+
+    // Priority Management
+    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
+    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
+    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
+    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
+
+    // Escalation Matrix (3-level hierarchy)
+    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
+    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
+    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
 });
 // Estate Management Routes
 Route::prefix('estate')->name('admin.estate.')->group(function () {

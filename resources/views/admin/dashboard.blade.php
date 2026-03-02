@@ -29,141 +29,88 @@
     --border-radius-lg: 16px;
 }
 
-/* GIGW: Minimum 4.5:1 contrast ratio for text */
-.calendar-component thead th {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: var(--text-primary);
-    font-weight: 600;
+.dashboard-stat-card {
+    border: 0;
+    border-left: 3px solid var(--bs-border-color);
+    border-radius: 0.45rem;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.line {
-    height: 2px;
-    background: linear-gradient(90deg, #e0e0e0 0%, #d0d0d0 100%);
-    border-radius: 2px;
+.dashboard-stat-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
 }
 
-.content-text p {
-    font-size: 1rem;
-    line-height: 1.75;
-    color: var(--text-primary);
-    margin-bottom: 1rem;
-    letter-spacing: 0.02em;
+.dashboard-stat-card .card-body {
+    padding: 0.7rem 0.8rem;
 }
 
-/* SMOOTH SCROLLING - Enhanced UX */
-.card-body {
-    scrollbar-width: thin;
-    scrollbar-color: #c1c1c1 transparent;
-    scroll-behavior: smooth;
-}
-
-.card-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.card-body::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 4px;
-}
-
-.card-body::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #c1c1c1 0%, #a8a8a8 100%);
-    border-radius: 4px;
-    transition: var(--transition-base);
-}
-
-.card-body::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #a8a8a8 0%, #909090 100%);
-}
-
-/* HIGH CONTRAST FOR ACCESSIBILITY (GIGW Standard) */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    color: var(--text-primary) !important;
-    font-weight: 700;
+.dashboard-stat-value {
+    font-size: clamp(1.55rem, 1.9vw, 2.1rem);
+    line-height: 1.05;
     letter-spacing: -0.02em;
 }
 
-h2 {
-    font-size: 1.5rem;
-    line-height: 1.3;
+.dashboard-stat-card.card-blue {
+    border-left-color: var(--bs-primary);
+    background: var(--bs-primary-bg-subtle);
 }
 
-h3 {
-    font-size: 1.25rem;
-    line-height: 1.4;
+.dashboard-stat-card.card-green {
+    border-left-color: var(--bs-success);
+    background: var(--bs-success-bg-subtle);
 }
 
-/* FOCUS STATES - WCAG 2.1 Compliant */
-a:focus,
-button:focus,
-input:focus,
-select:focus,
-textarea:focus,
-[tabindex]:focus {
-    outline: 3px solid #004a93;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.15);
-}
-</style>
-<style>
-.user-card {
-    border-radius: 20px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+.dashboard-stat-card.card-amber {
+    border-left-color: var(--bs-warning);
+    background: var(--bs-warning-bg-subtle);
 }
 
-.user-card img {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    object-fit: cover;
+.dashboard-stat-card.card-rose {
+    border-left-color: var(--bs-danger);
+    background: var(--bs-danger-bg-subtle);
 }
 
-.user-name {
-    font-size: 20px;
-    font-weight: 700;
-    margin: 0;
-    color: #1a1a1a;
+.dashboard-panel {
+    border: 0;
+    border-radius: 0.65rem;
+    background: #f2f2f6;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.07);
 }
 
-.user-role {
-    font-size: 15px;
-    color: #555;
-    margin-bottom: 8px;
+.dashboard-panel .card-header {
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+    background: transparent;
+    padding-top: 0.9rem !important;
+    padding-bottom: 0.9rem !important;
 }
 
-.user-email,
-.user-phone {
-    font-size: 14px;
-    color: #333;
-    margin: 0;
+.dashboard-birthday-item {
+    border: 1px solid #b7cdf9;
+    background: #f7f9ff;
+    border-radius: 0.5rem;
 }
 
-/* Soft pastel card backgrounds */
-.bg-soft-green {
-    background: #E6F2E8;
+.dashboard-birthday-item .card-body {
+    padding: 0.8rem !important;
 }
 
-.bg-soft-beige {
-    background: #EFE7DC;
+.dashboard-avatar {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8rem;
 }
 
-.bg-soft-lavender {
-    background: #E3E1EA;
+.dashboard-list-scroll {
+    max-height: 23rem;
+    overflow-y: auto;
 }
 
-.bg-soft-rose {
-    background: #F0E0E0;
+@media (max-width: 991.98px) {
+    .dashboard-list-scroll {
+        max-height: none;
+    }
 }
 
 .bg-soft-blue {
@@ -253,154 +200,12 @@ textarea:focus,
 <style>
 /* ================================
    MODERN UI ENHANCEMENTS (GIGW)
-================================ */
-
-/* --- Global Card Styling --- */
-.stat-card-modern,
-.content-card-modern,
-.card,
-.birthday-card {
-    border-radius: 18px !important;
-    background: #ffffff;
-    box-shadow: var(--shadow-sm) !important;
-    border: 1px solid #e8e8e8;
-    transition: var(--transition-base);
-}
-
-.stat-card-modern:hover,
-.content-card-modern:hover,
-.card:hover {
-    box-shadow: var(--shadow-md) !important;
-    transform: translateY(-3px);
-}
-
-/* --- Modern Section Headers --- */
-.section-header-modern {
-    font-size: 1.2rem;
-    font-weight: 700;
-    padding-bottom: 4px;
-    color: var(--text-primary);
-    border-left: 4px solid var(--primary-color);
-    padding-left: 10px;
-}
-
-/* --- Divider --- */
-.divider-modern {
-    width: 100%;
-    height: 1px;
-    background: #e5e5e5;
-    margin: 16px 0;
-}
-
-/* --- Notice Sidebar --- */
-.card-header.bg-danger {
-    border-radius: 18px 18px 0 0 !important;
-    padding: 14px 20px;
-}
-
-.card-body {
-    padding: 20px !important;
-}
-
-.card-body p {
-    color: #202020;
-    line-height: 1.6;
-}
-
-/* --- Notice Items --- */
-.notice-item {
-    padding: 12px 14px;
-    border-radius: 12px;
-    transition: var(--transition-base);
-    background: #fafafa;
-}
-
-.notice-item:hover {
-    background: #eff5ff;
-    border-left: 4px solid var(--primary-color);
-}
-
-/* --- Calendar Card --- */
-.calendar-component {
-    border-radius: 20px;
-    background: #fff;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid #e6e6e6;
-    padding: 18px;
-}
-
-.calendar-component table {
-    border-collapse: separate !important;
-    border-spacing: 4px !important;
-}
-
-/* Highlight Active Day */
-.calendar-cell.is-selected {
-    background: var(--primary-color) !important;
-    color: #fff !important;
-    font-weight: 600;
-}
-
-/* --- Dropdown Alignment --- */
-.x-dropdown {
-    margin-bottom: 10px;
-    display: inline-block;
-    width: 100%;
-}
-
-/* --- Teacher Dropdown Column --- */
-.col-3 .x-dropdown {
-    width: 100%;
-}
-
-/* --- Birthday Cards Grid --- */
-.birthday-card {
-    min-height: 160px;
-    padding: 16px 20px !important;
-    transition: var(--transition-base);
-}
-
-.birthday-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-}
-
-/* Employee name */
-.emp-name {
-    font-size: 1.1rem !important;
-    font-weight: 700;
-}
-
-/* --- Smooth Scrolling --- */
-.content-card-body-modern {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) #f1f1f1;
-}
-
-.content-card-body-modern::-webkit-scrollbar {
-    width: 8px;
-}
-
-.content-card-body-modern::-webkit-scrollbar-thumb {
-    background: #c9c9c9;
-    border-radius: 10px;
-}
-
-.content-card-body-modern::-webkit-scrollbar-thumb:hover {
-    background: #a3a3a3;
-}
-
-/* --- Buttons Modernized --- */
-.btn-outline-primary {
-    border-radius: 10px;
-    padding: 6px 12px;
-    border-width: 1.5px;
-}
-
-.btn-outline-primary:hover {
-    background: var(--primary-color);
     color: #fff;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
 }
+.dashboard-welcome h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; }
+.dashboard-welcome .text-white { font-size: 0.9rem; }
 
 /* --- GIGW Compliant Focus Styles --- */
 *:focus-visible {
@@ -674,8 +479,26 @@ table>thead {
 }
 </style>
 
+@php
+$user = Auth::user();
+$notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
+$notices = get_notice_notification_by_role();
+$hour = (int) date('G');
+$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
+$userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
+@endphp
 
-<div class="container-fluid">
+<div class="container-fluid px-3 px-md-4 py-3 admin-dashboard-surface">
+    <div class="dashboard-welcome d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
+            <div class="text-white">{{ now()->format('l, d F Y') }}</div>
+        </div>
+        <div class="d-none d-sm-block">
+            <i class="bi bi-calendar3 me-1"></i>
+            <span class="small">{{ now()->format('h:i A') }}</span>
+        </div>
+    </div>
 
     <div class="row g-4 mb-4">
 
@@ -721,35 +544,6 @@ table>thead {
                 </div>
             </a>
         </div>
-        @if(hasRole('Student-OT'))
-        <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('medical.exception.ot.view') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-yellow">
-                        <img src="{{ asset('images/classes.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Medical Exception</div>
-                        <div class="stat-value">{{ $exemptionCount }}</div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @else
-        <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('admin.dashboard.guest_faculty') }}">
-                <div class="stat-card clean-style">
-                    <div class="stat-icon icon-yellow">
-                        <img src="{{ asset('images/classes.svg') }}" alt="">
-                    </div>
-                    <div>
-                        <div class="stat-label">Total Guest Faculty</div>
-                        <div class="stat-value">{{ $total_guest_faculty }}</div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endif
         <!-- Total Guest Faculty -->
 
         @if(hasRole('Student-OT'))
@@ -794,6 +588,62 @@ table>thead {
                     <div>
                         <div class="stat-label">Session Details</div>
                         <div class="stat-value">{{ $totalSessions }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
+        @if(isset($isCCorACC) && $isCCorACC)
+        <!-- Total Students - Only for CC/ACC -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.students') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-green">
+                        <img src="{{ asset('images/classes.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Total Students</div>
+                        <div class="stat-value">{{ $totalStudents }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        @endif
+
+        @if(hasRole('Admin') || hasRole('Training-Induction') || (isset($isCCorACC) && $isCCorACC))
+        <!-- Participant History - Full academic records across all courses -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none">
+                <div class="stat-card-modern h-100">
+                    <div class="d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon-modern icon-bg-blue d-flex align-items-center justify-content-center flex-shrink-0">
+                            <i class="bi bi-clock-history text-primary fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-label-modern text-muted small mb-1">Participant History</div>
+                            <div class="stat-value-modern fw-bold text-dark">View Full</div>
+                            <small class="text-muted">Academic, notices, memos, attendance</small>
+                        </div>
+                        <span class="stat-icon"><i class="bi bi-person-vcard"></i></span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
+        @if(isset($isCCorACC) && $isCCorACC)
+        <!-- Total Students - Only for CC/ACC -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.students') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-green">
+                        <img src="{{ asset('images/classes.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Total Students</div>
+                        <div class="stat-value">{{ $totalStudents }}</div>
                     </div>
                 </div>
             </a>
@@ -1086,9 +936,6 @@ table>thead {
 
                                 </div>
                             </div>
-
-
-
                             @endforeach
                         </div>
 
@@ -1104,28 +951,19 @@ table>thead {
             </div>
         </div>
     </div>
-
 </div>
-
-
 
 @push('scripts')
 <script>
-// Define markAsRead function for Admin Summary notifications - Always override to ensure it works
-window.markAsRead = function(notificationId, clickedElement) {
-    console.log('markAsRead called with notificationId:', notificationId);
-
-    // Prevent multiple clicks
+window.markAsReadDashboard = function(notificationId, clickedElement) {
     if (clickedElement && clickedElement.dataset.processing === 'true') {
-        console.log('Already processing, ignoring click');
         return;
     }
     if (clickedElement) {
         clickedElement.dataset.processing = 'true';
     }
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-        '{{ csrf_token() }}';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
 
     fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
             method: 'POST',
@@ -1134,33 +972,22 @@ window.markAsRead = function(notificationId, clickedElement) {
                 'X-CSRF-TOKEN': csrfToken
             }
         })
-        .then(response => {
-            console.log('Response status:', response.status);
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || 'Failed to mark notification as read');
-                });
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                throw new Error(data.error || 'Failed to mark notification as read');
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Response data:', data);
             if (data.success && data.redirect_url) {
-                // Notification remains visible until redirect happens
                 window.location.href = data.redirect_url;
-            } else if (data.success) {
-                // If no redirect URL, just reload (notification will remain visible if not filtered)
-                location.reload();
-            } else {
-                console.error('Failed to mark notification as read:', data.error || 'Unknown error');
-                if (clickedElement) {
-                    clickedElement.dataset.processing = 'false';
-                }
-                alert('Failed to mark notification as read. Please try again.');
+                return;
             }
+            if (data.success) {
+                location.reload();
+                return;
+            }
+            throw new Error(data.error || 'Unknown error occurred');
         })
         .catch(error => {
-            console.error('Error:', error);
             if (clickedElement) {
                 clickedElement.dataset.processing = 'false';
             }
@@ -1168,40 +995,31 @@ window.markAsRead = function(notificationId, clickedElement) {
         });
 };
 
-// Lightweight calendar interactions (vanilla JS)
+window.markAsRead = window.markAsReadDashboard;
+
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.calendar-component').forEach(function(comp) {
         const yearSel = comp.querySelector('.calendar-year');
         const monthSel = comp.querySelector('.calendar-month');
         const cells = comp.querySelectorAll('.calendar-cell');
 
-
-        // Click a date -> emit custom event
         comp.addEventListener('click', function(e) {
             const td = e.target.closest('.calendar-cell');
             if (!td) return;
             const prev = comp.querySelector('.calendar-cell.is-selected');
             if (prev) prev.classList.remove('is-selected');
             td.classList.add('is-selected');
-
-
-            const date = td.dataset.date;
             comp.dispatchEvent(new CustomEvent('dateSelected', {
-                detail: {
-                    date
-                }
+                detail: { date: td.dataset.date }
             }));
         });
 
-
-        // keyboard support for cells
         cells.forEach(function(cell) {
             cell.addEventListener('keydown', function(ev) {
                 if (ev.key === 'Enter' || ev.key === ' ') {
                     ev.preventDefault();
                     cell.click();
                 }
-                // Arrow navigation (left/right/up/down)
                 const idx = Array.prototype.indexOf.call(cells, cell);
                 let targetIdx = null;
                 if (ev.key === 'ArrowLeft') targetIdx = idx - 1;
@@ -1215,27 +1033,23 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
+        if (yearSel && monthSel) {
+            yearSel.addEventListener('change', function() {
+                const url = new URL(window.location.href);
+                url.searchParams.set('year', this.value);
+                url.searchParams.set('month', monthSel.value);
+                window.location.href = url.toString();
+            });
 
-        // Change month/year -> navigate by query params (simple behavior)
-        yearSel.addEventListener('change', function() {
-            const y = this.value;
-            const m = monthSel.value;
-            const url = new URL(window.location.href);
-            url.searchParams.set('year', y);
-            url.searchParams.set('month', m);
-            window.location.href = url.toString();
-        });
-        monthSel.addEventListener('change', function() {
-            const y = yearSel.value;
-            const m = this.value;
-            const url = new URL(window.location.href);
-            url.searchParams.set('year', y);
-            url.searchParams.set('month', m);
-            window.location.href = url.toString();
-        });
+            monthSel.addEventListener('change', function() {
+                const url = new URL(window.location.href);
+                url.searchParams.set('year', yearSel.value);
+                url.searchParams.set('month', this.value);
+                window.location.href = url.toString();
+            });
+        }
     });
 });
 </script>
-
 @endpush
 @endsection

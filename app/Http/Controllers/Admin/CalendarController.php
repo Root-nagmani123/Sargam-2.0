@@ -19,11 +19,63 @@ class CalendarController extends Controller
 {
     public function index(Request $request)
     {
-        \Log::info('CalendarController index: User authenticated via middleware', [
-            'user' => auth()->user()->user_name,
-            'user_id' => auth()->id(),
-            'session_id' => session()->getId()
-        ]);
+        //print_r(Auth::user()->roles()->pluck('user_role_name')->toArray());die;
+        //Array ( [0] => Training )
+
+        // print_r(auth()->user());die;
+
+        // Moodle code start here 
+        try{
+        if ($request->has('token') && !auth()->check()) {
+            $key = config('services.moodle.key', '1234567890abcdef');
+            $iv = config('services.moodle.iv', 'abcdef1234567890');
+
+            // URL decode the token
+            $decodedToken = urldecode($request->token);
+            $base64Decoded = base64_decode($decodedToken);
+            if ($base64Decoded !== false) {
+                // Decrypt
+                $username = openssl_decrypt(
+                    $base64Decoded,
+                    'AES-128-CBC',
+                    $key,
+                    0,
+                    $iv
+                );
+                if ($username && $username !== false) {
+                    // Find user
+                    $user = User::where('user_name', trim($username))->first();
+                $roles = ['Student-OT'];
+                Session::put('user_roles', $roles);
+                    if ($user) {
+                        Auth::login($user);
+                        session()->flash('success', 'Welcome back!');
+                    } else {
+                        \Log::error('User not found in database', ['username' => $username]);
+                        return redirect()->route('login')->with('error', 'User account not found');
+                    }
+                } else {
+                    \Log::error('Token decryption failed');
+                    return redirect()->route('login')->with('error', 'Invalid authentication token');
+                }
+            } else {
+                \Log::error('Base64 decode failed');
+                return redirect()->route('login')->with('error', 'Invalid token format');
+            }
+        }
+        if (!auth()->check()) {
+            \Log::warning('User not authenticated, redirecting to login');
+
+            // Store intended URL
+            session(['url.intended' => $request->fullUrl()]);
+
+            return redirect()->route('login')->with('error', 'Please login to access the timetable');
+        }
+    } catch (\Exception $e) {
+        \Log::error('Moodle SSO authentication error: ' . $e->getMessage());
+    }
+        // Moodle code end here
+        $data_course_id =  get_Role_by_course();
 
         $data_course_id = get_Role_by_course();
 

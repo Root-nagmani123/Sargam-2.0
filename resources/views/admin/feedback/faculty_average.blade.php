@@ -2,6 +2,36 @@
 
 @section('title', 'Faculty Feedback Average - Sargam | Lal Bahadur')
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .faculty-average-page .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+        }
+
+        .faculty-average-page .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .faculty-average-page .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .faculty-average-page .choices.is-focused .choices__inner,
+        .faculty-average-page .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
 @section('setup_content')
     <style>
         /* Keep your existing CSS styles */
@@ -86,8 +116,136 @@
             text-align: center;
             padding: 20px;
         }
+
+        /* Responsive styles - only apply below desktop breakpoint */
+        @media (max-width: 991.98px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            .filter-card .card-body {
+                padding: 1rem;
+            }
+            .content-card .card-header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .content-card .card-header small {
+                font-size: 0.75rem;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+            .row.g-3 {
+                --bs-gutter-x: 0.75rem;
+                --bs-gutter-y: 0.75rem;
+            }
+            .filter-card .card-header {
+                font-size: 0.95rem;
+                padding: 0.6rem 1rem;
+            }
+            .filter-card .card-body {
+                padding: 0.75rem 1rem;
+            }
+            .filter-card fieldset {
+                margin-bottom: 0.75rem !important;
+            }
+            .filter-card .form-label {
+                font-size: 0.875rem;
+            }
+            .filter-card .form-select,
+            .filter-card .form-control {
+                font-size: 0.875rem;
+            }
+            .filter-card .d-flex.gap-2 {
+                flex-direction: column;
+            }
+            .filter-card .d-flex.gap-2 .btn {
+                width: 100% !important;
+            }
+            .content-card .card-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                padding: 0.75rem 1rem;
+                font-size: 0.95rem;
+            }
+            .content-card .card-header small {
+                font-size: 0.7rem;
+            }
+            .content-card .card-body {
+                padding: 0.75rem;
+            }
+            .table-responsive {
+                margin-left: -0.75rem;
+                margin-right: -0.75rem;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .table-responsive .table {
+                font-size: 0.8rem;
+                margin-bottom: 0;
+            }
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+            .table-responsive .table th:nth-child(2),
+            .table-responsive .table td:nth-child(2) {
+                max-width: 140px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .table-responsive .faculty-name {
+                font-size: 0.8rem;
+            }
+            .text-center.mb-3 h6 {
+                font-size: 0.9rem;
+            }
+            .d-flex.justify-content-between.align-items-center.mt-3 {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: flex-start !important;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            .filter-card .card-body {
+                padding: 0.6rem 0.75rem;
+            }
+            .content-card .card-body {
+                padding: 0.5rem;
+            }
+            .table-responsive {
+                margin-left: -0.5rem;
+                margin-right: -0.5rem;
+            }
+            .table-responsive .table {
+                font-size: 0.75rem;
+            }
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.4rem 0.35rem;
+            }
+            .table-responsive .table th:nth-child(6),
+            .table-responsive .table td:nth-child(6) {
+                min-width: 90px;
+            }
+        }
     </style>
-    <div class="container-fluid py-3">
+    <div class="container-fluid faculty-average-page py-3">
         <x-breadcrum title="Faculty Feedback Average"></x-breadcrum>
 
         <div class="row g-3">
@@ -100,16 +258,17 @@
                             <fieldset class="mb-3">
                                 <legend class="fs-6 fw-semibold">Course Status</legend>
                                 <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="course_type" value="current"
+                                        id="current" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="current">Current Courses</label>
+                                </div>
+                                <div class="form-check">
                                     <input class="form-check-input" type="radio" name="course_type" value="archived"
                                         id="archived" {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="archived">Archived Courses</label>
                                 </div>
 
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="course_type" value="current"
-                                        id="current" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="current">Current Courses</label>
-                                </div>
+                                
                             </fieldset>
 
                             <div class="mb-3">
@@ -127,7 +286,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Faculty Name</label>
-                                <select class="form-select select2" name="faculty_name">
+                                <select class="form-select" name="faculty_name">
                                     <option value="">All Faculty</option>
                                     @foreach ($faculties as $key => $faculty)
                                         <option value="{{ $key }}" {{ $currentFaculty == $key ? 'selected' : '' }}>
@@ -248,6 +407,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
         function resetFilters() {
             // Reset form to default values
@@ -349,6 +509,26 @@
             document.getElementById('filterForm').addEventListener('submit', function(e) {
                 e.preventDefault(); // Prevent form submission
                 loadFeedbackData(); // Load data via AJAX
+            });
+        });
+
+        // Initialize Choices.js on selects in this page
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Choices === 'undefined') return;
+
+            document.querySelectorAll('.faculty-average-page select').forEach(function (el) {
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                new Choices(el, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!el.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+                });
+
+                el.dataset.choicesInitialized = 'true';
             });
         });
         document.querySelectorAll('input[name="course_type"]').forEach(radio => {

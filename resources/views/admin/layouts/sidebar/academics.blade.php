@@ -1,12 +1,12 @@
 <aside class="side-mini-panel with-vertical">
-    <div>
+    <div style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar">
-            <div>
-                <div class="mini-nav">
-                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init">
+        <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+            <div style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+                <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto; min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer"></div>

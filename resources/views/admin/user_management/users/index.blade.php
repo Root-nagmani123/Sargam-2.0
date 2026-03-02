@@ -3,28 +3,21 @@
 @section('title', 'User Management - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid users-index">
     <x-breadcrum title="Users"></x-breadcrum>
 
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
 
-                <div class="row mb-2">
+                <div class="row mb-2 users-header-row">
                     <div class="col-6">
                         <h4 class="mb-0">Users</h4>
                     </div>
                     <div class="col-md-6 text-end">
                         <form method="GET" class="d-flex justify-content-end gap-2">
-
                             <input type="text" name="search" class="form-control" placeholder="Search..."
                                 value="{{ $search }}">
-                           <select name="User_type" class="form-select">
-                                <option value="">All Users</option>
-                                <option value="S" {{ $user_type === 'S' ? 'selected' : '' }}>Student</option>
-                                <option value="E" {{ $user_type === 'E' ? 'selected' : '' }}>Employee</option>
-                            </select>
-
                             <select name="per_page" class="form-select">
                                 <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
                                 <option value="20" {{ $perPage == 20 ? 'selected' : '' }}>20</option>

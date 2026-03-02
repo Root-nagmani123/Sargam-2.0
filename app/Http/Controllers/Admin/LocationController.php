@@ -2,16 +2,16 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{Country, State, District, City};
+use App\DataTables\{CountryMasterDataTable, StateMasterDataTable, DistrictMasterDataTable, CityMasterDataTable};
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 
 class LocationController extends Controller
 {
-    public function countryIndex()
+    public function countryIndex(CountryMasterDataTable $dataTable)
     {
-        $countries = Country::paginate(10);
-
-        return view('admin.country.index', compact('countries'));
+        return $dataTable->render('admin.country.index');
     }
 
     public function countryCreate()
@@ -76,11 +76,10 @@ class LocationController extends Controller
     }
 
     // State
-    public function stateIndex()
+    public function stateIndex(StateMasterDataTable $dataTable)
     {
-        $states = State::paginate(10);
-        // print_r($states);die;
-        return view('admin.state.index', compact('states'));
+        $countries = Country::all();
+        return $dataTable->render('admin.state.index', compact('countries'));
     }
 
     public function stateCreate()
@@ -91,11 +90,14 @@ class LocationController extends Controller
 
     public function stateStore(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'state_name' => 'required|string|max:255',
             'country_master_pk' => 'required|exists:country_master,pk',
             'active_inactive' => 'required',
         ]);
+        if ($validator->fails()) {
+            return redirect()->route('master.state.index')->withInput()->withErrors($validator);
+        }
 
         $state = new State();
         $state->state_name = $request->state_name;
@@ -116,13 +118,14 @@ class LocationController extends Controller
 
     public function stateUpdate(Request $request, $pk)
     {
-        // Validate incoming request
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'state_name' => 'required|string|max:255',
-            'country_master_pk' => 'required|exists:country_master,pk',  // Validating country
+            'country_master_pk' => 'required|exists:country_master,pk',
             'active_inactive' => 'required',
         ]);
-
+        if ($validator->fails()) {
+            return redirect()->route('master.state.index')->withInput()->withErrors($validator)->with('state_modal_edit_id', $pk);
+        }
 
         $state = State::findOrFail($pk);
 
@@ -146,10 +149,11 @@ class LocationController extends Controller
     }
 
     // District
-    public function districtIndex()
+    public function districtIndex(DistrictMasterDataTable $dataTable)
     {
-        $districts = District::paginate(10);
-        return view('admin.district.index', compact('districts'));
+        $countries = Country::all();
+        $states = State::all();
+        return $dataTable->render('admin.district.index', compact('countries', 'states'));
     }
 
     public function districtCreate()
@@ -161,19 +165,22 @@ class LocationController extends Controller
 
     public function districtStore(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
+            'country_master_pk' => 'required|exists:country_master,pk',
             'state_master_pk' => 'required|numeric',
             'district_name' => 'required|string|max:100',
-             'active_inactive' => 'required',
+            'active_inactive' => 'required',
         ]);
-
+        
+        if ($validator->fails()) {
+            return redirect()->route('master.district.index')->withInput()->withErrors($validator);
+        }
 
         District::create([
-            'country_master_pk' => $request->country_master_pk, // Assuming you have a country_master_pk in the request
+            'country_master_pk' => $request->country_master_pk,
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
             'active_inactive' => $request->active_inactive,
-
         ]);
 
         return redirect()->route('master.district.index')->with('success', 'District added successfully.');
@@ -190,21 +197,24 @@ class LocationController extends Controller
 
     public function districtUpdate(Request $request, $id)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
+            'country_master_pk' => 'required|exists:country_master,pk',
             'state_master_pk' => 'required|numeric',
             'district_name' => 'required|string|max:100',
-             'active_inactive' => 'required',
+            'active_inactive' => 'required',
         ]);
+        
+        if ($validator->fails()) {
+            return redirect()->route('master.district.index')->withInput()->withErrors($validator)->with('district_modal_edit_id', $id);
+        }
 
         $district = District::findOrFail($id);
         $district->update([
-            'country_master_pk' => $request->country_master_pk, // Assuming you have a country_master_pk in the request
-
+            'country_master_pk' => $request->country_master_pk,
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
-             'active_inactive' => $request->active_inactive,
+            'active_inactive' => $request->active_inactive,
         ]);
-
 
         return redirect()->route('master.district.index')->with('success', 'District updated successfully');
     }
@@ -216,10 +226,10 @@ class LocationController extends Controller
     }
 
     // City
-    public function cityIndex()
+    public function cityIndex(CityMasterDataTable $dataTable)
     {
-        $cities = City::with(['state', 'district'])->paginate(10);
-        return view('admin.city.index', compact('cities'));
+        $countries = Country::all();
+        return $dataTable->render('admin.city.index', compact('countries'));
     }
 
     public function cityCreate()

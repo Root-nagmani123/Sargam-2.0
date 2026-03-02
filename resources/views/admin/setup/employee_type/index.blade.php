@@ -65,7 +65,7 @@
 <div class="modal fade" id="employeeTypeModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background:#af2910;">
+            <div class="modal-header" style="background:#004a93;">
                 <h5 class="modal-title text-white">Employee Type</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

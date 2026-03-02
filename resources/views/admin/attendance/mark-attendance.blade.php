@@ -14,7 +14,7 @@ table.table-bordered.dataTable td:nth-child(4) { padding: 0 !important; }
         @if(hasRole('Admin') || hasRole('Training-Induction'))
         <x-breadcrum title="Mark Attendance Of Officer Trainees" />
         <x-session_message />
-        @endif 
+        @endif
         @if(hasRole('Internal Faculty'))
         <x-breadcrum title="Mark Attendance Of Your Assigned Officer Trainees" />
         <x-session_message />
@@ -69,11 +69,6 @@ table.table-bordered.dataTable td:nth-child(4) { padding: 0 !important; }
                         </div>
                     </div>
                 </div>
-
-                <div
-                    class="alert customize-alert rounded-pill alert-success bg-success text-white mt-4 mb-0 border-0 fade show text-center fw-bold">
-                    Attendance has been Marked for the Session
-                </div>
             </div>
         </div>
 
@@ -109,7 +104,9 @@ table.table-bordered.dataTable td:nth-child(4) { padding: 0 !important; }
             </div>
         </div>
     </div>
-    @endsection
-    @section('scripts')
+</form>
+@endsection
+
+@section('scripts')
     {!! $dataTable->scripts() !!}
     @endsection

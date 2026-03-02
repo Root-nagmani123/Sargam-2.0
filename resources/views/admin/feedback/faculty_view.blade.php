@@ -2,10 +2,40 @@
 
 @section('title', 'Faculty Feedback with Comments Admin View - Sargam | Lal Bahadur')
 
+@section('css')
+    @parent
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <style>
+        .faculty-view-page .choices__inner {
+            min-height: calc(2.25rem + 2px);
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+        }
+
+        .faculty-view-page .choices__list--single .choices__item {
+            padding: 0;
+            margin: 0;
+        }
+
+        .faculty-view-page .choices__list--dropdown {
+            border-radius: 0.375rem;
+            border-color: #ced4da;
+        }
+
+        .faculty-view-page .choices.is-focused .choices__inner,
+        .faculty-view-page .choices.is-open .choices__inner {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+@endsection
+
 @section('setup_content')
     <style>
         :root {
-            --primary: #af2910;
+            --primary: #004a93;
             --secondary: #f4f6f9;
             --accent: #f2b705;
             --success: #198754;
@@ -63,7 +93,7 @@
         }
 
         .rating-header {
-            color: #af2910 !important;
+            color: #004a93 !important;
             font-weight: 600;
         }
 
@@ -142,12 +172,214 @@
         .export-btn i {
             font-size: 0.875rem;
         }
+
+        /* Responsive styles - tablet and below (desktop unchanged) */
+        @media (max-width: 991.98px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .content-card .card-header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header .page-title {
+                width: 100%;
+                font-size: 1.1rem;
+            }
+
+            .content-card .card-header .d-flex.align-items-center {
+                flex-wrap: wrap;
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header .btn-group {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header small.text-muted {
+                width: 100%;
+                margin-left: 0 !important;
+                font-size: 0.75rem;
+            }
+
+            .feedback-section .text-center.mb-4 {
+                text-align: start !important;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                font-size: 0.9rem;
+                word-break: break-word;
+                display: flex;
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 0 0.25rem;
+            }
+
+            .feedback-section .text-center.mb-4 p strong {
+                min-width: 7rem;
+                flex-shrink: 0;
+            }
+
+            .table-responsive {
+                margin-left: -0.5rem;
+                margin-right: -0.5rem;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .table-responsive .table {
+                font-size: 0.875rem;
+            }
+
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+
+            .remarks-list {
+                padding: 0.75rem;
+                font-size: 0.875rem;
+            }
+
+            .pagination-info {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .container-fluid .row.g-3 {
+                margin-left: -0.25rem;
+                margin-right: -0.25rem;
+            }
+
+            .content-card .card-header .page-title {
+                font-size: 1rem;
+            }
+
+            .content-card .card-header .btn-group .btn {
+                font-size: 0.8rem;
+                padding: 0.35rem 0.5rem;
+            }
+
+            .content-card .card-header .btn-group .btn i {
+                margin-right: 0.25rem !important;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                font-size: 0.85rem;
+            }
+
+            .feedback-section .text-center.mb-4 {
+                text-align: start !important;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                display: flex;
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 0 0.25rem;
+            }
+
+            .feedback-section .text-center.mb-4 p strong {
+                display: inline-block;
+                min-width: 7rem;
+                flex-shrink: 0;
+            }
+
+            .table-responsive .table {
+                font-size: 0.8rem;
+            }
+
+            .table-responsive .table th,
+            .table-responsive .table td {
+                padding: 0.4rem 0.35rem;
+            }
+
+            .d-flex.justify-content-between.align-items-center {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .d-flex.justify-content-between.align-items-center > div:first-child {
+                width: 100%;
+                order: 1;
+            }
+
+            .d-flex.justify-content-between.align-items-center > div:last-child {
+                width: 100%;
+                justify-content: center;
+                order: 2;
+            }
+
+            .d-flex.justify-content-between.align-items-center .btn-sm {
+                font-size: 0.8rem;
+            }
+
+            .filter-card .card-body .d-flex.gap-2 {
+                flex-direction: column;
+            }
+
+            .filter-card .card-body .d-flex.gap-2 .btn {
+                width: 100% !important;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .content-card .card-header .btn-group {
+                flex-direction: column;
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .content-card .card-header .btn-group .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .page-title {
+                font-size: 0.95rem;
+            }
+
+            .feedback-section .text-center.mb-4 p {
+                font-size: 0.8rem;
+            }
+
+            .remarks-title {
+                font-size: 0.9rem;
+                padding: 0.4rem 0.5rem;
+            }
+
+            .remarks-list {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .suggestions-list {
+                max-height: 150px;
+            }
+        }
     </style>
 
     <!-- Add CSRF token meta tag -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <div class="container-fluid py-3">
+    <div class="container-fluid faculty-view-page py-3">
         <x-breadcrum title="Average Rating - Course / Topic wise"></x-breadcrum>
         <div class="row g-3">
 
@@ -352,42 +584,42 @@
                                                 <tbody class="align-middle text-dark">
                                                     <!-- Excellent -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">
+                                                        <th class="rating-header">
                                                             Excellent</th>
                                                         <td>{{ $data['content_counts']['5'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['5'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Very Good -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">Very
+                                                        <th class="rating-header">Very
                                                             Good</th>
                                                         <td>{{ $data['content_counts']['4'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['4'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Good -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">Good
+                                                        <th class="rating-header">Good
                                                         </th>
                                                         <td>{{ $data['content_counts']['3'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['3'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Average -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">
+                                                        <th class="rating-header">
                                                             Average</th>
                                                         <td>{{ $data['content_counts']['2'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['2'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Below Average -->
                                                     <tr>
-                                                        <th class="rating-header" style="color:#af2910 !important;">Below
+                                                        <th class="rating-header">Below
                                                             Average</th>
                                                         <td>{{ $data['content_counts']['1'] ?? 0 }}</td>
                                                         <td>{{ $data['presentation_counts']['1'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Percentage -->
                                                     <tr class="fw-semibold">
-                                                        <th class="rating-header" style="color:#af2910 !important;">
+                                                        <th class="rating-header">
                                                             Percentage</th>
                                                         <td class="percentage-cell">
                                                             {{ number_format($data['content_percentage'] ?? 0, 2) }}%</td>
@@ -472,7 +704,11 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
+        // Keep a reference to the Choices instance for the program select
+        let programChoicesInstance = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             const filterForm = document.getElementById('filterForm');
             const facultySearch = document.getElementById('facultySearch');
@@ -701,16 +937,25 @@
                     // Update programs dropdown
                     const newProgramSelect = doc.getElementById('programSelect');
                     if (newProgramSelect) {
-                        const currentProgramId = programSelect.value;
-                        programSelect.innerHTML = newProgramSelect.innerHTML;
-                        // Try to preserve the selected program
-                        if (currentProgramId) {
-                            const optionExists = Array.from(programSelect.options).some(opt => opt.value ===
-                                currentProgramId);
-                            if (optionExists) {
-                                programSelect.value = currentProgramId;
-                            }
+                        // Build choices data from the new select's options
+                        const optionsData = Array.from(newProgramSelect.options).map(function (opt) {
+                            return {
+                                value: opt.value,
+                                label: opt.text,
+                                selected: opt.selected,
+                                disabled: opt.disabled
+                            };
+                        });
+
+                        if (programChoicesInstance) {
+                            // Update the Choices.js instance so the UI reflects new options
+                            programChoicesInstance.clearStore();
+                            programChoicesInstance.setChoices(optionsData, 'value', 'label', true);
+                        } else {
+                            // Fallback: update the native select directly
+                            programSelect.innerHTML = newProgramSelect.innerHTML;
                         }
+
                         programSelect.disabled = false;
                     }
 
@@ -874,5 +1119,41 @@
                     alert('Error exporting to PDF. Please try again.');
                 });
         }
+
+        // Initialize Choices.js on selects in this page
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Choices === 'undefined') return;
+
+            // Program select gets its own instance reference so we can update it after AJAX
+            const programEl = document.getElementById('programSelect');
+            if (programEl && programEl.dataset.choicesInitialized !== 'true') {
+                programChoicesInstance = new Choices(programEl, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!programEl.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: programEl.getAttribute('placeholder') || programEl.options[0]?.text || 'Select an option',
+                });
+                programEl.dataset.choicesInitialized = 'true';
+            }
+
+            // Initialize Choices for any other selects on this page
+            document.querySelectorAll('.faculty-view-page select').forEach(function (el) {
+                if (el.id === 'programSelect') return;
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                new Choices(el, {
+                    allowHTML: false,
+                    searchPlaceholderValue: 'Search...',
+                    removeItemButton: !!el.multiple,
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: el.getAttribute('placeholder') || el.options[0]?.text || 'Select an option',
+                });
+
+                el.dataset.choicesInitialized = 'true';
+            });
+        });
     </script>
 @endsection

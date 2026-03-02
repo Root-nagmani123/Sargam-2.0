@@ -441,42 +441,114 @@
                                 <th scope="col">Sl. No.</th>
                                 <th scope="col">Faculty Type</th>
                                 <th scope="col">Faculty Name</th>
+                                <th scope="col">Email</th>
                                 <th scope="col">Mobile Number</th>
                                 <th scope="col">Current Sector</th>
+                                <th scope="col">Session Count</th>
+                                <th scope="col">Feedback Average</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($guest_faculty as $index => $faculty)
+                            @forelse($guest_faculty as $index => $faculty)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td class="  text-center"><span
-                                        class="badge bg-success-subtle text-success">Guest</span></td>
-                                <td>{{ $faculty->full_name }}</td>
-                                <td>{{ $faculty->mobile_no }}</td>
-                                <td class="  text-center"><span
-                                        class="badge bg-success-subtle text-success">@if($faculty->faculty_sector ==
-                                        1){{ 'Government' }}@elseif($faculty->faculty_sector ==
-                                        2){{ 'Private' }}@else{{ 'Other' }}@endif</span></td>
+                                <td>
+                                    <span class="badge rounded-1 badge-guest bg-success-subtle text-success">Guest</span>
+                                </td>
+                                <td>
+                                    <span class="faculty-name">{{ $faculty->full_name }}</span>
+                                </td>
+                                <td>
+                                    @if($faculty->email_id)
+                                        <a href="mailto:{{ $faculty->email_id }}" class="email-link">
+                                            <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">mail</span>
+                                            {{ $faculty->email_id }}
+                                        </a>
+                                    @else
+                                        <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
+                                <td>{{ $faculty->mobile_no ?? 'N/A' }}</td>
+                                <td>
+                                    @if($faculty->faculty_sector == 1)
+                                        <span class="badge rounded-1 badge-sector-gov">Government</span>
+                                    @elseif($faculty->faculty_sector == 2)
+                                        <span class="badge rounded-1 badge-sector-private">Private</span>
+                                    @else
+                                        <span class="badge rounded-1 badge-sector-other">Other</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="session-count-badge">
+                                        <span class="material-symbols-rounded" style="font-size: 1rem; vertical-align: middle;">event</span>
+                                        {{ $faculty->session_count ?? 0 }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @php
+                                        $avgContent = $faculty->feedback_summary['avg_content'] ?? 0;
+                                        $avgPresentation = $faculty->feedback_summary['avg_presentation'] ?? 0;
+                                        $overallAvg = ($avgContent + $avgPresentation) / 2;
+                                        
+                                        $getScoreClass = function($score) {
+                                            if ($score >= 80) return 'excellent';
+                                            if ($score >= 60) return 'good';
+                                            if ($score >= 40) return 'average';
+                                            return 'poor';
+                                        };
+                                    @endphp
+                                    @if($faculty->feedback_summary['total_feedback'] > 0)
+                                        <div class="feedback-average">
+                                            <div class="feedback-score">
+                                                <span class="feedback-label">Content:</span>
+                                                <span class="feedback-value {{ $getScoreClass($avgContent) }}">
+                                                    {{ number_format($avgContent, 1) }}%
+                                                </span>
+                                            </div>
+                                            <div class="feedback-score">
+                                                <span class="feedback-label">Presentation:</span>
+                                                <span class="feedback-value {{ $getScoreClass($avgPresentation) }}">
+                                                    {{ number_format($avgPresentation, 1) }}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <span class="text-muted">No feedback yet</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}" 
+                                       class="btn btn-view-feedback">
+                                        <span class="material-symbols-rounded">visibility</span>
+                                        View Feedback
+                                    </a>
+                                </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr>
+                                <td colspan="9" class="no-data">
+                                    <span class="material-symbols-rounded" style="font-size: 3rem; display: block; margin-bottom: 0.5rem; opacity: 0.5;">person_off</span>
+                                    No guest faculty found
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
- </div>
-
-
+</div>
 @endsection
+
 @push('scripts')
 <script src="{{ asset('js/jquery-3.7.1.min.js') }}"></script>
-
 <script>
 $(document).ready(function() {
     $('#guess_faculty').DataTable({
         order: [[2, 'asc']], // Sort by Faculty Name by default
-        pageLength: 25,
+        pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         language: {
             search: "Search:",
@@ -491,7 +563,7 @@ $(document).ready(function() {
                 previous: "Previous"
             }
         },
-        responsive: true,
+        responsive: false,
         autoWidth: false,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         drawCallback: function() {
@@ -501,3 +573,4 @@ $(document).ready(function() {
 });
 </script>
 @endpush
+    

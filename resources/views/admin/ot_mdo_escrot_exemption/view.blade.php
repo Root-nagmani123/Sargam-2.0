@@ -62,9 +62,138 @@
 .table-responsive {
     overflow-x: auto;
 }
+
+/* Responsive - Tablet (max 991px) */
+@media (max-width: 991.98px) {
+    .ot-mdo-view .row.mb-3 > .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .ot-mdo-view .row.mb-3 .d-flex.justify-content-end {
+        justify-content: flex-start !important;
+    }
+    .ot-mdo-view .student-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .ot-mdo-view .duty-count-badge {
+        font-size: 16px;
+        padding: 8px 16px;
+    }
+    .ot-mdo-view .duty-details {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+}
+
+/* Responsive - Small tablet / large phone (max 767px) */
+@media (max-width: 767.98px) {
+    .ot-mdo-view .container-fluid {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+    .ot-mdo-view .card-body {
+        padding: 1rem;
+    }
+    .ot-mdo-view .row.mb-3 > .col-6:first-child h4 {
+        font-size: 1.25rem;
+    }
+    .ot-mdo-view .row.mb-3 .col-md-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .ot-mdo-view .row.mb-3 .d-flex.align-items-end .btn {
+        width: 100%;
+    }
+    .ot-mdo-view .student-card {
+        padding: 15px;
+    }
+    .ot-mdo-view .student-header h5 {
+        font-size: 1rem;
+    }
+    .ot-mdo-view .duty-count-badge {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
+    .ot-mdo-view .duty-details {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .ot-mdo-view .duty-item .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .ot-mdo-view .duty-item .text-md-end {
+        text-align: left !important;
+    }
+    .ot-mdo-view .duty-item .text-md-end .btn {
+        width: 100%;
+    }
+}
+
+/* Responsive - Phone (max 575px) */
+@media (max-width: 575.98px) {
+    .ot-mdo-view .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .ot-mdo-view .card-body {
+        padding: 0.75rem;
+    }
+    .ot-mdo-view .row.mb-3 > .col-6:first-child h4 {
+        font-size: 1.1rem;
+    }
+    .ot-mdo-view .btn-info {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .ot-mdo-view .btn-info .material-icons {
+        font-size: 20px !important;
+    }
+    .ot-mdo-view .card.bg-light .col-md-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .ot-mdo-view .card.bg-light .row > div {
+        margin-bottom: 0.75rem !important;
+    }
+    .ot-mdo-view .card.bg-light .row > div:last-child {
+        margin-bottom: 0 !important;
+    }
+    .ot-mdo-view .student-card {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    .ot-mdo-view .student-header h5 {
+        font-size: 0.9375rem;
+        flex-wrap: wrap;
+    }
+    .ot-mdo-view .student-header h5 .material-icons {
+        font-size: 20px !important;
+    }
+    .ot-mdo-view .duty-count-badge {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+    .ot-mdo-view .duty-count-badge .material-icons {
+        font-size: 16px !important;
+    }
+    .ot-mdo-view .duty-item {
+        padding: 10px;
+    }
+    .ot-mdo-view .detail-item {
+        font-size: 13px;
+    }
+    .ot-mdo-view .alert-info .material-icons {
+        font-size: 36px !important;
+    }
+    .ot-mdo-view .alert-info p {
+        font-size: 0.9375rem !important;
+    }
+}
 </style>
 
-<div class="container-fluid">
+<div class="container-fluid ot-mdo-view">
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row mb-3">

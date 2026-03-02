@@ -15,9 +15,8 @@
                         Discipline Master
                     </h4>
                 </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-center gap-2">
-                        <!-- Add Group Mapping -->
+                <div class="col-12 col-md-6">
+                    <div class="d-flex justify-content-md-end justify-content-start">
                         <a href="{{ route('master.discipline.create') }}"
                             class="btn btn-primary d-inline-flex align-items-center gap-2 shadow-sm w-md-100 justify-content-center justify-content-md-start">
                             <span class="material-icons material-symbols-rounded fs-5">add</span>
