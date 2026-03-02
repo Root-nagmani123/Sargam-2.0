@@ -1,6 +1,6 @@
 <?php
 
-namespace App\DataTables\Estate;
+namespace App\DataTables;
 
 use App\Models\EligibilityCriterion;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;

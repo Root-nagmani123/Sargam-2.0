@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\DataTables\Estate\EstateApprovalSettingDataTable;
-use App\DataTables\Estate\EstateMigrationReportDataTable;
-use App\DataTables\Estate\EstateOtherRequestDataTable;
-use App\DataTables\Estate\EstatePossessionDetailsDataTable;
-use App\DataTables\Estate\EstatePossessionOtherDataTable;
-use App\DataTables\Estate\EstateRequestForEstateDataTable;
-use App\DataTables\Estate\EstateReturnHouseDataTable;
-use App\DataTables\Estate\EstateRequestPutInHacDataTable;
-use App\DataTables\Estate\EstateHacApprovedDataTable;
+use App\DataTables\EstateApprovalSettingDataTable;
+use App\DataTables\EstateMigrationReportDataTable;
+use App\DataTables\EstateOtherRequestDataTable;
+use App\DataTables\EstatePossessionDetailsDataTable;
+use App\DataTables\EstatePossessionOtherDataTable;
+use App\DataTables\EstateRequestForEstateDataTable;
+use App\DataTables\EstateReturnHouseDataTable;
+use App\DataTables\EstateRequestPutInHacDataTable;
+use App\DataTables\EstateHacApprovedDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateHouse;
 use App\Models\EstateMonthReadingDetails;
