@@ -2,24 +2,31 @@
 @section('title', 'Vehicle Pass Application - Approval Details')
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card" style="border-left:4px solid #004a93;">
-        <div class="card-header bg-white">
-            <div class="d-flex justify-content-between align-items-center">
+    @include('components.breadcrum', ['title' => 'Vehicle Pass Application - Approval Details'])
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-body-tertiary border-bottom-0">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div>
-                    <h4 class="mb-1">
-                        Vehicle Pass Application - Approval Review
+                    <h4 class="mb-1 fw-semibold d-flex align-items-center gap-2">
+                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">
+                            <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">directions_car</i>
+                        </span>
+                        <span>Vehicle Pass Application - Approval Review</span>
                         @if(isset($application->request_type) && $application->request_type === 'duplicate')
-                            <span class="badge bg-warning ms-2">Duplicate Pass</span>
+                            <span class="badge bg-warning-subtle text-warning-emphasis ms-1">Duplicate Pass</span>
                         @else
-                            <span class="badge bg-info ms-2">Regular Pass</span>
+                            <span class="badge bg-info-subtle text-info-emphasis ms-1">Regular Pass</span>
                         @endif
                     </h4>
-                    <small class="text-muted">Request ID: <code>{{ $application->vehicle_req_id ?? $application->vehicle_tw_pk }}</code></small>
+                    <p class="text-body-secondary small mb-0">
+                        Request ID:
+                        <code class="fw-semibold">{{ $application->vehicle_req_id ?? $application->vehicle_tw_pk }}</code>
+                    </p>
                 </div>
-                <div>
-                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-secondary">
-                        <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">arrow_back</i>
-                        Back to Pending
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">arrow_back</i>
+                        <span>Back to Pending</span>
                     </a>
                 </div>
             </div>
@@ -27,41 +34,55 @@
         <div class="card-body">
             <!-- Application Status -->
             <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="alert" style="background-color: #f0f7ff; border-left: 4px solid #0066cc;">
-                        <div class="row">
+                <div class="col-12">
+                    @php
+                        $statusClass = '';
+                        $statusText = '';
+                        switch($application->vech_card_status) {
+                            case 1:
+                                $statusClass = 'warning';
+                                $statusText = 'Pending Approval';
+                                break;
+                            case 2:
+                                $statusClass = 'success';
+                                $statusText = 'Approved';
+                                break;
+                            case 3:
+                                $statusClass = 'danger';
+                                $statusText = 'Rejected';
+                                break;
+                            default:
+                                $statusClass = 'secondary';
+                                $statusText = 'Unknown';
+                        }
+                    @endphp
+                    <div class="alert alert-{{ $statusClass === 'secondary' ? 'secondary' : 'primary' }} bg-body-tertiary border-0 rounded-3 py-3 px-3">
+                        <div class="row g-3 align-items-center">
                             <div class="col-md-4">
-                                <strong>Status:</strong><br>
-                                @php
-                                    $statusClass = '';
-                                    $statusText = '';
-                                    switch($application->vech_card_status) {
-                                        case 1:
-                                            $statusClass = 'warning';
-                                            $statusText = 'Pending Approval';
-                                            break;
-                                        case 2:
-                                            $statusClass = 'success';
-                                            $statusText = 'Approved';
-                                            break;
-                                        case 3:
-                                            $statusClass = 'danger';
-                                            $statusText = 'Rejected';
-                                            break;
-                                        default:
-                                            $statusClass = 'secondary';
-                                            $statusText = 'Unknown';
-                                    }
-                                @endphp
-                                <span class="badge bg-{{ $statusClass }}">{{ $statusText }}</span>
+                                <div class="d-flex flex-column">
+                                    <span class="small text-body-secondary text-uppercase fw-semibold">Status</span>
+                                    <span class="mt-1">
+                                        <span class="badge bg-{{ $statusClass }}">
+                                            {{ $statusText }}
+                                        </span>
+                                    </span>
+                                </div>
                             </div>
                             <div class="col-md-4">
-                                <strong>Submitted Date:</strong><br>
-                                {{ $application->created_date ? $application->created_date->format('d-M-Y H:i') : '--' }}
+                                <div class="d-flex flex-column">
+                                    <span class="small text-body-secondary text-uppercase fw-semibold">Submitted Date</span>
+                                    <span class="mt-1">
+                                        {{ $application->created_date ? $application->created_date->format('d-M-Y H:i') : '--' }}
+                                    </span>
+                                </div>
                             </div>
                             <div class="col-md-4">
-                                <strong>Last Updated:</strong><br>
-                                {{ $application->modified_date ? $application->modified_date->format('d-M-Y H:i') : 'Not updated' }}
+                                <div class="d-flex flex-column">
+                                    <span class="small text-body-secondary text-uppercase fw-semibold">Last Updated</span>
+                                    <span class="mt-1">
+                                        {{ $application->modified_date ? $application->modified_date->format('d-M-Y H:i') : 'Not updated' }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -71,17 +92,17 @@
             <!-- Vehicle Details -->
             <div class="row mb-3">
                 <div class="col-md-12">
-                    <h5 class="text-primary mb-3">
+                    <h5 class="text-primary mb-3 d-flex align-items-center gap-2">
                         <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">two_wheeler</i>
-                        Vehicle Details
+                        <span class="fw-semibold">Vehicle Details</span>
                     </h5>
                 </div>
             </div>
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Vehicle Type</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Vehicle Type</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             @if($application->vehicleType)
                                 {{ $application->vehicleType->vehicle_type }}
                             @else
@@ -92,46 +113,46 @@
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Vehicle Number</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Vehicle Number</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             <strong>{{ $application->vehicle_no }}</strong>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Valid From</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Valid From</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             {{ $application->veh_card_valid_from ? \Carbon\Carbon::parse($application->veh_card_valid_from)->format('d-M-Y') : '--' }}
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Valid To</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Valid To</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             {{ $application->vech_card_valid_to ? \Carbon\Carbon::parse($application->vech_card_valid_to)->format('d-M-Y') : '--' }}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Government Vehicle</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Government Vehicle</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             {!! $application->gov_veh == 1 ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' !!}
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Employee ID Card</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Employee ID Card</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             {{ $application->employee_id_card ?? '--' }}
                         </div>
                     </div>
@@ -141,25 +162,25 @@
             <!-- Employee Details -->
             <div class="row mb-3 mt-3">
                 <div class="col-md-12">
-                    <h5 class="text-primary mb-3">
+                    <h5 class="text-primary mb-3 d-flex align-items-center gap-2">
                         <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">person</i>
-                        Employee Details
+                        <span class="fw-semibold">Employee Details</span>
                     </h5>
                 </div>
             </div>
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Employee ID</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Employee ID</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             <strong>{{ $application->employee_id_card ?? '--' }}</strong>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Employee Name</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Employee Name</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             @if($application->employee)
                                 {{ trim($application->employee->first_name . ' ' . ($application->employee->last_name ?? '')) ?: '--' }}
                             @else
@@ -170,11 +191,11 @@
                 </div>
             </div>
 
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Designation</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Designation</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             @if($application->employee && $application->employee->designation)
                                 {{ $application->employee->designation->designation_name ?? '--' }}
                             @else
@@ -185,8 +206,8 @@
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Department</label>
-                        <div class="form-control bg-light">
+                        <label class="form-label small fw-semibold text-body-secondary">Department</label>
+                        <div class="form-control form-control-sm bg-body-tertiary border-0">
                             @if($application->employee && $application->employee->department)
                                 {{ $application->employee->department->department_name ?? '--' }}
                             @else
@@ -201,13 +222,13 @@
             @if($application->doc_upload)
                 <div class="row mb-3 mt-3">
                     <div class="col-md-12">
-                        <h5 class="text-primary mb-3">
+                        <h5 class="text-primary mb-3 d-flex align-items-center gap-2">
                             <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">attach_file</i>
-                            Attached Document
+                            <span class="fw-semibold">Attached Document</span>
                         </h5>
-                        <a href="{{ Storage::url($application->doc_upload) }}" target="_blank" class="btn btn-outline-primary">
+                        <a href="{{ Storage::url($application->doc_upload) }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">download</i>
-                            Download Document
+                            <span>Download Document</span>
                         </a>
                     </div>
                 </div>
@@ -217,19 +238,19 @@
             @if($application->approvals && count($application->approvals) > 0)
                 <div class="row mb-3 mt-4">
                     <div class="col-md-12">
-                        <h5 class="text-primary mb-3">
+                        <h5 class="text-primary mb-3 d-flex align-items-center gap-2">
                             <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">history</i>
-                            Approval History
+                            <span class="fw-semibold">Approval History</span>
                         </h5>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
-                                <thead>
+                        <div class="table-responsive rounded-3 border bg-body-tertiary">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead class="table-light">
                                     <tr>
-                                        <th>Status</th>
-                                        <th>Recommended</th>
-                                        <th>Approved By</th>
-                                        <th>Remarks</th>
-                                        <th>Date</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Recommended</th>
+                                        <th scope="col">Approved By</th>
+                                        <th scope="col">Remarks</th>
+                                        <th scope="col">Date</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -295,10 +316,10 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <small>{{ $approval->veh_approval_remarks ?? '--' }}</small>
+                                                <small class="text-body-secondary">{{ $approval->veh_approval_remarks ?? '--' }}</small>
                                             </td>
                                             <td>
-                                                <small>{{ $approval->modified_date ? $approval->modified_date->format('d-M-Y H:i') : '--' }}</small>
+                                                <small class="text-body-secondary">{{ $approval->modified_date ? $approval->modified_date->format('d-M-Y H:i') : '--' }}</small>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -313,28 +334,28 @@
             @if($application->vech_card_status == 1)
                 <div class="row mt-4">
                     <div class="col-md-12">
-                        <h5 class="text-primary mb-3">
+                        <h5 class="text-primary mb-3 d-flex align-items-center gap-2">
                             <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">check_circle</i>
-                            Approval Actions
+                            <span class="fw-semibold">Approval Actions</span>
                         </h5>
-                        <div class="row">
+                        <div class="row g-4">
                             <div class="col-md-6">
                                 <form action="{{ route('admin.security.vehicle_pass_approval.approve', $application->encrypted_id) }}" method="POST">
                                     @csrf
                                     <div class="mb-3">
-                                        <label for="forward_status_approve" class="form-label">Forward Status</label>
-                                        <select name="forward_status" id="forward_status_approve" class="form-select">
+                                        <label for="forward_status_approve" class="form-label small fw-semibold text-body-secondary">Forward Status</label>
+                                        <select name="forward_status" id="forward_status_approve" class="form-select form-select-sm">
                                             <option value="1">Forwarded</option>
                                             <option value="2">Card Ready</option>
                                         </select>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="remarks_approve" class="form-label">Remarks (Optional)</label>
-                                        <textarea name="veh_approval_remarks" id="remarks_approve" class="form-control" rows="3" placeholder="Enter approval remarks"></textarea>
+                                        <label for="remarks_approve" class="form-label small fw-semibold text-body-secondary">Remarks (Optional)</label>
+                                        <textarea name="veh_approval_remarks" id="remarks_approve" class="form-control form-control-sm" rows="3" placeholder="Enter approval remarks"></textarea>
                                     </div>
-                                    <button type="submit" class="btn btn-success">
+                                    <button type="submit" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2">
                                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">check</i>
-                                        Approve Application
+                                        <span>Approve Application</span>
                                     </button>
                                 </form>
                             </div>
@@ -342,12 +363,12 @@
                                 <form action="{{ route('admin.security.vehicle_pass_approval.reject', $application->encrypted_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this application?')">
                                     @csrf
                                     <div class="mb-3">
-                                        <label for="remarks_reject" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
-                                        <textarea name="veh_approval_remarks" id="remarks_reject" class="form-control" rows="3" placeholder="Enter reason for rejection" required></textarea>
+                                        <label for="remarks_reject" class="form-label small fw-semibold text-body-secondary">Rejection Reason <span class="text-danger">*</span></label>
+                                        <textarea name="veh_approval_remarks" id="remarks_reject" class="form-control form-control-sm" rows="3" placeholder="Enter reason for rejection" required></textarea>
                                     </div>
-                                    <button type="submit" class="btn btn-danger">
+                                    <button type="submit" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-2">
                                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">close</i>
-                                        Reject Application
+                                        <span>Reject Application</span>
                                     </button>
                                 </form>
                             </div>
@@ -357,9 +378,9 @@
             @else
                 <div class="row mt-4">
                     <div class="col-md-12">
-                        <div class="alert alert-info">
+                        <div class="alert alert-info d-flex align-items-center gap-2">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">info</i>
-                            This application has already been processed and cannot be approved or rejected again.
+                            <span>This application has already been processed and cannot be approved or rejected again.</span>
                         </div>
                     </div>
                 </div>
@@ -367,10 +388,10 @@
 
             <!-- Close Button -->
             <div class="row mt-3">
-                <div class="col-md-12">
-                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-secondary">
-                        <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">close</i>
-                        Close
+                <div class="col-md-12 d-flex justify-content-end">
+                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">close</i>
+                        <span>Close</span>
                     </a>
                 </div>
             </div>

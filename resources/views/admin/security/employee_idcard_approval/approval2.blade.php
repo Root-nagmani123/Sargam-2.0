@@ -4,54 +4,85 @@
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Approval II - Employee ID Card'])
     <div class="card" style="border-left:4px solid #004a93;">
-        <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                <h4 class="mb-0">Approval II</h4>
+        <div class="card-header bg-body-tertiary border-bottom-0 pb-0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h4 class="mb-1 fw-semibold">Approval II</h4>
+                    <p class="mb-0 small text-body-secondary">Final review and approval for employee ID card requests.</p>
+                </div>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                   {{-- <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm">
+                   {{--
+                    <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">arrow_back</i>
-                        Approval I
+                        <span>Approval I</span>
                     </a>
-                    <a href="{{ route('admin.security.employee_idcard_approval.all') }}" class="btn btn-secondary btn-sm">
+                    <a href="{{ route('admin.security.employee_idcard_approval.all') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">list</i>
-                        All Requests
-                    </a> --}}
+                        <span>All Requests</span>
+                    </a>
+                   --}}
                 </div>
             </div>
-
+        </div>
+        <div class="card-body">
             <!-- Filters Section -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-light border-bottom">
-                    <h6 class="mb-0 fw-semibold">Filters & Search</h6>
+            <div class="card border-0 bg-body-tertiary mb-4">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h6 class="mb-0 fw-semibold d-flex align-items-center gap-2">
+                            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">tune</i>
+                            </span>
+                            Filters &amp; Search
+                        </h6>
+                        @if(request()->anyFilled(['search', 'date_from', 'date_to']))
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis small">Filters applied</span>
+                        @endif
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body pt-3">
                     <form method="GET" action="{{ route('admin.security.employee_idcard_approval.approval2') }}" id="filterForm" class="mb-0">
                         <div class="row g-3 align-items-end">
-                            <div class="col-md-4">
-                                <label for="search" class="form-label">Search</label>
-                                <input type="text" name="search" id="search" class="form-control" placeholder="Search by Employee Name, ID Card No..." value="{{ request('search', '') }}">
+                            <div class="col-12 col-md-3">
+                                <label for="search" class="form-label small fw-medium text-body-secondary">Search</label>
+                                <input
+                                    type="text"
+                                    name="search"
+                                    id="search"
+                                    class="form-control form-control-sm"
+                                    placeholder="Search by employee name, ID card no..."
+                                    value="{{ request('search', '') }}">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Request Date From</label>
-                                <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small fw-medium text-body-secondary">Request Date From</label>
+                                <input
+                                    type="date"
+                                    name="date_from"
+                                    class="form-control form-control-sm"
+                                    value="{{ request('date_from') }}">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Request Date To</label>
-                                <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small fw-medium text-body-secondary">Request Date To</label>
+                                <input
+                                    type="date"
+                                    name="date_to"
+                                    class="form-control form-control-sm"
+                                    value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-md-2">
-                                <label for="per_page" class="form-label">Show Entries</label>
-                                <select name="per_page" id="per_page" class="form-select">
+                            <div class="col-6 col-md-2">
+                                <label for="per_page" class="form-label small fw-medium text-body-secondary">Show entries</label>
+                                <select name="per_page" id="per_page" class="form-select form-select-sm">
                                     @foreach([10, 25, 50, 100] as $n)
                                         <option value="{{ $n }}" {{ request('per_page', 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3 d-flex gap-2">
-                                <button type="submit" class="btn btn-primary flex-grow-1">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i> Search
+                            <div class="col-12 col-md-1 d-flex gap-2 justify-content-md-end">
+                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 flex-md-grow-0 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i>
+                                    <span>Search</span>
                                 </button>
-                                <a href="{{ route('admin.security.employee_idcard_approval.approval2') }}" class="btn btn-outline-secondary">
+                                <a href="{{ route('admin.security.employee_idcard_approval.approval2') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center">
                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">restart_alt</i>
                                 </a>
                             </div>

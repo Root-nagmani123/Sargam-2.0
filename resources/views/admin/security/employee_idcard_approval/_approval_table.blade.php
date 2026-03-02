@@ -2,8 +2,8 @@
 @props(['requests', 'approvalStage' => 1])
 
 <div class="table-responsive">
-    <table class="table table-bordered table-hover align-middle mb-0" id="approvalTable">
-        <thead class="table-primary">
+    <table class="table text-nowrap align-middle mb-0" id="approvalTable">
+        <thead>
             <tr>
                 <th style="width:50px;" class="text-center"><input type="checkbox" id="selectAll" aria-label="Select all"></th>
                 <th style="width:50px;" class="text-center">S.No.</th>
