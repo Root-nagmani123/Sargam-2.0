@@ -264,10 +264,7 @@ class VehiclePassController extends Controller
         $vehiclePass->vehicle_tw_pk = $vehicleTwPk;
         $vehiclePass->employee_id_card = $employeeIdCard ?? '';
         $vehiclePass->emp_master_pk = $empMasterPk;
-        $vehiclePass->applicant_type = $applicantType;
-        $vehiclePass->applicant_name = $applicantName;
-        $vehiclePass->designation = $designation;
-        $vehiclePass->department = $department;
+       
         $vehiclePass->vehicle_type = $validated['vehicle_type'];
         $vehiclePass->vehicle_no = $validated['vehicle_no'];
         $vehiclePass->vehicle_req_id = $vehicleReqId;
