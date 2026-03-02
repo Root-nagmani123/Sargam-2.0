@@ -4,67 +4,44 @@
 
 @section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Protocol</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.request-for-others') }}">Estate Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Eligibility - Criteria</li>
-        </ol>
-    </nav>
+<x-breadcrum title="Eligibility - Criteria" />
 
     <x-session_message />
 
-    <div class="card shadow-sm border-0" style="border-left: 4px solid #0d6efd;">
-        <div class="card-body p-4">
+        <div class="card">
+        <div class="card-body">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
                 <div>
                     <h1 class="h4 fw-bold text-dark mb-1">Eligibility - Criteria</h1>
                     <p class="text-muted small mb-0">This page displays all the Estate Eligibility Block Mapping added in the system and provides options such as add, edit, delete, excel upload, print etc.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.eligibility-criteria.create') }}" class="btn btn-success"><i class="bi bi-plus-lg me-1"></i> Add New</a>
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i></button>
-                </div>
-            </div>
-
-            <div class="row align-items-center gap-2 mb-3">
-                <div class="col-auto">
-                    <label class="form-label mb-0">Show</label>
-                    <select id="perPage" class="form-select form-select-sm d-inline-block w-auto">
-                        <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
-                        <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
-                        <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
-                    </select>
-                    <span class="ms-1">entries</span>
-                </div>
-                <div class="col ms-auto">
-                    <label class="form-label mb-0 me-2">Search within table:</label>
-                    <input type="search" class="form-control form-control-sm d-inline-block w-auto" id="searchTable" placeholder="Search...">
+                    <a href="{{ route('admin.estate.eligibility-criteria.create') }}" class="btn btn-primary"><i class="material-icons material-symbols-rounded">add</i> Add New</a>
                 </div>
             </div>
 
             <div class="table-responsive">
-                <table class="table table-bordered table-striped table-hover align-middle mb-0">
-                    <thead class="table-primary">
+                <table class="table align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th class="text-center" style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all"></th>
-                            <th class="text-center">S.NO.</th>
-                            <th>PAY SCALE</th>
-                            <th>UNIT TYPE</th>
-                            <th>UNIT SUB TYPE</th>
-                            <th class="text-center" style="width: 80px;">EDIT</th>
+                            <th class="border-0 ps-3 fw-semibold text-secondary">S.No.</th>
+                            <th class="border-0 fw-semibold text-secondary">Pay Scale</th>
+                            <th class="border-0 fw-semibold text-secondary">Unit Type</th>
+                            <th class="border-0 fw-semibold text-secondary">Unit Sub Type</th>
+                            <th class="border-0 pe-3 fw-semibold text-secondary text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($items as $index => $row)
                         <tr>
-                            <td class="text-center"><input type="checkbox" class="form-check-input row-check" value="{{ $row->pk }}"></td>
-                            <td class="text-center">{{ $items->firstItem() + $index }}</td>
-                            <td>{{ $row->salaryGrade ? $row->salaryGrade->display_label_text : '-' }}</td>
-                            <td>{{ $row->unitType->name ?? '-' }}</td>
-                            <td>{{ $row->unitSubType->name ?? '-' }}</td>
-                            <td class="text-center">
-                                <a href="{{ route('admin.estate.eligibility-criteria.edit', $row->pk) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <td class="ps-3">{{ $items->firstItem() + $index }}</td>
+                            <td class="fw-medium">{{ $row->salaryGrade ? $row->salaryGrade->display_label_text : '-' }}</td>
+                            <td class="fw-medium">{{ $row->unitType->name ?? '-' }}</td>
+                            <td class="fw-medium">{{ $row->unitSubType->name ?? '-' }}</td>
+                            <td class="pe-3 text-end">
+                                <a href="{{ route('admin.estate.eligibility-criteria.edit', $row->pk) }}" class="text-primary" title="Edit">
+                                    <i class="material-icons material-symbols-rounded">edit</i>
+                                </a>
                             </td>
                         </tr>
                         @empty

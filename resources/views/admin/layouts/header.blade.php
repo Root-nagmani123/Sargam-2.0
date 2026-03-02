@@ -187,71 +187,6 @@
 
                 <!-- Right Side Actions - Enhanced -->
                 <div class="d-flex align-items-center ms-auto gap-2" style="margin-right: 56px;">
-                    <!-- Notification Icon -->
-                    <div class="dropdown position-relative">
-                        <button type="button"
-                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
-                            id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                            aria-label="Notifications" data-bs-placement="bottom" title="Notifications">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 30px; color: #475569;"
-                                aria-hidden="true">notifications_active</i>
-                            @php
-                            $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
-                            @endphp
-                            @if($unreadCount > 0)
-                            <span
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                style="font-size: 10px;">
-                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
-                            </span>
-                            @endif
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-xl p-2"
-                            style="min-width: 350px; max-height: 400px; overflow-y: auto;"
-                            aria-labelledby="notificationDropdown">
-                            <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2">
-                                <span class="fw-semibold">Notifications</span>
-                                @if($unreadCount > 0)
-                                <button type="button" class="btn btn-sm btn-link text-primary p-0"
-                                    onclick="markAllAsRead()">
-                                    Mark all as read
-                                </button>
-                                @endif
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <div id="notificationList">
-                                @php
-                                $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
-                                @endphp
-                                @if($notifications->count() > 0)
-                                @foreach($notifications as $notification)
-                                <li>
-                                    <a class="dropdown-item px-3 py-2 rounded-lg {{ $notification->is_read ? '' : 'bg-light' }}"
-                                        href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
-                                        <div class="d-flex flex-column">
-                                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}
-                                            </div>
-                                            <div class="text-muted small mt-1">
-                                                {{ Str::limit($notification->message ?? '', 50) }}</div>
-                                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
-                                                {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
-                                            </div>
-                                        </div>
-                                    </a>
-                                </li>
-                                @endforeach
-                                @else
-                                <li class="px-3 py-4 text-center text-muted">
-                                    <i class="material-icons material-symbols-rounded"
-                                        style="font-size: 48px; opacity: 0.3;">notifications_none</i>
-                                    <div class="mt-2">No notifications</div>
-                                </li>
-                                @endif
-                            </div>
-                        </ul>
-                    </div>
 
     <!-- Notifications (visible on both desktop and mobile) -->
     <div class="dropdown position-relative d-none d-lg-block">
@@ -342,30 +277,6 @@
             <span class="small fw-medium">Logout</span>
         </button>
     </form>
-
-    <!-- Last Login -->
-    <div class="d-flex align-items-center gap-1 small">
-        <i class="material-icons material-symbols-rounded fs-6">
-            history
-        </i>
-        <span class="fw-semibold">Last login:</span>
-
-        @php
-            $lastLogin = Auth::user()->last_login ?? null;
-            if ($lastLogin) {
-                $date = \Carbon\Carbon::parse($lastLogin);
-                $formattedDate = $date->format('Y-m-d H:i:s');
-                $isoDate = $date->toIso8601String();
-            } else {
-                $formattedDate = 'Never';
-                $isoDate = '';
-            }
-        @endphp
-
-        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}" class="fw-medium">
-            {{ $formattedDate }}
-        </time>
-    </div>
 </div>
 
                     <!-- Last Login - Enhanced -->
