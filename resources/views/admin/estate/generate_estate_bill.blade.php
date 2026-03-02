@@ -57,8 +57,8 @@
                         <i class="material-symbols-rounded" style="font-size: 1rem;">print</i>
                         Print Selected
                     </button>
-                    <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
-                    <button type="button" id="btn_save_as_draft" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">Save As Draft</button>
+                    <a href="#" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</a>
+                    <a href="#" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">Save As Draft</a>
                 </div>
             </form>
         </div>

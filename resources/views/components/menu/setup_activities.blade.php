@@ -192,11 +192,22 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Request for Others</span>
                                     </a>
                                 </li>
-                                
+                                <!-- <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.add-other-estate-request') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.add-other-estate-request') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Add Other Estate Request</span>
+                                    </a>
+                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.possession-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.possession-for-others') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Possession for Other</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.change-request-hac-approved') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.change-request-hac-approved') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Change Requests (HAC Approved)</span>
                                     </a>
                                 </li>
                                 <!-- <li class="sidebar-item">
@@ -206,12 +217,17 @@
                                     </a>
                                 </li> -->
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.update-meter-reading') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading</span>
+                                    </a>
+                                </li>
+                                <!-- <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading-of-other') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.update-meter-reading-of-other') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
                                     </a>
-                                </li>
-                                
+                                </li> -->
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.list-meter-reading*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.list-meter-reading') }}">
@@ -235,6 +251,12 @@
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill-for-other') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.generate-estate-bill-for-other') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill for Other</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill') ? 'active' : '' }}"
+                                        href="{{ route('admin.estate.generate-estate-bill') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Generate Estate Bill</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">

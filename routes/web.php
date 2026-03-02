@@ -803,9 +803,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::prefix('estate')->name('estate.')->group(function () {
         // Estate Request for Others
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+
+        // Change Requests (HAC Approved)
+        Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+        Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
+        Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
         
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
         // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
@@ -835,16 +841,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
         Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
 
-        // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
+        // Generate Estate Bill / Estate Bill Summary
         Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
-        Route::post('generate-estate-bill/verify-selected', [EstateController::class, 'verifySelectedBillsLbsna'])->name('generate-estate-bill.verify-selected');
-        Route::post('generate-estate-bill/save-as-draft', [EstateController::class, 'saveAsDraftBillsLbsna'])->name('generate-estate-bill.save-as-draft');
 
-        // Return House (estate_possession_other where return_home_status = 0)
-        Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
-        Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
-        Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
-        Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
+        // Return House
+        Route::get('return-house', function () {
+            return view('admin.estate.return_house');
+        })->name('return-house');
 
         // Define House
         Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
@@ -1010,13 +1013,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             Route::get('bill-report-grid', function () {
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
-
+            
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
             Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
             Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
-
-            Route::get('migration-report', [EstateController::class, 'estateMigrationReport'])->name('migration-report');
-            Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
         });
     });
 });
