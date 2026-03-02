@@ -99,6 +99,7 @@
                                 <th>Electric Meter Reading</th>
                                 <th>New Meter No.</th>
                                 <th>New Meter Reading <span class="text-danger">*</span></th>
+                                <th>Unit</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -134,6 +135,7 @@ $(document).ready(function() {
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading.unit-sub-types') }}";
     const prefill = @json($prefill ?? null);
 
+    // For this grid we avoid DataTables to keep typing smooth and prevent focus jumps.
     let dataTable = null;
 
     function loadBuildingsThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
@@ -207,10 +209,6 @@ $(document).ready(function() {
     }
 
     $('#loadMeterReadingsBtn').on('click', function() {
-        if (dataTable) {
-            dataTable.destroy();
-            dataTable = null;
-        }
         const billMonthVal = $('#bill_month').val();
         if (!billMonthVal) {
             alert('Please select Meter Change Month.');
@@ -243,63 +241,75 @@ $(document).ready(function() {
             $('#noDataMessage').hide();
             const tbody = $('#updateMeterReadingTable tbody');
             tbody.html('');
+            window.meterReadingRowData = window.meterReadingRowData || {};
             res.data.forEach(function(row, idx) {
-                var newMeterNo = row.new_meter_no != null ? row.new_meter_no : '';
-                var newMeterReading = row.new_meter_reading != null ? row.new_meter_reading : '';
-                const tr = '<tr>' +
+                var newMeterNo = (row.new_meter_no != null && row.new_meter_no !== undefined) ? String(row.new_meter_no) : '';
+                var newMeterReading = (row.new_meter_reading != null && row.new_meter_reading !== undefined && row.new_meter_reading !== '') ? String(row.new_meter_reading) : '';
+                const lastReadingVal = (row.electric_meter_reading !== null && row.electric_meter_reading !== '' && row.electric_meter_reading !== 'N/A')
+                    ? row.electric_meter_reading
+                    : '';
+                const meterSlot = row.meter_slot || 1;
+                const rowKey = row.pk + '_' + meterSlot;
+                window.meterReadingRowData[rowKey] = { pk: row.pk, meter_slot: meterSlot, new_meter_no: newMeterNo, curr_month_elec_red: newMeterReading };
+                const tr = '<tr data-last-reading="'+ lastReadingVal +'" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.old_meter_no || 'N/A') +'</td>' +
                     '<td>'+ (row.electric_meter_reading ?? 'N/A') +'</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ newMeterNo +'" placeholder="Enter new meter no."></td>' +
-                    '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ newMeterReading +'" min="0" placeholder="Enter">' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ newMeterNo.replace(/"/g, '&quot;') +'" placeholder="Enter new meter no."></td>' +
+                    '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ newMeterReading.replace(/"/g, '&quot;') +'" min="0" placeholder="Enter" step="1">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
-                    '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+(row.meter_slot || 1)+'"></td>' +
+                    '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ meterSlot +'"></td>' +
+                    '<td class="unit-cell">'+ (row.unit !== null && row.unit !== undefined ? row.unit : 'N/A') +'</td>' +
                     '</tr>';
                 tbody.append(tr);
             });
             $('#meterReadingSaveForm').show();
-            initDataTable();
         }).fail(function() {
             alert('Failed to load data.');
         });
     });
-
-    function initDataTable() {
-        if (dataTable) dataTable.destroy();
-        dataTable = $('#updateMeterReadingTable').DataTable({
-            order: [[1, 'asc']],
-            pageLength: 25,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-            paging: true,
-            language: {
-                search: "Search:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                infoEmpty: "Showing 0 to 0 of 0 entries",
-                infoFiltered: "(filtered from _MAX_ total entries)",
-                paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
-            },
-            responsive: true,
-            autoWidth: false,
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
-        });
-    }
 
     $('#select_all').on('change', function() {
         $('.row-check').prop('checked', $(this).prop('checked'));
     });
 
     $('#meterReadingSaveForm').on('submit', function(e) {
-        if (dataTable && dataTable.page.len() !== -1) {
-            e.preventDefault();
-            const form = this;
-            dataTable.one('draw', function() {
-                form.submit();
-            });
-            dataTable.page.len(-1).draw('page');
+        // No DataTable pagination; submit normally.
+    });
+
+    function getRowKey($row) {
+        var pk = $row.data('pk');
+        var meterSlot = $row.data('meter-slot');
+        if (pk == null || meterSlot == null) return null;
+        return pk + '_' + meterSlot;
+    }
+
+    function syncRowDataFromInputs($row) {
+        var key = getRowKey($row);
+        if (!key || !window.meterReadingRowData) return;
+        if (!window.meterReadingRowData[key]) window.meterReadingRowData[key] = { pk: $row.data('pk'), meter_slot: $row.data('meter-slot'), new_meter_no: '', curr_month_elec_red: '' };
+        window.meterReadingRowData[key].new_meter_no = $row.find('.new-meter-no').val() || '';
+        window.meterReadingRowData[key].curr_month_elec_red = $row.find('.new-meter-reading').val() || '';
+    }
+
+    $(document).on('input change', '.new-meter-reading', function() {
+        const $row = $(this).closest('tr');
+        syncRowDataFromInputs($row);
+        const lastVal = $row.data('last-reading');
+        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+        const currVal = $(this).val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        let unit = 'N/A';
+        if (lastReading !== null && currReading !== null && currReading >= lastReading) {
+            unit = currReading - lastReading;
         }
+        $row.find('.unit-cell').text(unit);
+    });
+
+    $(document).on('input change', '.new-meter-no', function() {
+        syncRowDataFromInputs($(this).closest('tr'));
     });
 });
 </script>

@@ -310,6 +310,7 @@
                     <tbody>
                         <tr>
                             <td>Electricity Charges</td>
+                            
                             <td class="amount">₹ {{ number_format((float)($bill->electricty_charges ?? 0), 2) }}</td>
                         </tr>
                         <tr>
