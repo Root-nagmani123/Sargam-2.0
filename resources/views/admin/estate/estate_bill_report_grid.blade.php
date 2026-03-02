@@ -1,4 +1,4 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 
 @section('title', 'Estate Bill Report - Grid View - Sargam')
 
@@ -85,8 +85,8 @@ $(document).ready(function() {
     var dataUrl = "{{ route('admin.estate.reports.bill-report-grid.data') }}";
 
     function formatMoney(n) {
-        if (n == null || n === '' || isNaN(n)) return '—';
-        return '₹ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        if (n == null || n === '' || isNaN(n)) return 'ΓÇö';
+        return 'Γé╣ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
     function loadBillReportGrid() {
@@ -114,17 +114,17 @@ $(document).ready(function() {
                         tbody.append(
                             '<tr>' +
                             '<td>' + (row.sno || '') + '</td>' +
-                            '<td>' + (row.employee_type || '—') + '</td>' +
-                            '<td>' + (row.name || '—') + '</td>' +
-                            '<td>' + (row.section || '—') + '</td>' +
-                            '<td>' + (row.building_name || '—') + '</td>' +
-                            '<td>' + (row.house_no || '—') + '</td>' +
-                            '<td>' + (row.from_date || '—') + '</td>' +
-                            '<td>' + (row.to_date || '—') + '</td>' +
-                            '<td>' + (String(row.meter_no || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (String(row.prev_reading || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (String(row.curr_reading || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (row.unit_consumed ?? '—') + '</td>' +
+                            '<td>' + (row.employee_type || 'ΓÇö') + '</td>' +
+                            '<td>' + (row.name || 'ΓÇö') + '</td>' +
+                            '<td>' + (row.section || 'ΓÇö') + '</td>' +
+                            '<td>' + (row.building_name || 'ΓÇö') + '</td>' +
+                            '<td>' + (row.house_no || 'ΓÇö') + '</td>' +
+                            '<td>' + (row.from_date || 'ΓÇö') + '</td>' +
+                            '<td>' + (row.to_date || 'ΓÇö') + '</td>' +
+                            '<td>' + (String(row.meter_no || '').replace(/\n/g, '<br>') || 'ΓÇö') + '</td>' +
+                            '<td>' + (String(row.prev_reading || '').replace(/\n/g, '<br>') || 'ΓÇö') + '</td>' +
+                            '<td>' + (String(row.curr_reading || '').replace(/\n/g, '<br>') || 'ΓÇö') + '</td>' +
+                            '<td>' + (row.unit_consumed ?? 'ΓÇö') + '</td>' +
                             '<td>' + formatMoney(row.total_charge) + '</td>' +
                             '<td>' + formatMoney(row.licence_fee) + '</td>' +
                             '<td>' + formatMoney(row.water_charges) + '</td>' +
