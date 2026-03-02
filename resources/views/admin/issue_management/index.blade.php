@@ -146,14 +146,19 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8" class="p-0">
-                                    <div class="empty-state">
-                                        <div class="empty-state-icon">
-                                            <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1"></iconify-icon>
+                                <td colspan="{{ hasRole('Staff') || hasRole('Doctor') || hasRole('Internal Faculty') ? 7 : 8 }}" class="p-0 align-middle">
+                                    <div class="d-flex flex-column align-items-center justify-content-center gap-3 py-5 px-4 text-center">
+                                        <div class="rounded-circle bg-light bg-opacity-75 d-flex align-items-center justify-content-center" style="width: 4rem; height: 4rem;">
+                                            <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1 text-body-tertiary"></iconify-icon>
                                         </div>
-                                        <h6 class="text-body-secondary mb-1">No issues</h6>
-                                        <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
-                                        <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm mt-3">Log New Issue</a>
+                                        <div class="d-flex flex-column gap-1">
+                                            <h6 class="mb-0 fw-semibold text-body-emphasis">No issues</h6>
+                                            <p class="small mb-0 text-body-secondary">Try adjusting your filters or log a new issue.</p>
+                                        </div>
+                                        <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                                            <i class="material-icons material-symbols-rounded me-1" style="font-size: 1.1rem; vertical-align: middle;">add</i>
+                                            Log New Issue
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
