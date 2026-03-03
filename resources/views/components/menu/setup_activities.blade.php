@@ -170,7 +170,7 @@
                                 @if($canSeeSelfOnly)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.request-for-estate') }}">
+                                        href="{{ Route::has('admin.estate.request-for-estate') ? route('admin.estate.request-for-estate') : url('/admin/estate/request-for-estate') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Request For Estate</span>
                                     </a>
                                 </li>

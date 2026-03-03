@@ -35,16 +35,17 @@ use App\Http\Controllers\Admin\{
     NotificationController,
     MemoDisciplineController,
     DashboardController,
+    DashboardStatisticsController,
+    ParticipantHistoryController,
     CourseRepositoryController,
+    EmployeeIDCardRequestController,
+    FamilyIDCardRequestController,
+    WhosWhoController,
+    EstateController,
 };
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
-use App\Http\Controllers\Admin\IssueManagement\{
-    IssueManagementController,
-    IssueCategoryController,
-    IssueSubCategoryController
-};
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
     EstateElectricSlabController,
@@ -63,11 +64,54 @@ Route::get('clear-cache', function () {
     Artisan::call('optimize:clear');
     return redirect()->back()->with('success', 'Cache cleared successfully');
 });
+
+/**
+ * Full optimize flow: clear → config cache → route cache → optimize
+ * Step-by-step proper order. Use after deployment or when caches need refresh.
+ * GET /admin/system/optimize (auth required)
+ */
+Route::get('admin/system/optimize', function () {
+    $steps = [];
+    $run = function ($command, $name) use (&$steps) {
+        try {
+            \Illuminate\Support\Facades\Artisan::call($command);
+            $output = trim(\Illuminate\Support\Facades\Artisan::output());
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => true, 'output' => $output ?: 'OK'];
+        } catch (\Throwable $e) {
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => false, 'output' => $e->getMessage()];
+        }
+    };
+
+    // Step 1: Clear everything (clean slate)
+    $run('config:clear', 'Config cache clear');
+    $run('cache:clear', 'Application cache clear');
+    $run('view:clear', 'View cache clear');
+    $run('route:clear', 'Route cache clear');
+
+    // Step 2: Cache config & routes
+    $run('config:cache', 'Config cache');
+    $run('route:cache', 'Route cache');
+
+    // Step 3: View cache (if available) and optimize
+    try {
+        \Illuminate\Support\Facades\Artisan::call('view:cache');
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => true, 'output' => trim(\Illuminate\Support\Facades\Artisan::output()) ?: 'OK'];
+    } catch (\Throwable $e) {
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => false, 'output' => $e->getMessage()];
+    }
+    $run('optimize', 'Optimize (autoload + bootstrap)');
+
+    $allOk = collect($steps)->every(fn ($s) => $s['ok']);
+    if (request()->wantsJson()) {
+        return response()->json(['success' => $allOk, 'steps' => $steps]);
+    }
+    return response()->view('admin.system.optimize-result', compact('steps', 'allOk'));
+})->middleware('auth')->name('admin.system.optimize');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
-Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
+Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
 // Protected Routes
@@ -90,12 +134,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('users.assignRoleSave');
     });
 
-
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
-
-
 
     // Member Routes
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
@@ -172,14 +214,12 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
+     Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
+    ->name('admin.stream.toggleStatus');
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
-
     Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
-
-
-
 
     // curriculum route
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
@@ -255,12 +295,6 @@ Route::middleware(['auth'])->group(function () {
 
     // City route
 
-    // section route
-    Route::prefix('section')->name('section.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.section.index');
-        })->name('index');
-    });
 
     // Group Mapping Routes
     Route::prefix('group-mapping')->name('group.mapping.')->controller(GroupMappingController::class)->group(function () {
@@ -277,6 +311,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
         Route::delete('delete/{id}', 'delete')->name('delete');
+       // Route::post('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
+
+     Route::post('get-courses-by-status', 'getCoursesByStatus')
+    ->name('get.courses.by.status');
+
+
+
+
+
     });
 
     //feedback route
@@ -296,68 +339,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update', 'update')->name('update');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
-
-    // ============================================
-    // Security Management Routes (Vehicle & Visitor Pass)
-    // ============================================
-    
-    // Vehicle Type Master Routes
-    Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
-    });
-
-    // Vehicle Pass Configuration Routes
-    Route::prefix('security/vehicle-pass-config')->name('admin.security.vehicle_pass_config.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassConfigController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::put('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
-    });
-
-    // Vehicle Pass Application Routes
-    Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-    });
-
-    // Vehicle Pass Approval Routes
-    Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/all', 'allApplications')->name('all');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::post('/approve/{id}', 'approve')->name('approve');
-        Route::post('/reject/{id}', 'reject')->name('reject');
-    });
-
-    // Visitor/Gate Pass Routes
-    Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/checkout/{id}', 'checkOut')->name('checkout');
-    });
-
-    // ============================================
-    // End Security Management Routes
-    // ============================================
 
     // Attendance Routes
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
@@ -441,10 +422,16 @@ Route::middleware(['auth'])->group(function () {
             // })->name('admin.courseAttendanceNoticeMap.chat');
             Route::get('/user', 'user')->name('user');
             Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
-            Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
-            Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
+            Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
+            Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
+
+            Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
+            Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
+
         });
+
+
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
@@ -493,7 +480,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
-        Route::post('import', 'import')->name('import');
+        Route::post('import', 'processImport')->name('process.import');
     });
 
     Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
@@ -587,14 +574,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
-    Route::prefix('admin/setup/caste-category')->name('admin.setup.caste_category.')->controller(CasteCategoryController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-    });
+
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -622,27 +602,21 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
-    //change password work here 
+    //change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
-
-
-
-
-
-
 
 
     // Report walal route
 
     Route::get('/faculty_view', function () {
         return view('admin.feedback.faculty_view');
-    })->name('admin.feedback.faculty_view');
+    })->name('admin.feedback.faculty_view.page');
 
     Route::get('/feedback_details', function () {
         return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details');
+    })->name('admin.feedback.feedback_details.page');
 
     //  dashboard page route
 
@@ -651,7 +625,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
-    Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
+
 
     Route::get('/upcoming-events', function () {
         return view('admin.dashboard.upcoming_events');
@@ -673,18 +647,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
     Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
-    
+
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
 
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
-    
+
     // AJAX endpoints for course repository
     Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
-    
+
     //course repository resource routes (MUST be after AJAX routes)
     Route::resource('course-repository', CourseRepositoryController::class, [
     'parameters' => ['course-repository' => 'pk']
@@ -705,6 +680,7 @@ Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNum
 Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
 Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
 Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/filter-data', [CourseRepositoryController::class, 'filterData'])->name('admin.course-repository.user.filter-data');
 Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
 
     // Feedback Database Routes
@@ -730,76 +706,9 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 
     Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
-  // Estate Management Routes
-  Route::prefix('estate')->name('estate.')->group(function () {
-    // Estate Request for Others
-    Route::get('request-for-others', function () {
-        return view('admin.estate.estate_request_for_others');
-    })->name('request-for-others');
-    
-    Route::get('add-other-estate-request', function () {
-        return view('admin.estate.add_other_estate_request');
-    })->name('add-other-estate-request');
 
-    // Estate Possession
-    Route::get('possession-for-others', function () {
-        return view('admin.estate.estate_possession_for_others');
-    })->name('possession-for-others');
-    
-    Route::get('possession-view', function () {
-        return view('admin.estate.estate_possession_view');
-    })->name('possession-view');
-
-    // Update Meter
-    Route::get('update-meter-reading', function () {
-        return view('admin.estate.update_meter_reading');
-    })->name('update-meter-reading');
-    
-    Route::get('update-meter-reading-of-other', function () {
-        return view('admin.estate.update_meter_reading_of_other');
-    })->name('update-meter-reading-of-other');
-    
-    Route::get('update-meter-no', function () {
-        return view('admin.estate.update_meter_no');
-    })->name('update-meter-no');
-
-    // Return House
-    Route::get('return-house', function () {
-        return view('admin.estate.return_house');
-    })->name('return-house');
-
-    // Define House
-    Route::get('define-house', function () {
-        return view('admin.estate.define_house');
-    })->name('define-house');
-
-    // AJAX Routes
-    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
-    Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
-
-    // Category Management
-    Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
-    Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
-    Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
-    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
-    Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
-    Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
-    Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
-    Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
-
-    // Priority Management
-    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
-    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
-    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
-    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
-
-    // Escalation Matrix (3-level hierarchy)
-    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
-    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
-    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
-
-    // Estate Management Routes
-    Route::prefix('estate')->name('estate.')->group(function () {
+    // Estate Management Routes (auth required)
+    Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->group(function () {
         // Estate Request for Others
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
 
@@ -869,7 +778,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
         Route::get('update-meter-reading/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypes'])->name('update-meter-reading.unit-sub-types');
         Route::post('update-meter-reading/store', [EstateController::class, 'storeMeterReadings'])->name('update-meter-reading.store');
-        
+
         Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
         Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
         Route::get('update-meter-reading-of-other/meter-reading-dates', [EstateController::class, 'getMeterReadingDatesOther'])->name('update-meter-reading-of-other.meter-reading-dates');
@@ -963,10 +872,16 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
 
         // Estate Reports
         Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('pending-meter-reading/data', [EstateController::class, 'getPendingMeterReadingData'])->name('pending-meter-reading.data');
+            Route::get('pending-meter-reading', [EstateController::class, 'pendingMeterReading'])->name('pending-meter-reading');
+            
+            Route::get('house-status/data', [EstateController::class, 'getHouseStatusData'])->name('house-status.data');
+            Route::get('house-status', [EstateController::class, 'houseStatus'])->name('house-status');
+            
             Route::get('pending-meter-reading', function () {
                 return view('admin.estate.pending_meter_reading');
             })->name('pending-meter-reading');
-            
+
             Route::get('house-status', function () {
                 return view('admin.estate.house_status');
             })->name('house-status');
@@ -986,5 +901,3 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
         });
     });
-});
-
