@@ -15,14 +15,16 @@ class EstatePossessionOtherDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
+            ->addColumn('checkbox', function ($row) {
+                return '<input type="checkbox" class="form-check-input row-select-possession" data-id="' . (int) $row->pk . '" aria-label="Select row">';
+            })
             ->editColumn('request_id', fn($row) => $row->estateOtherRequest->request_no_oth ?? 'N/A')
             ->editColumn('name', fn($row) => $row->estateOtherRequest->emp_name ?? 'N/A')
-            ->editColumn('designation', function ($row) {
-                $designation = $row->getAttribute('designation')
-                    ?? $row->getAttribute('eor_designation')
-                    ?? $row->estateOtherRequest?->designation
-                    ?? $row->estateOtherRequest?->section;
-                return $designation !== null && $designation !== '' ? $designation : '—';
+            ->editColumn('section_name', function ($row) {
+                $section = $row->getAttribute('eor_section') ?? $row->estateOtherRequest?->section;
+                $designation = $row->getAttribute('eor_designation') ?? $row->estateOtherRequest?->designation;
+                $value = ($section !== null && $section !== '') ? $section : $designation;
+                return $value !== null && $value !== '' ? $value : '—';
             })
             ->editColumn('estate_name', fn($row) => $row->campus_name ?? 'N/A')
             ->editColumn('unit_type', fn($row) => $row->unit_type_name ?? 'N/A')
@@ -54,7 +56,7 @@ class EstatePossessionOtherDataTable extends DataTable
             ->orderColumn('DT_RowIndex', fn ($query, $order) => $query->orderBy('estate_possession_other.pk', $order))
             ->orderColumn('request_id', fn ($query, $order) => $query->orderBy('eor.request_no_oth', $order))
             ->orderColumn('name', fn ($query, $order) => $query->orderBy('eor.emp_name', $order))
-            ->orderColumn('designation', fn ($query, $order) => $query->orderBy('eor.designation', $order))
+            ->orderColumn('section_name', fn ($query, $order) => $query->orderBy('eor.section', $order))
             ->orderColumn('estate_name', fn ($query, $order) => $query->orderBy('ec.campus_name', $order))
             ->orderColumn('unit_type', fn ($query, $order) => $query->orderBy('eut.unit_type', $order))
             ->orderColumn('building_name', fn ($query, $order) => $query->orderBy('eb.block_name', $order))
@@ -76,7 +78,7 @@ class EstatePossessionOtherDataTable extends DataTable
                     </a>
                 </div>';
             })
-            ->rawColumns(['actions'])
+            ->rawColumns(['checkbox', 'actions'])
             ->setRowId('pk');
     }
 
@@ -93,6 +95,7 @@ class EstatePossessionOtherDataTable extends DataTable
                 'eor.section',
                 'eor.designation',
                 'eor.designation as eor_designation',
+                'eor.section as eor_section',
                 'eut.unit_type as unit_type_name',
                 'eust.unit_sub_type as unit_sub_type_name',
                 'ehm.house_no as house_no_display',
@@ -142,10 +145,11 @@ class EstatePossessionOtherDataTable extends DataTable
     public function getColumns(): array
     {
         return [
+            Column::computed('checkbox')->title('')->addClass('text-center')->orderable(false)->searchable(false)->width('40px'),
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(true)->searchable(false)->width('50px'),
             Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
             Column::make('name')->title('NAME')->orderable(true)->searchable(true),
-            Column::make('designation')->title('DESIGNATION')->orderable(true)->searchable(true),
+            Column::make('section_name')->title('SECTION NAME')->orderable(true)->searchable(true),
             Column::make('estate_name')->title('ESTATE NAME')->orderable(true)->searchable(true),
             Column::make('unit_type')->title('UNIT TYPE')->orderable(true)->searchable(true),
             Column::make('building_name')->title('BUILDING NAME')->orderable(true)->searchable(true),

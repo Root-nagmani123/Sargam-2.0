@@ -11,7 +11,7 @@ use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
 /**
- * Single table for HAC Approved: Change requests + New requests (forwarded from HAC).
+ * Single table for HAC Approved: Change requests + New requests.
  */
 class EstateHacApprovedDataTable extends DataTable
 {
@@ -119,7 +119,6 @@ class EstateHacApprovedDataTable extends DataTable
 
         $part2 = DB::table('estate_home_request_details as eh')
             ->where('eh.hac_status', 1)
-            ->where('eh.f_status', 1)
             ->where('eh.change_status', 0)
             ->when(!empty($hasPossessionPks), function ($q) use ($hasPossessionPks) {
                 $q->whereNotIn('eh.pk', $hasPossessionPks);

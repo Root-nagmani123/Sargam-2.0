@@ -18,7 +18,7 @@
                 </div>
                 <div class="flex-shrink-0 d-flex flex-wrap gap-2">
                     <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
-                    <a href="{{ route('admin.estate.hac-forward') }}" class="btn btn-outline-primary px-3" title="HAC Forward"><i class="bi bi-send-fill me-1"></i> HAC Forward</a>
+                    <a href="{{ route('admin.estate.change-request-hac-approved') }}" class="btn btn-outline-primary px-3" title="HAC Approved"><i class="bi bi-check2-square me-1"></i> HAC Approved</a>
                     <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
                 </div>
             </div>
@@ -112,17 +112,6 @@
                                     <option value="{{ (string) $pk }}">{{ $name }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_vacant_house_select" class="form-label">Vacant house <span class="text-muted small">(by eligibility type)</span></label>
-                            <select class="form-select" id="modal_vacant_house_select">
-                                <option value="">— Select vacant house —</option>
-                                <option value="__manual__">— Manual entry —</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="modal_current_alot" class="form-label">Alloted House</label>
-                            <input type="text" class="form-control" id="modal_current_alot" name="current_alot" maxlength="20" placeholder="e.g. TTP-II-07" title="House no (max 20 characters)">
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -284,37 +273,12 @@
             fillFromEmployeeDetails({});
         }
 
-        function loadVacantHouses(eligibilityTypePk, thenSelectValue) {
-            if (!eligibilityTypePk) {
-                $('#modal_vacant_house_select').find('option:not([value=""])').not('[value="__manual__"]').remove();
-                $('#modal_vacant_house_select').val('');
-                return;
-            }
-            var url = '{{ route("admin.estate.request-for-estate.vacant-houses") }}?eligibility_type_pk=' + eligibilityTypePk;
-            var $sel = $('#modal_vacant_house_select');
-            $sel.find('option[value!=""][value!="__manual__"]').remove();
-            $.get(url, function(res) {
-                var data = res.data || [];
-                data.forEach(function(o) {
-                    var label = o.label || (o.block_name + ' - ' + o.house_no);
-                    $sel.append($('<option></option>').attr('value', label).text(label));
-                });
-                if (thenSelectValue !== undefined && thenSelectValue !== '') {
-                    $sel.val(thenSelectValue);
-                    if ($sel.val() !== thenSelectValue) {
-                        $sel.val('__manual__');
-                    }
-                }
-            });
-        }
-
         $('#btn-open-add-request-estate').on('click', function() {
             $('#addEditRequestEstateModalLabel').text('Add Estate Request');
             $('#request_estate_id').val('');
             $('#formAddEditRequestEstate')[0].reset();
             $('#request_estate_id').val('');
             $('#modal_employee_pk').val('');
-            $('#modal_vacant_house_select').val('');
             $('#modal_req_id').val('');
             $('#modal_req_date').val(new Date().toISOString().slice(0, 10));
             $('#modal_status_wrap').addClass('d-none');
@@ -322,8 +286,6 @@
             clearEmployeeDerivedFields();
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees();
-            var defElig = $('#modal_eligibility_type_pk').val();
-            loadVacantHouses(defElig);
             $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
                 if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
                 if (addEditModal) addEditModal.show();
@@ -349,13 +311,9 @@
             var eligLabel = $btn.data('eligibility_type_label');
             ensureEligibilityOptionAndSetVal(eligPk, eligLabel);
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
-            $('#modal_current_alot').val($btn.data('current_alot') || '');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
             loadRequestEstateEmployees(rowPk, rowPk);
-            var currentAlot = $btn.data('current_alot') || '';
-            var valueForSelect = (currentAlot.indexOf(' - ') !== -1) ? currentAlot.split(' - ').pop().trim() : currentAlot;
-            loadVacantHouses(eligPk, valueForSelect);
             if (addEditModal) addEditModal.show();
         });
 
@@ -387,24 +345,6 @@
         $('#modal_new_emp_name').on('input blur', function() {
             if ($('#modal_employee_pk').val() === '__new__') {
                 $('#modal_emp_name').val($(this).val().trim());
-            }
-        });
-
-        $('#modal_eligibility_type_pk').on('change', function() {
-            var pk = $(this).val();
-            loadVacantHouses(pk);
-            $('#modal_vacant_house_select').val('');
-            $('#modal_current_alot').val('');
-        });
-
-        $('#modal_vacant_house_select').on('change', function() {
-            var v = $(this).val();
-            if (v === '__manual__') {
-                $('#modal_current_alot').val('').focus();
-            } else if (v) {
-                $('#modal_current_alot').val(v);
-            } else {
-                $('#modal_current_alot').val('');
             }
         });
 
