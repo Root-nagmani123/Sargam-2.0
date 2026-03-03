@@ -31,14 +31,20 @@ class EstateOtherRequestDataTable extends DataTable
             }, true)
             ->addColumn('actions', function ($row) {
                 $viewUrl = route('admin.estate.possession-view', ['requester_id' => $row->pk]);
-                $editUrl = route('admin.estate.add-other-estate-request', ['id' => $row->pk]);
+                $deleteUrl = route('admin.estate.other-estate-request.destroy', ['id' => $row->pk]);
+                $doj = $row->doj_acad ? $row->doj_acad->format('Y-m-d') : '';
 
-                return '<div class="d-inline-flex align-items-center gap-2" role="group">
-                    <a href="' . $viewUrl . '" class="btn btn-sm btn-info" title="View">
-                        <i class="bi bi-eye"></i>
+                return '<div class="d-inline-flex align-items-center gap-1" role="group">
+                    <a href="javascript:void(0);" class="text-primary btn-edit-other-request" title="Edit"
+                        data-id="' . (int) $row->pk . '"
+                        data-employee_name="' . e($row->emp_name ?? '') . '"
+                        data-father_name="' . e($row->f_name ?? '') . '"
+                        data-section="' . e($row->section ?? '') . '"
+                        data-doj_academy="' . e($doj) . '">
+                        <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
                     </a>
-                    <a href="' . $editUrl . '" class="btn btn-sm btn-warning" title="Edit">
-                        <i class="bi bi-pencil"></i>
+                    <a href="javascript:void(0);" class="text-primary btn-delete-other-request" data-url="' . e($deleteUrl) . '" data-id="' . $row->pk . '" title="Delete">
+                        <i class="material-symbols-rounded" style="font-size:18px;">delete</i>
                     </a>
                 </div>';
             })
@@ -54,7 +60,7 @@ class EstateOtherRequestDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('estateRequestTable')
-            ->addTableClass('table table-bordered table-hover text-nowrap w-100')
+            ->addTableClass('table text-nowrap w-100')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
