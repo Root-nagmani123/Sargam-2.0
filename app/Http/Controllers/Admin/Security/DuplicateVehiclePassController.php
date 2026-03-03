@@ -122,12 +122,28 @@ class DuplicateVehiclePassController extends Controller
             return response()->json(['success' => false, 'message' => 'Vehicle not found in TW or FW records.']);
         }
 
-        // Get employee details if available
+        // Get employee details: first by emp_master_pk, else by employee_id_card (match emp_id in employee_master)
         $employee = null;
-        if ($vehiclePass->emp_master_pk) {
+        $empMasterPk = $vehiclePass->emp_master_pk;
+        if ($empMasterPk) {
             $employee = EmployeeMaster::with(['designation', 'department'])
-                ->find($vehiclePass->emp_master_pk);
+                ->find($empMasterPk);
         }
+        if (!$employee && !empty(trim($vehiclePass->employee_id_card ?? ''))) {
+            $employee = EmployeeMaster::with(['designation', 'department'])
+                ->where('emp_id', trim($vehiclePass->employee_id_card))
+                ->first();
+            if ($employee) {
+                $empMasterPk = $employee->pk;
+            }
+        }
+
+        // Name, designation, department: from employee relation, or from TW/FW record columns (applicant_name, designation, department)
+        $employeeName = $employee
+            ? trim($employee->first_name . ' ' . ($employee->last_name ?? ''))
+            : (trim($vehiclePass->applicant_name ?? '') ?: '');
+        $designation = $employee?->designation?->designation_name ?? trim($vehiclePass->designation ?? '') ?: '';
+        $department = $employee?->department?->department_name ?? trim($vehiclePass->department ?? '') ?: '';
 
         return response()->json([
             'success' => true,
@@ -135,11 +151,11 @@ class DuplicateVehiclePassController extends Controller
                 'vehicle_pass_no' => $vehiclePassPk,
                 'vehicle_type' => $vehiclePass->vehicle_type,
                 'vehicle_type_name' => $vehiclePass->vehicleType?->vehicle_type ?? '',
-                'emp_master_pk' => $vehiclePass->emp_master_pk,
-                'employee_name' => $employee ? trim($employee->first_name . ' ' . ($employee->last_name ?? '')) : '',
+                'emp_master_pk' => $empMasterPk,
+                'employee_name' => $employeeName,
                 'id_card_number' => $vehiclePass->employee_id_card ?? '',
-                'designation' => $employee?->designation?->designation_name ?? '',
-                'department' => $employee?->department?->department_name ?? '',
+                'designation' => $designation,
+                'department' => $department,
                 'start_date' => $vehiclePass->veh_card_valid_from ? $vehiclePass->veh_card_valid_from->format('Y-m-d') : '',
                 'end_date' => $vehiclePass->vech_card_valid_to ? $vehiclePass->vech_card_valid_to->format('Y-m-d') : '',
                 'reason_for_duplicate' => $vehiclePass->card_reason ?? '',

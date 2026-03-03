@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class DuplicateIDCardRequestController extends Controller
@@ -140,7 +141,8 @@ class DuplicateIDCardRequestController extends Controller
             4 => 'Voter ID',
         ];
 
-        return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions'));
+        $data = [];
+        return view('admin.duplicate_idcard.create', compact('me', 'idProofOptions', 'data'));
     }
 
     /**
@@ -237,6 +239,261 @@ class DuplicateIDCardRequestController extends Controller
             'success' => false,
             'message' => 'Lookup is currently supported only for Permanent and Family ID cards.',
         ], 422);
+    }
+
+    /**
+     * Show edit form for a duplicate ID card request (only pending, owned by current user).
+     * @param string $id emp_id_apply e.g. DUP00001 (Permanent) or DUO05321 (Contractual/Other)
+     */
+    public function edit(string $id)
+    {
+        $user = Auth::user();
+        $employeePk = $user->user_id ?? $user->pk ?? null;
+        if (!$employeePk) {
+            abort(403);
+        }
+
+        $idProofOptions = [
+            1 => 'Aadhar Card',
+            2 => 'PAN Card',
+            3 => 'Driving Licence',
+            4 => 'Voter ID',
+        ];
+
+        $me = null;
+        $data = [];
+        $existing_docs = ['aadhar_doc' => null];
+
+        if (str_starts_with($id, 'DUP')) {
+            $row = SecurityDupPermIdApply::with('employee')->where('emp_id_apply', $id)->first();
+            if (!$row || (int) $row->created_by !== (int) $employeePk) {
+                abort(404);
+            }
+            if ((int) $row->id_status !== SecurityParmIdApply::ID_STATUS_PENDING) {
+                return redirect()->route('admin.duplicate_idcard.index')
+                    ->with('error', 'Only pending requests can be edited.');
+            }
+            $emp = $row->employee;
+            $data = [
+                'id_card_type' => 'Permanent',
+                'id_card_number' => $row->id_card_no,
+                'employee_name' => $emp ? trim($emp->first_name . ' ' . ($emp->last_name ?? '')) : ($row->employee_name ?? ''),
+                'designation' => $emp?->designation?->designation_name ?? '',
+                'date_of_birth' => $row->employee_dob ? $row->employee_dob->format('Y-m-d') : '',
+                'blood_group' => $row->blood_group ?? '',
+                'mobile_number' => $row->mobile_no ?? '',
+                'father_name' => '',
+                'card_reason' => $row->card_reason ?? '',
+                'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : '',
+                'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : '',
+                'id_proof' => 1,
+                'photo_path' => $row->id_photo_path,
+            ];
+            $existing_docs = [
+                'aadhar_doc' => $row->service_ext ?? null,
+                'fir_doc' => $row->fir_doc ?? null,
+                'payment_receipt' => $row->payment_receipt ?? null,
+            ];
+        } else {
+            $row = SecurityDupOtherIdApply::where('emp_id_apply', $id)->first();
+            if (!$row || (int) $row->created_by !== (int) $employeePk) {
+                abort(404);
+            }
+            if ((int) $row->id_status !== SecurityParmIdApply::ID_STATUS_PENDING) {
+                return redirect()->route('admin.duplicate_idcard.index')
+                    ->with('error', 'Only pending requests can be edited.');
+            }
+            $data = [
+                'id_card_type' => $row->card_type ?: 'Contractual',
+                'id_card_number' => $row->id_card_no,
+                'employee_name' => $row->employee_name ?? '',
+                'designation' => $row->designation_name ?? '',
+                'date_of_birth' => $row->employee_dob ? $row->employee_dob->format('Y-m-d') : '',
+                'blood_group' => $row->blood_group ?? '',
+                'mobile_number' => $row->mobile_no ?? '',
+                'father_name' => '',
+                'card_reason' => $row->card_reason ?? '',
+                'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : '',
+                'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : '',
+                'id_proof' => (int) ($row->id_proof ?? 1),
+                'photo_path' => $row->id_photo_path,
+            ];
+            $existing_docs = [
+                'aadhar_doc' => $row->aadhar_doc ?? null,
+                'fir_doc' => $row->fir_doc ?? null,
+                'service_ext' => $row->service_ext ?? null,
+                'payment_receipt' => $row->payment_receipt ?? null,
+            ];
+        }
+
+        return view('admin.duplicate_idcard.create', [
+            'me' => $me,
+            'idProofOptions' => $idProofOptions,
+            'edit_id' => $id,
+            'data' => $data,
+            'existing_docs' => $existing_docs,
+        ]);
+    }
+
+    /**
+     * Update a duplicate ID card request (only pending, owned by current user).
+     * Editable: card_reason and reason-specific documents (optional replace).
+     */
+    public function update(Request $request, string $id)
+    {
+        $user = Auth::user();
+        $employeePk = $user->user_id ?? $user->pk ?? null;
+        if (!$employeePk) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'card_reason' => 'required|string|max:255',
+            'card_valid_from' => 'nullable|date',
+            'card_valid_to' => 'nullable|date|after_or_equal:card_valid_from',
+            'photo' => 'nullable|file|image|mimes:jpeg,jpg,png,gif|max:2048',
+            'id_proof' => 'nullable|integer|in:1,2,3,4',
+            'aadhar_doc' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'damage_doc' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'fir_doc' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'service_ext' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'new_employee_name' => 'nullable|string|max:100',
+            'name_proof' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'designation_order' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+        ]);
+
+        $cardReason = $validated['card_reason'];
+
+        if (str_starts_with($id, 'DUP')) {
+            $row = SecurityDupPermIdApply::where('emp_id_apply', $id)->first();
+            if (!$row || (int) $row->created_by !== (int) $employeePk) {
+                abort(404);
+            }
+            if ((int) $row->id_status !== SecurityParmIdApply::ID_STATUS_PENDING) {
+                return redirect()->route('admin.duplicate_idcard.index')
+                    ->with('error', 'Only pending requests can be updated.');
+            }
+            $updates = ['card_reason' => $cardReason];
+            if ($request->filled('card_valid_from')) {
+                $updates['card_valid_from'] = $request->card_valid_from;
+            }
+            if ($request->filled('card_valid_to')) {
+                $updates['card_valid_to'] = $request->card_valid_to;
+            }
+            if ($request->hasFile('photo')) {
+                if ($row->id_photo_path) {
+                    Storage::disk('public')->delete($row->id_photo_path);
+                }
+                $updates['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
+            }
+            if ($request->hasFile('aadhar_doc')) {
+                $ext = $request->file('aadhar_doc')->getClientOriginalExtension();
+                $file = $id . '_IDPROOF_' . time() . '.' . $ext;
+                $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['service_ext'] = $file;
+            }
+            if ($request->hasFile('damage_doc')) {
+                $ext = $request->file('damage_doc')->getClientOriginalExtension();
+                $file = $id . '_DAMAGE_PROOF_' . time() . '.' . $ext;
+                $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['fir_doc'] = $file;
+            }
+            if ($request->hasFile('fir_doc')) {
+                $ext = $request->file('fir_doc')->getClientOriginalExtension();
+                $file = $id . '_FIR_' . time() . '.' . $ext;
+                $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['fir_doc'] = $file;
+            }
+            if ($request->hasFile('service_ext')) {
+                $ext = $request->file('service_ext')->getClientOriginalExtension();
+                $file = $id . '_SERVICE_EXT_' . time() . '.' . $ext;
+                $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['service_ext'] = $file;
+            }
+            if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
+                $updates['employee_name'] = $request->new_employee_name;
+                if ($request->hasFile('name_proof')) {
+                    $ext = $request->file('name_proof')->getClientOriginalExtension();
+                    $file = $id . '_NAME_PROOF_' . time() . '.' . $ext;
+                    $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
+                    $updates['payment_receipt'] = $file;
+                }
+            }
+            if ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
+                $ext = $request->file('designation_order')->getClientOriginalExtension();
+                $file = $id . '_DESIG_ORDER_' . time() . '.' . $ext;
+                $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['payment_receipt'] = $file;
+            }
+            $row->update($updates);
+        } else {
+            $row = SecurityDupOtherIdApply::where('emp_id_apply', $id)->first();
+            if (!$row || (int) $row->created_by !== (int) $employeePk) {
+                abort(404);
+            }
+            if ((int) $row->id_status !== SecurityParmIdApply::ID_STATUS_PENDING) {
+                return redirect()->route('admin.duplicate_idcard.index')
+                    ->with('error', 'Only pending requests can be updated.');
+            }
+            $updates = ['card_reason' => $cardReason];
+            if ($request->filled('card_valid_from')) {
+                $updates['card_valid_from'] = $request->card_valid_from;
+            }
+            if ($request->filled('card_valid_to')) {
+                $updates['card_valid_to'] = $request->card_valid_to;
+            }
+            if ($request->hasFile('photo')) {
+                if ($row->id_photo_path) {
+                    Storage::disk('public')->delete($row->id_photo_path);
+                }
+                $updates['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
+            }
+            if ($request->filled('id_proof')) {
+                $updates['id_proof'] = (int) $request->id_proof;
+            }
+            if ($request->hasFile('aadhar_doc')) {
+                $ext = $request->file('aadhar_doc')->getClientOriginalExtension();
+                $file = $id . '_IDPROOF_' . time() . '.' . $ext;
+                $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['aadhar_doc'] = $file;
+            }
+            if ($request->hasFile('damage_doc')) {
+                $ext = $request->file('damage_doc')->getClientOriginalExtension();
+                $file = $id . '_DAMAGE_PROOF_' . time() . '.' . $ext;
+                $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['fir_doc'] = $file;
+            }
+            if ($request->hasFile('fir_doc')) {
+                $ext = $request->file('fir_doc')->getClientOriginalExtension();
+                $file = $id . '_FIR_' . time() . '.' . $ext;
+                $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['fir_doc'] = $file;
+            }
+            if ($request->hasFile('service_ext')) {
+                $ext = $request->file('service_ext')->getClientOriginalExtension();
+                $file = $id . '_SERVICE_EXT_' . time() . '.' . $ext;
+                $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['service_ext'] = $file;
+            }
+            if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
+                $updates['employee_name'] = $request->new_employee_name;
+                if ($request->hasFile('name_proof')) {
+                    $ext = $request->file('name_proof')->getClientOriginalExtension();
+                    $file = $id . '_NAME_PROOF_' . time() . '.' . $ext;
+                    $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
+                    $updates['payment_receipt'] = $file;
+                }
+            }
+            if ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
+                $ext = $request->file('designation_order')->getClientOriginalExtension();
+                $file = $id . '_DESIG_ORDER_' . time() . '.' . $ext;
+                $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['payment_receipt'] = $file;
+            }
+            $row->update($updates);
+        }
+
+        return redirect()->route('admin.duplicate_idcard.index')->with('success', 'Duplicate ID Card request updated successfully.');
     }
 
     public function store(Request $request)

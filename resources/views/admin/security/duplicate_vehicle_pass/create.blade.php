@@ -139,23 +139,15 @@
                             vehicleType.value = vehData.vehicle_type;
                         }
 
-                        // Auto-fill employee name and PK
-                        if (vehData.emp_master_pk && !empMasterPk.value) {
+                        // Auto-fill employee PK and name
+                        if (vehData.emp_master_pk) {
                             empMasterPk.value = vehData.emp_master_pk;
                         }
-                        if (vehData.employee_name && !empNameDisplay.value) {
-                            empNameDisplay.value = vehData.employee_name;
-                        }
+                        empNameDisplay.value = vehData.employee_name || '';
 
-                        // Auto-fill designation
-                        if (vehData.designation && !designation.value) {
-                            designation.value = vehData.designation;
-                        }
-
-                        // Auto-fill department
-                        if (vehData.department && !department.value) {
-                            department.value = vehData.department;
-                        }
+                        // Auto-fill designation and department
+                        designation.value = vehData.designation || '';
+                        department.value = vehData.department || '';
 
                         // Auto-fill ID card number
                         if (vehData.id_card_number && !idCard.value) {

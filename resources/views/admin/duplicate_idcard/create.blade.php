@@ -45,13 +45,11 @@
                     <div class="col-md-4">
                         <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
                         @if(isset($edit_id))
-                            <div class="form-control-plaintext">
-                                @if($data['photo_path'] ?? null)
-                                    <a href="{{ asset('storage/' . $data['photo_path']) }}" target="_blank" class="btn btn-sm btn-outline-primary">View Photo</a>
-                                @else
-                                    <span class="text-muted">No photo uploaded</span>
-                                @endif
-                            </div>
+                            @if($data['photo_path'] ?? null)
+                                <a href="{{ asset('storage/' . $data['photo_path']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Photo</a>
+                            @endif
+                            <input type="file" name="photo" class="form-control" accept=".jpeg,.jpg,.png,.gif">
+                            <small class="text-muted d-block">Leave empty to keep current. Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
                         @else
                             <input type="file" name="photo" class="form-control" accept=".jpeg,.jpg,.png,.gif" required>
                             <small class="text-muted d-block">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
@@ -61,7 +59,7 @@
 
                     <div class="col-md-4">
                         <label class="form-label">ID Proof <span class="text-danger">*</span></label>
-                        <select name="id_proof" class="form-select" {{ isset($edit_id) ? 'disabled' : 'required' }}>
+                        <select name="id_proof" class="form-select" required>
                             @foreach($idProofOptions as $k => $label)
                                 <option value="{{ $k }}" {{ (int)old('id_proof', $data['id_proof'] ?? 1)===(int)$k ? 'selected':'' }}>{{ $label }}</option>
                             @endforeach
@@ -72,13 +70,11 @@
                     <div class="col-md-4">
                         <label class="form-label">Upload Aadhar Copy <span class="text-danger">*</span></label>
                         @if(isset($edit_id))
-                            <div class="form-control-plaintext">
-                                @if($existing_docs['aadhar_doc'] ?? null)
-                                    <a href="{{ asset('storage/idcard/dup_docs/' . $existing_docs['aadhar_doc']) }}" target="_blank" class="btn btn-sm btn-outline-primary">View Document</a>
-                                @else
-                                    <span class="text-muted">No document uploaded</span>
-                                @endif
-                            </div>
+                            @if($existing_docs['aadhar_doc'] ?? null)
+                                <a href="{{ asset('storage/idcard/dup_docs/' . $existing_docs['aadhar_doc']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Document</a>
+                            @endif
+                            <input type="file" name="aadhar_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
+                            <small class="text-muted d-block">Leave empty to keep current. Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @else
                             <input type="file" name="aadhar_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png" required>
                             <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
@@ -140,11 +136,12 @@
                         <label class="form-label">Reason for Applying Duplicate Card <span class="text-danger">*</span></label>
                         <select name="card_reason" id="card_reason_select" class="form-select" required>
                             <option value="">--Select--</option>
-                            <option value="Damage Card" {{ old('card_reason')==='Damage Card'?'selected':'' }}>Damage Card</option>
-                            <option value="Card Lost" {{ old('card_reason')==='Card Lost'?'selected':'' }}>Card Lost</option>
-                            <option value="Service Extended" {{ old('card_reason')==='Service Extended'?'selected':'' }}>Service Extended</option>
-                            <option value="Change in Name" {{ old('card_reason')==='Change in Name'?'selected':'' }}>Change in Name</option>
-                            <option value="Designation Change" {{ old('card_reason')==='Designation Change'?'selected':'' }}>Designation Change</option>
+                            @php $selReason = old('card_reason', $data['card_reason'] ?? ''); @endphp
+                            <option value="Damage Card" {{ $selReason==='Damage Card'?'selected':'' }}>Damage Card</option>
+                            <option value="Card Lost" {{ $selReason==='Card Lost'?'selected':'' }}>Card Lost</option>
+                            <option value="Service Extended" {{ $selReason==='Service Extended'?'selected':'' }}>Service Extended</option>
+                            <option value="Change in Name" {{ $selReason==='Change in Name'?'selected':'' }}>Change in Name</option>
+                            <option value="Designation Change" {{ $selReason==='Designation Change'?'selected':'' }}>Designation Change</option>
                         </select>
                         @error('card_reason')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -160,8 +157,15 @@
                     <!-- Card Lost - FIR Document -->
                     <div class="col-md-6" id="fir_doc_section" style="display: none;">
                         <label class="form-label">Upload FIR Copy / Document Proof <span class="text-danger">*</span></label>
+                        @if(isset($edit_id) && !empty($existing_docs['fir_doc'] ?? null))
+                            <a href="{{ asset('storage/idcard/dup_docs/' . $existing_docs['fir_doc']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current FIR Document</a>
+                        @endif
                         <input type="file" name="fir_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
-                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        @if(isset($edit_id))
+                            <small class="text-muted d-block">Leave empty to keep current. Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        @else
+                            <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        @endif
                         @error('fir_doc')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -197,12 +201,12 @@
 
                     <div class="col-md-3">
                         <label class="form-label">ID-Card Valid From</label>
-                        <input type="date" name="card_valid_from" id="card_valid_from" class="form-control" value="{{ old('card_valid_from') }}">
+                        <input type="date" name="card_valid_from" id="card_valid_from" class="form-control" value="{{ old('card_valid_from', $data['card_valid_from'] ?? '') }}">
                         @error('card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">ID-Card Valid Upto</label>
-                        <input type="date" name="card_valid_to" id="card_valid_to" class="form-control" value="{{ old('card_valid_to') }}">
+                        <input type="date" name="card_valid_to" id="card_valid_to" class="form-control" value="{{ old('card_valid_to', $data['card_valid_to'] ?? '') }}">
                         @error('card_valid_to')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
