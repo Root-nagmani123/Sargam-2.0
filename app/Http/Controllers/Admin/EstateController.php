@@ -40,66 +40,29 @@ class EstateController extends Controller
     }
 
     /**
-     * Estate Approval Setting - Listing of approval management (requested by / approved by).
+     * Get next Request ID for Add Estate Request (e.g. home-req-01, home-req-02).
      */
-    public function estateApprovalSetting(EstateApprovalSettingDataTable $dataTable)
+    public function getNextRequestForEstateId()
     {
-        return $dataTable->render('admin.estate.estate_approval_setting');
+        $nextId = $this->getNextEstateRequestId();
+        return response()->json(['next_req_id' => $nextId]);
     }
 
     /**
-     * Add Approved Request House - Form to assign employees to an approver (dual list).
+     * Compute next req_id from DB (home-req-01, home-req-02, ...).
      */
-    public function addApprovedRequestHouse(Request $request)
+    private function getNextEstateRequestId(): string
     {
-        $approverPk = $request->query('approver');
-        $approvers = EmployeeMaster::query()
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get()
-            ->mapWithKeys(fn ($e) => [$e->pk => trim($e->first_name . ' ' . $e->last_name) ?: ('ID ' . $e->pk)]);
-        $allEmployees = EmployeeMaster::query()
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get();
-        $selectedPks = collect();
-        $selectedApproverPk = null;
-        if ($approverPk) {
-            $selectedApproverPk = (int) $approverPk;
-            $selectedPks = EstateHomeReqApprovalMgmt::where('employees_pk', $selectedApproverPk)
-                ->pluck('employee_master_pk');
-        }
-        return view('admin.estate.add_approved_request_house', [
-            'approvers' => $approvers,
-            'allEmployees' => $allEmployees,
-            'selectedApproverPk' => $selectedApproverPk,
-            'selectedPks' => $selectedPks,
-        ]);
-    }
+        $latestReqId = EstateHomeRequestDetails::whereNotNull('req_id')
+            ->where('req_id', 'like', 'home-req-%')
+            ->orderBy('pk', 'desc')
+            ->value('req_id');
 
-    /**
-     * Store Approved Request House - Save approver and assigned employees.
-     */
-    public function storeApprovedRequestHouse(Request $request)
-    {
-        $request->validate([
-            'approver_pk' => 'required|integer|exists:employee_master,pk',
-            'employee_pks' => 'nullable|array',
-            'employee_pks.*' => 'integer|exists:employee_master,pk',
-        ]);
-        $approverPk = (int) $request->approver_pk;
-        $employeePks = $request->filled('employee_pks') ? array_map('intval', (array) $request->employee_pks) : [];
-        EstateHomeReqApprovalMgmt::where('employees_pk', $approverPk)->delete();
-        foreach ($employeePks as $empPk) {
-            EstateHomeReqApprovalMgmt::create([
-                'employee_master_pk' => $empPk,
-                'employees_pk' => $approverPk,
-                'is_forword' => 0,
-            ]);
+        $nextNumber = 1;
+        if ($latestReqId && preg_match('/home-req-(\d+)/', $latestReqId, $m)) {
+            $nextNumber = ((int) $m[1]) + 1;
         }
-        return redirect()
-            ->route('admin.estate.estate-approval-setting')
-            ->with('success', 'Approved request house settings saved successfully.');
+        return 'home-req-' . sprintf('%02d', $nextNumber);
     }
 
     /**
@@ -107,6 +70,7 @@ class EstateController extends Controller
      */
     public function storeRequestForEstate(Request $request)
     {
+        $isEdit = $request->filled('id');
         $rules = [
             'req_id' => 'nullable|string|max:50',
             'req_date' => 'required|date',
@@ -118,17 +82,16 @@ class EstateController extends Controller
             'doj_academic' => 'required|date',
             'doj_service' => 'required|date',
             'eligibility_type_pk' => 'required|integer',
-            'status' => 'required|integer|in:0,1,2',
             'remarks' => 'nullable|string|max:500',
-            'current_alot' => 'nullable|string|max:100',
-            'pos_from' => 'nullable|date',
-            'pos_to' => 'nullable|date',
-            'extension' => 'nullable|string|max:255',
+            'current_alot' => 'nullable|string|max:20',
         ];
+        if ($isEdit) {
+            $rules['status'] = 'required|integer|in:0,1,2';
+        }
         $validated = $request->validate($rules);
 
         // Generate / resolve Request ID
-        if ($request->filled('id')) {
+        if ($isEdit) {
             // Editing: keep existing ID if none provided, otherwise use given one
             $reqId = $validated['req_id'] ?? null;
             if ($reqId === null || $reqId === '') {
@@ -136,17 +99,8 @@ class EstateController extends Controller
                 $reqId = $existing->req_id;
             }
         } else {
-            // Creating: always auto-generate in the format home-req-{number}
-            $latestReqId = EstateHomeRequestDetails::whereNotNull('req_id')
-                ->where('req_id', 'like', 'home-req-%')
-                ->orderBy('pk', 'desc')
-                ->value('req_id');
-
-            $nextNumber = 1;
-            if ($latestReqId && preg_match('/home-req-(\d+)/', $latestReqId, $m)) {
-                $nextNumber = ((int) $m[1]) + 1;
-            }
-            $reqId = 'home-req-' . $nextNumber;
+            // Creating: always auto-generate (home-req-01, home-req-02, ...)
+            $reqId = $this->getNextEstateRequestId();
         }
 
         $data = [
@@ -160,12 +114,9 @@ class EstateController extends Controller
             'doj_academic' => $validated['doj_academic'],
             'doj_service' => $validated['doj_service'],
             'eligibility_type_pk' => (int) $validated['eligibility_type_pk'],
-            'status' => (int) $validated['status'],
+            'status' => $isEdit ? (int) $validated['status'] : 0,
             'remarks' => $validated['remarks'] ?? null,
-            'current_alot' => $validated['current_alot'] ?? null,
-            'pos_from' => $validated['pos_from'] ?? null,
-            'pos_to' => $validated['pos_to'] ?? null,
-            'extension' => $validated['extension'] ?? null,
+            'current_alot' => isset($validated['current_alot']) ? \Illuminate\Support\Str::limit($validated['current_alot'], 20) : null,
             'employee_pk' => (int) ($request->input('employee_pk', 0)),
             'app_status' => (int) ($request->input('app_status', 0)),
             'hac_status' => (int) ($request->input('hac_status', 0)),
@@ -274,15 +225,12 @@ class EstateController extends Controller
         }
 
         $houses = $query->get()->map(function ($row) {
-            $label = trim(($row->block_name ?? '') . ' - ' . ($row->house_no ?? ''));
-            if ($label === '-') {
-                $label = $row->house_no ?? (string) $row->pk;
-            }
+            $houseNo = trim($row->house_no ?? '') ?: (string) $row->pk;
             return [
                 'pk' => (int) $row->pk,
                 'house_no' => $row->house_no ?? '',
                 'block_name' => $row->block_name ?? '',
-                'label' => $label,
+                'label' => $houseNo,
             ];
         });
 
