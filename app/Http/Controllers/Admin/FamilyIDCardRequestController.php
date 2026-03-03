@@ -344,9 +344,45 @@ class FamilyIDCardRequestController extends Controller
         $existingFamilyMembers = SecurityFamilyIdApply::where('created_by', Auth::user()->user_id)
             ->where('fml_id_apply', '!=', $id)->orderBy('created_date', 'desc')->limit(50)->get()
             ->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
+
+        // Employee type for this family request (defaults to Permanent for older rows)
+        $employeeType = $row->employee_type ?? 'Permanent Employee';
+
+        // For contractual employees, prepare approval authority dropdown data
+        $approvalAuthorityEmployees = collect();
+        $currentApprovalAuthorityPk = null;
+
+        if ($employeeType === 'Contractual Employee') {
+            $authUserId = Auth::user()->user_id ?? null;
+            if ($authUserId) {
+                $authEmp = EmployeeMaster::with(['department', 'designation'])
+                    ->where('pk', $authUserId)
+                    ->orWhere('pk_old', $authUserId)
+                    ->first();
+
+                if ($authEmp && $authEmp->department_master_pk) {
+                    $approvalAuthorityEmployees = EmployeeMaster::with('designation')
+                        ->where('department_master_pk', $authEmp->department_master_pk)
+                        ->when(Schema::hasColumn('employee_master', 'payroll'), fn ($q) => $q->where('payroll', 0))
+                        ->when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                        ->orderBy('first_name')
+                        ->orderBy('last_name')
+                        ->get(['pk', 'first_name', 'last_name', 'designation_master_pk']);
+                }
+            }
+
+            // Existing approval authority (if any) on the record
+            if (isset($row->department_approval_emp_pk)) {
+                $currentApprovalAuthorityPk = (int) $row->department_approval_emp_pk;
+            }
+        }
+
         return view('admin.family_idcard.edit', [
             'request' => $request,
             'existingFamilyMembers' => $existingFamilyMembers,
+            'employeeType' => $employeeType,
+            'approvalAuthorityEmployees' => $approvalAuthorityEmployees,
+            'currentApprovalAuthorityPk' => $currentApprovalAuthorityPk,
         ]);
     }
 

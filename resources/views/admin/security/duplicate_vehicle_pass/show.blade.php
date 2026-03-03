@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Duplicate Vehicle Pass Request - Sargam')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid" id="duplicateVehiclePassPrint">
     <x-breadcrum title="Duplicate Vehicle Pass Request"></x-breadcrum>
 
     <div class="card border-0 shadow-sm mb-4">
@@ -42,7 +42,7 @@
                         Edit
                     </a>
                 @endif
-                <button type="button" class="btn btn-info" onclick="window.print()">
+                <button type="button" class="btn btn-info" onclick="printDuplicateVehiclePass()">
                     <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">print</i>
                     Print
                 </button>
@@ -58,12 +58,7 @@
 @push('styles')
 <style>
     @media print {
-        /* Reset default hidden elements */
-        * {
-            visibility: visible !important;
-        }
-        
-        /* Hide navigation, sidebar, and action buttons */
+        /* Hide navigation and action buttons */
         .no-print,
         .sidebar-nav,
         .topbar,
@@ -76,117 +71,57 @@
         nav {
             display: none !important;
         }
-        
-        /* Ensure body and main containers are visible */
-        body,
-        html {
-            visibility: visible !important;
-            display: block !important;
-            background: #fff !important;
-            color: #000 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        /* Full width for print */
-        .page-wrapper,
-        .main-content,
-        .container-fluid {
+
+        /* Use full width for the main print container */
+        #duplicateVehiclePassPrint {
             width: 100% !important;
-            max-width: 100% !important;
             margin: 0 !important;
             padding: 20px !important;
-            box-shadow: none !important;
-            display: block !important;
-            visibility: visible !important;
         }
-        
-        /* Card styling for print */
-        .card {
-            border: 2px solid #004a93 !important;
-            box-shadow: none !important;
-            page-break-inside: avoid;
-            display: block !important;
-            visibility: visible !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        .card-body {
-            padding: 20px !important;
-            display: block !important;
-            visibility: visible !important;
-        }
-        
-        /* Row and column styling for print */
-        .row {
-            display: block !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        .col-12,
-        .col-md-6,
-        [class*='col-'] {
-            display: block !important;
-            width: 100% !important;
-            margin: 8px 0 !important;
-            padding: 0 !important;
-        }
-        
-        /* Make text darker for print */
-        body {
-            color: #000 !important;
-            background: #fff !important;
-        }
-        
-        /* Remove Bootstrap print utilities that might hide content */
-        .d-print-none {
-            display: block !important;
-        }
-        
-        .d-none {
-            display: block !important;
-        }
-        
-        /* Status badge print styling */
-        .badge {
-            border: 1px solid #000 !important;
-            padding: 4px 8px !important;
-            display: inline-block !important;
-        }
-        
-        /* Add page header */
+
         @page {
             margin: 1cm;
         }
-        
-        h5 {
-            color: #004a93 !important;
-            font-size: 18px !important;
-            font-weight: bold !important;
-            display: block !important;
-            visibility: visible !important;
-        }
-        
-        strong {
-            font-weight: 600 !important;
-            display: inline !important;
-        }
-        
-        /* Ensure links are visible */
-        a {
-            color: inherit !important;
-            text-decoration: underline !important;
-        }
-        
-        /* Hide print button itself */
-        button[onclick*="print"],
-        .btn-info {
-            display: none !important;
-        }
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+    function printDuplicateVehiclePass() {
+        var content = document.getElementById('duplicateVehiclePassPrint');
+        if (!content) {
+            window.print();
+            return;
+        }
+
+        var printWindow = window.open('', '_blank', 'width=800,height=600');
+        printWindow.document.open();
+        printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Duplicate Vehicle Pass</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .card { border: 1px solid #000; padding: 16px; }
+        .row { display: flex; flex-wrap: wrap; margin-bottom: 8px; }
+        .col-md-6, .col-12 { flex: 0 0 50%; max-width: 50%; margin-bottom: 4px; }
+        .col-12 { flex-basis: 100%; max-width: 100%; }
+        strong { font-weight: 600; }
+        .badge { border: 1px solid #000; padding: 4px 8px; display: inline-block; }
+        h5 { margin-top: 0; margin-bottom: 12px; }
+    </style>
+</head>
+<body>`);
+        printWindow.document.write(content.innerHTML);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    }
+</script>
 @endpush
 
 @endsection

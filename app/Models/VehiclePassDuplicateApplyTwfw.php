@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Case 7 - Vehicle Pass Duplicate: Both 2W and 4W.
@@ -186,16 +187,47 @@ class VehiclePassDuplicateApplyTwfw extends Model
         return self::cardReasonToFormValue($this->card_reason);
     }
 
-    /** Designation from employee relation. */
+    /** Designation from employee relation; fallback by employee_id_card (emp_id). */
     public function getDesignationAttribute()
     {
-        return $this->employee?->designation?->designation_name;
+        if ($this->employee && $this->employee->relationLoaded('designation')) {
+            return $this->employee->designation?->designation_name;
+        }
+
+        // Fallback for legacy rows where emp_master_pk is null but employee_id_card is stored
+        $empIdCard = trim((string) ($this->employee_id_card ?? ''));
+        if ($empIdCard === '') {
+            return null;
+        }
+
+        $emp = DB::table('employee_master')
+            ->leftJoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+            ->where('employee_master.emp_id', $empIdCard)
+            ->select('designation_master.designation_name')
+            ->first();
+
+        return $emp->designation_name ?? null;
     }
 
-    /** Department from employee relation. */
+    /** Department from employee relation; fallback by employee_id_card (emp_id). */
     public function getDepartmentAttribute()
     {
-        return $this->employee?->department?->department_name;
+        if ($this->employee && $this->employee->relationLoaded('department')) {
+            return $this->employee->department?->department_name;
+        }
+
+        $empIdCard = trim((string) ($this->employee_id_card ?? ''));
+        if ($empIdCard === '') {
+            return null;
+        }
+
+        $emp = DB::table('employee_master')
+            ->leftJoin('department_master', 'employee_master.department_master_pk', '=', 'department_master.pk')
+            ->where('employee_master.emp_id', $empIdCard)
+            ->select('department_master.department_name')
+            ->first();
+
+        return $emp->department_name ?? null;
     }
 
     /** Alias for view: reason_for_duplicate display. */
