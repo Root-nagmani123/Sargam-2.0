@@ -54,59 +54,6 @@
 </div>
 @endsection
 
-@push('styles')
-<style>
-    /* Only the table scrolls; search, count and pagination stay fixed */
-    .estate-change-request-table-wrapper {
-        width: 100%;
-    }
-    .table-scroll-only {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
-        width: 100%;
-        margin-bottom: 0;
-    }
-    .estate-change-request-table {
-        width: 100% !important;
-        min-width: 900px;
-    }
-    .estate-change-request-table thead th {
-        background-color: #4077ad !important;
-        color: #fff !important;
-        font-weight: 600;
-        white-space: nowrap;
-        padding: 0.75rem;
-        border: 1px solid #3869a0;
-        vertical-align: middle;
-    }
-    .estate-change-request-table tbody tr:nth-of-type(even) {
-        background-color: rgba(64, 119, 173, 0.08);
-    }
-    .estate-change-request-table tbody tr:hover {
-        background-color: rgba(64, 119, 173, 0.12);
-    }
-    .estate-change-request-table tbody td {
-        padding: 0.6rem 0.75rem;
-        vertical-align: middle;
-    }
-    /* Hide DataTables responsive control column if present */
-    .estate-change-request-table .dtr-control,
-    .estate-change-request-table .dtr-inline {
-        display: none !important;
-    }
-    .dataTables_wrapper .dataTables_length label,
-    .dataTables_wrapper .dataTables_filter label {
-        font-weight: 500;
-    }
-    .dataTables_wrapper .dataTables_filter input {
-        margin-left: 0.5rem;
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
-        padding: 0.35rem 0.75rem;
-    }
-</style>
-@endpush
-
 @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>

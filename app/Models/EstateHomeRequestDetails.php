@@ -14,10 +14,37 @@ class EstateHomeRequestDetails extends Model
 
     public $timestamps = false;
 
+    protected $fillable = [
+        'req_id',
+        'req_date',
+        'emp_name',
+        'employee_id',
+        'emp_designation',
+        'pay_scale',
+        'doj_pay_scale',
+        'doj_academic',
+        'doj_service',
+        'eligibility_type_pk',
+        'status',
+        'remarks',
+        'current_alot',
+        'employee_pk',
+        'app_status',
+        'hac_status',
+        'f_status',
+        'change_status',
+        'testing',
+        'pos_from',
+        'pos_to',
+        'extension',
+    ];
+
     protected $casts = [
         'req_date' => 'date',
         'doj_pay_scale' => 'date',
         'doj_academic' => 'date',
         'doj_service' => 'date',
+        'pos_from' => 'date',
+        'pos_to' => 'date',
     ];
 }
