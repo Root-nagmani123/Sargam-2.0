@@ -70,6 +70,8 @@ class HostelFloorMasterDataTable extends DataTable
                     //->dom('Bfrtip')
                     // ->orderBy(1)
                     ->parameters([
+                        'scrollY' => '60vh',
+                        'scrollCollapse' => true,
                         'order' => [],
                     ])
                     ->selectStyleSingle()
