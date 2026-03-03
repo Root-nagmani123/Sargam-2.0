@@ -622,20 +622,9 @@
                         <label for="to_date" class="form-label">To Date</label>
                         <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
                     </div>
-<<<<<<< HEAD
-                </div>
-                <div class="col-6">
-                    <div class="mb-3 d-flex align-items-center gap-2">
-                       {{-- <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
-                        </a>--}}
-                        <button type="button" id="clearFilters" class="btn btn-secondary">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
-=======
                     <div class="col-12 col-sm-6 col-lg-6 d-flex align-items-end">
                         <button type="button" id="clearFilters" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle me-1"></i> Clear Filters
->>>>>>> dhananjay-stage-bugs
                         </button>
                     </div>
                 </div>

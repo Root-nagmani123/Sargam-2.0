@@ -290,20 +290,8 @@ input.is-invalid {
                                         required="true"
                                         />-->
 
-<<<<<<< HEAD
-                                        <x-select
-                                        name="district"
-                                        label="District :"
-                                        placeholder="District"
-                                        formLabelClass="form-label"
-                                        :options="$district"
-                                         required="true"
-                                         labelRequired="true"
-                                        />
-=======
                                 <x-select name="district" label="District :" placeholder="District"
                                     formLabelClass="form-label" :options="$district" />
->>>>>>> dhananjay-stage-bugs
 
                             </div>
                         </div>
@@ -320,46 +308,8 @@ input.is-invalid {
                                         labelRequired="true"
                                         />-->
 
-<<<<<<< HEAD
-                                        <x-select
-                                        name="city"
-                                        label="City :"
-                                        placeholder="City"
-                                        formLabelClass="form-label"
-                                         required="true"
-                                         labelRequired="true"
-                                        :options="$city" />
-
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 d-none" id="otherCityContainer">
-                                <div class="mb-3">
-
-                                    <x-input
-                                        name="other_city"
-                                        label="Other City :"
-                                        placeholder="Other City"
-                                        formLabelClass="form-label"
-                                        value=""
-                                        />
-
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                <x-input
-                                    name="residence_address"
-                                    label="Residence Address :"
-                                    placeholder="Residence Address :"
-                                    formLabelClass="form-label"
-                                    />
-
-                                </div>
-=======
                                 <x-select name="city" label="City :" placeholder="City" formLabelClass="form-label"
                                     :options="$city" />
->>>>>>> dhananjay-stage-bugs
 
                             </div>
                         </div>
@@ -657,214 +607,10 @@ input.is-invalid {
                         Back
                     </a>
                 </div>
-<<<<<<< HEAD
-
-                <div class="card">
-                    <div class="card-body">
-
-                        <div>
-                            <h4 class="card-title">Bank Details</h4>
-                            <hr>
-                            <div class="row">
-                                <div class="col-6">
-                                    <x-input
-                                        name="bankname"
-                                        label="Bank Name :"
-                                        placeholder="Bank Name"
-                                        formLabelClass="form-label"
-                                        />
-
-                                </div>
-                                <div class="col-6">
-
-                                    <x-input
-                                        type="text"
-                                        name="accountnumber"
-                                        label="Account Number :"
-                                        placeholder="Account Number"
-                                        formLabelClass="form-label"
-                                        formInputClass="only-numbers"
-                                        />
-
-                                </div>
-                                <div class="col-6 mt-3">
-
-                                    <x-input
-                                        name="ifsccode"
-                                        label="IFSC Code :"
-                                        placeholder="IFSC Code"
-                                        formLabelClass="form-label"
-                                        />
-
-                                </div>
-                                <div class="col-6 mt-3">
-
-                                    <x-input
-                                        type="text"
-                                        name="pannumber"
-                                        label="PAN Number :"
-                                        placeholder="PAN Number"
-                                        formLabelClass="form-label"
-                                        />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div>
-                            <h4 class="card-title">Other information</h4>
-                            <hr>
-                            <div class="row">
-                                <div class="col-6">
-
-                                    <x-input
-                                        type="file"
-                                        name="researchpublications"
-                                        label="Research Publications :"
-                                        placeholder="Research Publications"
-                                        formLabelClass="form-label"
-                                        helperSmallText="Please upload your research publications, if any"
-                                        />
-										<div class="research_publications"></div>
-
-                                        <div class="mt-2">
-                                    <iframe id="researchPreview" class="d-none"
-                                            style="width:100%; height:250px; border:1px solid #ccc;"></iframe>
-                                </div>
-                                <div class="existing-research mt-2"></div>
-
-                                </div>
-                                <div class="col-6">
-
-                                    <x-input
-                                        type="file"
-                                        name="professionalmemberships"
-                                        label="Professional Memberships :"
-                                        placeholder="Professional Memberships"
-                                        formLabelClass="form-label"
-                                        helperSmallText="Please upload your professional memberships, if any"
-                                        />
-                                     <div class="mt-2">
-                                    <iframe id="membershipPreview" class="d-none"
-                                            style="width:100%; height:250px; border:1px solid #ccc;"></iframe>
-                                </div>
-                                <div class="existing-membership mt-2"></div>
-                                </div>
-                                <div class="col-6 mt-3">
-
-                                    <x-input
-                                        type="file"
-                                        name="recommendationdetails"
-                                        label="Reference/Recommendation Details :"
-                                        placeholder="Reference/Recommendation Details"
-                                        formLabelClass="form-label"
-                                        helperSmallText="Please upload your reference/recommendation details, if any"
-                                        />
-
-                                         <div class="mt-2">
-                                    <iframe id="referencePreview" class="d-none"
-                                            style="width:100%; height:250px; border:1px solid #ccc;"></iframe>
-                                </div>
-                                <div class="existing-reference mt-2"></div>
-
-                                </div>
-                                <div class="col-6 mt-3">
-                                    <x-input
-                                        type="date"
-                                        name="joiningdate"
-                                        label="Joining Date :"
-                                        placeholder="Joining Date"
-                                        formLabelClass="form-label"
-										value="{{ $value ?? '' }}"
-                                        />
-
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-<div class="card">
-     <div class="card-body">
-          <div class="row">
-               <div class="col-12">
-                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
-                    <div class="mb-3">
-                         <div class="form-check form-check-inline">
-						 <input class="form-check-input success"
-						 type="radio" name="current_sector"
-                         id="success-radio" value="1">
-
-                     <label class="form-check-label"
-					 for="success-radio">Government Sector</label>
-                      </div>
-                    <div class="form-check form-check-inline">
-                      <input class="form-check-input success"
-					  type="radio" name="current_sector"
-                       id="success2-radio" value="2" >
-                     <label class="form-check-label" for="success2-radio">Private Sector</label>
-                     </div>
-                       </div>
-                </div>
-
-                 <div class="col-12">
-
-                                <label for="expertise" class="form-label">Area of Expertise :</label>
-                                <div class="mb-3 expertise-row">
-                                    {{-- faculties --}}
-                                    <x-checkbox
-                                        name="faculties[]"
-                                        label="Area of Expertise :"
-                                        formLabelClass="form-label"
-                                        :options="$faculties"
-                                        />
-                                </div>
-                            </div>
-                        </div>
-                        <hr>
-		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
-
-			<!--<button onclick="printFacultyForm()" class="btn btn-success d-flex align-items-center gap-2" type="button">
-				<i class="material-icons menu-icon">print</i>
-				Print
-			</button>-->
-
-			<!--<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
-				<i class="material-icons menu-icon">save</i>
-				Save
-			</button>-->
-
-			<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
-			<i class="material-icons menu-icon">save</i>
-			Save
-		</button>
-
-
-
-
-			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
-				<i class="material-icons menu-icon">arrow_back</i>
-				Back
-			</a>
-
-		</div>
-
-
-
-                    </div>
-                </div>
-
-            </form>
-        {{-- </div>
-=======
             </div>
         </div>
     </form>
     {{-- </div>
->>>>>>> dhananjay-stage-bugs
     </div> --}}
     <!-- end Vertical Steps Example -->
 </div>

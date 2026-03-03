@@ -3,16 +3,8 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<<<<<<< HEAD
-<meta name="app-base-url" content="{{ url('') }}">
-<meta name="app-base-path" content="{{ request()->getBaseUrl() }}">
-<meta name="faculty-index-path" content="{{ route('faculty.index', [], false) }}">
-<!-- Force light color scheme to prevent system dark mode -->
-<meta name="color-scheme" content="light">
-=======
 <!-- Support both light and dark - user choice via theme toggle -->
 <meta name="color-scheme" content="light dark">
->>>>>>> dhananjay-stage-bugs
 
 <!-- Favicon icon-->
 <link rel="shortcut icon" type="image/ico" href="{{asset('admin_assets/images/logos/favicon.ico')}}">

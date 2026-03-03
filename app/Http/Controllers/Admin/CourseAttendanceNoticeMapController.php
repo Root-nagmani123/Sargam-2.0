@@ -937,40 +937,11 @@ public function store_memo_notice(Request $request)
         ];
     }
 
-<<<<<<< HEAD
-    foreach ($students as $studentId) {
-    // $studentId is actually the course_student_attendance.pk
-    // if (isset($students[$studentId])) {
-        // $student = $students[$studentId];
-    // print_r($studentId);die;
-
-
-            $data[] = [
-                'course_master_pk'           => $validated['course_master_pk'],
-                'student_pk'                 => $studentId->student_pk,
-                'date_'                      => $validated['date_memo_notice'],
-                'subject_master_pk'          => $validated['subject_master_id'],
-                'subject_topic'              => $validated['topic_id'],
-                'venue_id'                   => $validated['venue_id'],
-                'class_session_master_pk'    => $validated['class_session_master_pk'],
-                'faculty_master_pk'          => $validated['faculty_master_pk'],
-                'course_student_attendance_pk' => $studentId->course_attendance_pk,
-                'message'                    => $validated['Remark'],
-                'notice_memo'                => $validated['submission_type'],
-            ];
-
-        }
-    // }
-    // print_r($data);die;
-
-    // ✅ Bulk insert
-=======
     if (empty($data)) {
         return redirect()->back()->with('error', 'No matching attendance record found for the selected topic and students. Please ensure students are from the selected topic.');
     }
 
     // ✅ Bulk insert (one notice per student)
->>>>>>> dhananjay-stage-bugs
     $inserted = DB::table('student_notice_status')->insert($data);
 
     if ($inserted) {
@@ -1811,19 +1782,7 @@ public function get_conversation_model_bkp($id,$type, Request $request)
     return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id'));
 }
 public function memo_notice_conversation_model(Request $request){
-<<<<<<< HEAD
-
-
-     $validated = $request->validate([
-        'memo_notice_id' => 'required',
-
-        'student_decip_incharge_msg' => 'required|string|max:500',
-        'created_by' => 'required',
-        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-         ]);
-=======
     $isAjax = $request->ajax() || $request->wantsJson();
->>>>>>> dhananjay-stage-bugs
 
     try {
         $validated = $request->validate([

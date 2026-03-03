@@ -2132,17 +2132,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize Select2 when modal is shown (dropdownParent = select's wrapper for consistent positioning)
     $('#eventModal').on('shown.bs.modal', function() {
-<<<<<<< HEAD
-        var modalDialog = $('#eventModal').find('.modal-dialog');
-
-        // Initialize Select2 for faculty field with enhanced styling
-=======
         // Check if mobile device
         var isMobile = window.innerWidth <= 767;
         var dropdownMaxHeight = isMobile ? '200px' : '300px';
 
         // Initialize Select2 for faculty field - use immediate parent (position-relative wrapper) so dropdown stays below field
->>>>>>> dhananjay-stage-bugs
         if (!$('#faculty').hasClass('select2-hidden-accessible')) {
             $('#faculty').select2({
                 placeholder: '👤 Select Faculty',

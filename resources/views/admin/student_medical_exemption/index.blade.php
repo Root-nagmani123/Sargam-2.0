@@ -510,10 +510,6 @@
                 </div>
 
                 <!-- Total Records Count Row -->
-<<<<<<< HEAD
-
-=======
->>>>>>> dhananjay-stage-bugs
 
                 <div class="table-responsive">
                     <table class="table text-nowrap" id="medicalExemptionTable">
@@ -533,10 +529,6 @@
                                 <th class="col">Action</th>
                             </tr>
                         </thead>
-<<<<<<< HEAD
-
-=======
->>>>>>> dhananjay-stage-bugs
                     </table>
                 </div>
             </div>
@@ -686,28 +678,12 @@ $(document).ready(function() {
         table.ajax.reload(null, false);
     });
 
-<<<<<<< HEAD
-
-$(document).on('click', '.delete-btn', function () {
-
-=======
->>>>>>> dhananjay-stage-bugs
 
     $(document).on('click', '.delete-btn', function() {
 
 
         let deleteUrl = $(this).data('url');
 
-<<<<<<< HEAD
-           /*
-            $.ajax({
-                url: deleteUrl,
-                type: 'DELETE',
-                data: {
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function (response) {
-=======
         Swal.fire({
             title: 'Are you sure?',
             text: "This record will be permanently deleted!",
@@ -717,62 +693,9 @@ $(document).on('click', '.delete-btn', function () {
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Yes, delete it!'
         }).then((result) => {
->>>>>>> dhananjay-stage-bugs
 
             if (result.isConfirmed) {
 
-<<<<<<< HEAD
-                      table.ajax.reload(null, false);
-                },
-                error: function () {
-                    Swal.fire(
-                        'Error!',
-                        'Something went wrong.',
-                        'error'
-                    );
-                }
-            });*/
-
-
-            $.ajax({
-    url: deleteUrl,
-    type: 'DELETE',
-    data: {
-        _token: '{{ csrf_token() }}'
-    },
-    success: function (response) {
-
-       Swal.fire({
-            title: 'Deleted!',
-            text: response.message ?? 'Record deleted successfully.',
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false
-        });
-
-
-        table.ajax.reload(null, false);
-    },
-    error: function (xhr) {
-
-        let message = 'Something went wrong.';
-
-        if (xhr.responseJSON && xhr.responseJSON.message) {
-            message = xhr.responseJSON.message;
-        }
-
-        Swal.fire(
-            'Not Allowed',
-            message,
-            'warning'
-        );
-    }
-});
-
-
-
-        }
-=======
                 /*
                  $.ajax({
                      url: deleteUrl,
@@ -840,7 +763,6 @@ $(document).on('click', '.delete-btn', function () {
 
             }
         });
->>>>>>> dhananjay-stage-bugs
     });
 
 });
@@ -984,8 +906,4 @@ function printTable() {
 
 
 
-<<<<<<< HEAD
 @endpush
-=======
-@endpush
->>>>>>> dhananjay-stage-bugs

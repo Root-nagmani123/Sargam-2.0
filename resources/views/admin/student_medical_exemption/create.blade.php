@@ -224,22 +224,10 @@
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
                     </div>
-<<<<<<< HEAD
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                        <label class="form-label">Upload Document <span class="text-danger">*</span></label>
-                        <small class="text-primary d-block mb-1">
-                        Please upload image or PDF files only. Maximum file size: 3 MB.</small>
-
-                        <input type="file" name="Doc_upload" class="form-control col-form-label"accept="image/*,.pdf" id="Doc_upload">
-                        <small id="fileInfo" class="text-muted"></small>
-						<small id="fileError" class="text-danger"></small>
-=======
                     <div class="col-12 col-lg-6">
                         <label class="form-label">Upload Document <span class="text-danger">*</span></label>
                         <div class="file-upload-hint mb-2">
                             Image or PDF only. Max size: 3 MB.
->>>>>>> dhananjay-stage-bugs
                         </div>
                         <input type="file" name="Doc_upload" class="form-control" accept="image/*,.pdf" id="Doc_upload">
                         <small id="fileInfo" class="text-muted d-block mt-1"></small>
@@ -347,8 +335,6 @@ if (oldCourse) {
     });
 }
 
-<<<<<<< HEAD
-=======
 </script>
 <script>
 document.getElementById('Doc_upload').addEventListener('change', function() {
@@ -358,8 +344,6 @@ document.getElementById('Doc_upload').addEventListener('change', function() {
 
     fileInfo.textContent = '';
     fileError.textContent = '';
-
-    if (!file) return;
 
     var allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     var maxSize = 3 * 1024 * 1024;
@@ -377,7 +361,6 @@ document.getElementById('Doc_upload').addEventListener('change', function() {
     var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
     fileInfo.innerHTML = 'Selected: <strong>' + file.name + '</strong> &middot; ' + sizeMB + ' MB';
 });
->>>>>>> dhananjay-stage-bugs
 </script>
 
 
@@ -389,7 +372,6 @@ document.getElementById('Doc_upload').addEventListener('change', function () {
     const file = this.files[0];
     const fileInfo = document.getElementById('fileInfo');
     const fileError = document.getElementById('fileError');
-
     fileInfo.innerHTML = '';
     fileError.innerHTML = '';
 

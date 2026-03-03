@@ -10,7 +10,7 @@
         display: flex;
         align-items: stretch;
     }
-    
+
     @media (min-width: 576px) {
         #eventDetails .modal-dialog {
             margin: 0.5rem;
@@ -20,7 +20,7 @@
             height: auto;
         }
     }
-    
+
     #eventDetails .modal-content {
         border-radius: 0;
         max-height: 100vh;
@@ -30,7 +30,7 @@
         margin: 0;
         overflow: hidden;
     }
-    
+
     @media (min-width: 576px) {
         #eventDetails .modal-content {
             border-radius: 0.75rem;
@@ -39,12 +39,12 @@
             margin: 0;
         }
     }
-    
+
     #eventDetails .modal-header {
         padding: 1rem;
         border-radius: 0.75rem 0.75rem 0 0;
     }
-    
+
     #eventDetails .modal-body {
         padding: 1rem;
         overflow-y: auto;
@@ -54,13 +54,13 @@
         min-height: 0;
         max-height: none;
     }
-    
+
     @media (max-width: 575.98px) {
         #eventDetails .modal-body {
             padding: 0.75rem 0.5rem;
         }
     }
-    
+
     #eventDetails .detail-item {
         padding: 0.75rem;
         margin-bottom: 0.75rem;
@@ -72,22 +72,22 @@
         gap: 0.5rem;
         word-wrap: break-word;
     }
-    
+
     #eventDetails .detail-item i {
         flex-shrink: 0;
         margin-top: 0.125rem;
     }
-    
+
     #eventDetails .detail-item strong {
         flex-shrink: 0;
         min-width: fit-content;
     }
-    
+
     #eventDetails .detail-item span {
         word-break: break-word;
         flex: 1;
     }
-    
+
     /* Very Small Devices (< 400px) */
     @media (max-width: 399.98px) {
         #eventDetails .modal-dialog {
@@ -97,32 +97,32 @@
             max-height: 100vh !important;
             height: 100vh !important;
         }
-        
+
         #eventDetails .modal-content {
             border-radius: 0 !important;
             max-height: 100vh !important;
             height: 100vh !important;
         }
-        
+
         #eventDetails .modal-header {
             padding: 0.75rem 0.5rem !important;
         }
-        
+
         #eventDetails .modal-title {
             font-size: 0.95rem !important;
             line-height: 1.3;
             word-break: break-word;
         }
-        
+
         #eventDetails .modal-header .d-flex {
             flex-direction: column;
             gap: 0.75rem;
         }
-        
+
         #eventDetails .modal-header .d-flex > div:first-child {
             width: 100%;
         }
-        
+
         #eventDetails .modal-header .d-flex > div:last-child {
             width: 100%;
             display: flex;
@@ -130,21 +130,21 @@
             gap: 0.5rem;
             justify-content: flex-end;
         }
-        
+
         #eventDetails .modal-header .btn {
             font-size: 0.75rem !important;
             padding: 0.4rem 0.6rem !important;
             min-height: 36px;
         }
-        
+
         #eventDetails .modal-header .btn i {
             margin-right: 0.25rem !important;
         }
-        
+
         #eventDetails .modal-header .btn span {
             display: none;
         }
-        
+
         #eventDetails .modal-header .btn-close {
             position: absolute;
             top: 0.5rem;
@@ -152,58 +152,58 @@
             margin: 0;
             padding: 0.5rem;
         }
-        
+
         #eventDetails .modal-header p {
             font-size: 0.75rem !important;
             margin-top: 0.5rem;
             padding-top: 0.5rem;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         #eventDetails .modal-body {
             padding: 0.75rem 0.5rem !important;
             max-height: calc(100vh - 140px);
         }
-        
+
         #eventDetails .event-details h4 {
             font-size: 0.9rem !important;
             margin-bottom: 0.75rem !important;
             word-break: break-word;
         }
-        
+
         #eventDetails .detail-item {
             padding: 0.625rem !important;
             margin-bottom: 0.5rem;
             flex-direction: column;
             gap: 0.35rem;
         }
-        
+
         #eventDetails .detail-item i {
             font-size: 1rem;
         }
-        
+
         #eventDetails .detail-item strong {
             font-size: 0.8rem;
             display: block;
             margin-bottom: 0.25rem;
         }
-        
+
         #eventDetails .detail-item span {
             font-size: 0.85rem;
             line-height: 1.4;
         }
-        
+
         #eventDetails .row.g-3 {
             --bs-gutter-y: 0.5rem;
             --bs-gutter-x: 0.5rem;
         }
-        
+
         #eventDetails .row > [class*="col-"] {
             padding-left: 0.25rem;
             padding-right: 0.25rem;
         }
     }
-    
+
     /* Small Mobile Devices (400px - 575px) */
     @media (min-width: 400px) and (max-width: 575.98px) {
         #eventDetails .modal-dialog {
@@ -213,125 +213,125 @@
             max-height: 100vh !important;
             height: 100vh !important;
         }
-        
+
         #eventDetails .modal-content {
             border-radius: 0 !important;
             max-height: 100vh !important;
             height: 100vh !important;
         }
-        
+
         #eventDetails .modal-header {
             padding: 0.875rem !important;
         }
-        
+
         #eventDetails .modal-title {
             font-size: 1rem !important;
         }
-        
+
         #eventDetails .modal-header .btn {
             font-size: 0.8rem !important;
             padding: 0.45rem 0.7rem !important;
             min-height: 38px;
         }
-        
+
         #eventDetails .modal-header .btn span {
             display: inline;
         }
-        
+
         #eventDetails .modal-body {
             padding: 0.875rem !important;
             max-height: calc(100vh - 160px);
         }
-        
+
         #eventDetails .event-details h4 {
             font-size: 0.95rem !important;
         }
-        
+
         #eventDetails .detail-item {
             padding: 0.75rem !important;
             flex-direction: row;
             align-items: flex-start;
         }
-        
+
         #eventDetails .detail-item strong {
             font-size: 0.85rem;
             min-width: 100px;
         }
-        
+
         #eventDetails .detail-item span {
             font-size: 0.875rem;
         }
     }
-    
+
     /* Tablet Portrait (576px - 767px) */
     @media (min-width: 576px) and (max-width: 767.98px) {
         #eventDetails .modal-dialog {
             max-width: 540px;
             margin: 1rem auto;
         }
-        
+
         #eventDetails .modal-content {
             max-height: calc(100vh - 2rem);
         }
-        
+
         #eventDetails .modal-header {
             padding: 1rem;
         }
-        
+
         #eventDetails .modal-body {
             padding: 1rem;
             max-height: calc(100vh - 180px);
         }
-        
+
         #eventDetails .detail-item {
             padding: 0.875rem;
         }
-        
+
         #eventDetails .detail-item strong {
             min-width: 120px;
         }
     }
-    
+
     /* Tablet Landscape / Small Desktop (768px - 991px) */
     @media (min-width: 768px) and (max-width: 991.98px) {
         #eventDetails .modal-dialog {
             max-width: 720px;
             margin: 1.75rem auto;
         }
-        
+
         #eventDetails .modal-body {
             max-height: calc(100vh - 200px);
         }
-        
+
         #eventDetails .detail-item {
             padding: 1rem;
         }
     }
-    
+
     /* Desktop (992px+) */
     @media (min-width: 992px) {
         #eventDetails .modal-dialog {
             max-width: 900px;
             margin: 1.75rem auto;
         }
-        
+
         #eventDetails .modal-header {
             padding: 1.25rem 1.5rem;
         }
-        
+
         #eventDetails .modal-body {
             padding: 1.5rem;
         }
-        
+
         #eventDetails .detail-item {
             padding: 1rem 1.25rem;
         }
-        
+
         #eventDetails .detail-item strong {
             min-width: 140px;
         }
     }
-    
+
     /* Landscape orientation on mobile */
     @media (max-width: 767.98px) and (orientation: landscape) {
         #eventDetails .modal-dialog {
@@ -341,51 +341,51 @@
             max-height: calc(100vh - 0.5rem) !important;
             height: calc(100vh - 0.5rem) !important;
         }
-        
+
         #eventDetails .modal-content {
             max-height: calc(100vh - 0.5rem) !important;
             height: calc(100vh - 0.5rem) !important;
             border-radius: 0.5rem !important;
         }
-        
+
         #eventDetails .modal-body {
             max-height: calc(100vh - 140px) !important;
             padding: 0.75rem !important;
         }
-        
+
         #eventDetails .modal-header {
             padding: 0.75rem !important;
         }
-        
+
         #eventDetails .modal-header .d-flex {
             flex-direction: row;
             flex-wrap: wrap;
         }
-        
+
         #eventDetails .modal-header .d-flex > div:last-child {
             width: auto;
         }
     }
-    
+
     /* Better button layout on mobile */
     @media (max-width: 575.98px) {
         #eventDetails .modal-header .d-flex.gap-2 {
             flex-wrap: wrap;
             gap: 0.5rem !important;
         }
-        
+
         #eventDetails .modal-header .btn {
             flex: 1;
             min-width: 0;
             max-width: calc(50% - 0.25rem);
         }
-        
+
         #eventDetails .modal-header .btn-close {
             flex: 0 0 auto;
             max-width: none;
         }
     }
-    
+
     /* Ensure proper text wrapping */
     #eventDetails .modal-title,
     #eventDetails .detail-item span,
@@ -394,16 +394,16 @@
         overflow-wrap: break-word;
         hyphens: auto;
     }
-    
+
     /* Better icon alignment */
     #eventDetails .detail-item {
         align-items: flex-start;
     }
-    
+
     #eventDetails .detail-item i {
         margin-top: 0.2rem;
     }
-    
+
     /* Prevent horizontal overflow */
     #eventDetails,
     #eventDetails .modal-content,
@@ -411,22 +411,22 @@
         max-width: 100%;
         overflow-x: hidden;
     }
-    
+
     /* Better spacing for detail items */
     @media (max-width: 767.98px) {
         #eventDetails .row.g-3 {
             --bs-gutter-y: 0.75rem;
         }
-        
+
         #eventDetails .row > [class*="col-"] {
             margin-bottom: 0.5rem;
         }
-        
+
         #eventDetails .row > [class*="col-"]:last-child {
             margin-bottom: 0;
         }
     }
-    
+
     /* Improved visual hierarchy */
     #eventDetails .event-details h4 {
         color: var(--bs-primary);
@@ -435,7 +435,7 @@
         padding-bottom: 0.5rem;
         margin-bottom: 1rem;
     }
-    
+
     @media (max-width: 575.98px) {
         #eventDetails .event-details h4 {
             font-size: 0.95rem;
@@ -443,7 +443,7 @@
             margin-bottom: 0.75rem;
         }
     }
-    
+
     /* Responsive button styles */
     #eventDetails .btn-responsive {
         min-height: 38px;
@@ -452,7 +452,7 @@
         justify-content: center;
         white-space: nowrap;
     }
-    
+
     @media (max-width: 399.98px) {
         #eventDetails .btn-responsive {
             min-height: 36px;
@@ -460,7 +460,7 @@
             padding: 0.4rem 0.6rem;
         }
     }
-    
+
     @media (min-width: 400px) and (max-width: 575.98px) {
         #eventDetails .btn-responsive {
             min-height: 38px;
@@ -468,14 +468,14 @@
             padding: 0.45rem 0.7rem;
         }
     }
-    
+
     /* Better empty state handling */
     #eventDetails .detail-item span:empty::before {
         content: "—";
         color: #6c757d;
         font-style: italic;
     }
-    
+
     /* Improved hover effects */
     @media (hover: hover) {
         #eventDetails .detail-item:hover {
@@ -484,25 +484,25 @@
             transition: all 0.2s ease;
         }
     }
-    
+
     /* Better icon colors for different detail types */
     #eventDetails .detail-item i.bi-person-fill,
     #eventDetails .detail-item i.bi-person-check-fill {
         color: #0d6efd;
     }
-    
+
     #eventDetails .detail-item i.bi-clock-history {
         color: #198754;
     }
-    
+
     #eventDetails .detail-item i.bi-geo-alt-fill {
         color: #dc3545;
     }
-    
+
     #eventDetails .detail-item i.bi-people-fill {
         color: #6f42c1;
     }
-    
+
     /* Ensure modal doesn't overflow viewport */
     @media (max-width: 767.98px) {
         #eventDetails.modal {
@@ -511,7 +511,7 @@
             padding-top: 0 !important;
             padding-bottom: 0 !important;
         }
-        
+
         #eventDetails .modal-dialog {
             margin: 0 !important;
             max-width: 100vw !important;
@@ -519,39 +519,39 @@
             max-height: 100vh !important;
             height: 100vh !important;
         }
-        
+
         #eventDetails .modal-content {
             border-radius: 0 !important;
             max-height: 100vh !important;
             height: 100vh !important;
         }
-        
+
         #eventDetails .modal-body {
             max-height: none !important;
             overflow-y: auto !important;
         }
     }
-    
+
     /* Better date display */
     #eventDetails #eventDate {
         word-break: break-word;
         line-height: 1.5;
     }
-    
+
     /* Improved header layout on very small screens */
     @media (max-width: 399.98px) {
         #eventDetails .modal-header .d-flex > div:first-child {
             padding-right: 2rem;
         }
     }
-    
+
     /* Better spacing for action buttons */
     @media (max-width: 575.98px) {
         #eventDetails .modal-header .d-flex.gap-2 {
             width: 100%;
             justify-content: space-between;
         }
-        
+
         #eventDetails .modal-header .btn-close {
             order: 3;
         }
@@ -562,26 +562,19 @@
     <div class="modal-dialog modal-dialog-scrollable modal-lg modal-fullscreen-md-down">
         <div class="modal-content shadow-lg">
             <div class="modal-header bg-primary bg-gradient text-white position-relative">
-                <div class="d-flex flex-column w-100"> 
+                <div class="d-flex flex-column w-100">
                     <div class="d-flex justify-content-between align-items-start align-items-sm-center flex-wrap gap-2">
                         <h3 class="modal-title h5 mb-0 flex-grow-1" id="eventDetailsTitle">
                             <span id="eventTitle">Event</span>
                         </h3>
-<<<<<<< HEAD
-                        <div class="d-flex gap-2 align-items-center">
-                            @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
-                            <button type="button" class="btn btn-sm btn-primary" id="editEventBtn">
-                                <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
-=======
                         <div class="d-flex gap-2 align-items-center flex-wrap flex-shrink-0">
                             @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
                             <button type="button" class="btn btn-sm btn-light btn-responsive" id="editEventBtn">
-                                <i class="bi bi-pencil" aria-hidden="true"></i> 
+                                <i class="bi bi-pencil" aria-hidden="true"></i>
                                 <span class="d-none d-sm-inline">Edit</span>
->>>>>>> dhananjay-stage-bugs
                             </button>
                             <button type="button" class="btn btn-sm btn-danger btn-responsive" id="deleteEventBtn">
-                                <i class="bi bi-trash" aria-hidden="true"></i> 
+                                <i class="bi bi-trash" aria-hidden="true"></i>
                                 <span class="d-none d-sm-inline">Delete</span>
                             </button>
                             @endif

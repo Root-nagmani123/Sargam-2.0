@@ -48,7 +48,7 @@
                                                     <span class="mini-nav-title sidebar-google-label">Time Table</span>
                                                 </a>
                                             </li>
-                                            
+
                                             <li class="mini-nav-item" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
@@ -77,8 +77,6 @@
                                                     <span class="mini-nav-title sidebar-google-label">FC Forms</span>
                                                 </a>
                                             </li>
-<<<<<<< HEAD
-=======
                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-8">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
@@ -88,9 +86,8 @@
                                                     <span class="mini-nav-title sidebar-google-label">Mess</span>
                                                 </a>
                                             </li>
-                                         
-                                           
->>>>>>> dhananjay-stage-bugs
+
+
                                             @endif
 
                                             @endif

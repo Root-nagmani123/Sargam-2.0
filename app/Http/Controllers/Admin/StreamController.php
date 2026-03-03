@@ -18,24 +18,6 @@ class StreamController extends Controller
         return view('admin.stream.create');
     }
 
-<<<<<<< HEAD
-
-    public function store(Request $request)
-{
-    $data = $request->input('stream_name');
-
-    // Force array always
-    $streams = is_array($data) ? $data : [$data];
-
-    $request->validate([
-        'stream_name.*' => 'required|string|max:100',
-    ]);
-
-    foreach ($streams as $name) {
-        Stream::create([
-            'stream_name' => trim($name),
-            'active_inactive' => 1,
-=======
 
     public function store(Request $request)
     {
@@ -46,7 +28,6 @@ class StreamController extends Controller
 
         $request->validate([
             'stream_name.*' => 'required|string|max:100',
->>>>>>> dhananjay-stage-bugs
         ]);
 
         foreach ($streams as $name) {
@@ -93,11 +74,7 @@ class StreamController extends Controller
         }
 
     public function update(Request $request, $id)
-<<<<<<< HEAD
-    {
-=======
         {
->>>>>>> dhananjay-stage-bugs
         $request->validate([
             'stream_name' => 'required|string|max:100',
         ]);
@@ -107,17 +84,6 @@ class StreamController extends Controller
         $stream->save();
 
         return redirect()->route('stream.index')->with('success', 'Stream updated successfully.');
-<<<<<<< HEAD
-    }
-
-    public function toggleStatus(Request $request)
-    {
-    $stream = Stream::where('pk', $request->id)->first();
-
-    if (!$stream) {
-        return response()->json(['success' => false]);
-    }
-=======
         }
 
     public function toggleStatus(Request $request)
@@ -127,7 +93,6 @@ class StreamController extends Controller
          if (!$stream) {
          return response()->json(['success' => false]);
      }
->>>>>>> dhananjay-stage-bugs
 
     $stream->active_inactive = $stream->active_inactive == 1 ? 0 : 1;
     $stream->save();
