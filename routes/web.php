@@ -806,6 +806,12 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         // Request For Estate (estate_home_request_details + possession)
         Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
         Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
+
+        // Put In HAC & HAC Forward workflow
+        Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
+        Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
+        Route::get('hac-forward', [EstateController::class, 'hacForward'])->name('hac-forward');
+        Route::post('request-for-estate/forward/{id}', [EstateController::class, 'forwardToAllotment'])->name('request-for-estate.forward');
         Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
         Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
         Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
@@ -816,6 +822,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('estate-approval-setting', [EstateController::class, 'estateApprovalSetting'])->name('estate-approval-setting');
         Route::get('add-approved-request-house', [EstateController::class, 'addApprovedRequestHouse'])->name('add-approved-request-house');
         Route::post('store-approved-request-house', [EstateController::class, 'storeApprovedRequestHouse'])->name('store-approved-request-house');
+        Route::delete('estate-approval-setting/{id}', [EstateController::class, 'destroyEstateApprovalSetting'])->name('estate-approval-setting.destroy');
 
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
@@ -866,10 +873,14 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             return view('admin.estate.update_meter_no');
         })->name('update-meter-no');
 
-        // Return House
-        Route::get('return-house', function () {
-            return view('admin.estate.return_house');
-        })->name('return-house');
+        // Generate Estate Bill / Estate Bill Summary
+        Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
+
+        // Return House (estate_possession_other where return_home_status = 0)
+        Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+        Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
+        Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
+        Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
 
         // Define House
         Route::get('define-house', [EstateController::class, 'defineHouse'])->name('define-house');
@@ -955,6 +966,9 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
             Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
             Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');
+
+            Route::get('migration-report', [EstateController::class, 'estateMigrationReport'])->name('migration-report');
+            Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
         });
     });
 });
