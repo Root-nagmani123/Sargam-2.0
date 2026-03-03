@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin\Estate;
 
-use App\DataTables\UnitTypeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
 
 class UnitTypeController extends Controller
 {
-    public function index(UnitTypeDataTable $dataTable)
+    public function index()
     {
-        return $dataTable->render('admin.estate.define_unit_type.index');
+        $items = UnitType::orderBy('unit_type')->paginate(request('per_page', 10));
+        return view('admin.estate.define_unit_type.index', compact('items'));
     }
 
     public function create()
