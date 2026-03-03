@@ -5,26 +5,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.reports.pending-meter-reading') }}">Estate Reports</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Pending Meter Reading</li>
-        </ol>
-    </nav>
-
-    <!-- Page Title -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Pending Meter Reading</h2>
-        <div>
-            <a href="{{ route('admin.estate.reports.house-status') }}" class="btn btn-outline-primary me-2">
-                <i class="bi bi-house me-2"></i>House Status
-            </a>
-            <a href="{{ route('admin.estate.reports.bill-report-grid') }}" class="btn btn-outline-primary">
-                <i class="bi bi-file-earmark-text me-2"></i>Bill Reports
-            </a>
-        </div>
-    </div>
+ <x-breadcrum title="Pending Meter Reading"></x-breadcrum>
 
     <!-- Filter Card -->
     <div class="card shadow-sm mb-4">
@@ -33,10 +14,7 @@
                 <div class="col-md-4">
                     <label for="bill_month" class="form-label">Select Bill Month <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <input type="text" class="form-control" id="bill_month" name="bill_month" value="December 2025" required>
-                        <span class="input-group-text">
-                            <i class="bi bi-calendar"></i>
-                        </span>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" required>
                     </div>
                     <small class="text-muted">
                         <i class="bi bi-info-circle"></i> Select Bill Month
@@ -57,6 +35,8 @@
                             <th>Employee Type</th>
                             <th>Name</th>
                             <th>House No.</th>
+<th>Meter Reading Date</th>
+<th>Last Meter Reading</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -65,60 +45,8 @@
                             <td>LBSNAA</td>
                             <td>Naresh Kumar Gupta</td>
                             <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>LBSNAA</td>
-                            <td>Naresh Kumar Gupta</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>LBSNAA</td>
-                            <td>KB Singha</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td>LBSNAA</td>
-                            <td>Naresh Kumar Gupta</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td>LBSNAA</td>
-                            <td>KB Singha</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>6</td>
-                            <td>LBSNAA</td>
-                            <td>Naresh Kumar Gupta</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>7</td>
-                            <td>LBSNAA</td>
-                            <td>KB Singha</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>8</td>
-                            <td>LBSNAA</td>
-                            <td>Naresh Kumar Gupta</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>9</td>
-                            <td>LBSNAA</td>
-                            <td>KB Singha</td>
-                            <td>KT-03</td>
-                        </tr>
-                        <tr>
-                            <td>10</td>
-                            <td>LBSNAA</td>
-                            <td>Naresh Kumar Gupta</td>
-                            <td>KT-03</td>
+                            <td>10/02/2026</td>
+                            <td>1000</td>
                         </tr>
                     </tbody>
                 </table>

@@ -38,8 +38,45 @@
 
             <hr>
             <div class="table-responsive">
-                {!! $dataTable->table(['class' => 'table table-bordered table-hover align-middle', 'aria-describedby' => 'estate-request-caption']) !!}
-                <div id="estate-request-caption" class="visually-hidden">Estate Request for Others list</div>
+                <table class="table align-middle mb-0" id="estateRequestTable">
+                    <thead>
+                        <tr>
+                            <th class="w-auto pe-2">
+                                <input type="checkbox" class="form-check-input" id="select_all" aria-label="Select all">
+                            </th>
+                            <th>S.No.</th>
+                            <th>Request ID</th>
+                            <th>Employee Name</th>
+                            <th>Father's Name</th>
+                            <th>Section</th>
+                            <th>Date of Joining in Academy</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="pe-2">
+                                <input type="checkbox" class="form-check-input" aria-label="Select row">
+                            </td>
+                            <td>1</td>
+                            <td><span class="fw-medium">Oth-req-1</span></td>
+                            <td>Karan Pillee</td>
+                            <td>Karan Pillee</td>
+                            <td>Karan Pillee</td>
+                            <td>Karan Pillee</td>
+                            <td>
+                                <div class="d-inline-flex gap-1">
+                                    <a href="javascript:void(0)" class="text-primary p-1" title="Edit" aria-label="Edit">
+                                        <i class="material-symbols-rounded">edit</i>
+                                    </a>
+                                    <a href="javascript:void(0)" class="text-primary p-1" title="Delete" aria-label="Delete">
+                                        <i class="material-symbols-rounded">delete</i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
