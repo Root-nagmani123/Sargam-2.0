@@ -61,6 +61,12 @@
                         <input type="text" class="form-control" id="section" name="section" value="{{ old('section', $prefill['section'] ?? '') }}" required>
                     </div>
                     <div class="col-md-6">
+                        <label for="designation" class="form-label">Designation</label>
+                        <input type="text" class="form-control" id="designation" name="designation" value="{{ old('designation', isset($record) ? ($record->designation ?? '') : ($prefill['designation'] ?? '')) }}" maxlength="500" placeholder="e.g. Section Officer">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
                         <label for="doj_academy" class="form-label">DOJ in Academy <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <input type="date" class="form-control" id="doj_academy" name="doj_academy" value="{{ old('doj_academy', $prefill['doj_academy'] ?? '') }}" required>

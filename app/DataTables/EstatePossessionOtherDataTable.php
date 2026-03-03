@@ -17,18 +17,24 @@ class EstatePossessionOtherDataTable extends DataTable
             ->addIndexColumn()
             ->editColumn('request_id', fn($row) => $row->estateOtherRequest->request_no_oth ?? 'N/A')
             ->editColumn('name', fn($row) => $row->estateOtherRequest->emp_name ?? 'N/A')
-            ->editColumn('designation', fn($row) => $row->estateOtherRequest->designation ?? 'N/A')
+            ->editColumn('designation', function ($row) {
+                $designation = $row->getAttribute('designation')
+                    ?? $row->getAttribute('eor_designation')
+                    ?? $row->estateOtherRequest?->designation
+                    ?? $row->estateOtherRequest?->section;
+                return $designation !== null && $designation !== '' ? $designation : '—';
+            })
             ->editColumn('estate_name', fn($row) => $row->campus_name ?? 'N/A')
             ->editColumn('unit_type', fn($row) => $row->unit_type_name ?? 'N/A')
             ->editColumn('building_name', fn($row) => $row->block_name ?? 'N/A')
             ->editColumn('unit_sub_type', fn($row) => $row->unit_sub_type_name ?? 'N/A')
             ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
-            ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('Y-m-d') : 'N/A')
-            ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('Y-m-d') : 'N/A')
-            ->editColumn('meter_reading_oth', fn($row) => $row->meter_reading_oth ?? 'N/A')
-            ->filterColumn('house_no', function ($query, $keyword) {
-                $searchValue = trim((string) $keyword);
-                if ($searchValue === '') {
+            ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
+            ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
+            ->editColumn('meter_reading_oth', fn($row) => ($row->meter_reading_oth ?? '---') . '/' . ($row->meter_reading_oth1 ?? '---'))
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+                if (empty($searchValue)) {
                     return;
                 }
                 $searchLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
@@ -36,17 +42,26 @@ class EstatePossessionOtherDataTable extends DataTable
                     $q->where('eor.request_no_oth', 'like', $searchLike)
                         ->orWhere('eor.emp_name', 'like', $searchLike)
                         ->orWhere('eor.section', 'like', $searchLike)
+                        ->orWhere('eor.designation', 'like', $searchLike)
                         ->orWhere('ec.campus_name', 'like', $searchLike)
                         ->orWhere('eb.block_name', 'like', $searchLike)
-                        ->orWhere('estate_possession_other.house_no', 'like', $searchLike);
+                        ->orWhere('eut.unit_type', 'like', $searchLike)
+                        ->orWhere('eust.unit_sub_type', 'like', $searchLike)
+                        ->orWhere('estate_possession_other.house_no', 'like', $searchLike)
+                        ->orWhere('ehm.house_no', 'like', $searchLike);
                 });
             })
             ->orderColumn('DT_RowIndex', fn ($query, $order) => $query->orderBy('estate_possession_other.pk', $order))
             ->orderColumn('request_id', fn ($query, $order) => $query->orderBy('eor.request_no_oth', $order))
             ->orderColumn('name', fn ($query, $order) => $query->orderBy('eor.emp_name', $order))
-            ->orderColumn('section_name', fn ($query, $order) => $query->orderBy('eor.section', $order))
+            ->orderColumn('designation', fn ($query, $order) => $query->orderBy('eor.designation', $order))
             ->orderColumn('estate_name', fn ($query, $order) => $query->orderBy('ec.campus_name', $order))
+            ->orderColumn('unit_type', fn ($query, $order) => $query->orderBy('eut.unit_type', $order))
             ->orderColumn('building_name', fn ($query, $order) => $query->orderBy('eb.block_name', $order))
+            ->orderColumn('unit_sub_type', fn ($query, $order) => $query->orderBy('eust.unit_sub_type', $order))
+            ->orderColumn('house_no', fn ($query, $order) => $query->orderBy('estate_possession_other.house_no', $order))
+            ->orderColumn('allotment_date', fn ($query, $order) => $query->orderBy('estate_possession_other.allotment_date', $order))
+            ->orderColumn('possession_date_oth', fn ($query, $order) => $query->orderBy('estate_possession_other.possession_date_oth', $order))
             ->addColumn('actions', function ($row) {
                 $viewUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
@@ -68,7 +83,7 @@ class EstatePossessionOtherDataTable extends DataTable
     public function query(EstatePossessionOther $model): QueryBuilder
     {
         return $model->newQuery()
-            ->with(['estateOtherRequest'])
+            ->with(['estateOtherRequest:pk,emp_name,request_no_oth,section,designation'])
             ->select([
                 'estate_possession_other.*',
                 'ec.campus_name',
@@ -76,6 +91,8 @@ class EstatePossessionOtherDataTable extends DataTable
                 'eor.request_no_oth',
                 'eor.emp_name',
                 'eor.section',
+                'eor.designation',
+                'eor.designation as eor_designation',
                 'eut.unit_type as unit_type_name',
                 'eust.unit_sub_type as unit_sub_type_name',
                 'ehm.house_no as house_no_display',
@@ -102,7 +119,7 @@ class EstatePossessionOtherDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[1, 'desc']],
+                'order' => [[0, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',
@@ -126,16 +143,16 @@ class EstatePossessionOtherDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(true)->searchable(false)->width('50px'),
-            Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(false),
-            Column::make('name')->title('NAME')->orderable(true)->searchable(false),
-            Column::make('section_name')->title('SECTION NAME')->orderable(true)->searchable(false),
-            Column::make('estate_name')->title('ESTATE NAME')->orderable(true)->searchable(false),
-            Column::make('unit_type')->title('UNIT TYPE')->orderable(false)->searchable(false),
-            Column::make('building_name')->title('BUILDING NAME')->orderable(true)->searchable(false),
-            Column::make('unit_sub_type')->title('UNIT SUB TYPE')->orderable(false)->searchable(false),
-            Column::make('house_no')->title('HOUSE NO.')->orderable(false)->searchable(true),
-            Column::make('allotment_date')->title('ALLOTMENT DATE')->orderable(false)->searchable(false),
-            Column::make('possession_date_oth')->title('POSSESSION DATE')->orderable(false)->searchable(false),
+            Column::make('request_id')->title('REQUEST ID')->orderable(true)->searchable(true),
+            Column::make('name')->title('NAME')->orderable(true)->searchable(true),
+            Column::make('designation')->title('DESIGNATION')->orderable(true)->searchable(true),
+            Column::make('estate_name')->title('ESTATE NAME')->orderable(true)->searchable(true),
+            Column::make('unit_type')->title('UNIT TYPE')->orderable(true)->searchable(true),
+            Column::make('building_name')->title('BUILDING NAME')->orderable(true)->searchable(true),
+            Column::make('unit_sub_type')->title('UNIT SUB TYPE')->orderable(true)->searchable(true),
+            Column::make('house_no')->title('HOUSE NO.')->orderable(true)->searchable(true),
+            Column::make('allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
+            Column::make('possession_date_oth')->title('POSSESSION DATE')->orderable(true)->searchable(false),
             Column::make('meter_reading_oth')->title('LAST MONTH ELECTRIC METER READING')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];

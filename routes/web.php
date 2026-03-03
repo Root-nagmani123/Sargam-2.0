@@ -954,7 +954,8 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             Route::get('house-status', function () {
                 return view('admin.estate.house_status');
             })->name('house-status');
-            
+
+            Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
             Route::get('bill-report-grid', function () {
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
