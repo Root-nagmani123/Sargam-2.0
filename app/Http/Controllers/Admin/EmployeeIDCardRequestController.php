@@ -561,7 +561,7 @@ class EmployeeIDCardRequestController extends Controller
             if ($employeeType === 'Permanent Employee') {
                 $nextId = (int) DB::table('security_parm_id_apply')->max('pk') + 1;
                 $empIdApply = 'PID' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
-print_r($cardValidTo);die;
+
                 $emp = EmployeeMaster::select(['pk', 'designation_master_pk'])->find($employeePk);
                 SecurityParmIdApply::create([
                     'emp_id_apply' => $empIdApply,

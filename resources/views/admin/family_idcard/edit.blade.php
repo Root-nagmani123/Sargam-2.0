@@ -255,6 +255,31 @@
             }
         });
     }
+
+            this.style.borderColor = '';
+            var files = e.dataTransfer.files;
+            if (files.length && input) { input.files = files; showPreview(files[0]); }
+        });
+    }
+    if (input) input.addEventListener('change', function() { showPreview(this.files[0]); });
+    if (removeBtn) removeBtn.addEventListener('click', function(e) { e.stopPropagation(); clearPreview(); });
+})();
+
+// Apply date restrictions to Valid From field
+(function() {
+    var today = new Date().toISOString().split('T')[0];
+    var validFromField = document.querySelector('.valid-from-field');
+    if (validFromField) {
+        validFromField.setAttribute('min', today);
+        validFromField.addEventListener('change', function() {
+            if (this.value && this.value < today) {
+                this.value = today;
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
 })();
 </script>
 @endsection
