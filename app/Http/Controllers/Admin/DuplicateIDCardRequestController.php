@@ -172,7 +172,18 @@ class DuplicateIDCardRequestController extends Controller
                 ], 404);
             }
 
+            // Try primary relation first; if missing (old data), resolve via employee_master_pk or created_by (pk / pk_old)
             $emp = $row->employee;
+            if (!$emp) {
+                $empId = $row->employee_master_pk ?: $row->created_by;
+                if ($empId) {
+                    // Use helper on EmployeeMaster model (handles pk / pk_old), then lazy-load designation
+                    $emp = EmployeeMaster::findByIdOrPkOld($empId);
+                    if ($emp) {
+                        $emp->load('designation');
+                    }
+                }
+            }
             // Prefer main table validity; if missing, fall back to latest approved duplicate/extension record
             $validFrom = $row->card_valid_from;
             $validTo = $row->card_valid_to;
