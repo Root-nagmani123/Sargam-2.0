@@ -58,7 +58,8 @@
                                                     </div>
                                                 </a>
                                             </li>
-                                            
+                                            @endif
+                                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
                                             <li class="mini-nav-item" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -73,6 +74,8 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            @endif
+                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                                             @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
