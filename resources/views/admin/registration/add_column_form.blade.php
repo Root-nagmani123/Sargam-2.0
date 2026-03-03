@@ -4,21 +4,10 @@
 
 @section('setup_content')
 
-<div class="container-fluid">
-    <!-- Start Form Card -->
+<div class="container-fluid add-column-form-page">
+    <x-breadcrum title="Add Column" />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
-            <h4 class="card-title mb-3">Add New Column to Table</h4>
-            <hr>
-{{-- 
-            @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif --}}
-
-            @if (session('error'))
-                <div class="alert alert-danger">{{ session('error') }}</div>
-            @endif
-
             <form action="{{ route('admin.column.add') }}" method="POST">
                 @csrf
                 <div class="row">

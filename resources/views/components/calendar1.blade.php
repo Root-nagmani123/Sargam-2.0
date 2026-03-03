@@ -3,7 +3,7 @@
 <style>
 :root {
     --primary-color: #004a93;
-    --secondary-color: #af2910;
+    --secondary-color: #004a93;
     --light-bg: #f8f9fa;
     --border-color: #dee2e6;
     --text-dark: #212529;
@@ -715,7 +715,7 @@ textarea:focus {
         </div>
     </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 
 <script>
 $(document).ready(function() {

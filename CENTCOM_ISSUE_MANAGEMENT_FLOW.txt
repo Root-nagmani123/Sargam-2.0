@@ -1,0 +1,212 @@
+================================================================================
+CENTCOM - ISSUE MANAGEMENT FLOW DOCUMENTATION
+================================================================================
+Sargam | Lal Bahadur Shastri National Academy of Administration (LBSNAA)
+================================================================================
+
+OVERVIEW
+--------
+CENTCOM (Central Complaint Management) is the module for managing complaints/issues
+reported on behalf of others. An admin/nodal officer can log a complaint for a
+complainant (employee) and assign it to the concerned department's nodal officer.
+
+
+================================================================================
+1. KEY CONCEPTS
+================================================================================
+
+1.1 Issue Types (behalf)
+   - behalf = 0 : CENTCOM (On behalf of someone)
+   - behalf = 1 : MySelf (Self-reported)
+
+1.2 Key Fields in issue_log_management
+   - created_by        : Complainant (person on whose behalf complaint was made)
+   - issue_logger      : User who submitted the form (logged-in admin)
+   - employee_master_pk: Nodal officer for the category (assigned at creation)
+   - assigned_to       : Person assigned to resolve (set when status is updated)
+
+1.3 Status Values
+   - 0 : Reported
+   - 1 : In Progress
+   - 2 : Completed
+   - 3 : Pending
+   - 6 : Reopened
+
+1.4 Display Labels
+   - Created By   : User who submitted the complaint (issue_logger)
+   - Issue Logger : Person on whose behalf complaint was made (created_by)
+
+
+================================================================================
+2. ADMIN WORKFLOW
+================================================================================
+
+2.1 MENU / NAVIGATION
+   - All Issues          : /admin/issue-management
+   - CENTCOM - Assigned  : /admin/issue-management/centcom
+   - Log New Issue       : /admin/issue-management/create
+   - Manage Categories   : /admin/issue-categories (Admin only)
+   - Manage Sub-Categories : /admin/issue-sub-categories (Admin only)
+
+2.2 ALL ISSUES PAGE (index)
+   - Shows issues based on role:
+     * Admin/SuperAdmin : All issues
+     * Others : Issues where user is nodal officer (employee_master_pk),
+                issue logger (issue_logger), or assigned to (assigned_to)
+   - Tabs: Active (0,1,3,6) | Archive (2)
+   - Filters: Status, Category, Priority, Date From/To
+   - Actions: View, Edit (if creator), Update Status (if nodal or assigned)
+
+2.3 CENTCOM - ASSIGNED COMPLAINTS PAGE (centcom)
+   - Shows issues where:
+     * assigned_to = current user (assigned to resolve)
+     * OR employee_master_pk = current user (nodal officer for category)
+   - Filters: Status, Category, Priority, Date From/To
+   - Actions: View Details
+
+2.4 LOG NEW ISSUE (create) - CENTCOM FLOW
+   Step 1: Select Category
+   Step 2: Select Sub-Category (loaded via AJAX)
+   Step 3: Select Complainant (person on whose behalf)
+   Step 4: Select Nodal Employee (category-specific, from issue_category_employee_map)
+   Step 5: Enter Description
+   Step 6: Select Location (Hostel / Residential / Others)
+   Step 7: Select Building, Floor, Room (based on location)
+   Step 8: Upload images (optional)
+   Step 9: Submit
+
+   Data saved:
+   - created_by = complainant (employee pk)
+   - issue_logger = logged-in user
+   - employee_master_pk = nodal employee
+   - issue_status = 0 (Reported)
+
+2.5 VIEW ISSUE (show)
+   - Full details: Category, Sub-category, Description, Status, Location, etc.
+   - Created By / Issue Logger displayed correctly
+   - Update Status button: visible if user is nodal officer OR assigned_to
+   - Assignment dropdown: Only employees from same department as category's nodal officers
+
+2.6 UPDATE STATUS (status_update)
+   - Allowed if: issue.employee_master_pk == user OR issue.assigned_to == user
+   - If not yet assigned: Must assign to employee (from same department) or "Other"
+   - Status options: Reported, In Progress, Completed, Pending, Reopened
+   - If already assigned: Only status and remarks can be updated
+
+2.7 EDIT ISSUE (edit)
+   - Allowed only if: issue.created_by == user (complainant)
+   - Can update: Category, Sub-category, Description, Location, Building, etc.
+
+
+================================================================================
+3. USER WORKFLOW (Non-Admin)
+================================================================================
+
+3.1 VIEWING ISSUES
+   - All Issues: Only issues where user is involved (nodal, logger, or assigned)
+   - CENTCOM: Only issues assigned to user or where user is nodal officer
+
+3.2 LOGGING A COMPLAINT (On behalf)
+   - Same create form as admin
+   - Select complainant (from employee list)
+   - Select nodal employee (category-specific)
+   - Fill description, location, etc.
+   - Submit
+
+3.3 UPDATING STATUS
+   - If user is nodal officer (employee_master_pk):
+     * Can assign to department employee or "Other"
+     * Can update status (Reported → In Progress → Completed, etc.)
+   - If user is assigned_to:
+     * Can update status and remarks only (assignment locked)
+
+3.4 EDITING
+   - Only if user is the complainant (created_by)
+
+
+================================================================================
+4. DATA FLOW DIAGRAM (CENTCOM)
+================================================================================
+
+  [Admin/User]                    [System]                      [Nodal Officer]
+       |                              |                                |
+       |  1. Log New Issue            |                                |
+       |  (Complainant + Nodal)       |                                |
+       |----------------------------->|                                |
+       |                              |  issue_logger = admin          |
+       |                              |  created_by = complainant      |
+       |                              |  employee_master_pk = nodal    |
+       |                              |  status = Reported (0)         |
+       |                              |--------------------------------|
+       |                              |  Issue appears in CENTCOM      |
+       |                              |  for nodal officer             |
+       |                              |                                |
+       |                              |  2. Nodal opens CENTCOM        |
+       |                              |<-------------------------------|
+       |                              |                                |
+       |                              |  3. Nodal assigns + updates     |
+       |                              |     status                     |
+       |                              |<-------------------------------|
+       |                              |  assigned_to = employee        |
+       |                              |  status = In Progress (1)       |
+       |                              |                                |
+       |                              |  4. Assigned person resolves   |
+       |                              |<-------------------------------|
+       |                              |  status = Completed (2)        |
+
+
+================================================================================
+5. ROUTES REFERENCE
+================================================================================
+
+GET  /admin/issue-management              - All Issues (index)
+GET  /admin/issue-management/centcom       - CENTCOM Assigned (centcom)
+GET  /admin/issue-management/create        - Log New Issue form
+POST /admin/issue-management               - Store new issue
+GET  /admin/issue-management/{id}         - View issue (show)
+GET  /admin/issue-management/{id}/edit     - Edit form
+PUT  /admin/issue-management/{id}          - Update issue
+PUT  /admin/issue-management/{id}/status   - Update status + assign
+POST /admin/issue-management/{id}/feedback - Add feedback
+
+AJAX:
+GET  /admin/issue-management/sub-categories/{categoryId}
+GET  /admin/issue-management/nodal-employees/{categoryId}
+
+
+================================================================================
+6. EMPLOYEE FILTERING RULES
+================================================================================
+
+6.1 Create Form - Employees list
+   - All employees (for Complainant dropdown)
+
+6.2 Create Form - Nodal Employee
+   - Loaded via AJAX: Only employees mapped to selected category
+   - Source: issue_category_employee_map
+
+6.3 Show Form - Assignment dropdown (Update Status modal)
+   - Only employees from same department as category's nodal officers
+   - Flow: category -> issue_category_employee_map (nodal officers)
+          -> their department_master_pk -> all employees of that department
+
+
+================================================================================
+7. ROLE-BASED ACCESS
+================================================================================
+
+Admin/SuperAdmin:
+  - See all issues in All Issues
+  - Manage Categories, Sub-Categories
+  - Full access
+
+Others:
+  - All Issues: Only own (nodal/logger/assigned)
+  - CENTCOM: Only assigned or nodal
+  - Edit: Only if complainant
+  - Update Status: Only if nodal or assigned
+
+
+================================================================================
+End of Document
+================================================================================

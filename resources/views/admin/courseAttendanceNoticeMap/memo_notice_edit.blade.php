@@ -64,7 +64,7 @@
 
                         <!-- Content -->
                         <div class="col-12">
-                            <label class="form-label">Memo / Notice Content <span class="text-danger">*</span></label>
+                            <label class="form-label">Message <span class="text-danger">*</span></label>
                             <textarea name="content" id="content" class="form-control" required>
                             {{ old('content', $template->content) }}
                         </textarea>
@@ -92,7 +92,7 @@
 
 
 @section('scripts')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    @include('components.jquery-3-6')
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 
     <script>

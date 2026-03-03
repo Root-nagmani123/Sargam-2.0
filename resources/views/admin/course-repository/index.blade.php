@@ -132,7 +132,8 @@
         color: #b02a37;
     }
 </style>
-<div class="container-fluid">
+<div class="container-fluid course-repository-index-page">
+    <x-session_message />
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <div class="card border-0 shadow-sm">
@@ -165,7 +166,6 @@
             </div>
         </div>
     </nav>
-
 
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-4 p-md-5">
@@ -259,8 +259,7 @@
                                 </a>
                             </td>
                             <td>
-                                <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-primary border-bottom">{{ $repo->getDocumentCount() }} - documents</a>
+                                <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-primary border-bottom">{{ $documents_count_array[$repo->pk] ?? $repo->getDocumentCount() }} - documents</a>
                             </td>
                             <td class="pe-4">
                                 <div class="d-flex gap-1" role="group" aria-label="Category actions">

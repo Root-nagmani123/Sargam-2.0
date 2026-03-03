@@ -3,12 +3,50 @@
 {{--
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.8.1/themes/prism.min.css" rel="stylesheet" /> --}}
 <link rel="stylesheet" href="{{asset('admin_assets/css/dual-listbox.css')}}">
+<style>
+/* MDO Escrot Exemption Edit - Responsive */
+@media (max-width: 991.98px) {
+    .mdo-edit-page .card-body { padding: 1rem !important; }
+    .mdo-edit-page .card-title { font-size: 1.1rem; }
+}
+
+@media (max-width: 767.98px) {
+    .mdo-edit-page.container-fluid { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+    .mdo-edit-page .card-body { padding: 0.75rem !important; }
+    .mdo-edit-page .form-actions { flex-direction: column; align-items: stretch !important; }
+    .mdo-edit-page .form-actions .btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 575.98px) {
+    .mdo-edit-page.container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    .mdo-edit-page .card-body { padding: 0.5rem !important; }
+    .mdo-edit-page .card-title { font-size: 1rem; }
+    .mdo-edit-page .alert .fs-5 { font-size: 0.9375rem !important; }
+    .mdo-edit-page .form-label { font-size: 0.9rem; }
+}
+
+@media (max-width: 375px) {
+    .mdo-edit-page.container-fluid { padding-left: 0.375rem !important; padding-right: 0.375rem !important; }
+    .mdo-edit-page .card-body { padding: 0.5rem !important; }
+}
+
+/* Select2 responsive - full width on mobile */
+@media (max-width: 575.98px) {
+    .mdo-edit-page .select2-container { width: 100% !important; }
+}
+
+/* Prevent date/time inputs from overflowing */
+.mdo-edit-page input[type="date"],
+.mdo-edit-page input[type="time"] {
+    max-width: 100%;
+}
+</style>
 @endsection
 @section('title', 'MDO Escrot Exemption')
 
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid mdo-edit-page">
     <x-breadcrum title="MDO Escrot Exemption" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
@@ -20,7 +58,7 @@
             <hr>
 
             <div class="row mb-4">
-                <div class="col-md-8">
+                <div class="col-12 col-md-8">
                     <div class="alert alert-info d-flex align-items-center" role="alert">
                         <i class="material-icons me-2">person</i>
                         <div>
@@ -36,11 +74,9 @@
                 @if(!empty($mdoDutyType))
                 <input type="hidden" name="pk" value="{{ encrypt($mdoDutyType->pk) }}">
                 @endif
-                <div class="row">
+                <div class="row g-2 g-md-3">
 
-                    
-
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
                         <div class="mb-3">
 
                             <x-select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
@@ -50,7 +86,7 @@
                         </div>
 
                     </div>
-                    <div class="col-md-3" id="faculty_field_container" style="display: none;">
+                    <div class="col-12 col-sm-6 col-md-3" id="faculty_field_container" style="display: none;">
                         <div class="mb-3">
                             <x-select name="faculty_master_pk" id="faculty_master_pk" label="Faculty :" formLabelClass="form-label"
                                 formSelectClass="select2"
@@ -58,7 +94,7 @@
                                 :options="$facultyMaster" labelRequired="true" />
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
                         <div class="mb-3">
                             <x-input type="date" name="mdo_date" label="Select Date & Time :"
                                 placeholder="Select Date & Time : " formLabelClass="form-label" 
@@ -66,14 +102,14 @@
                         </div>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
 
                         <x-input type="time" name="Time_from" label="From Time :" placeholder="From Time : "
                             formLabelClass="form-label" labelRequired="true"
                             value="{{ old('Time_from', $mdoDutyType->Time_from ?? '') }}" />
 
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-12 col-sm-6 col-md-3">
 
                         <x-input type="time" name="Time_to" label="To Time :" placeholder="To Time : "
                             formLabelClass="form-label" labelRequired="true"
@@ -83,15 +119,15 @@
                 </div>
                 <hr>
                 
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                        <i class="material-icons menu-icon">save</i>
-                        Update
-                    </button>
-                    <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+                <div class="mb-3 form-actions d-flex flex-wrap justify-content-end gap-2">
+                    <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary hstack gap-2">
                         <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>
+                    <button class="btn btn-primary hstack gap-2" type="submit">
+                        <i class="material-icons menu-icon">save</i>
+                        Update
+                    </button>
                 </div>
 
             </form>

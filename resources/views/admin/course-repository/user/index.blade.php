@@ -10,7 +10,7 @@
     <!-- Filter Card -->
     <div class="card filter-card shadow-sm mb-4">
         <div class="card-body p-4" style="background-color: #FBF8F8;">
-            <form method="GET" action="{{ route('admin.course-repository.user.index') }}" id="filterForm">
+            <form method="GET" action="{{ route('admin.course-repository.user.filter-data') }}" id="filterForm">
                 <div class="row g-3 align-items-end">
                     <!-- Date Filter -->
                     <div class="col-md-2">
@@ -53,18 +53,7 @@
                         </select>
                     </div>
 
-                    <!-- Week Filter -->
-                    <div class="col-md-2">
-                        <label for="filter_week" class="form-label fw-semibold mb-2">Week</label>
-                        <select class="form-select" id="filter_week" name="week">
-                            <option value="">Select Week</option>
-                            @for($i = 1; $i <= 52; $i++)
-                                <option value="{{ $i }}" {{ $filters['week'] == $i ? 'selected' : '' }}>
-                                    {{ $i }}
-                                </option>
-                            @endfor
-                        </select>
-                    </div>
+                   
 
                     <!-- Faculty Filter -->
                     <div class="col-md-2">
@@ -84,6 +73,11 @@
                         <button type="submit" class="btn btn-primary w-100 fw-semibold">
                             Apply Filters
                         </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ route('admin.course-repository.user.index') }}" class="btn btn-primary w-100 fw-semibold">
+                            Clear Filters
+                        </a>
                     </div>
                 </div>
             </form>

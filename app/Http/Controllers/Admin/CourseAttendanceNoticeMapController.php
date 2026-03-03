@@ -756,7 +756,7 @@ $memo_conclusion_master = collect(); // default empty collection
     $memoNotice->transform(function ($item) {
         if ($item->role_type == 'f') {
             $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = $creator ? $creator->name : 'Admin';
+            $item->display_name = 'Admin';
         } elseif ($item->role_type == 's') {
             $student = DB::table('student_master')->where('pk', $item->created_by)->first();
             $item->display_name = $student ? $student->display_name : 'Student';
@@ -799,7 +799,7 @@ $memoNotice->transform(function ($item) {
         $creator = DB::table('users')
             ->where('id', $item->created_by)
             ->first();
-        $item->display_name = $creator ? $creator->name : 'Admin';
+        $item->display_name = 'Admin';
     } elseif ($item->role_type == 's') {
         // Student (From student_master table)
         $student = DB::table('student_master')
@@ -909,18 +909,35 @@ public function store_memo_notice(Request $request)
         'submission_type' => 'required|in:1,2',
     ]);
 
-    // ✅ Fetch all required student info in one query
+    // ✅ Fetch one course_student_attendance row per selected student for THIS topic only
+    // (Filter by topic_id so we don't get multiple attendance rows per student → one notice per student)
     $students = DB::table('course_student_attendance as a')
         ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
         ->whereIn('a.Student_master_pk', $validated['selected_student_list'])
+        ->where('a.timetable_pk', $validated['topic_id'])
         ->select('a.pk as course_attendance_pk', 's.pk as student_pk')
         ->get()
-        ->keyBy('course_attendance_pk'); // So we can access by course attendance PK
+        ->unique('student_pk')
+        ->values();
 
     $data = [];
-    // print_r($students);
-    // print_r($validated['selected_student_list']);die;
+    foreach ($students as $row) {
+        $data[] = [
+            'course_master_pk'           => $validated['course_master_pk'],
+            'student_pk'                 => $row->student_pk,
+            'date_'                      => $validated['date_memo_notice'],
+            'subject_master_pk'          => $validated['subject_master_id'],
+            'subject_topic'              => $validated['topic_id'],
+            'venue_id'                   => $validated['venue_id'],
+            'class_session_master_pk'    => $validated['class_session_master_pk'],
+            'faculty_master_pk'          => $validated['faculty_master_pk'],
+            'course_student_attendance_pk' => $row->course_attendance_pk,
+            'message'                    => $validated['Remark'],
+            'notice_memo'                => $validated['submission_type'],
+        ];
+    }
 
+<<<<<<< HEAD
     foreach ($students as $studentId) {
     // $studentId is actually the course_student_attendance.pk
     // if (isset($students[$studentId])) {
@@ -947,6 +964,13 @@ public function store_memo_notice(Request $request)
     // print_r($data);die;
 
     // ✅ Bulk insert
+=======
+    if (empty($data)) {
+        return redirect()->back()->with('error', 'No matching attendance record found for the selected topic and students. Please ensure students are from the selected topic.');
+    }
+
+    // ✅ Bulk insert (one notice per student)
+>>>>>>> dhananjay-stage-bugs
     $inserted = DB::table('student_notice_status')->insert($data);
 
     if ($inserted) {
@@ -971,21 +995,21 @@ public function store_memo_notice(Request $request)
             $topicName = $topic ? $topic->subject_topic : 'Topic';
             $memoNoticeType = $validated['submission_type'] == 1 ? 'Memo' : 'Notice';
             $date = date('d M Y', strtotime($validated['date_memo_notice']));
-
-            // Build notification message
-            $message = "A {$memoNoticeType} has been issued for {$courseName} - {$subjectName} ({$topicName}) on {$date}.";
-            if (!empty($validated['Remark'])) {
-                $message .= " Remark: {$validated['Remark']}";
-            }
-
-            // Get the inserted notice records to use their PKs as reference_pk
-            // Create mapping of student_pk to course_student_attendance_pk from inserted data
-            $studentToAttendanceMap = [];
-            foreach ($data as $record) {
-                $studentToAttendanceMap[$record['student_pk']] = $record['course_student_attendance_pk'];
-            }
-
-            // Query back using course_student_attendance_pk to get the exact inserted records
+        foreach ($students as $studentId) {
+            $data[] = [
+                'course_master_pk'           => $validated['course_master_pk'],
+                'student_pk'                 => $studentId->student_pk,
+                'date_'                      => $validated['date_memo_notice'],
+                'subject_master_pk'          => $validated['subject_master_id'],
+                'subject_topic'              => $validated['topic_id'],
+                'venue_id'                   => $validated['venue_id'],
+                'class_session_master_pk'    => $validated['class_session_master_pk'],
+                'faculty_master_pk'          => $validated['faculty_master_pk'],
+                'course_student_attendance_pk' => $studentId->course_attendance_pk,
+                'message'                    => $validated['Remark'],
+                'notice_memo'                => $validated['submission_type'],
+            ];
+        }
             $courseAttendancePks = array_values(array_unique(array_column($data, 'course_student_attendance_pk')));
             $insertedNotices = DB::table('student_notice_status')
                 ->whereIn('course_student_attendance_pk', $courseAttendancePks)
@@ -1151,14 +1175,14 @@ public function memo_notice_conversation(Request $request)
     $statusTable = $type === 'memo' ? 'student_memo_status' : 'student_notice_status';
     $foreignKey = $type === 'memo' ? 'student_memo_status_pk' : 'student_notice_status_pk';
 
-    // Insert message
+    // Insert message (store created_date in UTC for correct chat order and display in Asia/Kolkata)
     $inserted = DB::table($table)->insert([
         $foreignKey => $validated['memo_notice_id'],
         'student_decip_incharge_msg' => $validated['message'],
         'doc_upload' => $filePath,
         'role_type' => 'f',
         'created_by' => auth()->user()->id ?? 1,
-        'created_date' => now(),
+        'created_date' => now('UTC'),
     ]);
 
    if ($inserted) {
@@ -1443,6 +1467,7 @@ public function noticedeleteMessage($id,$type)
         'sm.pk as student_id',
         't.subject_topic as topic_name'
     );
+    $notices->orderBy('student_notice_status.pk', 'desc');
     $notices = $notices->get();
 
     $memos = collect();
@@ -1589,7 +1614,7 @@ if (!$id || !is_numeric($id)) {
     $memoNotice->transform(function ($item) {
         if ($item->role_type == 'f') {
             $creator = DB::table('users')->where('id', $item->created_by)->first();
-            $item->display_name = $creator ? $creator->name : 'Admin';
+            $item->display_name = 'Admin';
         } elseif ($item->role_type == 's') {
             $student = DB::table('student_master')->where('pk', $item->created_by)->first();
             $item->display_name = $student ? $student->display_name : 'Student';
@@ -1633,14 +1658,14 @@ public function memo_notice_conversation_student(Request $request)
     $insertTable = $type === 'memo' ? 'memo_message_student_decip_incharge' : 'notice_message_student_decip_incharge';
     $foreignKeyField = $type === 'memo' ? 'student_memo_status_pk' : 'student_notice_status_pk';
 
-    // Insert message
+    // Insert message (store created_date in UTC for correct chat order and display in Asia/Kolkata)
     $inserted = DB::table($insertTable)->insert([
         $foreignKeyField => $validated['memo_notice_id'],
         'student_decip_incharge_msg' => $validated['message'],
         'doc_upload' => $filePath,
         'role_type' => 's',
         'created_by' => $validated['student_id'],
-        'created_date' => now(),
+        'created_date' => now('UTC'),
     ]);
 
     // Redirect back with appropriate message
@@ -1727,7 +1752,7 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
     $conversations = $conversations->map(function ($item) {
         if ($item->role_type == 'f') {
             $user = DB::table('users')->find($item->created_by);
-            $item->display_name = $user->name ?? 'Admin';
+            $item->display_name = 'Admin';
             $item->user_type = 'admin';
 
         } elseif ($item->role_type == 's') {
@@ -1769,7 +1794,7 @@ public function get_conversation_model_bkp($id,$type, Request $request)
         ->map(function ($item) {
             if ($item->role_type == 'f') {
                 $user = DB::table('users')->find($item->created_by);
-                $item->display_name = $user->name ?? 'Admin';
+                $item->display_name = 'Admin';
                 $item->user_type = 'admin';
             } elseif ($item->role_type == 's') {
                 $student = DB::table('student_master')->where('pk', $item->created_by)->first();
@@ -1786,6 +1811,7 @@ public function get_conversation_model_bkp($id,$type, Request $request)
     return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id'));
 }
 public function memo_notice_conversation_model(Request $request){
+<<<<<<< HEAD
 
 
      $validated = $request->validate([
@@ -1795,46 +1821,80 @@ public function memo_notice_conversation_model(Request $request){
         'created_by' => 'required',
         'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
          ]);
+=======
+    $isAjax = $request->ajax() || $request->wantsJson();
+>>>>>>> dhananjay-stage-bugs
 
-    // Handle file upload
+    try {
+        $validated = $request->validate([
+            'memo_notice_id' => 'required',
+            'student_decip_incharge_msg' => 'required_without:document|nullable|string|max:500',
+            'created_by' => 'required',
+            'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        if ($isAjax) {
+            return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+        }
+        throw $e;
+    }
+
+    // Handle file upload (form field name must be "document" for side-panel chat)
     $filePath = null;
     if ($request->hasFile('document')) {
         $file = $request->file('document');
-        $filePath = $file->store('notice_documents', 'public'); // stored in /storage/app/public/notice_documents
+        $folder = $request->type === 'memo' ? 'memo_conversation_documents' : 'notice_documents';
+        $filePath = $file->store($folder, 'public');
     }
 
-    if($request->type == 'memo'){
-$data = DB::table('memo_message_student_decip_incharge')->insert([
-        'student_memo_status_pk' => $validated['memo_notice_id'],
-        'student_decip_incharge_msg' => $validated['student_decip_incharge_msg'],
-         'doc_upload' => $filePath,
-        'role_type' => $request->role_type, // 'f' for admin, 's' for student
-        'created_by' => $validated['created_by'], // Replace with correct user ID
-         ]);
-          if ($data) {
-        return redirect()->back()->with('success', 'Memo msg created successfully.');
+    $messageText = $validated['student_decip_incharge_msg'] ?? '';
 
-        } else {
+    if ($request->type == 'memo') {
+        $data = DB::table('memo_message_student_decip_incharge')->insert([
+            'student_memo_status_pk' => $validated['memo_notice_id'],
+            'student_decip_incharge_msg' => $messageText,
+            'doc_upload' => $filePath,
+            'role_type' => $request->role_type,
+            'created_by' => $validated['created_by'],
+            'created_date' => now('UTC'),
+        ]);
+        if ($data) {
+            if ($isAjax) {
+                return response()->json(['success' => true, 'message' => 'Memo msg created successfully.']);
+            }
+            return redirect()->back()->with('success', 'Memo msg created successfully.');
+        }
+        if ($isAjax) {
+            return response()->json(['success' => false, 'message' => 'Failed to create Memo/Notice. Please try again.'], 500);
+        }
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
-    }else if($request->type == 'notice'){
-    // Insert into your table
-   $data = DB::table('notice_message_student_decip_incharge')->insert([
-        'student_notice_status_pk' => $validated['memo_notice_id'],
-        'student_decip_incharge_msg' => $validated['student_decip_incharge_msg'],
-        'doc_upload' => $filePath,
-        'role_type' => $request->role_type, // 'f' for admin, 's' for student
-        'created_by' => $validated['created_by'], // Replace with correct user ID
-         ]);
 
-   if ($data) {
-        return redirect()->back()->with('success', 'Notice msg created successfully.');
-
-        } else {
+    if ($request->type == 'notice') {
+        $data = DB::table('notice_message_student_decip_incharge')->insert([
+            'student_notice_status_pk' => $validated['memo_notice_id'],
+            'student_decip_incharge_msg' => $messageText,
+            'doc_upload' => $filePath,
+            'role_type' => $request->role_type,
+            'created_by' => $validated['created_by'],
+            'created_date' => now('UTC'),
+        ]);
+        if ($data) {
+            if ($isAjax) {
+                return response()->json(['success' => true, 'message' => 'Notice msg created successfully.']);
+            }
+            return redirect()->back()->with('success', 'Notice msg created successfully.');
+        }
+        if ($isAjax) {
+            return response()->json(['success' => false, 'message' => 'Failed to create Memo/Notice. Please try again.'], 500);
+        }
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
-}
 
+    if ($isAjax) {
+        return response()->json(['success' => false, 'message' => 'Invalid type.'], 400);
+    }
+    return redirect()->back()->with('error', 'Invalid type.');
 }
    public function getMemoData_bkp(Request $request)
 {

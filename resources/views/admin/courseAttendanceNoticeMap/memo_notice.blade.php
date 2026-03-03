@@ -28,7 +28,7 @@
                        </div>
                     </div>
                     <div class="col-12">
-                        <label for="content" class="form-label">Memo / Notice Content</label>
+                        <label for="content" class="form-label">Memo / Notice Content <span class="text-danger">*</span></label>
                         <textarea name="content" class="form-control" id="content" rows="3"></textarea>
                     </div>
                 </div>
@@ -47,7 +47,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@include('components.jquery-3-6')
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 <script>
 $(document).ready(function() {
