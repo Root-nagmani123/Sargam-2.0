@@ -20,6 +20,8 @@ class EstateMonthReadingDetails extends Model
         'to_date',
         'last_month_elec_red',
         'curr_month_elec_red',
+        'last_month_elec_red2',
+        'curr_month_elec_red2',
         'bill_month',
         'bill_year',
         'house_no',

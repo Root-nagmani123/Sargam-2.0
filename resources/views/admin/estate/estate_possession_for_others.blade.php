@@ -5,6 +5,7 @@
 @section('setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Estate Possession for Others"></x-breadcrum>
+    <x-session_message />
 
     <!-- Page Card -->
     <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
@@ -13,44 +14,20 @@
             <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
                 <div>
                     <h1 class="h4 fw-semibold mb-1">Estate Possession for Others</h1>
-                    <p class="text-muted small mb-0">View and manage possession records with add, edit, delete, excel upload, download, and print options.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
                     <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 text-decoration-none">
-                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">speed</i>
                         <span>Update Reading</span>
                     </a>
-                    <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-success d-inline-flex align-items-center gap-2" title="Add possession">
-                        <i class="material-symbols-rounded" style="font-size: 1.25rem;">add</i>
+                    <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-primary d-inline-flex align-items-center gap-2" title="Add possession">
                         <span>Add Possession</span>
                     </a>
                 </div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
-                    <i class="bi bi-check-circle-fill me-2 flex-shrink-0" aria-hidden="true"></i>
-                    <span class="flex-grow-1">{{ session('success') }}</span>
-                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" aria-hidden="true"></i>
-                    <span class="flex-grow-1">{{ session('error') }}</span>
-                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            <!-- Info callout -->
-            <div class="alert alert-info d-flex align-items-start rounded-3 border-0 mb-4 shadow-sm" role="status">
-                <i class="bi bi-info-circle-fill me-2 mt-1 flex-shrink-0" aria-hidden="true"></i>
-                <p class="mb-0 small">This page lists all possession records in the system. Use the actions above to add new records, update meter readings, or manage existing entries via the table (edit, delete, excel upload/download, print).</p>
-            </div>
-
             <hr class="my-4">
             <div class="table-responsive overflow-auto estate-possession-table-wrap rounded-3">
-                {!! $dataTable->table(['class' => 'table table-hover align-middle text-nowrap mb-0 w-100', 'style' => 'min-width: 1200px;', 'id' => 'estatePossessionTable', 'aria-describedby' => 'estate-possession-caption']) !!}
+                {!! $dataTable->table(['class' => 'table text-nowrap mb-0 w-100']) !!}
             </div>
             <div id="estate-possession-caption" class="visually-hidden">Estate Possession for Others list</div>
         </div>
