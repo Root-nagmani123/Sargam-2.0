@@ -53,6 +53,22 @@
                         <p class="mt-3 text-body-secondary small mb-0">Loading details...</p>
                     </div>
                     <div id="approveModalContent" class="d-none">
+                        {{-- Direct confirm when house was already selected at Raise Change Request --}}
+                        <div id="approveConfirmOnly" class="d-none mb-4">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Requester Name</label>
+                                    <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveRequesterNameConfirm" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small text-uppercase text-body-secondary">Designation</label>
+                                    <input type="text" class="form-control form-control-lg bg-body-secondary border-0" id="approveDesignationConfirm" readonly>
+                                </div>
+                            </div>
+                            <p class="mb-0 text-body">Requested house was already selected when the change request was raised. Approve with house: <strong id="approveRequestedHouseNo" class="text-success"></strong>?</p>
+                        </div>
+                        {{-- Full form (dropdowns) – only when requested house not already set --}}
+                        <div id="approveFullForm">
                         <p class="text-body-secondary small mb-4">Please select the house to approve for this request.</p>
                         {{-- Requester Name & Designation (read-only) --}}
                         <div class="row g-3 mb-4">
@@ -100,6 +116,7 @@
                         </div>
                         <div id="approveNoHouses" class="alert alert-warning alert-dismissible fade show small mt-3 d-none" role="alert">No vacant houses available. Select Estate, Unit Type, Building, and Unit Sub Type first.<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button></div>
                         <div id="approveFormError" class="alert alert-danger alert-dismissible fade show mt-3 d-none" role="alert"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 bg-body-secondary bg-opacity-50 py-3 px-4 gap-2">
@@ -287,12 +304,18 @@
         border-color: var(--bs-border-color);
         font-size: 0.875rem;
     }
+    /* Whole table (header + body) scrolls together so columns stay aligned */
     .estate-hac-approved-table-wrapper {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        display: block;
     }
-    #estateHacApprovedTable_wrapper table {
-        min-width: 992px;
+    #estateHacApprovedTable_wrapper .dataTables_scrollHead,
+    #estateHacApprovedTable_wrapper .dataTables_scrollBody {
+        overflow: visible !important;
+    }
+    #estateHacApprovedTable_wrapper table.dataTable {
+        min-width: 1200px;
     }
     /* Pagination: btn-like buttons */
     #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button {
@@ -322,6 +345,194 @@
     {!! $dataTable->scripts() !!}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        var approveModalEl = document.getElementById('approveChangeRequestModal');
+        var approveModal = approveModalEl ? new bootstrap.Modal(approveModalEl) : null;
+        var approveForm = document.getElementById('formApproveChangeRequest');
+        var approveLoading = document.getElementById('approveModalLoading');
+        var approveContent = document.getElementById('approveModalContent');
+        var approveFormError = document.getElementById('approveFormError');
+
+        var approveCampuses = [];
+        var approveUnitTypesByCampus = {};
+        var blocksUrl = '{{ route("admin.estate.possession.blocks") }}';
+        var unitSubTypesUrl = '{{ route("admin.estate.possession.unit-sub-types") }}';
+        var vacantHousesUrl = '{{ route("admin.estate.change-request.vacant-houses") }}';
+
+        function resetApproveDropdowns() {
+            $('#approve_estate_campus, #approve_unit_type, #approve_building, #approve_unit_sub_type, #estate_house_master_pk')
+                .html('<option value="">---select---</option>').val('').prop('disabled', false);
+        }
+
+        function loadApproveBlocks() {
+            var campusId = $('#approve_estate_campus').val();
+            var unitTypeId = $('#approve_unit_type').val();
+            $('#approve_building').html('<option value="">---select---</option>');
+            $('#approve_unit_sub_type').html('<option value="">---select---</option>');
+            $('#estate_house_master_pk').html('<option value="">---select---</option>');
+            if (!campusId) return;
+            $.get(blocksUrl, { campus_id: campusId, unit_type_id: unitTypeId || '' }, function(res) {
+                if (res.status && res.data) {
+                    res.data.forEach(function(b) {
+                        $('#approve_building').append('<option value="' + b.pk + '">' + (b.block_name || b.pk) + '</option>');
+                    });
+                }
+            });
+        }
+
+        function loadApproveUnitSubTypes() {
+            var campusId = $('#approve_estate_campus').val();
+            var blockId = $('#approve_building').val();
+            var unitTypeId = $('#approve_unit_type').val();
+            $('#approve_unit_sub_type').html('<option value="">---select---</option>');
+            $('#estate_house_master_pk').html('<option value="">---select---</option>');
+            if (!campusId || !blockId) return;
+            $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId, unit_type_id: unitTypeId || '' }, function(res) {
+                if (res.status && res.data) {
+                    res.data.forEach(function(u) {
+                        $('#approve_unit_sub_type').append('<option value="' + u.pk + '">' + (u.unit_sub_type || u.pk) + '</option>');
+                    });
+                }
+            });
+        }
+
+        function loadApproveVacantHouses() {
+            var campusId = $('#approve_estate_campus').val();
+            var blockId = $('#approve_building').val();
+            var unitSubId = $('#approve_unit_sub_type').val();
+            var unitTypeId = $('#approve_unit_type').val();
+            $('#estate_house_master_pk').html('<option value="">---select---</option>');
+            if (!campusId || !blockId || !unitSubId) return;
+            $.get(vacantHousesUrl, {
+                campus_id: campusId,
+                block_id: blockId,
+                unit_sub_type_id: unitSubId,
+                unit_type_id: unitTypeId || ''
+            }, function(res) {
+                if (res.status && res.data) {
+                    res.data.forEach(function(h) {
+                        $('#estate_house_master_pk').append('<option value="' + h.pk + '">' + (h.house_no || h.pk) + '</option>');
+                    });
+                    $('#approveNoHouses').toggleClass('d-none', (res.data || []).length > 0);
+                }
+            });
+        }
+
+        $(document).on('click', '.btn-approve-change-request', function() {
+            var id = $(this).data('id');
+            if (!approveModal || !approveForm) return;
+            approveForm.action = '{{ route("admin.estate.change-request.approve", ["id" => "__ID__"]) }}'.replace('__ID__', id);
+            approveLoading.classList.remove('d-none');
+            approveContent.classList.add('d-none');
+            approveFormError.classList.add('d-none');
+            resetApproveDropdowns();
+            approveModal.show();
+            fetch('{{ url("admin/estate/change-request/approve-details") }}/' + id, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function(res) { return res.json(); }).then(function(data) {
+                approveLoading.classList.add('d-none');
+                approveContent.classList.remove('d-none');
+                if (data.error) {
+                    approveFormError.textContent = data.error || 'Failed to load details';
+                    approveFormError.classList.remove('d-none');
+                    return;
+                }
+                var emp = data.employee || {};
+                var chReq = data.change_request || {};
+                var requestedHousePk = chReq.requested_house_pk ? parseInt(chReq.requested_house_pk, 10) : null;
+                var requestedHouseNo = chReq.change_house_no || '';
+
+                if (requestedHousePk && requestedHouseNo) {
+                    document.getElementById('approveConfirmOnly').classList.remove('d-none');
+                    document.getElementById('approveFullForm').classList.add('d-none');
+                    var titleEl = document.getElementById('approveChangeRequestModalLabel');
+                    if (titleEl) titleEl.innerHTML = '<i class="bi bi-check2-circle text-success"></i> Approve Change Request';
+                    $('#approveRequesterNameConfirm').val(emp.emp_name || '');
+                    $('#approveDesignationConfirm').val(emp.emp_designation || '');
+                    document.getElementById('approveRequestedHouseNo').textContent = requestedHouseNo;
+                    var sel = document.getElementById('estate_house_master_pk');
+                    sel.innerHTML = '<option value="' + requestedHousePk + '">' + requestedHouseNo + '</option>';
+                    sel.removeAttribute('required');
+                } else {
+                    var titleEl = document.getElementById('approveChangeRequestModalLabel');
+                    if (titleEl) titleEl.innerHTML = '<i class="bi bi-check2-circle text-success"></i> Approved Request House';
+                    document.getElementById('approveConfirmOnly').classList.add('d-none');
+                    document.getElementById('approveFullForm').classList.remove('d-none');
+                    $('#approveRequesterName').val(emp.emp_name || '');
+                    $('#approveDesignation').val(emp.emp_designation || '');
+                    approveCampuses = data.campuses || [];
+                    approveUnitTypesByCampus = data.unit_types_by_campus || {};
+                    $('#approve_estate_campus').html('<option value="">---select---</option>');
+                    approveCampuses.forEach(function(c) {
+                        $('#approve_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
+                    });
+                    $('#approve_unit_type, #approve_building, #approve_unit_sub_type, #estate_house_master_pk').html('<option value="">---select---</option>');
+                    document.getElementById('estate_house_master_pk').setAttribute('required', 'required');
+                    $('#approveNoHouses').addClass('d-none');
+                }
+            }).catch(function() {
+                approveLoading.classList.add('d-none');
+                approveContent.classList.remove('d-none');
+                approveFormError.textContent = 'Network error. Please try again.';
+                approveFormError.classList.remove('d-none');
+            });
+        });
+
+        $('#approve_estate_campus').on('change', function() {
+            var campusId = $(this).val();
+            var list = approveUnitTypesByCampus[campusId] || [];
+            $('#approve_unit_type').html('<option value="">---select---</option>');
+            list.forEach(function(ut) {
+                $('#approve_unit_type').append('<option value="' + ut.pk + '">' + (ut.unit_type || ut.pk) + '</option>');
+            });
+            loadApproveBlocks();
+        });
+        $('#approve_unit_type').on('change', loadApproveBlocks);
+        $('#approve_building').on('change', loadApproveUnitSubTypes);
+        $('#approve_unit_sub_type').on('change', loadApproveVacantHouses);
+
+        if (approveForm) {
+            approveForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var submitBtn = document.getElementById('btnSubmitApprove');
+                var housePk = document.getElementById('estate_house_master_pk').value;
+                if (!housePk) {
+                    approveFormError.textContent = 'Please select Estate, Unit Type, Building, Unit Sub Type, and House No. to allot.';
+                    approveFormError.classList.remove('d-none');
+                    return;
+                }
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...'; }
+                approveFormError.classList.add('d-none');
+                var formData = new FormData(approveForm);
+                fetch(approveForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                }).then(function(res) { return res.json().then(function(d) { return { ok: res.ok, data: d }; }); })
+                .then(function(result) {
+                    if (result.ok && result.data.success) {
+                        approveModal.hide();
+                        var dt = $('#estateHacApprovedTable').DataTable();
+                        if (dt && dt.ajax) dt.ajax.reload(null, false);
+                        var alert = document.createElement('div');
+                        alert.className = 'alert alert-success alert-dismissible fade show';
+                        alert.setAttribute('role', 'alert');
+                        alert.innerHTML = '<span>' + (result.data.message || 'Change request approved and house allotted.') + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                        var cardBody = approveForm.closest('.container-fluid').querySelector('.card-body');
+                        var wrapper = cardBody && cardBody.querySelector('.estate-hac-approved-table-wrapper');
+                        if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
+                    } else {
+                        approveFormError.textContent = (result.data && result.data.message) || 'Something went wrong.';
+                        approveFormError.classList.remove('d-none');
+                    }
+                }).catch(function() {
+                    approveFormError.textContent = 'Network error. Please try again.';
+                    approveFormError.classList.remove('d-none');
+                }).finally(function() {
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Approve'; }
+                });
+            });
+        }
+
         var disapproveModalEl = document.getElementById('disapproveChangeRequestModal');
         var disapproveModal = disapproveModalEl ? new bootstrap.Modal(disapproveModalEl) : null;
         var form = document.getElementById('formDisapproveChangeRequest');

@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\EstatePossessionOther;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -26,8 +27,24 @@ class EstateReturnHouseDataTable extends DataTable
             ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
             ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
             ->editColumn('returning_date', fn($row) => $row->current_meter_reading_date ? $row->current_meter_reading_date->format('d-m-Y') : '—')
-            ->editColumn('upload_document', fn() => '—')
-            ->editColumn('remarks', fn() => '—')
+            ->editColumn('upload_document', function ($row) {
+                $path = $row->upload_document ?? $row->noc_document ?? null;
+                if (!$path) {
+                    $path = $this->returnHouseMetaByPk()[(string) $row->pk]['upload_document'] ?? null;
+                }
+                if (!$path) {
+                    return '—';
+                }
+                $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+                return '<a href="' . e($url) . '" target="_blank" rel="noopener">View</a>';
+            })
+            ->editColumn('remarks', function ($row) {
+                $remarks = $row->remarks;
+                if (!$remarks) {
+                    $remarks = $this->returnHouseMetaByPk()[(string) $row->pk]['remarks'] ?? null;
+                }
+                return $remarks ?: '—';
+            })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (!empty($searchValue)) {
@@ -46,6 +63,7 @@ class EstateReturnHouseDataTable extends DataTable
                     });
                 }
             }, true)
+            ->rawColumns(['upload_document'])
             ->setRowId('pk');
     }
 
@@ -66,7 +84,7 @@ class EstateReturnHouseDataTable extends DataTable
             ->leftJoin('estate_unit_type_master as eut', 'estate_possession_other.estate_unit_type_master_pk', '=', 'eut.pk')
             ->leftJoin('estate_unit_sub_type_master as eust', 'estate_possession_other.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->leftJoin('estate_house_master as ehm', 'estate_possession_other.estate_house_master_pk', '=', 'ehm.pk')
-            ->where('estate_possession_other.return_home_status', 0)
+            ->where('estate_possession_other.return_home_status', 1)
             ->orderBy('estate_possession_other.pk', 'desc');
     }
 
@@ -127,5 +145,23 @@ class EstateReturnHouseDataTable extends DataTable
     protected function filename(): string
     {
         return 'EstateReturnHouse_' . date('YmdHis');
+    }
+
+    private function returnHouseMetaByPk(): array
+    {
+        static $meta = null;
+        if ($meta !== null) {
+            return $meta;
+        }
+
+        $file = 'estate/return-house-meta.json';
+        if (!Storage::disk('local')->exists($file)) {
+            $meta = [];
+            return $meta;
+        }
+
+        $decoded = json_decode((string) Storage::disk('local')->get($file), true);
+        $meta = is_array($decoded) ? $decoded : [];
+        return $meta;
     }
 }
