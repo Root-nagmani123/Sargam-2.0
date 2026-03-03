@@ -774,17 +774,59 @@ Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
 
         // Estate Possession
-        Route::get('possession-for-others', function () {
-            return view('admin.estate.estate_possession_for_others');
-        })->name('possession-for-others');
+        Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
+        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
+        Route::post('possession-view', [EstateController::class, 'storePossession'])->name('possession-view.store');
+        Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+        Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
+        Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
+        Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
+        Route::get('possession/requester-details', [EstateController::class, 'getRequesterDetails'])->name('possession.requester-details');
+
+        // Update Meter
+        Route::get('update-meter-reading', function () {
+            return view('admin.estate.update_meter_reading');
+        })->name('update-meter-reading');
         
-        Route::get('bill-report-grid', function () {
-            return view('admin.estate.estate_bill_report_grid');
-        })->name('bill-report-grid');
+        Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
+        Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
+        Route::get('update-meter-reading-of-other/meter-reading-dates', [EstateController::class, 'getMeterReadingDatesOther'])->name('update-meter-reading-of-other.meter-reading-dates');
+        Route::get('update-meter-reading-of-other/blocks', [EstateController::class, 'getMeterReadingBlocksOther'])->name('update-meter-reading-of-other.blocks');
+        Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
+        Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
         
-        Route::get('bill-report-print', function () {
-            return view('admin.estate.estate_bill_report_print');
-        })->name('bill-report-print');
+        Route::get('update-meter-no', function () {
+            return view('admin.estate.update_meter_no');
+        })->name('update-meter-no');
+
+        // Return House
+        Route::get('return-house', function () {
+            return view('admin.estate.return_house');
+        })->name('return-house');
+
+        // Define House
+        Route::get('define-house', function () {
+            return view('admin.estate.define_house');
+        })->name('define-house');
+
+        // Estate Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('pending-meter-reading', function () {
+                return view('admin.estate.pending_meter_reading');
+            })->name('pending-meter-reading');
+            
+            Route::get('house-status', function () {
+                return view('admin.estate.house_status');
+            })->name('house-status');
+            
+            Route::get('bill-report-grid', function () {
+                return view('admin.estate.estate_bill_report_grid');
+            })->name('bill-report-grid');
+            
+            Route::get('bill-report-print', function () {
+                return view('admin.estate.estate_bill_report_print');
+            })->name('bill-report-print');
+        });
     });
 });
 
