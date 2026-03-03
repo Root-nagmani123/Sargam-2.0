@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\EstateHomeRequestDetails;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -73,8 +74,13 @@ class EstateRequestForEstateDataTable extends DataTable
                 ];
                 $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
                 $currentAlot = trim((string) ($row->current_alot ?? ''));
-                $raiseChangeUrl = $currentAlot !== '' ? route('admin.estate.raise-change-request', ['id' => $row->pk]) : '';
-                $raiseChangeLink = $raiseChangeUrl !== '' ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>' : '';
+                $canRaiseChangeRequest = hasRole('Estate') || hasRole('Admin');
+                $raiseChangeUrl = ($canRaiseChangeRequest && $currentAlot !== '')
+                    ? route('admin.estate.raise-change-request', ['id' => $row->pk])
+                    : '';
+                $raiseChangeLink = $raiseChangeUrl !== ''
+                    ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>'
+                    : '';
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
                     <a href="' . e($detailsUrl) . '" class="text-primary" title="Request &amp; Change Details"><i class="material-icons material-symbols-rounded">visibility</i></a>
                     ' . $raiseChangeLink . '
@@ -128,7 +134,7 @@ class EstateRequestForEstateDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->select([
                 'estate_home_request_details.pk',
                 'estate_home_request_details.employee_pk',
@@ -146,6 +152,21 @@ class EstateRequestForEstateDataTable extends DataTable
                 'estate_home_request_details.eligibility_type_pk',
                 'estate_home_request_details.remarks',
             ]);
+
+        // Self-service: non-estate/admin/HAC-approval users should only see their own requests.
+        // Estate / Admin / Training-* / IST / HAC Person see full list (they work on others' requests).
+        $user = Auth::user();
+        if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('HAC Person'))) {
+            $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+            if (!empty($employeeIds)) {
+                $query->whereIn('estate_home_request_details.employee_pk', $employeeIds);
+            } else {
+                // No mapped employee → show nothing
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        return $query;
     }
 
     public function html(): HtmlBuilder

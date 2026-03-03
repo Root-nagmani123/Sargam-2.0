@@ -50,7 +50,7 @@
                         @forelse($requestList as $index => $row)
                         <tr>
                             <td class="text-center">
-                                <input type="checkbox" class="form-check-input row-select" value="{{ $row->id ?? $index }}" aria-label="Select row">
+                                <input type="checkbox" class="form-check-input row-select" value="{{ $row->pk ?? $index }}" aria-label="Select row">
                             </td>
                             <td>{{ $index + 1 }}</td>
                             <td>{{ $row->request_id ?? '—' }}</td>
@@ -66,7 +66,7 @@
                                 <a href="#" class="link-primary text-decoration-none">Extension</a>
                             </td>
                             <td>
-                                <a href="#" class="link-primary text-decoration-none btn-change-request" data-request-id="{{ $row->id ?? $row->pk ?? $index }}">Change</a>
+                                <a href="#" class="link-primary text-decoration-none btn-change-request" data-request-id="{{ $row->pk }}">Change</a>
                                 @if(!empty($row->change_approved))
                                 <span class="text-success small d-block">(Your request has been approved)</span>
                                 @endif
