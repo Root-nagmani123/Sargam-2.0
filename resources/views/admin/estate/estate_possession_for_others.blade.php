@@ -3,66 +3,76 @@
 @section('title', 'Estate Possession for Others - Sargam')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <x-breadcrum title="Estate Possession for Others"></x-breadcrum>
 
-    <!-- Page Header -->
-    <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
-        <div class="card-body" id="possessionCardBody">
-            <div class="row align-items-center mb-4">
-                <div class="col-12 col-md-6">
-                    <h2 class="mb-0">Estate Possession for Others</h2>
+    <!-- Page Card -->
+    <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
+        <div class="card-body p-4 p-lg-5" id="possessionCardBody">
+            <!-- Header -->
+            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 fw-semibold mb-1">Estate Possession for Others</h1>
+                    <p class="text-muted small mb-0">View and manage possession records with add, edit, delete, excel upload, download, and print options.</p>
                 </div>
-                <div class="col-12 col-md-6 mt-3 mt-md-0">
-                    <div class="d-flex justify-content-md-end justify-content-start gap-2">
-                        <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" class="btn btn-outline-primary text-decoration-none">Update Reading</a>
-                        <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-success btn-sm" title="Add">
-                            <i class="material-symbols-rounded">add</i>
-                        </a>
-                    </div>
+                <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                    <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 text-decoration-none">
+                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">speed</i>
+                        <span>Update Reading</span>
+                    </a>
+                    <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-success d-inline-flex align-items-center gap-2" title="Add possession">
+                        <i class="material-symbols-rounded" style="font-size: 1.25rem;">add</i>
+                        <span>Add Possession</span>
+                    </a>
                 </div>
             </div>
 
             @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
+                    <i class="bi bi-check-circle-fill me-2 flex-shrink-0" aria-hidden="true"></i>
+                    <span class="flex-grow-1">{{ session('success') }}</span>
+                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
             @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" aria-hidden="true"></i>
+                    <span class="flex-grow-1">{{ session('error') }}</span>
+                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
-            <!-- Info Card -->
-            <div class="alert alert-info mb-4">
-                <p class="mb-0">This page displays all Possession added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
+            <!-- Info callout -->
+            <div class="alert alert-info d-flex align-items-start rounded-3 border-0 mb-4 shadow-sm" role="status">
+                <i class="bi bi-info-circle-fill me-2 mt-1 flex-shrink-0" aria-hidden="true"></i>
+                <p class="mb-0 small">This page lists all possession records in the system. Use the actions above to add new records, update meter readings, or manage existing entries via the table (edit, delete, excel upload/download, print).</p>
             </div>
 
-            <hr>
-            <div class="table-responsive overflow-auto estate-possession-table-wrap">
-                {!! $dataTable->table(['class' => 'table text-nowrap mb-0 w-100', 'style' => 'min-width: 1200px;', 'id' => 'estatePossessionTable']) !!}
+            <hr class="my-4">
+            <div class="table-responsive overflow-auto estate-possession-table-wrap rounded-3">
+                {!! $dataTable->table(['class' => 'table table-hover align-middle text-nowrap mb-0 w-100', 'style' => 'min-width: 1200px;', 'id' => 'estatePossessionTable', 'aria-describedby' => 'estate-possession-caption']) !!}
             </div>
+            <div id="estate-possession-caption" class="visually-hidden">Estate Possession for Others list</div>
         </div>
     </div>
 </div>
 
 <!-- Delete confirmation modal -->
 <div class="modal fade" id="deletePossessionModal" tabindex="-1" aria-labelledby="deletePossessionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deletePossessionModalLabel">Confirm Delete</h5>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-3 shadow border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="deletePossessionModalLabel">Confirm Delete</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                Are you sure you want to delete this possession record?
+            <div class="modal-body pt-2">
+                <p class="mb-0">Are you sure you want to delete this possession record? This action cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary rounded-2" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger rounded-2 d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
             </div>
         </div>
     </div>
@@ -82,12 +92,22 @@
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
     }
-    @media (max-width: 991.98px) {
-        .estate-possession-table-wrap,
+    #estatePossessionTable thead th {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    @media (max-width: 991.98px) {        .estate-possession-table-wrap,
         #estatePossessionTable_wrapper .dataTables_scrollBody {
             max-height: 60vh;
             overflow-y: auto !important;
+            overflow-x: auto !important;
             -webkit-overflow-scrolling: touch;
+        }
+    }
+    @media (max-width: 575.98px) {
+        .estate-possession-table-wrap,
+        #estatePossessionTable_wrapper .dataTables_scrollBody {
+            max-height: 55vh;
         }
     }
 </style>
@@ -117,7 +137,7 @@
                     $('#deletePossessionModal').modal('hide');
                     if (response.success) {
                         $('#estatePossessionTable').DataTable().ajax.reload(null, false);
-                        const alert = '<div class="alert alert-success alert-dismissible fade show" role="alert">' + response.message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+                        const alert = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2 flex-shrink-0" aria-hidden="true"></i><span class="flex-grow-1">' + response.message + '</span><button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert"></button></div>';
                         $('#possessionCardBody').find('.alert-success').remove();
                         $('#possessionCardBody').prepend(alert);
                         setTimeout(function() { $('.alert-success').fadeOut(); }, 3000);
@@ -126,7 +146,7 @@
                 error: function(xhr) {
                     $('#deletePossessionModal').modal('hide');
                     const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to delete.';
-                    const alert = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' + msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+                    const alert = '<div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" aria-hidden="true"></i><span class="flex-grow-1">' + msg + '</span><button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert"></button></div>';
                     $('#possessionCardBody').find('.alert-danger').remove();
                     $('#possessionCardBody').prepend(alert);
                 }
