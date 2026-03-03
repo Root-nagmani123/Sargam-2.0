@@ -4,15 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\DataTables\EstateApprovalSettingDataTable;
 use App\DataTables\EstateChangeRequestDataTable;
+use App\DataTables\EstateMigrationReportDataTable;
 use App\DataTables\EstateOtherRequestDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
 use App\DataTables\EstateRequestForEstateDataTable;
+use App\DataTables\EstateReturnHouseDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\EstateHouse;
 use App\Models\EstateMonthReadingDetails;
 use App\Models\EstateMonthReadingDetailsOther;
 use App\Models\EstateHomeRequestDetails;
 use App\Models\EstateHomeReqApprovalMgmt;
+use App\Models\EstateMigrationReport;
 use App\Models\EstateOtherRequest;
 use App\Models\EstatePossessionOther;
 use App\Models\EmployeeMaster;
@@ -40,6 +43,68 @@ class EstateController extends Controller
     }
 
     /**
+     * Put In HAC - Authority view: List estate requests not yet in HAC. Authority selects and puts in HAC.
+     */
+    public function putInHac(EstateRequestPutInHacDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.put_in_hac');
+    }
+
+    /**
+     * HAC Forward - HAC view: List requests in HAC not yet forwarded. HAC forwards to allotment team.
+     */
+    public function hacForward(EstateRequestHacForwardDataTable $dataTable)
+    {
+        return $dataTable->render('admin.estate.hac_forward');
+    }
+
+    /**
+     * Put selected estate requests in HAC (set hac_status = 1).
+     */
+    public function putInHacAction(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:estate_home_request_details,pk',
+        ]);
+
+        $updated = EstateHomeRequestDetails::whereIn('pk', $request->ids)
+            ->where('hac_status', 0)
+            ->update(['hac_status' => 1]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $updated . ' request(s) put in HAC successfully.',
+            ]);
+        }
+        return redirect()->route('admin.estate.put-in-hac')
+            ->with('success', $updated . ' request(s) put in HAC successfully.');
+    }
+
+    /**
+     * Forward estate request to allotment team (set f_status = 1).
+     */
+    public function forwardToAllotment(Request $request, $id)
+    {
+        $record = EstateHomeRequestDetails::where('hac_status', 1)
+            ->where('f_status', 0)
+            ->findOrFail($id);
+
+        $record->f_status = 1;
+        $record->save();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Request forwarded to allotment team successfully.',
+            ]);
+        }
+        return redirect()->route('admin.estate.hac-forward')
+            ->with('success', 'Request forwarded to allotment team successfully.');
+    }
+
+    /**
      * Get next Request ID for Add Estate Request (e.g. home-req-01, home-req-02).
      */
     public function getNextRequestForEstateId()
@@ -63,6 +128,25 @@ class EstateController extends Controller
             $nextNumber = ((int) $m[1]) + 1;
         }
         return 'home-req-' . sprintf('%02d', $nextNumber);
+    }
+
+    /**
+     * Delete a single estate approval setting record.
+     */
+    public function destroyEstateApprovalSetting(Request $request, $id)
+    {
+        $record = EstateHomeReqApprovalMgmt::find($id);
+        if (!$record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.estate-approval-setting')->with('error', 'Record not found.');
+        }
+        $record->delete();
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Approval setting deleted successfully.']);
+        }
+        return redirect()->route('admin.estate.estate-approval-setting')->with('success', 'Approval setting deleted successfully.');
     }
 
     /**
@@ -479,6 +563,9 @@ class EstateController extends Controller
             $message = 'Possession added successfully.';
         }
 
+        if ($request->get('redirect_to') === 'return-house') {
+            return redirect()->route('admin.estate.return-house')->with('success', $message);
+        }
         return redirect()
             ->route('admin.estate.possession-for-others')
             ->with('success', $message);
@@ -878,6 +965,54 @@ class EstateController extends Controller
     }
 
     /**
+     * Return House - Listing (estate_possession_other where return_home_status = 0).
+     * Pass requesters & campuses for Add Request Details modal (dynamic dropdowns).
+     */
+    public function returnHouse(EstateReturnHouseDataTable $dataTable)
+    {
+        $requesters = EstateOtherRequest::orderBy('emp_name')
+            ->get(['pk', 'emp_name', 'request_no_oth', 'section']);
+        $campuses = DB::table('estate_campus_master')
+            ->orderBy('campus_name')
+            ->get(['pk', 'campus_name']);
+        $unitTypesByCampus = DB::table('estate_campus_master as a')
+            ->join('estate_house_master as b', 'a.pk', '=', 'b.estate_campus_master_pk')
+            ->join('estate_unit_type_master as c', 'b.estate_unit_master_pk', '=', 'c.pk')
+            ->select('a.pk as campus_pk', 'c.pk as unit_type_pk', 'c.unit_type')
+            ->distinct()
+            ->orderBy('a.pk')
+            ->orderBy('c.unit_type')
+            ->get()
+            ->groupBy('campus_pk')
+            ->map(fn ($rows) => $rows->map(fn ($r) => ['pk' => $r->unit_type_pk, 'unit_type' => $r->unit_type])->values()->all())
+            ->all();
+
+        return $dataTable->render('admin.estate.return_house', compact('requesters', 'campuses', 'unitTypesByCampus'));
+    }
+
+    /**
+     * Mark house as returned (set return_home_status = 1 in estate_possession_other).
+     */
+    public function markReturnHouse(Request $request, $id)
+    {
+        $record = EstatePossessionOther::find($id);
+        if (!$record) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+            }
+            return redirect()->route('admin.estate.return-house')->with('error', 'Record not found.');
+        }
+
+        $record->return_home_status = 1;
+        $record->save();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'House marked as returned successfully.']);
+        }
+        return redirect()->route('admin.estate.return-house')->with('success', 'House marked as returned successfully.');
+    }
+
+    /**
      * API: Get requester details (request_no_oth, section) when requester selected.
      */
     public function getRequesterDetails(Request $request)
@@ -892,6 +1027,130 @@ class EstateController extends Controller
             'data' => [
                 'request_no_oth' => $req->request_no_oth,
                 'section' => $req->section,
+            ],
+        ]);
+    }
+
+    /**
+     * API: Return House - Get employees list by type (LBSNAA = estate_possession_details + estate_home_request_details, Other = estate_other_req).
+     */
+    public function getReturnHouseEmployees(Request $request)
+    {
+        $type = $request->get('employee_type', 'Other Employee');
+        if ($type === 'LBSNAA') {
+            $list = DB::table('estate_possession_details as epd')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('epd.return_home_status', 0)
+                ->whereNotNull('epd.estate_house_master_pk')
+                ->select('epd.pk as id', 'ehrd.emp_name as name', 'ehrd.req_id as request_no')
+                ->orderBy('ehrd.emp_name')
+                ->get();
+        } else {
+            $list = EstateOtherRequest::orderBy('emp_name')
+                ->get(['pk as id', 'emp_name as name', 'request_no_oth as request_no', 'section'])
+                ->map(fn ($r) => (object) ['id' => $r->id, 'name' => $r->name, 'request_no' => $r->request_no, 'section' => $r->section ?? '']);
+        }
+        return response()->json(['status' => true, 'data' => $list]);
+    }
+
+    /**
+     * API: Return House - Get full request details for mapping (section, estate, unit, building, house, dates).
+     * Other: estate_other_req (section) + latest estate_possession_other. LBSNAA: estate_possession_details + house/campus/block/unit.
+     */
+    public function getReturnHouseRequestDetails(Request $request)
+    {
+        $type = $request->get('employee_type', 'Other Employee');
+        $id = $request->get('id');
+        if (!$id) {
+            return response()->json(['status' => false, 'data' => null]);
+        }
+        if ($type === 'LBSNAA') {
+            $row = DB::table('estate_possession_details as epd')
+                ->join('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+                ->join('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
+                ->join('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
+                ->join('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->leftJoin('estate_unit_master as eum', 'ehm.estate_unit_master_pk', '=', 'eum.pk')
+                ->leftJoin('estate_unit_type_master as eut', 'eum.estate_unit_type_master_pk', '=', 'eut.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('epd.pk', $id)
+                ->select(
+                    'ec.pk as estate_campus_master_pk',
+                    'ec.campus_name',
+                    'eb.pk as estate_block_master_pk',
+                    'eb.block_name',
+                    'eut.pk as estate_unit_type_master_pk',
+                    'eut.unit_type as unit_type_name',
+                    'eust.pk as estate_unit_sub_type_master_pk',
+                    'eust.unit_sub_type',
+                    'ehm.pk as estate_house_master_pk',
+                    'ehm.house_no',
+                    'epd.allotment_date',
+                    'epd.possession_date as possession_date_oth',
+                    'ehrd.remarks as section_display'
+                )
+                ->first();
+            if (!$row) {
+                return response()->json(['status' => false, 'data' => null]);
+            }
+            $section = $row->section_display ?? '';
+            unset($row->section_display);
+            $row->section = $section;
+            $row->possession_date_oth = $row->possession_date_oth ? (\Carbon\Carbon::parse($row->possession_date_oth)->format('Y-m-d')) : null;
+            $row->allotment_date = $row->allotment_date ? (is_string($row->allotment_date) ? (date('Y-m-d', strtotime($row->allotment_date)) ?: $row->allotment_date) : \Carbon\Carbon::parse($row->allotment_date)->format('Y-m-d')) : null;
+            return response()->json(['status' => true, 'data' => $row]);
+        }
+        // Other: estate_other_req (section) + latest estate_possession_other
+        $req = EstateOtherRequest::find($id);
+        if (!$req) {
+            return response()->json(['status' => false, 'data' => null]);
+        }
+        $pos = DB::table('estate_possession_other as epo')
+            ->leftJoin('estate_campus_master as ec', 'epo.estate_campus_master_pk', '=', 'ec.pk')
+            ->leftJoin('estate_block_master as eb', 'epo.estate_block_master_pk', '=', 'eb.pk')
+            ->leftJoin('estate_unit_type_master as eut', 'epo.estate_unit_type_master_pk', '=', 'eut.pk')
+            ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+            ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('epo.estate_other_req_pk', $id)
+            ->orderBy('epo.pk', 'desc')
+            ->select(
+                'ec.pk as estate_campus_master_pk',
+                'ec.campus_name',
+                'eb.pk as estate_block_master_pk',
+                'eb.block_name',
+                'eut.pk as estate_unit_type_master_pk',
+                'eut.unit_type as unit_type_name',
+                'eust.pk as estate_unit_sub_type_master_pk',
+                'eust.unit_sub_type',
+                'ehm.pk as estate_house_master_pk',
+                'ehm.house_no',
+                'epo.allotment_date',
+                'epo.possession_date_oth'
+            )
+            ->first();
+        $section = $req->section ?? '';
+        if ($pos) {
+            $pos->section = $section;
+            $pos->possession_date_oth = $pos->possession_date_oth ? (\Carbon\Carbon::parse($pos->possession_date_oth)->format('Y-m-d')) : null;
+            $pos->allotment_date = $pos->allotment_date ? (is_string($pos->allotment_date) ? date('Y-m-d', strtotime($pos->allotment_date)) : \Carbon\Carbon::parse($pos->allotment_date)->format('Y-m-d')) : null;
+            return response()->json(['status' => true, 'data' => $pos]);
+        }
+        return response()->json([
+            'status' => true,
+            'data' => (object) [
+                'section' => $section,
+                'estate_campus_master_pk' => null,
+                'campus_name' => null,
+                'estate_block_master_pk' => null,
+                'block_name' => null,
+                'estate_unit_type_master_pk' => null,
+                'unit_type_name' => null,
+                'estate_unit_sub_type_master_pk' => null,
+                'unit_sub_type' => null,
+                'estate_house_master_pk' => null,
+                'house_no' => null,
+                'allotment_date' => null,
+                'possession_date_oth' => null,
             ],
         ]);
     }
@@ -1843,6 +2102,174 @@ class EstateController extends Controller
     public function houseStatus()
     {
         return view('admin.estate.house_status');
+    }
+
+    /**
+     * Estate Migration Report (1998–2026) – historical allotment data with filters.
+     * Filter options come from distinct values in the report table.
+     */
+    public function estateMigrationReport(EstateMigrationReportDataTable $dataTable)
+    {
+        $years = EstateMigrationReport::select('allotment_year')
+            ->whereNotNull('allotment_year')
+            ->distinct()
+            ->orderBy('allotment_year', 'desc')
+            ->pluck('allotment_year');
+
+        $campuses = EstateMigrationReport::select('campus_name')
+            ->whereNotNull('campus_name')
+            ->where('campus_name', '!=', '')
+            ->distinct()
+            ->orderBy('campus_name')
+            ->pluck('campus_name');
+
+        $buildings = EstateMigrationReport::select('building_name')
+            ->whereNotNull('building_name')
+            ->where('building_name', '!=', '')
+            ->distinct()
+            ->orderBy('building_name')
+            ->pluck('building_name');
+
+        $buildingTypes = EstateMigrationReport::select('type_of_building')
+            ->whereNotNull('type_of_building')
+            ->where('type_of_building', '!=', '')
+            ->distinct()
+            ->orderBy('type_of_building')
+            ->pluck('type_of_building');
+
+        $departments = EstateMigrationReport::select('department_name')
+            ->whereNotNull('department_name')
+            ->where('department_name', '!=', '')
+            ->distinct()
+            ->orderBy('department_name')
+            ->pluck('department_name');
+
+        $employeeTypes = EstateMigrationReport::select('employee_type')
+            ->whereNotNull('employee_type')
+            ->where('employee_type', '!=', '')
+            ->distinct()
+            ->orderBy('employee_type')
+            ->pluck('employee_type');
+
+        return $dataTable->render('admin.estate.estate_migration_report', compact(
+            'years', 'campuses', 'buildings', 'buildingTypes', 'departments', 'employeeTypes'
+        ));
+    }
+
+    /**
+     * API: Get cascading filter options for Estate Migration Report.
+     * Options depend on upstream filters: year → campus → building → type → department → employee type.
+     * Each dropdown only considers filters that come before it in the chain.
+     */
+    public function getEstateMigrationReportFilterOptions(Request $request)
+    {
+        $year = $request->query('year');
+        $campus = $request->query('campus');
+        $building = $request->query('building');
+        $type = $request->query('type');
+        $department = $request->query('department');
+
+        $response = [];
+
+        // Years: no upstream filters
+        $yearsQuery = EstateMigrationReport::query();
+        $response['years'] = $yearsQuery->select('allotment_year')
+            ->whereNotNull('allotment_year')
+            ->distinct()
+            ->orderBy('allotment_year', 'desc')
+            ->pluck('allotment_year');
+
+        // Campuses: filtered by year
+        $campusesQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $campusesQuery->where('allotment_year', (int) $year);
+        }
+        $response['campuses'] = $campusesQuery->select('campus_name')
+            ->whereNotNull('campus_name')
+            ->where('campus_name', '!=', '')
+            ->distinct()
+            ->orderBy('campus_name')
+            ->pluck('campus_name');
+
+        // Buildings: filtered by year, campus
+        $buildingsQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $buildingsQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $buildingsQuery->where('campus_name', $campus);
+        }
+        $response['buildings'] = $buildingsQuery->select('building_name')
+            ->whereNotNull('building_name')
+            ->where('building_name', '!=', '')
+            ->distinct()
+            ->orderBy('building_name')
+            ->pluck('building_name');
+
+        // Type of building: filtered by year, campus, building
+        $typesQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $typesQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $typesQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $typesQuery->where('building_name', $building);
+        }
+        $response['buildingTypes'] = $typesQuery->select('type_of_building')
+            ->whereNotNull('type_of_building')
+            ->where('type_of_building', '!=', '')
+            ->distinct()
+            ->orderBy('type_of_building')
+            ->pluck('type_of_building');
+
+        // Departments: filtered by year, campus, building, type
+        $deptQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $deptQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $deptQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $deptQuery->where('building_name', $building);
+        }
+        if ($type !== null && $type !== '') {
+            $deptQuery->where('type_of_building', $type);
+        }
+        $response['departments'] = $deptQuery->select('department_name')
+            ->whereNotNull('department_name')
+            ->where('department_name', '!=', '')
+            ->distinct()
+            ->orderBy('department_name')
+            ->pluck('department_name');
+
+        // Employee types: filtered by year, campus, building, type, department
+        $empTypeQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $empTypeQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $empTypeQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $empTypeQuery->where('building_name', $building);
+        }
+        if ($type !== null && $type !== '') {
+            $empTypeQuery->where('type_of_building', $type);
+        }
+        if ($department !== null && $department !== '') {
+            $empTypeQuery->where('department_name', $department);
+        }
+        $response['employeeTypes'] = $empTypeQuery->select('employee_type')
+            ->whereNotNull('employee_type')
+            ->where('employee_type', '!=', '')
+            ->distinct()
+            ->orderBy('employee_type')
+            ->pluck('employee_type');
+
+        return response()->json($response);
     }
 
     /**
