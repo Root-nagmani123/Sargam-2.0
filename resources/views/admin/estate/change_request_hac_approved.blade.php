@@ -7,18 +7,17 @@
     <x-breadcrum title="Change Requests (HAC Approved)"></x-breadcrum>
     <x-session_message />
 
-    <div class="card shadow-sm border-0 rounded-3">
+    <div class="card">
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-4">
                 <div>
                     <h1 class="h4 fw-semibold mb-1">Change Requests (Approved by HAC)</h1>
-                    <p class="text-muted small mb-0">View and manage change requests approved by HAC. Use Approve/Disapprove to take action on each request.</p>
                 </div>
             </div>
-
-            <div class="estate-change-request-table-wrapper">
+            <hr class="my-2">
+            <div class="table-responsive">
                 {!! $dataTable->table([
-                    'class' => 'table text-nowrap align-middle mb-0 estate-change-request-table',
+                    'class' => 'table text-nowrap w-100 estate-change-request-table',
                     'aria-describedby' => 'change-request-caption'
                 ]) !!}
             </div>

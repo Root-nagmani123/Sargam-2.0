@@ -25,7 +25,7 @@ class IssueManagementController extends Controller
     /**
      * Display a listing of all issues.
      */
-    public function index(Request $request)
+    public function index(IssueManagementDataTable $dataTable)
     {
         $query = IssueLogManagement::with([
             'category',
