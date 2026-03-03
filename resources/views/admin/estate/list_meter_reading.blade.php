@@ -3,6 +3,12 @@
 @section('title', 'List Meter Reading - Sargam')
 
 @section('setup_content')
+<style>
+    /* List Meter Reading page: search bar right-aligned (default DataTables style) */
+    #listMeterReadingCard .dataTables_filter { float: right !important; text-align: right !important; }
+    #listMeterReadingCard .dataTables_filter label { margin: 0 !important; }
+    #listMeterReadingCard .dataTables_filter input { margin-left: 0.5rem !important; }
+</style>
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="List Meter Reading" />
 
@@ -13,14 +19,14 @@
             <h1 class="h4 fw-bold text-dark mb-1">List Meter Reading</h1>
             <p class="text-muted small mb-4">Filter meter readings by Bill Month and Building Name.</p>
 
-            <form id="filterForm" class="row g-3 align-items-end">
+            <form id="listMeterReadingFilterForm" class="row g-3">
                 <div class="col-12 col-md-4">
                     <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" required>
                         <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
                     </div>
-                    <small class="text-muted">Select Bill Month</small>
+                    <small class="text-muted d-block">Select Bill Month</small>
                 </div>
                 <div class="col-12 col-md-4">
                     <label for="block_id" class="form-label">Building Name <span class="text-danger">*</span></label>
@@ -30,9 +36,10 @@
                             <option value="{{ $b->pk }}">{{ $b->block_name ?? 'N/A' }}</option>
                         @endforeach
                     </select>
-                    <small class="text-muted">Select Building Name</small>
+                    <small class="text-muted d-block">Select Building Name</small>
                 </div>
                 <div class="col-12 col-md-4">
+                    <label class="form-label d-block" style="height: 1.25em; margin-bottom: 0.5rem;" aria-hidden="true">&nbsp;</label>
                     <button type="button" class="btn btn-primary" id="btnShow">
                         <i class="bi bi-search me-1"></i> Show
                     </button>
@@ -41,7 +48,7 @@
         </div>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-3">
+    <div class="card shadow-sm border-0 rounded-3" id="listMeterReadingCard">
         <div class="card-body p-4">
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle mb-0" id="listMeterReadingTable">
@@ -139,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             },
                             responsive: true,
                             autoWidth: false,
-                            dom: '<"row flex-wrap align-items-center gap-2"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
+                            dom: '<"row flex-wrap align-items-center gap-2 mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
                         });
                     }
                 } else {

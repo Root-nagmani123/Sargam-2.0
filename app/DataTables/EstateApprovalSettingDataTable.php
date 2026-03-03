@@ -77,7 +77,7 @@ class EstateApprovalSettingDataTable extends DataTable
                 'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
-                'searching' => false,
+                'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'order' => [[0, 'asc']],
