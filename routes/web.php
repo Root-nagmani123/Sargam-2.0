@@ -37,7 +37,6 @@ use App\Http\Controllers\Admin\{
     DashboardController,
     CourseRepositoryController,
 };
-use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
@@ -82,26 +81,11 @@ Route::middleware(['auth'])->group(function () {
             ->name('users.assignRoleSave');
     });
 
-    // // Dashboard
-    // Route::get('/dashboard', function () {
-    //     $year = request('year', now()->year);
-    //     $month = request('month', now()->month);
-    //     $events = []; // Add your events logic here if needed
-    //     return view('admin.dashboard', compact('year', 'month', 'events'));
-
-    // })->name('admin.dashboard');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
 
-
-    Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
-
-    // Route::get('/home', [HomeController::class, 'index'])->name('home');
-
-    // By Dhananjay
-    //Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
 
 
     // Member Routes
@@ -737,35 +721,66 @@ Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::
 
 Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
+  // Estate Management Routes
+  Route::prefix('estate')->name('estate.')->group(function () {
+    // Estate Request for Others
+    Route::get('request-for-others', function () {
+        return view('admin.estate.estate_request_for_others');
+    })->name('request-for-others');
+    
+    Route::get('add-other-estate-request', function () {
+        return view('admin.estate.add_other_estate_request');
+    })->name('add-other-estate-request');
 
-// ============================================
-// Issue Management Module Routes (CENTCOM)
-// ============================================
-Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+    // Estate Possession
+    Route::get('possession-for-others', function () {
+        return view('admin.estate.estate_possession_for_others');
+    })->name('possession-for-others');
     
-    // Issue Management - Main Routes
-    Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
-    Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
-    Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
-    Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
-    Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
-    Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
-    Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
+    Route::get('possession-view', function () {
+        return view('admin.estate.estate_possession_view');
+    })->name('possession-view');
+
+    // Update Meter
+    Route::get('update-meter-reading', function () {
+        return view('admin.estate.update_meter_reading');
+    })->name('update-meter-reading');
     
-    // AJAX Routes
-    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
-    Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
+    Route::get('update-meter-reading-of-other', function () {
+        return view('admin.estate.update_meter_reading_of_other');
+    })->name('update-meter-reading-of-other');
     
-    // Category Management
-    Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
-    Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
-    Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
-    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');
-    
-    // Sub-Category Management
-    Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
-    Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
-    Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
-    Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
+    Route::get('update-meter-no', function () {
+        return view('admin.estate.update_meter_no');
+    })->name('update-meter-no');
+
+    // Return House
+    Route::get('return-house', function () {
+        return view('admin.estate.return_house');
+    })->name('return-house');
+
+    // Define House
+    Route::get('define-house', function () {
+        return view('admin.estate.define_house');
+    })->name('define-house');
+
+    // Estate Reports
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('pending-meter-reading', function () {
+            return view('admin.estate.pending_meter_reading');
+        })->name('pending-meter-reading');
+        
+        Route::get('house-status', function () {
+            return view('admin.estate.house_status');
+        })->name('house-status');
+        
+        Route::get('bill-report-grid', function () {
+            return view('admin.estate.estate_bill_report_grid');
+        })->name('bill-report-grid');
+        
+        Route::get('bill-report-print', function () {
+            return view('admin.estate.estate_bill_report_print');
+        })->name('bill-report-print');
+    });
 });
 
