@@ -236,7 +236,7 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.update-meter-reading-of-other') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.update-meter-reading-of-other') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Update Meter Reading of Other</span>
