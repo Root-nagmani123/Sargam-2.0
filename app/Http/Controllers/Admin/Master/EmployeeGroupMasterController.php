@@ -16,7 +16,14 @@ class EmployeeGroupMasterController extends Controller
     }
     public function create()
     {
-        return view('admin.master.employee_group.create');
+        $employeeGroupMaster = null;
+
+        // Return only form HTML for AJAX requests (modal)
+        if (request()->ajax()) {
+            return view('admin.master.employee_group._form', compact('employeeGroupMaster'))->render();
+        }
+
+        return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
     }
 
     public function store(Request $request)
@@ -37,6 +44,12 @@ class EmployeeGroupMasterController extends Controller
         $employeeGroup = $id ? EmployeeGroupMaster::find($id) : new EmployeeGroupMaster();
 
         if ($id && !$employeeGroup) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee Group not found.'
+                ], 404);
+            }
             return redirect()->back()->with('error', 'Employee Group not found.');
         }
 
@@ -45,13 +58,36 @@ class EmployeeGroupMasterController extends Controller
 
         $message = $id ? 'Employee Group updated successfully.' : 'Employee Group created successfully.';
 
+        // Return JSON response for AJAX requests (modal)
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+        }
+
         return redirect()->route('master.employee.group.index')->with('success', $message);
     }
     public function edit($id)
     {
-        $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
-        // dd($employeeGroupMaster);
-        return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
+        try {
+            $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
+
+            // Return only form HTML for AJAX requests (modal)
+            if (request()->ajax()) {
+                return view('admin.master.employee_group._form', compact('employeeGroupMaster'))->render();
+            }
+
+            return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
+        } catch (\Exception $e) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to edit employee group: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'Failed to edit employee group: ' . $e->getMessage());
+        }
     }
 
     public function update(Request $request, $id)
@@ -65,5 +101,30 @@ class EmployeeGroupMasterController extends Controller
         return redirect()->route('admin.master.employee_group_master.index')->with('success', 'Employee Group updated successfully.');
     }
 
-
+    public function destroy(Request $request, $id)
+    {
+        try {
+            $pk = decrypt($id);
+            $employeeGroup = EmployeeGroupMaster::findOrFail($pk);
+            $employeeGroup->delete();
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employee Group deleted successfully.'
+                ]);
+            }
+            
+            return redirect()->route('master.employee.group.index')->with('success', 'Employee Group deleted successfully.');
+        } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete employee group. ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->route('master.employee.group.index')->with('error', 'Failed to delete employee group.');
+        }
+    }
 }

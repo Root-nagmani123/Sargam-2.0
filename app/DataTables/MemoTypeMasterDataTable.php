@@ -45,27 +45,25 @@ class MemoTypeMasterDataTable extends DataTable
     // 🔹 Delete button logic (NO Blade here)
     if ($isActive) {
         $deleteButton = '
-            <button type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+            <a href="javascript:void(0);"
+                class="d-inline-flex align-items-center gap-1 text-primary"
                 disabled
                 title="Cannot delete active memo type">
-                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
+                <span class="material-icons material-symbols-rounded fs-5">
                     delete
                 </span>
-                <span class="d-none d-md-inline">Delete</span>
-            </button>';
+            </a>';
     } else {
         $deleteButton = '
-            <button type="button"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
+            <a href="javascript:void(0);"
+                class="d-inline-flex align-items-center gap-1 text-primary deleteBtn"
                 data-pk="' . $row->pk . '"
                 data-url="' . $deleteUrl . '"
                 aria-label="Delete memo type">
-                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
+                <span class="material-icons material-symbols-rounded">
                     delete
                 </span>
-                <span class="d-none d-md-inline">Delete</span>
-            </button>';
+            </a>';
     }
 
     return '
@@ -73,13 +71,12 @@ class MemoTypeMasterDataTable extends DataTable
 
             <!-- Edit -->
             <a href="javascript:void(0);"
-                class="editMemo btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                class="editMemo d-inline-flex align-items-center gap-1 text-primary"
                 data-pk="' . $row->pk . '"
                 data-name="' . e($row->memo_type_name) . '"
                 data-status="' . $row->active_inactive . '"
                 data-file="' . ($row->memo_doc_upload ? asset('storage/' . $row->memo_doc_upload) : '') . '">
-                <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
-                <span class="d-none d-md-inline">Edit</span>
+                <span class="material-icons material-symbols-rounded">edit</span>
             </a>
 
             <!-- Delete -->
@@ -118,10 +115,8 @@ class MemoTypeMasterDataTable extends DataTable
                 'pageLength' => 10,
                 'language' => [
                     'paginate' => [
-                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_left</i>',
-                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_right</i>'
+                        'previous' => ' <i class="material-icons material-symbols-rounded fs-4">chevron_left</i>',
+                        'next' => '<i class="material-icons material-symbols-rounded fs-4">chevron_right</i>'
                     ]
                 ],
             ]);
