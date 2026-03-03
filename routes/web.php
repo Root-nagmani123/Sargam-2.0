@@ -770,9 +770,13 @@ Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController
             return view('admin.estate.pending_meter_reading');
         })->name('pending-meter-reading');
         
-        Route::get('house-status', function () {
-            return view('admin.estate.house_status');
-        })->name('house-status');
+        Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
+        Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+
+        // Estate Possession
+        Route::get('possession-for-others', function () {
+            return view('admin.estate.estate_possession_for_others');
+        })->name('possession-for-others');
         
         Route::get('bill-report-grid', function () {
             return view('admin.estate.estate_bill_report_grid');
