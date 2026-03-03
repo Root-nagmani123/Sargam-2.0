@@ -56,11 +56,8 @@
                         <label for="estate_unit_type_master_pk" class="form-label">Unit Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
                             <option value="">Select</option>
-                            @foreach($unitTypes as $ut)
-                                <option value="{{ $ut->pk }}" {{ (isset($record) && $record->estate_unit_type_master_pk == $ut->pk) || old('estate_unit_type_master_pk') == $ut->pk ? 'selected' : '' }}>{{ $ut->unit_type }}</option>
-                            @endforeach
                         </select>
-                        <small class="text-muted"><i class="bi bi-info-circle"></i> Select Unit Type</small>
+                        <small class="text-muted"><i class="bi bi-info-circle"></i> Select Estate first, then Unit Type</small>
                     </div>
                 </div>
 
@@ -127,8 +124,10 @@ $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.possession.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.possession.unit-sub-types') }}";
     const housesUrl = "{{ route('admin.estate.possession.houses') }}";
+    const unitTypesByCampus = @json($unitTypesByCampus ?? []);
 
     const recordBlock = @json(isset($record) ? $record->estate_block_master_pk : null);
+    const recordUnitType = @json(isset($record) ? $record->estate_unit_type_master_pk : null);
     const recordUnitSub = @json(isset($record) ? $record->estate_unit_sub_type_master_pk : null);
     const recordHouse = @json(isset($record) ? $record->estate_house_master_pk : null);
 
@@ -139,14 +138,41 @@ $(document).ready(function() {
         $('#section_display').val(opt.data('section') || '');
     }).trigger('change');
 
-    // Campus change -> load blocks
+    // Campus change -> fill unit types from pre-loaded data (campus + house_master + unit_type_master join), then blocks
     $('#estate_campus_master_pk').change(function() {
         var campusId = $(this).val();
+        $('#estate_unit_type_master_pk').html('<option value="">Select</option>');
         $('#estate_block_master_pk').html('<option value="">Select</option>');
         $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
         $('#estate_house_master_pk').html('<option value="">Select</option>');
         if (!campusId) return;
-        $.get(blocksUrl, { campus_id: campusId }, function(res) {
+        var list = unitTypesByCampus[campusId] || [];
+        $.each(list, function(i, ut) {
+            var sel = (recordUnitType && recordUnitType == ut.pk) ? 'selected' : '';
+            $('#estate_unit_type_master_pk').append('<option value="'+ut.pk+'" '+sel+'>'+ut.unit_type+'</option>');
+        });
+        if (list.length && !recordUnitType && list.length === 1) {
+            $('#estate_unit_type_master_pk').val(list[0].pk);
+        }
+        if (list.length) loadBlocks();
+    });
+
+    // Unit Type change -> reload blocks for current campus
+    $('#estate_unit_type_master_pk').change(function() {
+        $('#estate_block_master_pk').html('<option value="">Select</option>');
+        $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
+        $('#estate_house_master_pk').html('<option value="">Select</option>');
+        loadBlocks();
+    });
+
+    function loadBlocks() {
+        var campusId = $('#estate_campus_master_pk').val();
+        var unitTypeId = $('#estate_unit_type_master_pk').val();
+        if (!campusId) return;
+        $.get(blocksUrl, {
+            campus_id: campusId,
+            unit_type_id: unitTypeId || ''
+        }, function(res) {
             if (res.status && res.data) {
                 $.each(res.data, function(i, b) {
                     var sel = (recordBlock && recordBlock == b.pk) ? 'selected' : '';
@@ -155,7 +181,7 @@ $(document).ready(function() {
                 loadUnitSubTypes();
             }
         });
-    });
+    }
 
     // Block change -> load unit sub types
     $('#estate_block_master_pk').change(function() {
@@ -167,8 +193,13 @@ $(document).ready(function() {
     function loadUnitSubTypes() {
         var campusId = $('#estate_campus_master_pk').val();
         var blockId = $('#estate_block_master_pk').val();
+        var unitTypeId = $('#estate_unit_type_master_pk').val();
         if (!campusId || !blockId) return;
-        $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
+        $.get(unitSubTypesUrl, {
+            campus_id: campusId,
+            block_id: blockId,
+            unit_type_id: unitTypeId
+        }, function(res) {
             if (res.status && res.data) {
                 $.each(res.data, function(i, u) {
                     var sel = (recordUnitSub && recordUnitSub == u.pk) ? 'selected' : '';
@@ -189,8 +220,14 @@ $(document).ready(function() {
         var campusId = $('#estate_campus_master_pk').val();
         var blockId = $('#estate_block_master_pk').val();
         var unitSubId = $('#estate_unit_sub_type_master_pk').val();
+        var unitTypeId = $('#estate_unit_type_master_pk').val();
         if (!campusId || !blockId || !unitSubId) return;
-        $.get(housesUrl, { campus_id: campusId, block_id: blockId, unit_sub_type_id: unitSubId }, function(res) {
+        $.get(housesUrl, {
+            campus_id: campusId,
+            block_id: blockId,
+            unit_sub_type_id: unitSubId,
+            unit_type_id: unitTypeId
+        }, function(res) {
             if (res.status && res.data) {
                 $.each(res.data, function(i, h) {
                     var sel = (recordHouse && recordHouse == h.pk) ? 'selected' : '';
