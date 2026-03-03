@@ -33,6 +33,7 @@
                 </div>
             </div>
         </div>
+        <!-- end Zero Configuration -->
     </div>
 </div>
 
@@ -660,14 +661,14 @@ $(document).on('click', '.add-btn', function () {
 </script>
 @endif
 <!-- Modal -->
-<div class="modal fade" id="dutyTypeModal" tabindex="-1" aria-labelledby="dutyTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-3 border-0 shadow-lg">
-            <div class="modal-header border-bottom py-3">
-                <h5 class="modal-title fw-semibold" id="dutyTypeModalLabel">MDO Duty Type</h5>
+<div class="modal fade" id="dutyTypeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">MDO Duty Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body">
                 <!-- Form content will be loaded here via fetch -->
             </div>
         </div>
