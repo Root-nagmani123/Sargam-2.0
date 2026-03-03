@@ -226,15 +226,18 @@ class IssueManagementController extends Controller
                 'hostelMapping.hostelBuilding',
                 'statusHistory'
             ])->orderBy('created_date', 'desc');
+
+            // Centcom listing: show only issues where the logged-in employee
+            // is either the configured nodal officer (employee_master_pk)
+            // or currently assigned handler (assigned_to).
             $ids = getEmployeeIdsForUser(Auth::user()->user_id);
             if (empty($ids)) {
                 $ids = [Auth::user()->user_id];
             }
+
             $query->where(function ($q) use ($ids) {
-                $q->whereIn('assigned_to', $ids)
-                    ->orWhereIn('employee_master_pk', $ids)
-                    ->orWhereIn('issue_logger', $ids)
-                    ->orWhereIn('created_by', $ids);
+                $q->whereIn('employee_master_pk', $ids)   // Nodal officer for the category
+                  ->orWhereIn('assigned_to', $ids);       // Currently assigned to this employee
             });
 
         // Search (ID, description, category name, sub-category)

@@ -294,6 +294,9 @@
                                     </thead>
                                     <tbody>
                                         @foreach($issue->statusHistory as $history)
+                                        @php
+                                            $statusUpdatedBy = \App\Models\EmployeeMaster::findByIdOrPkOld($history->created_by);
+                                        @endphp
                                         <tr>
                                             <td>{{ $history->issue_date->format('d-m-Y H:i:s') }}</td>
                                             <td>
@@ -301,7 +304,7 @@
                                                     {{ $history->status_label }}
                                                 </span>
                                             </td>
-                                            <td>{{ $history->creator->first_name ?? 'System' }}</td>
+                                            <td>{{ $statusUpdatedBy?->name ?? 'System' }}</td>
                                             <td>{{ $history->remarks ?? '-' }}</td>
                                         </tr>
                                         @endforeach
@@ -339,6 +342,10 @@
                         $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
                         $canReassign = $isNodalOfficer && !$isCompleted; // Re-assign not allowed for closed (Completed) issues
                         $canOnlyReopen = $isComplainant && $isCompleted;
+
+                        // Determine latest status from history (most recent first),
+                        // fall back to main issue_status if no history exists.
+                        $latestStatus = (int) ($issue->statusHistory->first()->issue_status ?? $issue->issue_status);
                     @endphp
 
                     @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
@@ -367,8 +374,9 @@
                     @endif
 
                     @php
-                        // After Reopen (6), all status options stay enabled so user can set any status again
-                        $disableStatusOptions = (int)$issue->issue_status !== 6;
+                        // After Reopen (6), all status options stay enabled so user can set any status again.
+                        // Use the latest status from history so this works even if the main column lags.
+                        $disableStatusOptions = $latestStatus !== 6;
                     @endphp
                     <div class="mb-3">
                         <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>
