@@ -872,7 +872,14 @@ $(document).ready(function () {
         });
     });
 
-    $(".select2").select2();
+    /* Choices.js searchable dropdowns (replaces Select2) */
+    if (typeof DropdownSearch !== 'undefined') {
+        document.querySelectorAll('select.select2').forEach(function(el) {
+            var placeholder = el.getAttribute('data-placeholder') || el.getAttribute('placeholder') || 'Select...';
+            var allowClear = el.getAttribute('data-allow-clear') === 'true';
+            DropdownSearch.init(el, { placeholder: placeholder, allowClear: allowClear });
+        });
+    }
 });
 
 
@@ -1701,9 +1708,9 @@ $(document).on('click', '#resetAttendance', function () {
         $('#manual_session').val('');
     }
     
-    // Hide session containers
-    $('#normal_session_container').hide();
-    $('#manual_session_container').hide();
+    // Hide session containers (Bootstrap d-none)
+    $('#normal_session_container').addClass('d-none');
+    $('#manual_session_container').addClass('d-none');
     
     // Destroy DataTable if it exists
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
@@ -1765,21 +1772,20 @@ function drawAttendanceTable() {
 
 $(document).ready(function() {
 
-    $('#normal_session_container').hide();
-    $('#manual_session_container').hide();
-
+    $('#normal_session_container').addClass('d-none');
+    $('#manual_session_container').addClass('d-none');
 
     $('input[name="attendance_type"]').change(function() {
-        $('#normal_session_container').hide();
-        $('#manual_session_container').hide();
+        $('#normal_session_container').addClass('d-none');
+        $('#manual_session_container').addClass('d-none');
 
         $('#session').val('').trigger('change');
         $('#manual_session').val('').trigger('change');
 
         if ($(this).val() === 'normal') {
-            $('#normal_session_container').show();
+            $('#normal_session_container').removeClass('d-none');
         } else if ($(this).val() === 'manual') {
-            $('#manual_session_container').show();
+            $('#manual_session_container').removeClass('d-none');
         }
         // For 'full_day', both remain hidden
     });
