@@ -376,7 +376,8 @@
                     @php
                         // After Reopen (6), all status options stay enabled so user can set any status again.
                         // Use the latest status from history so this works even if the main column lags.
-                        $disableStatusOptions = $latestStatus !== 6;
+                        // Additionally, allow Nodal Officer to always change to any status.
+                        $disableStatusOptions = !$isNodalOfficer && $latestStatus !== 6;
                     @endphp
                     <div class="mb-3">
                         <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>
