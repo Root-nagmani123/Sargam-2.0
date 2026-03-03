@@ -5,44 +5,40 @@
 @section('setup_content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.estate.update-meter-no') }}">Update Meter No.</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Update Meter Reading</li>
-        </ol>
-    </nav>
+<x-breadcrum :title="'Update Meter Reading'" :items="['Home', 'Estate Management', 'Update Meter Reading']" />  
 
     <!-- Page Title -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">
-            <a href="{{ route('admin.estate.update-meter-no') }}" class="text-decoration-none text-dark">
-                <i class="bi bi-arrow-left me-2"></i>Update Meter Reading
-            </a>
-        </h2>
-    </div>
-
-    <!-- Form Card -->
     <div class="card shadow-sm">
-        <div class="card-header bg-white">
-            <h5 class="mb-0">Please Update Meter Reading</h5>
+        <div class="card-header bg-body-secondary bg-opacity-10 border-0 py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 class="card-title">Please Update Meter Reading</h5>
+    
         </div>
-        <div class="card-body">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            <form id="meterReadingFilterForm">
-                @csrf
+        <div class="card-body p-4">
+            <form>
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label for="bill_month" class="form-label">Meter Change Month <span class="text-danger">*</span></label>
                         <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select month">
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select Meter Change Month
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
+                        <select class="form-select" id="estate_name" name="estate_name" required>
+                            <option value="administrative_officer" selected>Administrative Officer</option>
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Estate Name
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
+                        <select class="form-select" id="building" name="building" required>
+                            <option value="bhagirathi_avas" selected>Bhagirathi Avas</option>
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Select Building
                         </small>
                     </div>
                     <div class="col-md-4">
