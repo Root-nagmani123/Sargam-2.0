@@ -19,13 +19,13 @@
         <div>
             <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" class="btn btn-link text-decoration-none me-2">Update Reading</a>
             <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-success btn-sm" title="Add">
-                <i class="bi bi-plus-circle"></i>
+                <i class="material-symbols-rounded">add</i>
             </a>
             <a href="{{ route('admin.estate.possession-view') }}" class="btn btn-light btn-sm" title="Edit">
-                <i class="bi bi-pencil"></i>
+                <i class="material-symbols-rounded">edit</i>
             </a>
             <button class="btn btn-danger btn-sm" title="Delete">
-                <i class="bi bi-x-circle"></i>
+                <i class="material-symbols-rounded">delete</i>
             </button>
         </div>
     </div>
@@ -35,47 +35,12 @@
         <p class="mb-0">This page displays all Possession added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
     </div>
 
-    <!-- Table Controls -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-3">
-                    <label class="form-label">Show</label>
-                    <select class="form-select form-select-sm">
-                        <option value="10" selected>10 entries</option>
-                        <option value="25">25 entries</option>
-                        <option value="50">50 entries</option>
-                        <option value="100">100 entries</option>
-                    </select>
-                </div>
-                <div class="col-md-9 text-end">
-                    <button class="btn btn-outline-secondary btn-sm me-2">Show / hide columns</button>
-                    <button class="btn btn-outline-secondary btn-sm me-2">
-                        <i class="bi bi-grid-3x3-gap"></i>
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm me-2">
-                        <i class="bi bi-printer"></i>
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-search"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <label class="form-label">Search with in table:</label>
-                    <input type="text" class="form-control form-control-sm" placeholder="Search...">
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Data Table Card -->
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover table-striped" id="estatePossessionTable">
-                    <thead class="table-primary">
+                <table class="table" id="estatePossessionTable">
+                    <thead>
                         <tr>
                             <th>
                                 <input type="checkbox" class="form-check-input" id="select_all">
