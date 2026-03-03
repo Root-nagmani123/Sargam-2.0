@@ -38,8 +38,9 @@
                         <label for="from_list" class="form-label">From <span class="text-danger">*</span></label>
                         <select id="from_list" class="form-select form-select-lg" multiple size="12" style="min-height: 280px;">
                             @foreach($allEmployees as $emp)
-                                @if(!$selectedPks->contains($emp->pk))
-                                    <option value="{{ $emp->pk }}">{{ trim($emp->first_name . ' ' . $emp->last_name) ?: ('ID ' . $emp->pk) }}</option>
+                                @php $empPk = $emp->{$empPkCol ?? 'pk'}; @endphp
+                                @if(!$selectedPks->contains($empPk))
+                                    <option value="{{ $empPk }}">{{ trim($emp->first_name . ' ' . $emp->last_name) ?: ('ID ' . $empPk) }}</option>
                                 @endif
                             @endforeach
                         </select>
@@ -56,8 +57,9 @@
                         <label for="to_list" class="form-label">To <span class="text-danger">*</span></label>
                         <select id="to_list" class="form-select form-select-lg" multiple size="12" name="employee_pks[]" style="min-height: 280px;">
                             @foreach($allEmployees as $emp)
-                                @if($selectedPks->contains($emp->pk))
-                                    <option value="{{ $emp->pk }}">{{ trim($emp->first_name . ' ' . $emp->last_name) ?: ('ID ' . $emp->pk) }}</option>
+                                @php $empPk = $emp->{$empPkCol ?? 'pk'}; @endphp
+                                @if($selectedPks->contains($empPk))
+                                    <option value="{{ $empPk }}">{{ trim($emp->first_name . ' ' . $emp->last_name) ?: ('ID ' . $empPk) }}</option>
                                 @endif
                             @endforeach
                         </select>

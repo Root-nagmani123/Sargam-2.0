@@ -28,6 +28,9 @@ class EstateElectricSlabDataTable extends DataTable
             ->editColumn('rate_per_unit', function ($row) {
                 return number_format((float) $row->rate_per_unit, 2);
             })
+            ->addColumn('merge_with_house', function ($row) {
+                return $row->unitType ? e($row->unitType->unit_type) : '—';
+            })
             ->addColumn('action', function ($row) {
                 $editUrl = route('admin.estate.define-electric-slab.edit', $row->pk);
                 $deleteUrl = route('admin.estate.define-electric-slab.destroy', $row->pk);
@@ -49,7 +52,9 @@ class EstateElectricSlabDataTable extends DataTable
 
     public function query(EstateElectricSlab $model): QueryBuilder
     {
-        return $model->newQuery()->orderBy('start_unit_range');
+        return $model->newQuery()
+            ->with('unitType')
+            ->orderBy('start_unit_range');
     }
 
     public function html(): HtmlBuilder
@@ -91,6 +96,7 @@ class EstateElectricSlabDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('60px'),
             Column::computed('unit_range')->title('UNIT RANGE')->orderable(true)->searchable(true),
             Column::make('rate_per_unit')->title('RATE/UNIT')->orderable(true)->searchable(true),
+            Column::computed('merge_with_house')->title('MERGE WITH HOUSE')->orderable(false)->searchable(false),
             Column::computed('action')->title('EDIT')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
     }

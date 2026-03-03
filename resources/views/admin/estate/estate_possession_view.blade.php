@@ -107,12 +107,8 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" id="meter_reading_oth" name="meter_reading_oth" value="{{ old('meter_reading_oth', isset($record) ? $record->meter_reading_oth : '') }}" min="0" placeholder="Primary">
-                            <span class="input-group-text">/</span>
-                            <input type="number" class="form-control" id="meter_reading_oth1" name="meter_reading_oth1" value="{{ old('meter_reading_oth1', isset($record) ? $record->meter_reading_oth1 : '') }}" min="0" placeholder="Secondary">
-                        </div>
-                        <div class="form-text">Electric Meter Reading (Primary / Secondary)</div>
+                        <input type="number" class="form-control" id="meter_reading_oth" name="meter_reading_oth" value="{{ old('meter_reading_oth', isset($record) ? $record->meter_reading_oth : '') }}" min="0" placeholder="Primary">
+                        <div class="form-text">Electric Meter Reading (Primary)</div>
                     </div>
                 </div>
 

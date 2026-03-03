@@ -51,6 +51,7 @@
                 <form id="formAddEditRequestEstate" method="POST" action="{{ route('admin.estate.request-for-estate.store') }}">
                     @csrf
                     <input type="hidden" name="id" id="request_estate_id" value="">
+                    <input type="hidden" name="employee_pk" id="request_employee_pk" value="">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="modal_req_id" class="form-label">Request ID</label>
@@ -106,12 +107,13 @@
                         </div>
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="modal_eligibility_type_pk" name="eligibility_type_pk" required>
+                            <select class="form-select" id="modal_eligibility_type_pk" disabled>
                                 <option value="">— Select eligibility type —</option>
                                 @foreach($eligibilityTypes ?? [] as $pk => $name)
                                     <option value="{{ (string) $pk }}">{{ $name }}</option>
                                 @endforeach
                             </select>
+                            <input type="hidden" id="modal_eligibility_type_pk_hidden" name="eligibility_type_pk" value="">
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -250,12 +252,18 @@
 
         function ensureEligibilityOptionAndSetVal(pk, label) {
             var $sel = $('#modal_eligibility_type_pk');
+            var $hidden = $('#modal_eligibility_type_pk_hidden');
             var val = (pk !== undefined && pk !== null && pk !== '') ? String(pk) : '';
-            if (val && $sel.find('option[value="' + val + '"]').length === 0) {
-                $sel.append($('<option></option>').attr('value', val).text(label || ('Type ' + val)));
+            if (!val) {
+                $sel.val('').trigger('change');
+                $hidden.val('');
+                return;
             }
-            $sel.find('option').prop('selected', false);
-            $sel.find('option[value="' + val + '"]').prop('selected', true);
+            if ($sel.find('option[value="' + val + '"]').length === 0) {
+                $sel.append(new Option(label || ('Type ' + val), val, false, false));
+            }
+            $sel.val(val).trigger('change');
+            $hidden.val(val);
         }
 
         function fillFromEmployeeDetails(data) {
@@ -276,6 +284,7 @@
         $('#btn-open-add-request-estate').on('click', function() {
             $('#addEditRequestEstateModalLabel').text('Add Estate Request');
             $('#request_estate_id').val('');
+            $('#request_employee_pk').val('0');
             $('#formAddEditRequestEstate')[0].reset();
             $('#request_estate_id').val('');
             $('#modal_employee_pk').val('');
@@ -296,8 +305,10 @@
             e.preventDefault();
             var $btn = $(this);
             var rowPk = $btn.data('id');
+            var employeePk = $btn.data('employee_pk') || 0;
             $('#addEditRequestEstateModalLabel').text('Edit Estate Request');
             $('#request_estate_id').val(rowPk || '');
+            $('#request_employee_pk').val(employeePk);
             $('#modal_req_id').val($btn.data('req_id') || '');
             $('#modal_req_date').val($btn.data('req_date') || '');
             $('#modal_emp_name').val($btn.data('emp_name') || '');
@@ -313,7 +324,7 @@
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
-            loadRequestEstateEmployees(rowPk, rowPk);
+            loadRequestEstateEmployees(rowPk, employeePk);
             if (addEditModal) addEditModal.show();
         });
 
@@ -350,8 +361,12 @@
 
         $('#formAddEditRequestEstate').on('submit', function(e) {
             e.preventDefault();
-            if ($('#modal_employee_pk').val() === '__new__') {
+            var selVal = $('#modal_employee_pk').val();
+            if (selVal === '__new__') {
                 $('#modal_emp_name').val($('#modal_new_emp_name').val().trim());
+                $('#request_employee_pk').val('0');
+            } else {
+                $('#request_employee_pk').val(selVal || '0');
             }
             var $form = $(this);
             var $errors = $('#addEditRequestEstateFormErrors');
