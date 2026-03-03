@@ -101,6 +101,7 @@
                                 <th>Meter No.</th>
                                 <th>Last Month Meter Reading</th>
                                 <th>Current Month Reading <span class="text-danger">*</span></th>
+                                <th>Unit</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -212,15 +213,17 @@ $(document).ready(function() {
             const tbody = $('#updateMeterReadingOtherTable tbody');
             tbody.html('');
             res.data.forEach(function(row, idx) {
-                const tr = '<tr>' +
+                const lastReading = typeof row.last_month_reading === 'number' ? row.last_month_reading : (parseInt(row.last_month_reading, 10) || null);
+                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ (row.meter_no || 'N/A') +'</td>' +
                     '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
-                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ (row.curr_month_reading || '') +'" min="0" placeholder="Enter">' +
+                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '') +'" min="0" placeholder="Enter">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'"></td>' +
+                    '<td class="unit-cell">'+ (row.unit || 'N/A') +'</td>' +
                     '</tr>';
                 tbody.append(tr);
             });
@@ -254,6 +257,19 @@ $(document).ready(function() {
 
     $('#select_all').on('change', function() {
         $('.row-check').prop('checked', $(this).prop('checked'));
+    });
+
+    $(document).on('input change', '.curr-reading', function() {
+        const $row = $(this).closest('tr');
+        const lastVal = $row.data('last-reading');
+        const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
+        const currVal = $(this).val();
+        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        let unit = 'N/A';
+        if (lastReading !== null && currReading !== null && currReading >= lastReading) {
+            unit = currReading - lastReading;
+        }
+        $row.find('.unit-cell').text(unit);
     });
 
     $('#meterReadingSaveForm').on('submit', function(e) {

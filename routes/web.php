@@ -722,13 +722,13 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
-Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+    Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+    Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
 // Change export routes to POST
-Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
     ->name('admin.feedback.export.pdf');
 
-Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+    Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
   // Estate Management Routes
   Route::prefix('estate')->name('estate.')->group(function () {
@@ -773,24 +773,49 @@ Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController
         return view('admin.estate.define_house');
     })->name('define-house');
 
-    // Estate Reports
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('pending-meter-reading', function () {
-            return view('admin.estate.pending_meter_reading');
-        })->name('pending-meter-reading');
-        
+    // AJAX Routes
+    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
+    Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
+
+    // Category Management
+    Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
+    Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
+    Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
+    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
+    Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
+    Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
+    Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
+    Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
+
+    // Priority Management
+    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
+    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
+    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
+    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
+
+    // Escalation Matrix (3-level hierarchy)
+    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
+    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
+    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+
+    // Estate Management Routes
+    Route::prefix('estate')->name('estate.')->group(function () {
+        // Estate Request for Others
+        Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+
         Route::get('add-other-estate-request', [EstateController::class, 'addOtherEstateRequest'])->name('add-other-estate-request');
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
+        Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
         // Estate Possession
         Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
-        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
-        Route::post('possession-view', [EstateController::class, 'storePossession'])->name('possession-view.store');
         Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
+
+        Route::get('possession-view', [EstateController::class, 'possessionView'])->name('possession-view');
+        Route::post('possession-view/store', [EstateController::class, 'storePossession'])->name('possession-view.store');
         Route::get('possession/blocks', [EstateController::class, 'getPossessionBlocks'])->name('possession.blocks');
         Route::get('possession/unit-sub-types', [EstateController::class, 'getPossessionUnitSubTypes'])->name('possession.unit-sub-types');
         Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
-        Route::get('possession/requester-details', [EstateController::class, 'getRequesterDetails'])->name('possession.requester-details');
 
         // Update Meter
         Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
@@ -890,10 +915,8 @@ Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController
             Route::get('bill-report-grid', function () {
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
-            
-            Route::get('bill-report-print', function () {
-                return view('admin.estate.estate_bill_report_print');
-            })->name('bill-report-print');
+
+            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
         });
     });
 });
