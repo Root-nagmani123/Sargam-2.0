@@ -59,21 +59,82 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    $('#pendingMeterReadingTable').DataTable({
-        order: [[0, 'asc']],
-        pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-            infoEmpty: "Showing 0 to 0 of 0 entries",
-            infoFiltered: "(filtered from _MAX_ total entries)",
-            paginate: {
-                first: "First",
-                last: "Last",
-                next: "Next",
-                previous: "Previous"
+    var dataTableInstance = null;
+
+    function destroyDataTable() {
+        if (dataTableInstance && $.fn.DataTable.isDataTable('#pendingMeterReadingTable')) {
+            dataTableInstance.destroy();
+            $('#pendingMeterReadingTable tbody').empty();
+            dataTableInstance = null;
+        }
+    }
+
+    function loadPendingMeterReading() {
+        var billMonth = $('#bill_month').val();
+        if (!billMonth) {
+            alert('Please select Bill Month.');
+            return;
+        }
+        var parts = billMonth.split('-');
+        var billYear = parts.length >= 1 ? parts[0] : '';
+
+        $('#noDataRow').remove();
+        $('#pendingMeterReadingTable tbody').html('<tr><td colspan="6" class="text-center">Loading...</td></tr>');
+
+        $.ajax({
+            url: '{{ route("admin.estate.reports.pending-meter-reading.data") }}',
+            type: 'GET',
+            data: { bill_month: billMonth, bill_year: billYear },
+            dataType: 'json',
+            success: function(res) {
+                destroyDataTable();
+                var tbody = $('#pendingMeterReadingTable tbody');
+                tbody.empty();
+                if (res.status && res.data && res.data.length > 0) {
+                    $.each(res.data, function(i, row) {
+                        tbody.append(
+                            '<tr>' +
+                                '<td>' + (row.sno || (i + 1)) + '</td>' +
+                                '<td>' + (row.employee_type || 'N/A') + '</td>' +
+                                '<td>' + (row.name || 'N/A') + '</td>' +
+                                '<td>' + (row.house_no || 'N/A') + '</td>' +
+                                '<td>' + (row.meter_reading_date || '-') + '</td>' +
+                                '<td>' + (row.last_meter_reading || 'N/A') + '</td>' +
+                            '</tr>'
+                        );
+                    });
+                } else {
+                    tbody.append('<tr id="noDataRow"><td colspan="6" class="text-center text-muted">' + (res.message || 'No pending meter readings for the selected month.') + '</td></tr>');
+                }
+                // Only init DataTable when we have data rows (6 columns each). Empty state has 1 cell with colspan=6 → column count error.
+                if (res.status && res.data && res.data.length > 0) {
+                    dataTableInstance = $('#pendingMeterReadingTable').DataTable({
+                        order: [[0, 'asc']],
+                        pageLength: 10,
+                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                        language: {
+                            search: "Search:",
+                            lengthMenu: "Show _MENU_ entries",
+                            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                            infoEmpty: "Showing 0 to 0 of 0 entries",
+                            infoFiltered: "(filtered from _MAX_ total entries)",
+                            paginate: {
+                                first: "First",
+                                last: "Last",
+                                next: "Next",
+                                previous: "Previous"
+                            }
+                        },
+                        responsive: true,
+                        autoWidth: false,
+                        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+                    });
+                }
+            },
+            error: function(xhr) {
+                destroyDataTable();
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
+                $('#pendingMeterReadingTable tbody').empty().append('<tr><td colspan="6" class="text-center text-danger">' + msg + '</td></tr>');
             }
         },
         responsive: true,
