@@ -90,8 +90,11 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Store Name <span class="text-danger">*</span></label>
-                            <input type="text" name="store_name" class="form-control" required value="{{ old('store_name') }}">
-                            @error('store_name')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="store_name" id="create_store_name" class="form-control" required
+                                   value="{{ old('store_name') }}"
+                                   pattern="[a-zA-Z0-9\s\-]+"
+                                   autocomplete="off">
+                            <div class="text-danger small mt-1" id="create_store_name_error" role="alert">@error('store_name'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Store Type <span class="text-danger">*</span></label>
@@ -105,8 +108,11 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Location</label>
-                            <input type="text" name="location" class="form-control" value="{{ old('location') }}">
-                            @error('location')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="location" id="create_location" class="form-control"
+                                   value="{{ old('location') }}"
+                                   pattern="[a-zA-Z0-9\s\-\.\,]*"
+                                   autocomplete="off">
+                            <div class="text-danger small mt-1" id="create_location_error" role="alert">@error('location'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
@@ -143,7 +149,10 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Store Name <span class="text-danger">*</span></label>
-                            <input type="text" name="store_name" id="edit_store_name" class="form-control" required>
+                            <input type="text" name="store_name" id="edit_store_name" class="form-control" required
+                                   pattern="[a-zA-Z0-9\s\-]+"
+                                   autocomplete="off">
+                            <div class="text-danger small mt-1" id="edit_store_name_error" role="alert"></div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Store Type <span class="text-danger">*</span></label>
@@ -156,7 +165,10 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Location</label>
-                            <input type="text" name="location" id="edit_location" class="form-control">
+                            <input type="text" name="location" id="edit_location" class="form-control"
+                                   pattern="[a-zA-Z0-9\s\-\.\,]*"
+                                   autocomplete="off">
+                            <div class="text-danger small mt-1" id="edit_location_error" role="alert"></div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
@@ -180,6 +192,140 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-hide success alerts after 5 seconds
+    setTimeout(function() {
+        document.querySelectorAll('.alert.alert-success.alert-dismissible').forEach(function(alertEl) {
+            try {
+                if (window.bootstrap && bootstrap.Alert) {
+                    bootstrap.Alert.getOrCreateInstance(alertEl).close();
+                } else {
+                    alertEl.classList.remove('show');
+                    alertEl.style.display = 'none';
+                }
+            } catch (e) {
+                alertEl.classList.remove('show');
+                alertEl.style.display = 'none';
+            }
+        });
+    }, 5000);
+
+    // Validation rules (must match server: StoreController)
+    var storeNameRegex = /^[a-zA-Z0-9\s\-]+$/;
+    var locationRegex = /^[a-zA-Z0-9\s\-\.\,]*$/;
+    var storeNameMessage = 'Store name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.';
+    var locationMessage = 'Location may only contain letters, numbers, spaces, hyphens, commas and periods. Special characters are not allowed.';
+
+    function validateStoreName(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: false, message: 'Store name is required.' };
+        return storeNameRegex.test(value) ? { valid: true } : { valid: false, message: storeNameMessage };
+    }
+
+    function validateLocation(value) {
+        if (typeof value !== 'string') return { valid: true };
+        return locationRegex.test(value) ? { valid: true } : { valid: false, message: locationMessage };
+    }
+
+    function showLiveError(inputEl, errorEl, result) {
+        if (result.valid) {
+            inputEl.classList.remove('is-invalid');
+            errorEl.textContent = '';
+        } else {
+            inputEl.classList.add('is-invalid');
+            errorEl.textContent = result.message;
+        }
+    }
+
+    function attachLiveValidation(inputId, errorId, validateFn) {
+        var input = document.getElementById(inputId);
+        var errorEl = document.getElementById(errorId);
+        if (!input || !errorEl) return;
+        function run() {
+            showLiveError(input, errorEl, validateFn(input.value));
+        }
+        input.addEventListener('input', run);
+        input.addEventListener('blur', run);
+    }
+
+    // Create modal: real-time validation
+    attachLiveValidation('create_store_name', 'create_store_name_error', validateStoreName);
+    attachLiveValidation('create_location', 'create_location_error', validateLocation);
+
+    // Edit modal: real-time validation
+    attachLiveValidation('edit_store_name', 'edit_store_name_error', validateStoreName);
+    attachLiveValidation('edit_location', 'edit_location_error', validateLocation);
+
+    // Create form: prevent submit if store name or location invalid
+    var createForm = document.querySelector('#createStoreModal form');
+    if (createForm) {
+        createForm.addEventListener('submit', function(e) {
+            var nameResult = validateStoreName(document.getElementById('create_store_name').value);
+            var locResult = validateLocation(document.getElementById('create_location').value);
+            showLiveError(document.getElementById('create_store_name'), document.getElementById('create_store_name_error'), nameResult);
+            showLiveError(document.getElementById('create_location'), document.getElementById('create_location_error'), locResult);
+            if (!nameResult.valid || !locResult.valid) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Edit form: prevent submit if store name or location invalid
+    var editForm = document.getElementById('editStoreForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            var nameResult = validateStoreName(document.getElementById('edit_store_name').value);
+            var locResult = validateLocation(document.getElementById('edit_location').value);
+            showLiveError(document.getElementById('edit_store_name'), document.getElementById('edit_store_name_error'), nameResult);
+            showLiveError(document.getElementById('edit_location'), document.getElementById('edit_location_error'), locResult);
+            if (!nameResult.valid || !locResult.valid) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Reset Add Store form when modal is closed (Cancel or backdrop) so next open shows a clean form
+    var createStoreModal = document.getElementById('createStoreModal');
+    if (createStoreModal) {
+        createStoreModal.addEventListener('hidden.bs.modal', function() {
+            var form = createStoreModal.querySelector('form');
+            if (form) {
+                form.reset();
+                var storeTypeSelect = form.querySelector('select[name="store_type"]');
+                if (storeTypeSelect) storeTypeSelect.value = 'mess';
+                var statusSelect = form.querySelector('select[name="status"]');
+                if (statusSelect) statusSelect.value = 'active';
+            }
+            document.getElementById('create_store_name_error').textContent = '';
+            document.getElementById('create_location_error').textContent = '';
+            var createNameInput = document.getElementById('create_store_name');
+            var createLocInput = document.getElementById('create_location');
+            if (createNameInput) createNameInput.classList.remove('is-invalid');
+            if (createLocInput) createLocInput.classList.remove('is-invalid');
+        });
+    }
+
+    // When Add Store modal is shown, run validation once so server-rendered errors get is-invalid styling
+    if (createStoreModal) {
+        createStoreModal.addEventListener('shown.bs.modal', function() {
+            var nameInput = document.getElementById('create_store_name');
+            var locInput = document.getElementById('create_location');
+            showLiveError(nameInput, document.getElementById('create_store_name_error'), validateStoreName(nameInput.value));
+            showLiveError(locInput, document.getElementById('create_location_error'), validateLocation(locInput.value));
+        });
+    }
+
+    // Clear edit modal errors when it is hidden
+    var editStoreModal = document.getElementById('editStoreModal');
+    if (editStoreModal) {
+        editStoreModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('edit_store_name_error').textContent = '';
+            document.getElementById('edit_location_error').textContent = '';
+            document.getElementById('edit_store_name').classList.remove('is-invalid');
+            document.getElementById('edit_location').classList.remove('is-invalid');
+        });
+    }
+
     document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-store');
         if (!btn) return;

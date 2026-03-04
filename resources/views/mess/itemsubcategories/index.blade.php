@@ -1,16 +1,37 @@
 @extends('admin.layouts.master')
 @section('title', 'Subcategory Item Master')
 @section('setup_content')
+@php
+    $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
+@endphp
 <div class="container-fluid">
     <div class="datatables">
         <div class="card">
             <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h4 class="mb-0">Subcategory Item Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
                     Add Subcategory Item
                 </button>
             </div>
+
+            <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="mb-3 row g-2 align-items-end">
+                <div class="col-auto">
+                    <label for="filter_category_id" class="form-label mb-0">Category name</label>
+                    <select name="category_id" id="filter_category_id" class="form-select form-select-sm" style="min-width: 200px;">
+                        <option value="">All</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}" {{ (string) $selectedCategoryId === (string) $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                    @if($selectedCategoryId !== '')
+                        <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                    @endif
+                </div>
+            </form>
 
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -101,8 +122,9 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Item Name <span class="text-danger">*</span></label>
-                            <input type="text" name="item_name" class="form-control" required value="{{ old('item_name') }}">
-                            @error('item_name')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="item_name" id="create_item_name" class="form-control" required
+                                   value="{{ old('item_name') }}" pattern="[a-zA-Z0-9\s\-]+" autocomplete="off">
+                            <div class="text-danger small mt-1" id="create_item_name_error" role="alert">@error('item_name'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Item Code <span class="text-danger">*</span></label>
@@ -111,8 +133,10 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Unit Measurement <span class="text-danger">*</span></label>
-                            <input type="text" name="unit_measurement" class="form-control" value="{{ old('unit_measurement') }}" placeholder="e.g., kg, liter, piece" required>
-                            @error('unit_measurement')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="unit_measurement" id="create_unit_measurement" class="form-control"
+                                   value="{{ old('unit_measurement') }}" placeholder="e.g., kg, liter, piece" required
+                                   pattern="[a-zA-Z0-9\s\-\/\.]+" autocomplete="off">
+                            <div class="text-danger small mt-1" id="create_unit_measurement_error" role="alert">@error('unit_measurement'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Alert Quantity (min. stock)</label>
@@ -168,7 +192,9 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Item Name <span class="text-danger">*</span></label>
-                            <input type="text" name="item_name" id="edit_item_name" class="form-control" required>
+                            <input type="text" name="item_name" id="edit_item_name" class="form-control" required
+                                   pattern="[a-zA-Z0-9\s\-]+" autocomplete="off">
+                            <div class="text-danger small mt-1" id="edit_item_name_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Item Code <span class="text-danger">*</span></label>
@@ -177,7 +203,9 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Unit Measurement <span class="text-danger">*</span></label>
-                            <input type="text" name="unit_measurement" id="edit_unit_measurement" class="form-control" required>
+                            <input type="text" name="unit_measurement" id="edit_unit_measurement" class="form-control" required
+                                   pattern="[a-zA-Z0-9\s\-\/\.]+" autocomplete="off">
+                            <div class="text-danger small mt-1" id="edit_unit_measurement_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Alert Quantity (min. stock)</label>
@@ -210,6 +238,107 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Validation rules (must match ItemSubcategoryController)
+    var itemNameRegex = /^[a-zA-Z0-9\s\-]+$/;
+    var unitMeasurementRegex = /^[a-zA-Z0-9\s\-\/\.]+$/;
+    var itemNameMessage = 'Item name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.';
+    var unitMeasurementMessage = 'Unit measurement may only contain letters, numbers, spaces, hyphens, slashes and periods. Special characters are not allowed.';
+
+    function validateItemName(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: false, message: 'Item name is required.' };
+        return itemNameRegex.test(value) ? { valid: true } : { valid: false, message: itemNameMessage };
+    }
+
+    function validateUnitMeasurement(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: false, message: 'Unit measurement is required.' };
+        return unitMeasurementRegex.test(value) ? { valid: true } : { valid: false, message: unitMeasurementMessage };
+    }
+
+    function showLiveError(inputEl, errorEl, result) {
+        if (!inputEl || !errorEl) return;
+        if (result.valid) {
+            inputEl.classList.remove('is-invalid');
+            errorEl.textContent = '';
+        } else {
+            inputEl.classList.add('is-invalid');
+            errorEl.textContent = result.message;
+        }
+    }
+
+    function attachLiveValidation(inputId, errorId, validateFn) {
+        var input = document.getElementById(inputId);
+        var errorEl = document.getElementById(errorId);
+        if (!input || !errorEl) return;
+        function run() { showLiveError(input, errorEl, validateFn(input.value)); }
+        input.addEventListener('input', run);
+        input.addEventListener('blur', run);
+    }
+
+    // Create modal: real-time validation
+    attachLiveValidation('create_item_name', 'create_item_name_error', validateItemName);
+    attachLiveValidation('create_unit_measurement', 'create_unit_measurement_error', validateUnitMeasurement);
+
+    // Edit modal: real-time validation
+    attachLiveValidation('edit_item_name', 'edit_item_name_error', validateItemName);
+    attachLiveValidation('edit_unit_measurement', 'edit_unit_measurement_error', validateUnitMeasurement);
+
+    // Create form submit validation
+    var createForm = document.querySelector('#createItemSubcategoryModal form');
+    if (createForm) {
+        createForm.addEventListener('submit', function(e) {
+            var r1 = validateItemName(document.getElementById('create_item_name').value);
+            var r2 = validateUnitMeasurement(document.getElementById('create_unit_measurement').value);
+            showLiveError(document.getElementById('create_item_name'), document.getElementById('create_item_name_error'), r1);
+            showLiveError(document.getElementById('create_unit_measurement'), document.getElementById('create_unit_measurement_error'), r2);
+            if (!r1.valid || !r2.valid) e.preventDefault();
+        });
+    }
+
+    // Edit form submit validation
+    var editForm = document.getElementById('editItemSubcategoryForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            var r1 = validateItemName(document.getElementById('edit_item_name').value);
+            var r2 = validateUnitMeasurement(document.getElementById('edit_unit_measurement').value);
+            showLiveError(document.getElementById('edit_item_name'), document.getElementById('edit_item_name_error'), r1);
+            showLiveError(document.getElementById('edit_unit_measurement'), document.getElementById('edit_unit_measurement_error'), r2);
+            if (!r1.valid || !r2.valid) e.preventDefault();
+        });
+    }
+
+    // Clear errors when modals are hidden
+    var createModal = document.getElementById('createItemSubcategoryModal');
+    if (createModal) {
+        createModal.addEventListener('hidden.bs.modal', function() {
+            ['create_item_name_error', 'create_unit_measurement_error'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+            ['create_item_name', 'create_unit_measurement'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.remove('is-invalid');
+            });
+        });
+    }
+
+    var editModal = document.getElementById('editItemSubcategoryModal');
+    if (editModal) {
+        editModal.addEventListener('hidden.bs.modal', function() {
+            ['edit_item_name_error', 'edit_unit_measurement_error'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+            ['edit_item_name', 'edit_unit_measurement'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.remove('is-invalid');
+            });
+        });
+    }
+
     document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemsubcategory');
         if (!btn) return;

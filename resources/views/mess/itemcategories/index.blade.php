@@ -3,17 +3,36 @@
 @section('setup_content')
 @php
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
+    $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
 @endphp
 <div class="container-fluid">
     <div class="datatables">
         <div class="card">
             <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h4 class="mb-0">Category Item Master</h4>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
                     Add Category Item
                 </button>
             </div>
+
+            <form method="GET" action="{{ route('admin.mess.itemcategories.index') }}" class="mb-3 row g-2 align-items-end">
+                <div class="col-auto">
+                    <label for="filter_category_type" class="form-label mb-0">Category type</label>
+                    <select name="category_type" id="filter_category_type" class="form-select form-select-sm" style="min-width: 180px;">
+                        <option value="">All</option>
+                        @foreach($categoryTypes as $value => $label)
+                            <option value="{{ $value }}" {{ (string) $selectedCategoryType === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                    @if($selectedCategoryType !== '')
+                        <a href="{{ route('admin.mess.itemcategories.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                    @endif
+                </div>
+            </form>
 
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">

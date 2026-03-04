@@ -52,15 +52,35 @@ class StoreController extends Controller
     }
 
     /**
-     * Build an array of validated attributes for create/update.
+     * Regex: letters, numbers, spaces, hyphen only (no special characters).
      */
+    protected const STORE_NAME_PATTERN = '/^[\pL\pN\s\-]+$/u';
+
+    /**
+     * Regex: letters, numbers, spaces, hyphen, comma, period (no special characters). Empty allowed for nullable.
+     */
+    protected const LOCATION_PATTERN = '/^[\pL\pN\s\-\.\,]*$/u';
+
     protected function validatedData(Request $request, ?Store $store = null): array
     {
         $validated = $request->validate([
-            'store_name' => ['required', 'string', 'max:255'],
+            'store_name' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:' . self::STORE_NAME_PATTERN,
+            ],
             'store_type' => ['nullable', 'string', 'in:'.implode(',', array_keys(Store::storeTypes()))],
-            'location'   => ['nullable', 'string', 'max:255'],
+            'location'   => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:' . self::LOCATION_PATTERN,
+            ],
             'status'     => ['nullable', 'in:active,inactive'],
+        ], [
+            'store_name.regex' => 'Store name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
+            'location.regex'   => 'Location may only contain letters, numbers, spaces, hyphens, commas and periods. Special characters are not allowed.',
         ]);
 
         $status = $validated['status'] ?? Store::STATUS_ACTIVE;

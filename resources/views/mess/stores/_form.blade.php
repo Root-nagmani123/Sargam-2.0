@@ -9,7 +9,11 @@
 <div class="row">
     <div class="col-md-6 mb-3">
         <label class="form-label">Store Name <span class="text-danger">*</span></label>
-        <input type="text" name="store_name" class="form-control" required value="{{ $oldName }}">
+        <input type="text" name="store_name" class="form-control" required
+               pattern="[a-zA-Z0-9\s\-]+"
+               title="Only letters, numbers, spaces and hyphens allowed. No special characters."
+               value="{{ $oldName }}">
+        <div class="text-muted small">Letters, numbers, spaces and hyphens only. No special characters.</div>
         @error('store_name')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
 
@@ -24,7 +28,11 @@
 <div class="row">
     <div class="col-md-6 mb-3">
         <label class="form-label">Location</label>
-        <input type="text" name="location" class="form-control" value="{{ $oldLoc }}">
+        <input type="text" name="location" class="form-control"
+               pattern="[a-zA-Z0-9\s\-\.\,]*"
+               title="Only letters, numbers, spaces, hyphens, commas and periods allowed. No special characters."
+               value="{{ $oldLoc }}">
+        <div class="text-muted small">Letters, numbers, spaces, hyphens, commas and periods only. No special characters.</div>
         @error('location')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
 

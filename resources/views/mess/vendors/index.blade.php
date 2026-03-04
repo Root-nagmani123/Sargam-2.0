@@ -99,48 +99,60 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required value="{{ old('name') }}">
-                            @error('name')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="name" id="create_vendor_name" class="form-control" required
+                                   value="{{ old('name') }}" pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
+                            <div class="text-danger small mt-1" id="create_vendor_name_error" role="alert">@error('name'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" value="{{ old('email') }}" placeholder="Optional">
+                            <input type="email" name="email" id="create_email" class="form-control" value="{{ old('email') }}" maxlength="255" placeholder="Optional">
                             @error('email')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Contact Person <span class="text-danger">*</span></label>
-                            <input type="text" name="contact_person" class="form-control" required value="{{ old('contact_person') }}">
-                            @error('contact_person')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="contact_person" id="create_contact_person" class="form-control" required
+                                   value="{{ old('contact_person') }}" pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
+                            <div class="text-danger small mt-1" id="create_contact_person_error" role="alert">@error('contact_person'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Phone <span class="text-danger">*</span></label>
-                            <input type="text" name="phone" class="form-control" required value="{{ old('phone') }}" inputmode="numeric" pattern="[0-9]*" maxlength="20" placeholder="Digits only">
-                            @error('phone')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input
+                                type="text"
+                                name="phone"
+                                id="create_phone"
+                                class="form-control"
+                                required
+                                value="{{ old('phone') }}"
+                                inputmode="numeric"
+                                pattern="[0-9]{10}"
+                                maxlength="10"
+                                placeholder="10 digit mobile number">
+                            <div class="text-danger small mt-1" id="create_phone_error" role="alert">@error('phone'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" class="form-control" rows="3" required>{{ old('address') }}</textarea>
-                            @error('address')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <textarea name="address" id="create_address" class="form-control" rows="3" required maxlength="2000" autocomplete="off" placeholder="Up to 2000 characters">{{ old('address') }}</textarea>
+                            <div class="text-danger small mt-1" id="create_address_error" role="alert">@error('address'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">GST Number</label>
-                            <input type="text" name="gst_number" class="form-control" value="{{ old('gst_number') }}" placeholder="Optional">
-                            @error('gst_number')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="gst_number" id="create_gst_number" class="form-control" value="{{ old('gst_number') }}" maxlength="15" pattern="[A-Za-z0-9]+" placeholder="Letters & numbers, max 15">
+                            <div class="text-danger small mt-1" id="create_gst_number_error" role="alert">@error('gst_number'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Bank Name</label>
-                            <input type="text" name="bank_name" class="form-control" value="{{ old('bank_name') }}" placeholder="Optional">
-                            @error('bank_name')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="bank_name" id="create_bank_name" class="form-control" value="{{ old('bank_name') }}" maxlength="255" pattern="[a-zA-Z0-9\s\-]+" placeholder="No special characters, max 255">
+                            <div class="text-danger small mt-1" id="create_bank_name_error" role="alert">@error('bank_name'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">IFSC Code</label>
-                            <input type="text" name="ifsc_code" class="form-control" value="{{ old('ifsc_code') }}" placeholder="Optional">
-                            @error('ifsc_code')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="ifsc_code" id="create_ifsc_code" class="form-control" value="{{ old('ifsc_code') }}" maxlength="11" pattern="[A-Za-z0-9]+" placeholder="Letters & numbers, max 11">
+                            <div class="text-danger small mt-1" id="create_ifsc_code_error" role="alert">@error('ifsc_code'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Account Number</label>
-                            <input type="text" name="account_number" class="form-control" value="{{ old('account_number') }}" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
-                            @error('account_number')<div class="text-danger small">{{ $message }}</div>@enderror
+                            <input type="text" name="account_number" id="create_account_number" class="form-control" value="{{ old('account_number') }}" inputmode="numeric" pattern="[0-9]*" maxlength="18" placeholder="Digits only, max 18">
+                            <div class="text-danger small mt-1" id="create_account_number_error" role="alert">@error('account_number'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Upload Licence</label>
@@ -228,39 +240,56 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="edit_vendor_name" class="form-control" required>
+                            <input type="text" name="name" id="edit_vendor_name" class="form-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
+                            <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Email</label>
-                            <input type="email" name="email" id="edit_vendor_email" class="form-control" placeholder="Optional">
+                            <input type="email" name="email" id="edit_vendor_email" class="form-control" maxlength="255" placeholder="Optional">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Contact Person <span class="text-danger">*</span></label>
-                            <input type="text" name="contact_person" id="edit_vendor_contact_person" class="form-control" required>
+                            <input type="text" name="contact_person" id="edit_vendor_contact_person" class="form-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
+                            <div class="text-danger small mt-1" id="edit_vendor_contact_person_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Phone <span class="text-danger">*</span></label>
-                            <input type="text" name="phone" id="edit_vendor_phone" class="form-control" required inputmode="numeric" pattern="[0-9]*" maxlength="20" placeholder="Digits only">
+                            <input
+                                type="text"
+                                name="phone"
+                                id="edit_vendor_phone"
+                                class="form-control"
+                                required
+                                inputmode="numeric"
+                                pattern="[0-9]{10}"
+                                maxlength="10"
+                                placeholder="10 digit mobile number">
+                            <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" id="edit_vendor_address" class="form-control" rows="3" required></textarea>
+                            <textarea name="address" id="edit_vendor_address" class="form-control" rows="3" required maxlength="2000" autocomplete="off" placeholder="Up to 2000 characters"></textarea>
+                            <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">GST Number</label>
-                            <input type="text" name="gst_number" id="edit_vendor_gst_number" class="form-control" placeholder="Optional">
+                            <input type="text" name="gst_number" id="edit_vendor_gst_number" class="form-control" maxlength="15" pattern="[A-Za-z0-9]+" placeholder="Letters & numbers, max 15">
+                            <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Bank Name</label>
-                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control" placeholder="Optional">
+                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control" maxlength="255" pattern="[a-zA-Z0-9\s\-]+" placeholder="No special characters, max 255">
+                            <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">IFSC Code</label>
-                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code" class="form-control" placeholder="Optional">
+                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code" class="form-control" maxlength="11" pattern="[A-Za-z0-9]+" placeholder="Letters & numbers, max 11">
+                            <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Account Number</label>
-                            <input type="text" name="account_number" id="edit_vendor_account_number" class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="50" placeholder="Digits only (optional)">
+                            <input type="text" name="account_number" id="edit_vendor_account_number" class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="18" placeholder="Digits only, max 18">
+                            <div class="text-danger small mt-1" id="edit_account_number_error" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Upload Licence</label>
@@ -281,6 +310,254 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Validation rules (must match VendorController)
+    var nameRegex = /^[a-zA-Z0-9\s\-]+$/;
+    var addressRegex = /^[a-zA-Z0-9\s\-\.\,\r\n]+$/;
+    var gstRegex = /^[A-Za-z0-9]*$/;
+    var bankNameRegex = /^[a-zA-Z0-9\s\-]*$/;
+    var ifscRegex = /^[A-Za-z0-9]*$/;
+    var accountNumberRegex = /^[0-9]*$/;
+    var nameMessage = 'Vendor name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.';
+    var contactPersonMessage = 'Contact person may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.';
+    var addressMessage = 'Address may only contain letters, numbers, spaces, hyphens, commas, periods and new lines. Special characters are not allowed.';
+    var gstMessage = 'GST number may only contain letters and numbers. Max 15 characters.';
+    var bankNameMessage = 'Bank name may only contain letters, numbers, spaces and hyphens. Max 255 characters.';
+    var ifscMessage = 'IFSC code may only contain letters and numbers. Max 11 characters.';
+    var accountNumberMessage = 'Account number must contain only digits. Max 18 digits.';
+
+    function validateName(value, required) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (required && value.length === 0) return { valid: false, message: 'This field is required.' };
+        if (value.length === 0) return { valid: true };
+        return nameRegex.test(value) ? { valid: true } : { valid: false, message: nameMessage };
+    }
+
+    function validateContactPerson(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: false, message: 'Contact person is required.' };
+        return nameRegex.test(value) ? { valid: true } : { valid: false, message: contactPersonMessage };
+    }
+
+    function validateAddress(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: false, message: 'Address is required.' };
+        if (value.length > 2000) return { valid: false, message: 'Address cannot exceed 2000 characters.' };
+        return addressRegex.test(value) ? { valid: true } : { valid: false, message: addressMessage };
+    }
+
+    function validateGst(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: true };
+        if (value.length > 15) return { valid: false, message: 'GST number cannot exceed 15 characters.' };
+        return gstRegex.test(value) ? { valid: true } : { valid: false, message: gstMessage };
+    }
+
+    function validateBankName(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: true };
+        if (value.length > 255) return { valid: false, message: 'Bank name cannot exceed 255 characters.' };
+        return bankNameRegex.test(value) ? { valid: true } : { valid: false, message: bankNameMessage };
+    }
+
+    function validateIfsc(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: true };
+        if (value.length > 11) return { valid: false, message: 'IFSC code cannot exceed 11 characters.' };
+        return ifscRegex.test(value) ? { valid: true } : { valid: false, message: ifscMessage };
+    }
+
+    function validateAccountNumber(value) {
+        if (typeof value !== 'string') return { valid: true };
+        value = value.trim();
+        if (value.length === 0) return { valid: true };
+        if (value.length > 18) return { valid: false, message: 'Account number cannot exceed 18 digits.' };
+        return accountNumberRegex.test(value) ? { valid: true } : { valid: false, message: accountNumberMessage };
+    }
+
+    function showLiveError(inputEl, errorEl, result) {
+        if (!inputEl || !errorEl) return;
+        if (result.valid) {
+            inputEl.classList.remove('is-invalid');
+            errorEl.textContent = '';
+        } else {
+            inputEl.classList.add('is-invalid');
+            errorEl.textContent = result.message;
+        }
+    }
+
+    function attachLiveValidation(inputId, errorId, validateFn) {
+        var input = document.getElementById(inputId);
+        var errorEl = document.getElementById(errorId);
+        if (!input || !errorEl) return;
+        function run() { showLiveError(input, errorEl, validateFn(input.value)); }
+        input.addEventListener('input', run);
+        input.addEventListener('blur', run);
+    }
+
+    function normalizeAndValidatePhone(value, required) {
+        if (typeof value !== 'string') return { valid: !required };
+        var digits = value.replace(/\D/g, '').slice(0, 10);
+        return (function () {
+            if (required && digits.length === 0) {
+                return { valid: false, message: 'Phone number is required.' };
+            }
+            if (digits.length !== 10) {
+                return { valid: false, message: 'Phone number must be exactly 10 digits.' };
+            }
+            return { valid: true };
+        })();
+    }
+
+    function attachPhoneField(inputId, errorId, required) {
+        var input = document.getElementById(inputId);
+        var errorEl = document.getElementById(errorId);
+        if (!input || !errorEl) return;
+
+        function run() {
+            var raw = input.value || '';
+            var cleaned = raw.replace(/\D/g, '').slice(0, 10);
+            if (cleaned !== raw) {
+                input.value = cleaned;
+            }
+            var result = normalizeAndValidatePhone(cleaned, required);
+            showLiveError(input, errorEl, result);
+            return result;
+        }
+
+        input.addEventListener('input', run);
+        input.addEventListener('blur', run);
+
+        return run;
+    }
+
+    // Create modal: real-time validation
+    attachLiveValidation('create_vendor_name', 'create_vendor_name_error', function(v) { return validateName(v, true); });
+    attachLiveValidation('create_contact_person', 'create_contact_person_error', validateContactPerson);
+    attachLiveValidation('create_address', 'create_address_error', validateAddress);
+    var createPhoneValidator = attachPhoneField('create_phone', 'create_phone_error', true);
+
+    // Edit modal: real-time validation
+    attachLiveValidation('edit_vendor_name', 'edit_vendor_name_error', function(v) { return validateName(v, true); });
+    attachLiveValidation('edit_vendor_contact_person', 'edit_vendor_contact_person_error', validateContactPerson);
+    attachLiveValidation('edit_vendor_address', 'edit_vendor_address_error', validateAddress);
+    var editPhoneValidator = attachPhoneField('edit_vendor_phone', 'edit_phone_error', true);
+    attachLiveValidation('edit_vendor_gst_number', 'edit_gst_number_error', validateGst);
+    attachLiveValidation('edit_vendor_bank_name', 'edit_bank_name_error', validateBankName);
+    attachLiveValidation('edit_vendor_ifsc_code', 'edit_ifsc_code_error', validateIfsc);
+    attachLiveValidation('edit_vendor_account_number', 'edit_account_number_error', validateAccountNumber);
+
+    // Create modal: optional fields live validation
+    attachLiveValidation('create_gst_number', 'create_gst_number_error', validateGst);
+    attachLiveValidation('create_bank_name', 'create_bank_name_error', validateBankName);
+    attachLiveValidation('create_ifsc_code', 'create_ifsc_code_error', validateIfsc);
+    attachLiveValidation('create_account_number', 'create_account_number_error', validateAccountNumber);
+
+    function runOptionalValidators(prefix) {
+        var inputGst, inputBank, inputIfsc, inputAcc, errGst, errBank, errIfsc, errAcc;
+        if (prefix === 'create') {
+            inputGst = document.getElementById('create_gst_number');
+            inputBank = document.getElementById('create_bank_name');
+            inputIfsc = document.getElementById('create_ifsc_code');
+            inputAcc = document.getElementById('create_account_number');
+            errGst = document.getElementById('create_gst_number_error');
+            errBank = document.getElementById('create_bank_name_error');
+            errIfsc = document.getElementById('create_ifsc_code_error');
+            errAcc = document.getElementById('create_account_number_error');
+        } else {
+            inputGst = document.getElementById('edit_vendor_gst_number');
+            inputBank = document.getElementById('edit_vendor_bank_name');
+            inputIfsc = document.getElementById('edit_vendor_ifsc_code');
+            inputAcc = document.getElementById('edit_vendor_account_number');
+            errGst = document.getElementById('edit_gst_number_error');
+            errBank = document.getElementById('edit_bank_name_error');
+            errIfsc = document.getElementById('edit_ifsc_code_error');
+            errAcc = document.getElementById('edit_account_number_error');
+        }
+        var rGst = validateGst((inputGst && inputGst.value) || '');
+        var rBank = validateBankName((inputBank && inputBank.value) || '');
+        var rIfsc = validateIfsc((inputIfsc && inputIfsc.value) || '');
+        var rAcc = validateAccountNumber((inputAcc && inputAcc.value) || '');
+        if (inputGst && errGst) showLiveError(inputGst, errGst, rGst);
+        if (inputBank && errBank) showLiveError(inputBank, errBank, rBank);
+        if (inputIfsc && errIfsc) showLiveError(inputIfsc, errIfsc, rIfsc);
+        if (inputAcc && errAcc) showLiveError(inputAcc, errAcc, rAcc);
+        return rGst.valid && rBank.valid && rIfsc.valid && rAcc.valid;
+    }
+
+    // Create form: prevent submit if invalid
+    var createForm = document.querySelector('#createVendorModal form');
+    if (createForm) {
+        createForm.addEventListener('submit', function(e) {
+            var r1 = validateName(document.getElementById('create_vendor_name').value, true);
+            var r2 = validateContactPerson(document.getElementById('create_contact_person').value);
+            var r3 = validateAddress(document.getElementById('create_address').value);
+            var r4 = createPhoneValidator ? createPhoneValidator() : { valid: true };
+            var rOpt = runOptionalValidators('create');
+            showLiveError(document.getElementById('create_vendor_name'), document.getElementById('create_vendor_name_error'), r1);
+            showLiveError(document.getElementById('create_contact_person'), document.getElementById('create_contact_person_error'), r2);
+            showLiveError(document.getElementById('create_address'), document.getElementById('create_address_error'), r3);
+            if (!r1.valid || !r2.valid || !r3.valid || !r4.valid || !rOpt) e.preventDefault();
+        });
+    }
+
+    // Edit form: prevent submit if invalid
+    var editForm = document.getElementById('editVendorForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            var r1 = validateName(document.getElementById('edit_vendor_name').value, true);
+            var r2 = validateContactPerson(document.getElementById('edit_vendor_contact_person').value);
+            var r3 = validateAddress(document.getElementById('edit_vendor_address').value);
+            var r4 = editPhoneValidator ? editPhoneValidator() : { valid: true };
+            var rOpt = runOptionalValidators('edit');
+            showLiveError(document.getElementById('edit_vendor_name'), document.getElementById('edit_vendor_name_error'), r1);
+            showLiveError(document.getElementById('edit_vendor_contact_person'), document.getElementById('edit_vendor_contact_person_error'), r2);
+            showLiveError(document.getElementById('edit_vendor_address'), document.getElementById('edit_vendor_address_error'), r3);
+            if (!r1.valid || !r2.valid || !r3.valid || !r4.valid || !rOpt) e.preventDefault();
+        });
+    }
+
+    var createVendorModal = document.getElementById('createVendorModal');
+    if (createVendorModal) {
+        createVendorModal.addEventListener('hidden.bs.modal', function() {
+            var form = createVendorModal.querySelector('form');
+            if (form) form.reset();
+            ['create_vendor_name_error', 'create_contact_person_error', 'create_address_error', 'create_phone_error', 'create_gst_number_error', 'create_bank_name_error', 'create_ifsc_code_error', 'create_account_number_error'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+            ['create_vendor_name', 'create_contact_person', 'create_address', 'create_phone', 'create_gst_number', 'create_bank_name', 'create_ifsc_code', 'create_account_number'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.remove('is-invalid');
+            });
+        });
+        createVendorModal.addEventListener('shown.bs.modal', function() {
+            showLiveError(document.getElementById('create_vendor_name'), document.getElementById('create_vendor_name_error'), validateName(document.getElementById('create_vendor_name').value, true));
+            showLiveError(document.getElementById('create_contact_person'), document.getElementById('create_contact_person_error'), validateContactPerson(document.getElementById('create_contact_person').value));
+            showLiveError(document.getElementById('create_address'), document.getElementById('create_address_error'), validateAddress(document.getElementById('create_address').value));
+            if (createPhoneValidator) { createPhoneValidator(); }
+        });
+    }
+
+    var editVendorModal = document.getElementById('editVendorModal');
+    if (editVendorModal) {
+        editVendorModal.addEventListener('hidden.bs.modal', function() {
+            ['edit_vendor_name_error', 'edit_vendor_contact_person_error', 'edit_vendor_address_error', 'edit_phone_error', 'edit_gst_number_error', 'edit_bank_name_error', 'edit_ifsc_code_error', 'edit_account_number_error'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+            ['edit_vendor_name', 'edit_vendor_contact_person', 'edit_vendor_address', 'edit_vendor_phone', 'edit_vendor_gst_number', 'edit_vendor_bank_name', 'edit_vendor_ifsc_code', 'edit_vendor_account_number'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.remove('is-invalid');
+            });
+        });
+    }
+
     document.addEventListener('mousedown', function(e) {
         var viewBtn = e.target.closest('.btn-view-vendor');
         if (viewBtn) {

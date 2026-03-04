@@ -33,7 +33,13 @@ class SellingVoucherDateRangeController extends Controller
         $query = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory']);
 
         if ($request->filled('store')) {
-            $query->where('store_id', $request->store);
+            $storeParam = $request->store;
+            if (str_starts_with((string) $storeParam, 'sub_')) {
+                $subStoreId = (int) str_replace('sub_', '', $storeParam);
+                $query->where('store_id', $subStoreId)->where('store_type', 'sub_store');
+            } else {
+                $query->where('store_id', (int) $storeParam)->where('store_type', 'store');
+            }
         }
         if ($request->filled('status') && $request->status !== '') {
             $query->where('status', $request->status);

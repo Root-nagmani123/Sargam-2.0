@@ -9,11 +9,21 @@ use App\Models\Mess\ItemCategory;
 
 class ItemSubcategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $itemsubcategories = ItemSubcategory::with('category')->orderByDesc('id')->get();
         $categories = ItemCategory::active()->orderBy('category_name')->get();
-        return view('mess.itemsubcategories.index', compact('itemsubcategories', 'categories'));
+
+        $query = ItemSubcategory::with('category');
+        $categoryIdFilter = $request->get('category_id');
+        if ($categoryIdFilter !== null && $categoryIdFilter !== '') {
+            $validIds = $categories->pluck('id')->toArray();
+            if (in_array((int) $categoryIdFilter, $validIds, true)) {
+                $query->where('category_id', (int) $categoryIdFilter);
+            }
+        }
+        $itemsubcategories = $query->orderByDesc('id')->get();
+
+        return view('mess.itemsubcategories.index', compact('itemsubcategories', 'categories', 'categoryIdFilter'));
     }
 
     public function create()
@@ -68,17 +78,30 @@ class ItemSubcategoryController extends Controller
     }
 
     /**
+     * Regex: letters, numbers, spaces, hyphen only (no special characters).
+     */
+    protected const ITEM_NAME_PATTERN = '/^[\pL\pN\s\-]+$/u';
+
+    /**
+     * Regex: letters, numbers, spaces, hyphen, slash, period only.
+     */
+    protected const UNIT_MEASUREMENT_PATTERN = '/^[\pL\pN\s\-\/\.]+$/u';
+
+    /**
      * Build an array of validated attributes for create/update.
      */
     protected function validatedData(Request $request, ?ItemSubcategory $itemsubcategory = null): array
     {
         $validated = $request->validate([
             'category_id'      => ['required', 'exists:mess_item_categories,id'],
-            'item_name'        => ['required', 'string', 'max:255'],
-            'unit_measurement' => ['required', 'string', 'max:50'],
-            'alert_quantity'  => ['nullable', 'numeric', 'min:0'],
-            'description'     => ['nullable', 'string'],
-            'status'          => ['nullable', 'in:active,inactive'],
+            'item_name'        => ['required', 'string', 'max:255', 'regex:' . self::ITEM_NAME_PATTERN],
+            'unit_measurement' => ['required', 'string', 'max:50', 'regex:' . self::UNIT_MEASUREMENT_PATTERN],
+            'alert_quantity'   => ['nullable', 'numeric', 'min:0'],
+            'description'      => ['nullable', 'string'],
+            'status'           => ['nullable', 'in:active,inactive'],
+        ], [
+            'item_name.regex'        => 'Item name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
+            'unit_measurement.regex' => 'Unit measurement may only contain letters, numbers, spaces, hyphens, slashes and periods. Special characters are not allowed.',
         ]);
 
         $status = $validated['status'] ?? ItemSubcategory::STATUS_ACTIVE;

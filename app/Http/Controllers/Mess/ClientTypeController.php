@@ -52,6 +52,11 @@ class ClientTypeController extends Controller
     }
 
     /**
+     * Regex: letters, numbers, spaces, hyphen only (no special characters).
+     */
+    protected const CLIENT_NAME_PATTERN = '/^[\pL\pN\s\-]+$/u';
+
+    /**
      * Build an array of validated attributes for create/update.
      */
     protected function validatedData(Request $request, ?ClientType $clientType = null): array
@@ -60,6 +65,7 @@ class ClientTypeController extends Controller
             'required',
             'string',
             'max:255',
+            'regex:' . self::CLIENT_NAME_PATTERN,
             Rule::unique('mess_client_types', 'client_name'),
         ];
         if ($clientType !== null) {
@@ -70,6 +76,8 @@ class ClientTypeController extends Controller
             'client_type' => ['required', 'string', 'in:employee,ot,course,section,other'],
             'client_name' => $clientNameRules,
             'status'      => ['nullable', 'in:active,inactive'],
+        ], [
+            'client_name.regex' => 'Client name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
         ]);
 
         $status = $validated['status'] ?? ClientType::STATUS_ACTIVE;

@@ -56,8 +56,10 @@ class SubStoreController extends Controller
     protected function validatedData(Request $request, ?SubStore $subStore = null): array
     {
         $validated = $request->validate([
-            'sub_store_name' => ['required', 'string', 'max:255'],
+            'sub_store_name' => ['required', 'string', 'max:255', 'regex:/^[\pL\pN\s\-]+$/u'],
             'status'         => ['nullable', 'in:active,inactive'],
+        ], [
+            'sub_store_name.regex' => 'Sub Store name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
         ]);
 
         $status = $validated['status'] ?? SubStore::STATUS_ACTIVE;

@@ -9,10 +9,20 @@ use App\Models\Mess\ItemCategory;
 
 class ItemCategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $itemcategories = ItemCategory::orderByDesc('id')->get();
-        return view('mess.itemcategories.index', compact('itemcategories'));
+        $query = ItemCategory::query();
+
+        $categoryTypeFilter = $request->get('category_type');
+        if ($categoryTypeFilter !== null && $categoryTypeFilter !== '') {
+            $validTypes = array_keys(ItemCategory::categoryTypes());
+            if (in_array($categoryTypeFilter, $validTypes, true) && Schema::hasColumn('mess_item_categories', 'category_type')) {
+                $query->where('category_type', $categoryTypeFilter);
+            }
+        }
+
+        $itemcategories = $query->orderByDesc('id')->get();
+        return view('mess.itemcategories.index', compact('itemcategories', 'categoryTypeFilter'));
     }
 
     public function create()
@@ -52,6 +62,11 @@ class ItemCategoryController extends Controller
     }
 
     /**
+     * Regex: letters, numbers, spaces, hyphen only (no special characters).
+     */
+    protected const CATEGORY_NAME_PATTERN = '/^[\pL\pN\s\-]+$/u';
+
+    /**
      * Build an array of validated attributes for create/update.
      */
     protected function validatedData(Request $request, ?ItemCategory $itemcategory = null): array
@@ -61,6 +76,7 @@ class ItemCategoryController extends Controller
                 'required',
                 'string',
                 'max:255',
+                'regex:' . self::CATEGORY_NAME_PATTERN,
                 $itemcategory
                     ? Rule::unique('mess_item_categories', 'category_name')->ignore($itemcategory->id)
                     : Rule::unique('mess_item_categories', 'category_name'),
@@ -70,7 +86,9 @@ class ItemCategoryController extends Controller
             'status'        => ['nullable', 'in:active,inactive'],
         ];
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'category_name.regex' => 'Category name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
+        ]);
 
         $status = $validated['status'] ?? ItemCategory::STATUS_ACTIVE;
         $categoryType = $validated['category_type'] ?? ItemCategory::TYPE_RAW_MATERIAL;

@@ -25,7 +25,10 @@
 <div class="row">
     <div class="col-md-12 mb-3">
         <label class="form-label">Item Name <span class="text-danger">*</span></label>
-        <input type="text" name="item_name" class="form-control" required value="{{ $oldItemName }}">
+        <input type="text" name="item_name" class="form-control" required value="{{ $oldItemName }}"
+               pattern="[a-zA-Z0-9\s\-]+"
+               title="Only letters, numbers, spaces and hyphens allowed. No special characters.">
+        <div class="text-muted small">Letters, numbers, spaces and hyphens only.</div>
         @error('item_name')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
 </div>
@@ -40,7 +43,10 @@
 
     <div class="col-md-6 mb-3">
         <label class="form-label">Unit Measurement <span class="text-danger">*</span></label>
-        <input type="text" name="unit_measurement" class="form-control" value="{{ $oldUnitMeasurement }}" placeholder="e.g., kg, liter, piece" required>
+        <input type="text" name="unit_measurement" class="form-control" value="{{ $oldUnitMeasurement }}" placeholder="e.g., kg, liter, piece" required
+               pattern="[a-zA-Z0-9\s\-\/\.]+"
+               title="Only letters, numbers, spaces, hyphens, slashes and periods allowed. No special characters.">
+        <div class="text-muted small">Letters, numbers, spaces, hyphens, slashes and periods only.</div>
         @error('unit_measurement')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
 </div>
