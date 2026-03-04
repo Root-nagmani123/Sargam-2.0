@@ -83,18 +83,30 @@
                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">download</i>
                     Export
                 </button>
+                @php
+                    // Base export URL that already includes current filters (search, card_type, etc.)
+                    $exportBase = route('admin.family_idcard.export', request()->query());
+                @endphp
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="familyIdcardExportDropdown">
-                    <li><h6 class="dropdown-header text-muted small text-uppercase">Active (with Filters)</h6></li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.family_idcard.export', array_merge(['tab' => 'active', 'format' => 'xlsx'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i> Excel</a></li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.family_idcard.export', array_merge(['tab' => 'active', 'format' => 'pdf'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i> PDF</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header text-muted small text-uppercase">Archive (with Filters)</h6></li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.family_idcard.export', array_merge(['tab' => 'archive', 'format' => 'xlsx'], request()->query())) }}">Excel</a></li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.family_idcard.export', array_merge(['tab' => 'archive', 'format' => 'pdf'], request()->query())) }}">PDF</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header text-muted small text-uppercase">All (with Filters)</h6></li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.family_idcard.export', array_merge(['tab' => 'all', 'format' => 'xlsx'], request()->query())) }}">All - Excel</a></li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.family_idcard.export', array_merge(['tab' => 'all', 'format' => 'pdf'], request()->query())) }}">All - PDF</a></li>
+                    <li><h6 class="dropdown-header text-muted small text-uppercase">Export current view</h6></li>
+                    <li>
+                        <a id="familyIdcardExportExcel"
+                           class="dropdown-item d-flex align-items-center gap-2 py-2"
+                           href="{{ $exportBase }}?tab=active&format=xlsx"
+                           data-base="{{ $exportBase }}">
+                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
+                            Excel
+                        </a>
+                    </li>
+                    <li>
+                        <a id="familyIdcardExportPdf"
+                           class="dropdown-item d-flex align-items-center gap-2 py-2"
+                           href="{{ $exportBase }}?tab=active&format=pdf"
+                           data-base="{{ $exportBase }}">
+                            <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
+                            PDF
+                        </a>
+                    </li>
                 </ul>
             </div>
             <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Add">
@@ -360,6 +372,48 @@ document.addEventListener('DOMContentLoaded', function() {
         var container = document.querySelector('.family-idcard-print-area');
         if (container) container.classList.remove('printing-active', 'printing-archive');
     });
+
+    // --- Export: respect currently visible tab (Active / Archive) ---
+    (function () {
+        var currentTab = 'active';
+        var activeTabBtn = document.getElementById('active-tab');
+        var archiveTabBtn = document.getElementById('archive-tab');
+
+        function updateExportLinks() {
+            var excelLink = document.getElementById('familyIdcardExportExcel');
+            var pdfLink = document.getElementById('familyIdcardExportPdf');
+            if (!excelLink || !pdfLink) return;
+
+            [excelLink, pdfLink].forEach(function (link) {
+                var base = link.getAttribute('data-base');
+                if (!base) return;
+                try {
+                    var url = new URL(base, window.location.origin);
+                    url.searchParams.set('tab', currentTab);
+                    var fmt = link.id === 'familyIdcardExportPdf' ? 'pdf' : 'xlsx';
+                    url.searchParams.set('format', fmt);
+                    link.href = url.toString();
+                } catch (e) {
+                    // ignore
+                }
+            });
+        }
+
+        if (activeTabBtn) {
+            activeTabBtn.addEventListener('shown.bs.tab', function () {
+                currentTab = 'active';
+                updateExportLinks();
+            });
+        }
+        if (archiveTabBtn) {
+            archiveTabBtn.addEventListener('shown.bs.tab', function () {
+                currentTab = 'archive';
+                updateExportLinks();
+            });
+        }
+
+        updateExportLinks();
+    })();
 });
 </script>
 @endsection

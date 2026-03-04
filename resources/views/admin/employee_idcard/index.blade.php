@@ -339,37 +339,52 @@
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td class="fw-medium text-body-emphasis">{{ $request->name }}</td>
                                         <td class="text-body-secondary">{{ $request->designation ?? '--' }}</td>
+                                        @php
+                                            $isPermanent = !str_starts_with((string)($request->id ?? ''), 'c-');
+                                            $validFromYmd = isset($request->card_valid_from) && $request->card_valid_from ? \Carbon\Carbon::parse($request->card_valid_from)->format('Y-m-d') : '';
+                                            $validUptoYmd = isset($request->card_valid_to) && $request->card_valid_to ? \Carbon\Carbon::parse($request->card_valid_to)->format('Y-m-d') : '';
+                                        @endphp
                                         <td class="text-center">
-                                            @if($request->status === 'Approved')
+                                            @if($request->status === 'Approved' && $isPermanent)
                                                 <button type="button"
                                                         class="btn btn-sm btn-outline-info idcard-archive-ext-btn"
+                                                        style="cursor:pointer;"
                                                         title="Request Extension"
                                                         data-request-id="{{ $request->id }}"
                                                         data-name="{{ $request->name }}"
                                                         data-designation="{{ $request->designation ?? '--' }}"
                                                         data-valid-upto="{{ $request->id_card_valid_upto ?? '' }}"
+                                                        data-valid-from="{{ $validFromYmd }}"
+                                                        data-id-number="{{ $request->id_card_number ?? '' }}"
+                                                        data-request-for="{{ $request->request_for ?? 'Own ID Card' }}"
+                                                        data-duplication=""
                                                         data-status="{{ $request->status ?? '--' }}"
                                                         data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
                                                         data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">hourglass_bottom</i>
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;pointer-events:none;">hourglass_bottom</i>
                                                 </button>
                                             @else
                                                 <span class="text-body-tertiary">--</span>
                                             @endif
                                         </td>
                                         <td class="text-center">
-                                            @if($request->status === 'Approved')
+                                            @if($request->status === 'Approved' && $isPermanent)
                                                 <button type="button"
                                                         class="btn btn-sm btn-outline-warning idcard-archive-dup-btn"
+                                                        style="cursor:pointer;"
                                                         title="Request Duplicate"
                                                         data-request-id="{{ $request->id }}"
                                                         data-name="{{ $request->name }}"
                                                         data-designation="{{ $request->designation ?? '--' }}"
                                                         data-valid-upto="{{ $request->id_card_valid_upto ?? '' }}"
+                                                        data-valid-from="{{ $validFromYmd }}"
+                                                        data-id-number="{{ $request->id_card_number ?? '' }}"
+                                                        data-request-for="{{ $request->request_for ?? 'Own ID Card' }}"
+                                                        data-duplication=""
                                                         data-status="{{ $request->status ?? '--' }}"
                                                         data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
                                                         data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
-                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">content_copy</i>
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:18px;pointer-events:none;">content_copy</i>
                                                 </button>
                                             @else
                                                 <span class="text-body-tertiary">--</span>
@@ -696,60 +711,82 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function openViewAmendModal(btn) {
+        if (!btn || !btn.dataset) return;
         const modal = document.getElementById('viewDetailsModal');
-        document.getElementById('modalName').textContent = btn.dataset.name || '--';
-        document.getElementById('modalDesignation').textContent = btn.dataset.designation || '--';
-        document.getElementById('modalRequestFor').textContent = btn.dataset.requestFor || '--';
-        document.getElementById('modalCreated').textContent = btn.dataset.created || '--';
-        document.getElementById('modalDuplication').textContent = btn.dataset.duplication || '--';
-        document.getElementById('modalExtension').textContent = btn.dataset.extension || '--';
-        document.getElementById('modalValidUpto').textContent = btn.dataset.validUpto || btn.dataset.extension || '--';
+        if (!modal) return;
+        const setText = function(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text || '--';
+        };
+        setText('modalName', btn.dataset.name);
+        setText('modalDesignation', btn.dataset.designation);
+        setText('modalRequestFor', btn.dataset.requestFor);
+        setText('modalCreated', btn.dataset.created);
+        setText('modalDuplication', btn.dataset.duplication);
+        setText('modalExtension', btn.dataset.extension);
+        setText('modalValidUpto', btn.dataset.validUpto || btn.dataset.extension);
         const status = btn.dataset.status || '--';
         const statusClass = { 'Pending': 'warning', 'Approved': 'success', 'Rejected': 'danger', 'Issued': 'primary' }[status] || 'secondary';
-        document.getElementById('modalStatus').innerHTML = status !== '--' ? '<span class="badge bg-' + statusClass + '">' + status + '</span>' : '--';
-        document.getElementById('modalViewFullLink').href = btn.dataset.showUrl || '#';
+        const statusEl = document.getElementById('modalStatus');
+        if (statusEl) statusEl.innerHTML = status !== '--' ? '<span class="badge bg-' + statusClass + '">' + status + '</span>' : '--';
+        const viewLink = document.getElementById('modalViewFullLink');
+        if (viewLink) viewLink.href = btn.dataset.showUrl || '#';
         const amendForm = document.getElementById('amendDupExtForm');
-        const requestId = btn.dataset.requestId;
-        const isContractual = (requestId || '').toString().startsWith('c-');
+        const requestId = (btn.dataset.requestId || '').toString();
+        const isContractual = requestId.startsWith('c-');
 
-        // For contractual ID cards, only show details and a clear message; do not call backend amend API.
         if (isContractual) {
             const errEl = document.getElementById('amendDupExtError');
             const errText = document.getElementById('amendDupExtErrorText');
-            if (errText) {
-                errText.textContent = 'Duplication/Extension is not supported for contractual ID card requests. Please use Duplicate ID Card Request page.';
-            }
-            if (errEl) {
-                errEl.classList.remove('d-none');
-            }
-            document.getElementById('amendDupReasonField').style.display = 'none';
-            document.getElementById('amendExtensionSection').style.display = 'none';
-            document.getElementById('amendDupExtSubmitBtn').disabled = true;
-            new bootstrap.Modal(modal).show();
+            if (errText) errText.textContent = 'Duplication/Extension is not supported for contractual ID card requests. Please use Duplicate ID Card Request page.';
+            if (errEl) errEl.classList.remove('d-none');
+            const dupReasonField = document.getElementById('amendDupReasonField');
+            if (dupReasonField) dupReasonField.style.display = 'none';
+            const extSection = document.getElementById('amendExtensionSection');
+            if (extSection) extSection.style.display = 'none';
+            const submitBtn = document.getElementById('amendDupExtSubmitBtn');
+            if (submitBtn) submitBtn.disabled = true;
+            try { new bootstrap.Modal(modal).show(); } catch (err) { console.error('Modal show:', err); }
             return;
         }
 
-        amendForm.action = '{{ route("admin.employee_idcard.amendDuplicationExtension", ["id" => "__ID__"]) }}'.replace('__ID__', requestId);
-        document.getElementById('amend_duplication_reason').value = btn.dataset.duplication || '';
-        document.getElementById('amend_id_card_number').value = btn.dataset.idNumber || '';
-        document.getElementById('amend_id_card_valid_from').value = btn.dataset.validFrom || '';
-        document.getElementById('amend_id_card_valid_upto').value = btn.dataset.validUpto || btn.dataset.extension || '';
-        document.getElementById('amend_fir_receipt').value = '';
-        document.getElementById('amend_payment_receipt').value = '';
-        document.getElementById('amend_extension_document').value = '';
-        document.getElementById('amend_supporting_document').value = '';
-        document.getElementById('amendDupExtError').classList.add('d-none');
-        document.getElementById('amendDupExtSuccess').classList.add('d-none');
+        if (amendForm) amendForm.action = '{{ route("admin.employee_idcard.amendDuplicationExtension", ["id" => "__ID__"]) }}'.replace('__ID__', requestId);
+        const setValue = function(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.value = val || '';
+        };
+        setValue('amend_duplication_reason', btn.dataset.duplication);
+        setValue('amend_id_card_number', btn.dataset.idNumber);
+        setValue('amend_id_card_valid_from', btn.dataset.validFrom);
+        setValue('amend_id_card_valid_upto', btn.dataset.validUpto || btn.dataset.extension);
+        setValue('amend_fir_receipt', '');
+        setValue('amend_payment_receipt', '');
+        setValue('amend_extension_document', '');
+        setValue('amend_supporting_document', '');
+        const errEl2 = document.getElementById('amendDupExtError');
+        if (errEl2) errEl2.classList.add('d-none');
+        const successEl = document.getElementById('amendDupExtSuccess');
+        if (successEl) successEl.classList.add('d-none');
         var requestFor = (btn.dataset.requestFor || '').trim();
         var isExtension = requestFor === 'Extension';
-        document.getElementById('amendDupReasonField').style.display = isExtension ? 'none' : '';
-        document.getElementById('amendExtensionSection').style.display = isExtension ? 'block' : 'none';
-        if (isExtension) {
-            document.getElementById('amend_extension_reason').value = btn.dataset.extensionReason || '';
-        }
+        const dupReasonField2 = document.getElementById('amendDupReasonField');
+        if (dupReasonField2) dupReasonField2.style.display = isExtension ? 'none' : '';
+        const extSection2 = document.getElementById('amendExtensionSection');
+        if (extSection2) extSection2.style.display = isExtension ? 'block' : 'none';
+        if (isExtension) setValue('amend_extension_reason', btn.dataset.extensionReason);
         const dupReason = document.getElementById('amend_duplication_reason');
-        dupReason.dispatchEvent(new Event('change'));
-        new bootstrap.Modal(modal).show();
+        if (dupReason) dupReason.dispatchEvent(new Event('change'));
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                new bootstrap.Modal(modal).show();
+            } else {
+                modal.classList.add('show');
+                modal.style.display = 'block';
+                document.body.classList.add('modal-open');
+            }
+        } catch (err) {
+            console.error('openViewAmendModal:', err);
+        }
     }
 
     var currentAmendBtn = null;
@@ -759,10 +796,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var target = e.target.closest('a.amend-dup-ext-btn, button.idcard-archive-ext-btn, button.idcard-archive-dup-btn');
         if (target) {
             e.preventDefault();
+            e.stopPropagation();
             currentAmendBtn = target;
-            openViewAmendModal(target);
+            try {
+                openViewAmendModal(target);
+            } catch (err) {
+                console.error('openViewAmendModal error:', err);
+            }
         }
-    });
+    }, true);
 
     const amendForm = document.getElementById('amendDupExtForm');
     const amendModal = document.getElementById('viewDetailsModal');

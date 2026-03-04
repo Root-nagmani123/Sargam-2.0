@@ -334,15 +334,32 @@ class FamilyIDCardRequestController extends Controller
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
         $request = IdCardSecurityMapper::toFamilyRequestDto($row);
-        return view('admin.family_idcard.show', ['request' => $request]);
+
+        // Load all family members for this request (same emp_id_apply + created_by + created_date)
+        $members = $this->sameGroupQuery($row)
+            ->orderBy('fml_id_apply')
+            ->get()
+            ->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
+
+        return view('admin.family_idcard.show', [
+            'request' => $request,
+            'members' => $members,
+        ]);
     }
 
     public function edit($id)
     {
         $row = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
         $request = IdCardSecurityMapper::toFamilyRequestDto($row);
-        $existingFamilyMembers = SecurityFamilyIdApply::where('created_by', Auth::user()->user_id)
-            ->where('fml_id_apply', '!=', $id)->orderBy('created_date', 'desc')->limit(50)->get()
+        // Same group = same emp_id_apply + created_by + created_date (include all members)
+        $createdDate = $row->created_date instanceof \DateTimeInterface
+            ? $row->created_date->format('Y-m-d H:i:s')
+            : \Carbon\Carbon::parse($row->created_date)->format('Y-m-d H:i:s');
+        $existingFamilyMembers = SecurityFamilyIdApply::where('emp_id_apply', $row->emp_id_apply)
+            ->where('created_by', $row->created_by)
+            ->whereRaw("DATE_FORMAT(created_date, '%Y-%m-%d %H:%i:%s') = ?", [$createdDate])
+            ->orderBy('fml_id_apply')
+            ->get()
             ->map(fn ($r) => IdCardSecurityMapper::toFamilyRequestDto($r));
 
         // Employee type for this family request (defaults to Permanent for older rows)
@@ -440,8 +457,232 @@ class FamilyIDCardRequestController extends Controller
         }
         $row->save();
 
+        // --- Sync family members list (inline table, create-style) ---
+        $members = $request->input('members', []);
+
+        // If member rows are present, validate and sync them with security_family_id_apply
+        if (is_array($members) && count($members) > 0) {
+            // Basic validation: valid_to must be >= valid_from when both are present
+            foreach ($members as $idx => $member) {
+                $from = $member['valid_from'] ?? null;
+                $to = $member['valid_to'] ?? null;
+                if (!empty($from) && !empty($to) && $to < $from) {
+                    throw ValidationException::withMessages([
+                        "members.{$idx}.valid_to" => 'Valid To date must not be earlier than Valid From date.',
+                    ]);
+                }
+            }
+
+            // Existing group rows (all members for this application)
+            $existingRows = $this->sameGroupQuery($row)->orderBy('fml_id_apply')->get();
+            $existingById = $existingRows->keyBy('fml_id_apply');
+
+            $seenIds = [];
+            $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
+
+            foreach ($members as $idx => $member) {
+                $name = trim($member['name'] ?? '');
+                $memberId = $member['id'] ?? null;
+                $relation = $member['relation'] ?? null;
+                $dob = $member['dob'] ?? null;
+                $validFrom = $member['valid_from'] ?? null;
+                $validTo = $member['valid_to'] ?? null;
+                $fileKey = "members.{$idx}.family_photo";
+
+                // Skip completely empty rows
+                if ($name === '' && empty($memberId)) {
+                    continue;
+                }
+
+                // Update existing member
+                if (!empty($memberId) && $existingById->has($memberId)) {
+                    /** @var \App\Models\SecurityFamilyIdApply $memberRow */
+                    $memberRow = $existingById->get($memberId);
+                    $memberRow->family_name = $name !== '' ? $name : $memberRow->family_name;
+                    $memberRow->family_relation = $relation ?: null;
+                    $memberRow->employee_dob = $dob ?: null;
+                    $memberRow->card_valid_from = $validFrom ?: null;
+                    $memberRow->card_valid_to = $validTo ?: null;
+
+                    if ($request->hasFile($fileKey)) {
+                        $path = $request->file($fileKey)->store('family_idcard/Individual_photos', 'public');
+                        $memberRow->id_photo_path = $path;
+                    }
+                    $memberRow->save();
+                    $seenIds[] = $memberId;
+                    continue;
+                }
+
+                // Create new member (name required)
+                if ($name !== '') {
+                    $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
+                    $nextPk++;
+
+                    $createdDate = $row->created_date instanceof \DateTimeInterface
+                        ? $row->created_date->format('Y-m-d H:i:s')
+                        : Carbon::parse($row->created_date)->format('Y-m-d H:i:s');
+
+                    $photoPath = null;
+                    if ($request->hasFile($fileKey)) {
+                        $photoPath = $request->file($fileKey)->store('family_idcard/Individual_photos', 'public');
+                    }
+
+                    SecurityFamilyIdApply::create([
+                        'pk' => $nextPk - 1,
+                        'fml_id_apply' => $fmlIdApply,
+                        'family_name' => $name,
+                        'family_relation' => $relation ?: null,
+                        'card_valid_from' => $validFrom ?: null,
+                        'card_valid_to' => $validTo ?: null,
+                        'id_status' => (int) $row->id_status,
+                        'created_by' => $row->created_by,
+                        'created_date' => $createdDate,
+                        'id_photo_path' => $photoPath,
+                        'family_photo' => $row->family_photo,
+                        'employee_dob' => $dob ?: null,
+                        'emp_id_apply' => $row->emp_id_apply,
+                        'employee_type' => $row->employee_type ?? null,
+                        'department_approval_emp_pk' => $row->department_approval_emp_pk ?? null,
+                        'card_type' => $row->card_type ?? 'Family',
+                    ]);
+                }
+            }
+
+            // Delete members that were removed in the UI (but keep at least one record)
+            $submittedIds = array_filter($seenIds, fn ($v) => !empty($v));
+            $idsToDelete = $existingRows->pluck('fml_id_apply')
+                ->reject(function ($existingId) use ($submittedIds) {
+                    return in_array($existingId, $submittedIds, true);
+                })
+                ->values();
+
+            if ($idsToDelete->count() > 0 && $existingRows->count() > $idsToDelete->count()) {
+                SecurityFamilyIdApply::whereIn('fml_id_apply', $idsToDelete)->delete();
+            }
+        }
+
         return redirect()->route('admin.family_idcard.show', $row->fml_id_apply)
             ->with('success', 'Family ID Card request updated successfully!');
+    }
+
+    /**
+     * Ensure member row belongs to the same group as the main row (id = fml_id_apply of main).
+     */
+    private function sameGroupQuery(SecurityFamilyIdApply $mainRow)
+    {
+        $createdDate = $mainRow->created_date instanceof \DateTimeInterface
+            ? $mainRow->created_date->format('Y-m-d H:i:s')
+            : Carbon::parse($mainRow->created_date)->format('Y-m-d H:i:s');
+        return SecurityFamilyIdApply::where('emp_id_apply', $mainRow->emp_id_apply)
+            ->where('created_by', $mainRow->created_by)
+            ->whereRaw("DATE_FORMAT(created_date, '%Y-%m-%d %H:%i:%s') = ?", [$createdDate]);
+    }
+
+    /**
+     * Add a new family member to the same group (same emp_id_apply, created_by, created_date).
+     */
+    public function storeMember(Request $request, $id)
+    {
+        $mainRow = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        if ((int) $mainRow->created_by !== (int) (Auth::user()->user_id ?? Auth::id())) {
+            abort(403, 'You can only add members to your own family ID card request.');
+        }
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'relation' => 'nullable|string|max:100',
+            'dob' => 'nullable|date',
+            'valid_from' => 'nullable|date',
+            'valid_to' => 'nullable|date|after_or_equal:valid_from',
+            'family_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+        $from = $validated['valid_from'] ?? null;
+        $to = $validated['valid_to'] ?? null;
+        if (!empty($from) && !empty($to) && $to < $from) {
+            throw ValidationException::withMessages(['valid_to' => 'Valid To must not be earlier than Valid From.']);
+        }
+        $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
+        $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
+        $createdDate = $mainRow->created_date instanceof \DateTimeInterface
+            ? $mainRow->created_date->format('Y-m-d H:i:s')
+            : Carbon::parse($mainRow->created_date)->format('Y-m-d H:i:s');
+        $photoPath = null;
+        if ($request->hasFile('family_photo')) {
+            $photoPath = $request->file('family_photo')->store('family_idcard/Individual_photos', 'public');
+        }
+        SecurityFamilyIdApply::create([
+            'fml_id_apply' => $fmlIdApply,
+            'family_name' => $validated['name'],
+            'family_relation' => $validated['relation'] ?? null,
+            'card_valid_from' => $validated['valid_from'] ?? null,
+            'card_valid_to' => $validated['valid_to'] ?? null,
+            'employee_dob' => $validated['dob'] ?? null,
+            'id_status' => (int) $mainRow->id_status,
+            'created_by' => $mainRow->created_by,
+            'created_date' => $createdDate,
+            'id_photo_path' => $photoPath,
+            'family_photo' => $mainRow->family_photo,
+            'emp_id_apply' => $mainRow->emp_id_apply,
+            'employee_type' => $mainRow->employee_type ?? null,
+            'department_approval_emp_pk' => $mainRow->department_approval_emp_pk ?? null,
+        ]);
+        return redirect()->route('admin.family_idcard.edit', $id)
+            ->with('success', 'Family member added successfully.');
+    }
+
+    /**
+     * Update an existing family member in the same group.
+     */
+    public function updateMember(Request $request, $id, $memberId)
+    {
+        $mainRow = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        if ((int) $mainRow->created_by !== (int) (Auth::user()->user_id ?? Auth::id())) {
+            abort(403, 'You can only edit members of your own family ID card request.');
+        }
+        $memberRow = $this->sameGroupQuery($mainRow)->where('fml_id_apply', $memberId)->firstOrFail();
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'relation' => 'nullable|string|max:100',
+            'dob' => 'nullable|date',
+            'valid_from' => 'nullable|date',
+            'valid_to' => 'nullable|date|after_or_equal:valid_from',
+            'family_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+        $from = $validated['valid_from'] ?? null;
+        $to = $validated['valid_to'] ?? null;
+        if (!empty($from) && !empty($to) && $to < $from) {
+            throw ValidationException::withMessages(['valid_to' => 'Valid To must not be earlier than Valid From.']);
+        }
+        $memberRow->family_name = $validated['name'];
+        $memberRow->family_relation = $validated['relation'] ?? null;
+        $memberRow->employee_dob = $validated['dob'] ?? null;
+        $memberRow->card_valid_from = $validated['valid_from'] ?? null;
+        $memberRow->card_valid_to = $validated['valid_to'] ?? null;
+        if ($request->hasFile('family_photo')) {
+            $memberRow->id_photo_path = $request->file('family_photo')->store('family_idcard/Individual_photos', 'public');
+            $memberRow->family_photo = $memberRow->family_photo ?? $memberRow->id_photo_path;
+        }
+        $memberRow->save();
+        return redirect()->route('admin.family_idcard.edit', $id)
+            ->with('success', 'Family member updated successfully.');
+    }
+
+    /**
+     * Remove a family member from the group (must be same group, and cannot delete the main row).
+     */
+    public function destroyMember($id, $memberId)
+    {
+        $mainRow = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
+        if ((int) $mainRow->created_by !== (int) (Auth::user()->user_id ?? Auth::id())) {
+            abort(403, 'You can only remove members from your own family ID card request.');
+        }
+        if ($memberId === $id) {
+            return redirect()->route('admin.family_idcard.edit', $id)
+                ->with('error', 'You cannot remove the main card. Edit the main details above instead.');
+        }
+        $memberRow = $this->sameGroupQuery($mainRow)->where('fml_id_apply', $memberId)->firstOrFail();
+        $memberRow->delete();
+        return redirect()->route('admin.family_idcard.edit', $id)
+            ->with('success', 'Family member removed successfully.');
     }
 
     public function destroy($id)

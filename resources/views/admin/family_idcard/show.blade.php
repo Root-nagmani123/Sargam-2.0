@@ -20,41 +20,80 @@
                     <a href="{{ route('admin.family_idcard.index') }}" class="btn btn-outline-secondary btn-sm">Back to List</a>
                 </div>
             </div>
-            <div class="row g-3">
+            <div class="row g-3 mb-4">
                 <div class="col-md-6"><strong>Employee ID:</strong> {{ $request->employee_id ?? '--' }}</div>
                 <div class="col-md-6"><strong>Employee Name:</strong> {{ $request->employee_name ?? '--' }}</div>
-                <div class="col-md-6"><strong>Guardian Name:</strong> {{ $request->guardian_name ?? '--' }}</div>
-                <div class="col-md-6"><strong>Guardian Designation:</strong> {{ $request->guardian_designation ?? '--' }}</div>
-                <div class="col-md-6"><strong>Designation:</strong> {{ $request->designation ?? '--' }}</div>
-                <div class="col-md-6"><strong>Card Type:</strong> {{ $request->card_type ?? '--' }}</div>
-                <div class="col-md-6"><strong>Family Member Name:</strong> {{ $request->name ?? '--' }}</div>
-                <div class="col-md-6"><strong>Relation:</strong> {{ $request->relation ?? '--' }}</div>
-                <div class="col-md-6"><strong>Family Member ID:</strong> {{ $request->family_member_id ?? '--' }}</div>
+                <div class="col-md-6"><strong>Designation:</strong> {{ $request->guardian_designation ?? $request->designation ?? '--' }}</div>
+                <div class="col-md-6"><strong>Card Type:</strong> {{ $request->card_type ?? 'Family' }}</div>
                 <div class="col-md-6"><strong>Section:</strong> {{ $request->section ?? '--' }}</div>
-                <div class="col-md-6"><strong>DOB:</strong> {{ $request->dob ? $request->dob->format('d/m/Y') : '--' }}</div>
                 <div class="col-md-6"><strong>Valid From:</strong> {{ $request->valid_from ? $request->valid_from->format('d/m/Y') : '--' }}</div>
                 <div class="col-md-6"><strong>Valid To:</strong> {{ $request->valid_to ? $request->valid_to->format('d/m/Y') : '--' }}</div>
                 <div class="col-md-6"><strong>Status:</strong> <span class="badge bg-primary">{{ $request->status ?? 'Pending' }}</span></div>
                 <div class="col-md-6">
-                    @if($request->group_photo)
+                    @php
+                        $firstMember = isset($members) && count($members) ? $members->first() : null;
+                        $groupPhotoPath = $firstMember->family_photo ?? $request->family_photo ?? null;
+                    @endphp
+                    @if($groupPhotoPath)
                         <strong>Group Photo:</strong><br>
-                        <img src="{{ asset('storage/' . $request->group_photo) }}" alt="Group Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
+                        <img src="{{ asset('storage/' . $groupPhotoPath) }}" alt="Group Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
                     @else
                         <strong>Group Photo:</strong> --
                     @endif
                 </div>
                 <div class="col-md-6">
-                    @if($request->family_photo)
-                        <strong>Individual Photo:</strong><br>
-                        <img src="{{ asset('storage/' . $request->family_photo) }}" alt="Individual Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
+                    @if($request->id_photo_path)
+                        <strong>Individual Photo (selected member):</strong><br>
+                        <img src="{{ asset('storage/' . $request->id_photo_path) }}" alt="Individual Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
                     @else
-                        <strong>Individual Photo:</strong> --
+                        <strong>Individual Photo (selected member):</strong> --
                     @endif
                 </div>
                 @if(isset($request->remarks) && $request->remarks)
                     <div class="col-12"><strong>Remarks:</strong> {{ $request->remarks }}</div>
                 @endif
-            </div>
+            @if(isset($members) && $members->count())
+                <hr class="my-4">
+                <h6 class="fw-semibold mb-3">Family Members List</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:60px;">S.No.</th>
+                                <th>Member Name</th>
+                                <th>Relation</th>
+                                <th>DOB</th>
+                                <th>Valid From</th>
+                                <th>Valid To</th>
+                                <th style="width:140px;">Individual Photo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($members as $index => $member)
+                                <tr>
+                                    <td class="text-center">{{ $index + 1 }}</td>
+                                    <td>{{ $member->name ?? '--' }}</td>
+                                    <td>{{ $member->relation ?? '--' }}</td>
+                                    <td>{{ $member->dob ? \App\Support\IdCardSecurityMapper::formatDateForDisplay($member->dob) : '--' }}</td>
+                                    <td>{{ $member->valid_from ? \App\Support\IdCardSecurityMapper::formatDateForDisplay($member->valid_from) : '--' }}</td>
+                                    <td>{{ $member->valid_to ? \App\Support\IdCardSecurityMapper::formatDateForDisplay($member->valid_to) : '--' }}</td>
+                                    <td class="text-center">
+                                        @php
+                                            $photo = $member->id_photo_path ?? $member->family_photo ?? null;
+                                        @endphp
+                                        @if($photo)
+                                            <img src="{{ asset('storage/' . $photo) }}" alt="Member Photo" class="img-thumbnail" style="max-height:80px;">
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
         </div>
     </div>
 </div>

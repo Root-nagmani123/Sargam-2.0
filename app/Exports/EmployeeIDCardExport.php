@@ -64,8 +64,6 @@ class EmployeeIDCardExport implements FromCollection, WithHeadings
                 $record->designation ?? '--',
                 $record->card_type ?? '--',
                 $record->request_for ?? '--',
-                in_array($record->request_for ?? '', ['Replacement', 'Duplication']) ? ($record->duplication_reason ?? '--') : '--',
-                ($record->request_for ?? '') === 'Extension' ? ($record->id_card_valid_upto ?? '--') : '--',
                 $record->id_card_valid_upto ?? '--',
                 $record->status ?? '--',
             ];
@@ -81,8 +79,6 @@ class EmployeeIDCardExport implements FromCollection, WithHeadings
             'Designation',
             'Card Type',
             'Request For',
-            'Duplication',
-            'Extension',
             'Valid Upto',
             'Status',
         ];

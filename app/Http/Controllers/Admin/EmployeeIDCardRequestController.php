@@ -165,15 +165,43 @@ class EmployeeIDCardRequestController extends Controller
         return $paginator;
     }
 
+    /**
+     * Check if the given employee (pk) already has an approved ID card (Permanent or Contractual).
+     */
+    private static function hasApprovedIdCard(int $employeePk): bool
+    {
+        $perm = SecurityParmIdApply::where('employee_master_pk', $employeePk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->exists();
+        if ($perm) {
+            return true;
+        }
+        $cont = DB::table('security_con_oth_id_apply')
+            ->where('created_by', $employeePk)
+            ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+            ->exists();
+        return $cont;
+    }
+
     public function create()
     {
+        $authUserId = Auth::user()->user_id ?? Auth::id();
+        $employeePk = null;
+        if ($authUserId) {
+            $authEmp = EmployeeMaster::where('pk', $authUserId)->orWhere('pk_old', $authUserId)->first();
+            $employeePk = $authEmp?->pk;
+        }
+        if ($employeePk && static::hasApprovedIdCard($employeePk)) {
+            return redirect()->route('admin.employee_idcard.index')
+                ->with('error', 'You already have an approved ID card. A new request cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.');
+        }
+
         $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name');
 
         // Contractual: Section = logged-in user's department only; Approval Authority = same department employees with Payroll=0 (permanent)
         $userDepartmentPk = null;
         $userDepartmentName = null;
         $approvalAuthorityEmployees = collect();
-        $authUserId = Auth::user()->user_id ?? null;
         if ($authUserId) {
             $authEmp = EmployeeMaster::with('department')
                 ->where('pk', $authUserId)
@@ -282,6 +310,18 @@ class EmployeeIDCardRequestController extends Controller
     public function store(Request $request)
     {
        
+        $authUserId = Auth::user()->user_id ?? Auth::id();
+        $authEmployeePk = null;
+        if ($authUserId) {
+            $authEmp = EmployeeMaster::where('pk', $authUserId)->orWhere('pk_old', $authUserId)->first();
+            $authEmployeePk = $authEmp?->pk;
+        }
+        if ($authEmployeePk && static::hasApprovedIdCard($authEmployeePk)) {
+            throw ValidationException::withMessages([
+                'employee_type' => 'You already have an approved ID card. A new request cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
+            ]);
+        }
+
         $validated = $request->validate([
             'employee_type' => 'required|in:Permanent Employee,Contractual Employee',
             'card_type' => 'required|string|max:100',
@@ -856,13 +896,14 @@ class EmployeeIDCardRequestController extends Controller
         }
         $row->card_type = $cardNameCode;
 
-        $cardValidFrom = null;
-        $cardValidTo = null;
-        if (!empty($validated['id_card_valid_from'])) {
-            $cardValidFrom = static::parseDateToYmd($validated['id_card_valid_from']);
+        // Preserve existing dates when not provided (e.g. readonly field not submitted or empty)
+        $cardValidFrom = !empty($validated['id_card_valid_from']) ? static::parseDateToYmd($validated['id_card_valid_from']) : $row->card_valid_from;
+        $cardValidTo = !empty($validated['id_card_valid_upto']) ? static::parseDateToYmd($validated['id_card_valid_upto']) : $row->card_valid_to;
+        if ($cardValidFrom instanceof \DateTimeInterface) {
+            $cardValidFrom = $cardValidFrom->format('Y-m-d');
         }
-        if (!empty($validated['id_card_valid_upto'])) {
-            $cardValidTo = static::parseDateToYmd($validated['id_card_valid_upto']);
+        if ($cardValidTo instanceof \DateTimeInterface) {
+            $cardValidTo = $cardValidTo->format('Y-m-d');
         }
 
         $row->card_valid_from = $cardValidFrom;
@@ -889,6 +930,24 @@ class EmployeeIDCardRequestController extends Controller
             $documentsUploadedList[] = 'Joining Letter';
         }
         $row->save();
+
+        // Persist name, father_name and academy_joining (doj) to linked employee_master
+        $emp = EmployeeMaster::find($row->employee_master_pk);
+        if ($emp) {
+            $name = trim($validated['name'] ?? '');
+            if ($name !== '') {
+                $parts = preg_split('/\s+/', $name, 2);
+                $emp->first_name = $parts[0] ?? '';
+                $emp->last_name = $parts[1] ?? '';
+            }
+            if (array_key_exists('father_name', $validated)) {
+                $emp->father_name = $validated['father_name'];
+            }
+            if (!empty($validated['academy_joining'])) {
+                $emp->doj = \Carbon\Carbon::parse($validated['academy_joining'])->format('Y-m-d');
+            }
+            $emp->save();
+        }
 
         $successMsg = 'Employee ID Card request updated successfully!';
         if (!empty($documentsUploadedList)) {

@@ -28,16 +28,14 @@
 <table>
     <thead>
         <tr>
-            <th width="4%">S.No.</th>
-            <th width="10%">Request Date</th>
-            <th width="14%">Employee Name</th>
-            <th width="12%">Designation</th>
-            <th width="8%">Card Type</th>
-            <th width="10%">Request For</th>
-            <th width="10%">Duplication</th>
-            <th width="10%">Extension</th>
-            <th width="10%">Valid Upto</th>
-            <th width="8%">Status</th>
+            <th width="5%">S.No.</th>
+            <th width="12%">Request Date</th>
+            <th width="16%">Employee Name</th>
+            <th width="14%">Designation</th>
+            <th width="10%">Card Type</th>
+            <th width="12%">Request For</th>
+            <th width="12%">Valid Upto</th>
+            <th width="10%">Status</th>
         </tr>
     </thead>
     <tbody>
@@ -49,8 +47,6 @@
             <td>{{ $record->designation ?? '--' }}</td>
             <td>{{ $record->card_type ?? '--' }}</td>
             <td>{{ $record->request_for ?? '--' }}</td>
-            <td>{{ in_array($record->request_for, ['Replacement', 'Duplication']) ? ($record->duplication_reason ?? '--') : '--' }}</td>
-            <td>{{ $record->request_for === 'Extension' ? ($record->id_card_valid_upto ?? '--') : '--' }}</td>
             <td>{{ $record->id_card_valid_upto ?? '--' }}</td>
             <td>{{ $record->status ?? '--' }}</td>
         </tr>

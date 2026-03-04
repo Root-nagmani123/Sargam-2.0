@@ -993,16 +993,22 @@ class EmployeeIDCardApprovalController extends Controller
 
     private function exportApproval2($search, $cardType, $dateFrom, $dateTo, $format, $perPage)
     {
-        // Build query for all pending regular (Permanent) requests in Approval 2
-        // Join with employee_master + designation_master to derive name/designation
-        $query = DB::table('security_parm_id_apply as spa')
-            ->leftJoin('employee_master as emp', 'spa.employee_master_pk', '=', 'emp.pk')
+        $searchLike = empty($search) ? null : '%' . trim($search) . '%';
+        $dateFromDt = empty($dateFrom) ? null : \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
+        $dateToDt = empty($dateTo) ? null : \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
+
+        // 1) Permanent Regular: match employee by pk OR pk_old so name/designation resolve
+        $permRegQuery = DB::table('security_parm_id_apply as spa')
+            ->leftJoin('employee_master as emp', function ($j) {
+                $j->on('spa.employee_master_pk', '=', 'emp.pk')
+                  ->orOn('spa.employee_master_pk', '=', 'emp.pk_old');
+            })
             ->leftJoin('designation_master as desig', 'emp.designation_master_pk', '=', 'desig.pk')
             ->where('spa.id_status', 1)
             ->select(
                 'spa.emp_id_apply as id',
-                DB::raw("TRIM(CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, ''))) as name"),
-                'desig.designation_name as designation',
+                DB::raw("TRIM(CONCAT(COALESCE(MAX(emp.first_name), ''), ' ', COALESCE(MAX(emp.last_name), ''))) as name"),
+                DB::raw("MAX(desig.designation_name) as designation"),
                 'spa.id_card_no',
                 'spa.employee_dob',
                 'spa.blood_group',
@@ -1010,31 +1016,141 @@ class EmployeeIDCardApprovalController extends Controller
                 'spa.created_date',
                 DB::raw("'Regular' as type"),
                 DB::raw("'Permanent' as card_type")
-            );
+            )
+            ->groupBy('spa.pk', 'spa.emp_id_apply', 'spa.id_card_no', 'spa.employee_dob', 'spa.blood_group', 'spa.mobile_no', 'spa.created_date');
 
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('emp.first_name', 'like', "%{$search}%")
-                  ->orWhere('emp.last_name', 'like', "%{$search}%")
-                  ->orWhere('spa.id_card_no', 'like', "%{$search}%");
+        if ($searchLike) {
+            $permRegQuery->where(function ($q) use ($searchLike) {
+                $q->where('emp.first_name', 'like', $searchLike)
+                  ->orWhere('emp.last_name', 'like', $searchLike)
+                  ->orWhere('spa.id_card_no', 'like', $searchLike);
             });
         }
-
-        // Optional card type filter (permanent_type on main table)
         if (!empty($cardType)) {
-            $query->where('spa.permanent_type', $cardType);
+            $permRegQuery->where('spa.permanent_type', $cardType);
         }
+        if ($dateFromDt) {
+            $permRegQuery->where('spa.created_date', '>=', $dateFromDt);
+        }
+        if ($dateToDt) {
+            $permRegQuery->where('spa.created_date', '<=', $dateToDt);
+        }
+        $permRegData = $permRegQuery->orderByDesc('spa.created_date')->get();
 
-        if (!empty($dateFrom)) {
-            $from = \Carbon\Carbon::parse($dateFrom)->startOfDay()->toDateTimeString();
-            $query->where('spa.created_date', '>=', $from);
+        // 2) Permanent Duplicate
+        $dupPermA2 = DB::table('security_dup_perm_id_apply_approval')->where('status', 2)->pluck('security_parm_id_apply_pk');
+        $dupPermQuery = DB::table('security_dup_perm_id_apply as dup')
+            ->leftJoin('employee_master as emp', function ($j) {
+                $j->on('dup.employee_master_pk', '=', 'emp.pk')
+                  ->orOn('dup.employee_master_pk', '=', 'emp.pk_old');
+            })
+            ->leftJoin('designation_master as desig', 'dup.designation_pk', '=', 'desig.pk')
+            ->where('dup.id_status', 1);
+        if ($dupPermA2->isNotEmpty()) {
+            $dupPermQuery->whereNotIn('dup.emp_id_apply', $dupPermA2);
         }
-        if (!empty($dateTo)) {
-            $to = \Carbon\Carbon::parse($dateTo)->endOfDay()->toDateTimeString();
-            $query->where('spa.created_date', '<=', $to);
+        $dupPermQuery->select(
+            'dup.emp_id_apply as id',
+            DB::raw("TRIM(CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, ''))) as name"),
+            'desig.designation_name as designation',
+            'dup.id_card_no',
+            'dup.employee_dob',
+            'dup.blood_group',
+            'dup.mobile_no',
+            'dup.created_date',
+            DB::raw("'Duplicate' as type"),
+            DB::raw("'Permanent' as card_type")
+        );
+        if ($searchLike) {
+            $dupPermQuery->where(function ($q) use ($searchLike) {
+                $q->where('dup.id_card_no', 'like', $searchLike)
+                  ->orWhereRaw("CONCAT(COALESCE(emp.first_name, ''), ' ', COALESCE(emp.last_name, '')) LIKE ?", [$searchLike]);
+            });
         }
+        if ($dateFromDt) {
+            $dupPermQuery->where('dup.created_date', '>=', $dateFromDt);
+        }
+        if ($dateToDt) {
+            $dupPermQuery->where('dup.created_date', '<=', $dateToDt);
+        }
+        $dupPermData = $dupPermQuery->orderByDesc('dup.created_date')->get();
 
-        $data = $query->get()->toArray();
+        // 3) Contractual Regular (has A1, no A2)
+        $contHasA1 = DB::table('security_con_oth_id_apply_approval')->where('status', 1)->pluck('security_parm_id_apply_pk');
+        $contHasA2 = DB::table('security_con_oth_id_apply_approval')->where('status', 2)->pluck('security_parm_id_apply_pk');
+        $contQuery = DB::table('security_con_oth_id_apply')
+            ->where('id_status', 1)
+            ->select(
+                'emp_id_apply as id',
+                'employee_name as name',
+                'designation_name as designation',
+                'id_card_no',
+                'employee_dob',
+                'blood_group',
+                'mobile_no',
+                'created_date',
+                DB::raw("'Regular' as type"),
+                DB::raw("'Contractual' as card_type")
+            );
+        if ($contHasA1->isNotEmpty()) {
+            $contQuery->whereIn('emp_id_apply', $contHasA1);
+            if ($contHasA2->isNotEmpty()) {
+                $contQuery->whereNotIn('emp_id_apply', $contHasA2);
+            }
+        } else {
+            $contQuery->whereRaw('0 = 1');
+        }
+        if ($searchLike) {
+            $contQuery->where(function ($q) use ($searchLike) {
+                $q->where('employee_name', 'like', $searchLike)->orWhere('id_card_no', 'like', $searchLike);
+            });
+        }
+        if ($dateFromDt) {
+            $contQuery->where('created_date', '>=', $dateFromDt);
+        }
+        if ($dateToDt) {
+            $contQuery->where('created_date', '<=', $dateToDt);
+        }
+        $contData = $contQuery->orderByDesc('created_date')->get();
+
+        // 4) Contractual Duplicate
+        $dupContA2 = DB::table('security_dup_other_id_apply_approval')->where('status', 2)->pluck('security_con_id_apply_pk');
+        $dupContQuery = DB::table('security_dup_other_id_apply')
+            ->where('id_status', 1)
+            ->select(
+                'emp_id_apply as id',
+                'employee_name as name',
+                'designation_name as designation',
+                'id_card_no',
+                'employee_dob',
+                'blood_group',
+                'mobile_no',
+                'created_date',
+                DB::raw("'Duplicate' as type"),
+                DB::raw("'Contractual' as card_type")
+            );
+        if ($dupContA2->isNotEmpty()) {
+            $dupContQuery->whereNotIn('emp_id_apply', $dupContA2);
+        }
+        if ($searchLike) {
+            $dupContQuery->where(function ($q) use ($searchLike) {
+                $q->where('employee_name', 'like', $searchLike)->orWhere('id_card_no', 'like', $searchLike);
+            });
+        }
+        if ($dateFromDt) {
+            $dupContQuery->where('created_date', '>=', $dateFromDt);
+        }
+        if ($dateToDt) {
+            $dupContQuery->where('created_date', '<=', $dateToDt);
+        }
+        $dupContData = $dupContQuery->orderByDesc('created_date')->get();
+
+        $data = $permRegData->concat($dupPermData)->concat($contData)->concat($dupContData)
+            ->sortByDesc(function ($r) {
+                return $r->created_date ? \Carbon\Carbon::parse($r->created_date)->timestamp : 0;
+            })
+            ->values()
+            ->all();
 
         return $this->outputExport($data, 'Approval_II_' . now()->format('Y-m-d'), $format);
     }

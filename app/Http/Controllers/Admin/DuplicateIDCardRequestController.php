@@ -285,15 +285,35 @@ class DuplicateIDCardRequestController extends Controller
                     ->with('error', 'Only pending requests can be edited.');
             }
             $emp = $row->employee;
+            // Fallback blood_group/mobile from approved ID card (security_parm_id_apply) if duplicate row has none
+            $bloodGroup = $row->blood_group ?? null;
+            $mobileNo = $row->mobile_no ?? null;
+            if (($bloodGroup === null || $bloodGroup === '') && $row->employee_master_pk) {
+                $parent = DB::table('security_parm_id_apply')
+                    ->where('employee_master_pk', $row->employee_master_pk)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->orderByDesc('created_date')
+                    ->first(['blood_group', 'mobile_no']);
+                if ($parent) {
+                    $bloodGroup = $bloodGroup ?? $parent->blood_group ?? '';
+                    $mobileNo = $mobileNo ?? $parent->mobile_no ?? '';
+                }
+            }
+            if (($bloodGroup === null || $bloodGroup === '') && $emp) {
+                $bloodGroup = $bloodGroup ?? ($emp->blood_group ?? '');
+            }
+            if (($mobileNo === null || $mobileNo === '') && $emp) {
+                $mobileNo = $mobileNo ?? ($emp->mobile ?? $emp->landline_contact_no ?? '');
+            }
             $data = [
                 'id_card_type' => 'Permanent',
                 'id_card_number' => $row->id_card_no,
                 'employee_name' => $emp ? trim($emp->first_name . ' ' . ($emp->last_name ?? '')) : ($row->employee_name ?? ''),
                 'designation' => $emp?->designation?->designation_name ?? '',
                 'date_of_birth' => $row->employee_dob ? $row->employee_dob->format('Y-m-d') : '',
-                'blood_group' => $row->blood_group ?? '',
-                'mobile_number' => $row->mobile_no ?? '',
-                'father_name' => '',
+                'blood_group' => $bloodGroup ?? '',
+                'mobile_number' => $mobileNo ?? '',
+                'father_name' => $emp ? ($emp->father_name ?? '') : '',
                 'card_reason' => $row->card_reason ?? '',
                 'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : '',
                 'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : '',
@@ -314,15 +334,36 @@ class DuplicateIDCardRequestController extends Controller
                 return redirect()->route('admin.duplicate_idcard.index')
                     ->with('error', 'Only pending requests can be edited.');
             }
+            // Fallback blood_group/mobile/father_name from employee_master (created_by) if row has none
+            $bloodGroup = $row->blood_group ?? '';
+            $mobileNo = $row->mobile_no ?? '';
+            $fatherName = $row->father_name ?? '';
+            if (($bloodGroup === '' || $mobileNo === '' || $fatherName === '') && $row->created_by) {
+                $empOther = EmployeeMaster::where('pk', $row->created_by)->orWhere('pk_old', $row->created_by)->first(['father_name', 'mobile', 'landline_contact_no']);
+                if ($empOther) {
+                    $fatherName = $fatherName ?: ($empOther->father_name ?? '');
+                    $mobileNo = $mobileNo ?: ($empOther->mobile ?? $empOther->landline_contact_no ?? '');
+                }
+            }
+            if ($bloodGroup === '' && $row->created_by) {
+                $parent = DB::table('security_parm_id_apply')
+                    ->where('employee_master_pk', $row->created_by)
+                    ->where('id_status', SecurityParmIdApply::ID_STATUS_APPROVED)
+                    ->orderByDesc('created_date')
+                    ->value('blood_group');
+                if ($parent) {
+                    $bloodGroup = $parent;
+                }
+            }
             $data = [
                 'id_card_type' => $row->card_type ?: 'Contractual',
                 'id_card_number' => $row->id_card_no,
                 'employee_name' => $row->employee_name ?? '',
                 'designation' => $row->designation_name ?? '',
                 'date_of_birth' => $row->employee_dob ? $row->employee_dob->format('Y-m-d') : '',
-                'blood_group' => $row->blood_group ?? '',
-                'mobile_number' => $row->mobile_no ?? '',
-                'father_name' => '',
+                'blood_group' => $bloodGroup,
+                'mobile_number' => $mobileNo,
+                'father_name' => $fatherName,
                 'card_reason' => $row->card_reason ?? '',
                 'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : '',
                 'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : '',

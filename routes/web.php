@@ -417,7 +417,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/store', 'store')->name('store');
         Route::get('/show/{id}', 'show')->name('show');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
+        Route::put('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
         Route::get('/api/vehicle-details', 'getVehicleDetails')->name('api.vehicle_details');
     });
@@ -846,6 +846,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
         Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
         Route::put('/update/{familyIDCardRequest}', 'update')->name('update');
+        Route::post('/{id}/member', 'storeMember')->name('member.store');
+        Route::put('/{id}/member/{memberId}', 'updateMember')->name('member.update');
+        Route::delete('/{id}/member/{memberId}', 'destroyMember')->name('member.destroy');
         Route::delete('/delete/{familyIDCardRequest}', 'destroy')->name('destroy');
         Route::post('/restore/{id}', 'restore')->name('restore');
         Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');

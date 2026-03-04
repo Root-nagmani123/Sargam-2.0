@@ -47,45 +47,17 @@
                     </div>
                     @endif
                     <div class="col-md-6">
-                        <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" id="name" class="form-control" value="{{ old('name', $request->name) }}" placeholder="Enter Family Member Name" required>
-                        @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="relation" class="form-label">Relation</label>
-                        <select name="relation" id="relation" class="form-select">
-                            <option value="">Select Relation</option>
-                            @foreach(['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Other'] as $opt)
-                                <option value="{{ $opt }}" {{ old('relation', $request->relation) == $opt ? 'selected' : '' }}>{{ $opt }}</option>
-                            @endforeach
-                        </select>
-                        @error('relation')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
                         <label for="section" class="form-label">Section <span class="text-danger">*</span></label>
                         <input type="text" name="section" id="section" class="form-control" value="{{ old('section', $request->section) }}" placeholder="Enter Section" required>
                         @error('section')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-md-6">
-                        <label for="family_member_id" class="form-label">Family Member ID</label>
-                        <input type="text" name="family_member_id" id="family_member_id" class="form-control" value="{{ old('family_member_id', $request->family_member_id) }}" placeholder="Issued ID">
-                        @error('family_member_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="dob" class="form-label">Date of Birth</label>
-                        <input type="date" name="dob" id="dob" class="form-control" value="{{ old('dob', $request->dob ? $request->dob->format('Y-m-d') : '') }}">
-                        @error('dob')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="valid_from" class="form-label">Valid From</label>
-                        <input type="date" name="valid_from" id="valid_from" class="form-control valid-from-field" value="{{ old('valid_from', $request->valid_from ? $request->valid_from->format('Y-m-d') : '') }}" min="{{ date('Y-m-d') }}">
-                        @error('valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-6">
-                        <label for="valid_to" class="form-label">Valid To</label>
-                        <input type="date" name="valid_to" id="valid_to" class="form-control" value="{{ old('valid_to', $request->valid_to ? $request->valid_to->format('Y-m-d') : '') }}">
-                        @error('valid_to')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
+                    {{-- Hidden fields to preserve main-row details (handled via members list visually) --}}
+                    <input type="hidden" name="name" value="{{ old('name', $request->name) }}">
+                    <input type="hidden" name="relation" value="{{ old('relation', $request->relation) }}">
+                    <input type="hidden" name="family_member_id" value="{{ old('family_member_id', $request->family_member_id) }}">
+                    <input type="hidden" name="dob" value="{{ old('dob', $request->dob ? $request->dob->format('Y-m-d') : '') }}">
+                    <input type="hidden" name="valid_from" value="{{ old('valid_from', $request->valid_from ? $request->valid_from->format('Y-m-d') : '') }}">
+                    <input type="hidden" name="valid_to" value="{{ old('valid_to', $request->valid_to ? $request->valid_to->format('Y-m-d') : '') }}">
                     <div class="col-12">
                         <label class="form-label">Upload Family Photo</label>
                         <div class="family-idcard-upload-zone position-relative" id="familyPhotoUploadZone">
@@ -110,43 +82,140 @@
                     </div>
                 </div>
 
-                <h6 class="fw-semibold mt-4 mb-3">Family Members List</h6>
+                <!-- Family Members List (create-style: inline editable rows) -->
+                <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                    <h6 class="fw-semibold mb-0">Family Members List</h6>
+                    <button type="button" class="btn btn-primary btn-sm" id="addFamilyMemberBtn">
+                        <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:18px;">add</i>
+                        Add Family Member
+                    </button>
+                </div>
                 <div class="table-responsive">
-                    <table class="table table-bordered family-idcard-members-table mb-0">
+                    <table class="table table-bordered family-idcard-members-table mb-0" id="familyMembersTable">
                         <thead>
                             <tr>
-                                <th>S.No.</th>
-                                <th>Family Member ID</th>
-                                <th>Name</th>
+                                <th style="width: 60px;">S.No.</th>
+                                <th>Name <span class="text-danger">*</span></th>
                                 <th>Relation</th>
                                 <th>DOB</th>
-                                <th>Valid From - To</th>
+                                <th>Valid From</th>
+                                <th>Valid To</th>
+                                <th>Individual Photo</th>
+                                <th style="width: 70px;">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="familyMembersBody">
+                            @php $relationOptions = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Other']; @endphp
                             @forelse($existingFamilyMembers as $idx => $member)
-                                <tr>
-                                    <td class="fw-medium">{{ $idx + 1 }}</td>
-                                    <td>{{ $member->family_member_id ?? '--' }}</td>
-                                    <td>{{ $member->name ?? '--' }}</td>
-                                    <td>{{ $member->relation ?? '--' }}</td>
-                                    <td>{{ $member->dob ? $member->dob->format('d/m/Y') : '--' }}</td>
-                                    <td>
-                                        @if($member->valid_from && $member->valid_to)
-                                            {{ $member->valid_from->format('d/m/Y') }} - {{ $member->valid_to->format('d/m/Y') }}
-                                        @else
-                                            --
-                                        @endif
+                                <tr class="family-member-row" data-row-index="{{ $idx }}">
+                                    <td class="align-middle fw-medium row-sno">{{ $idx + 1 }}</td>
+                                    <td class="align-middle">
+                                        <input type="hidden" name="members[{{ $idx }}][id]" value="{{ $member->id }}">
+                                        <input type="text" name="members[{{ $idx }}][name]" class="form-control form-control-sm member-name" value="{{ old('members.'.$idx.'.name', $member->name ?? '') }}" placeholder="Name" required>
+                                    </td>
+                                    <td class="align-middle">
+                                        <select name="members[{{ $idx }}][relation]" class="form-select form-select-sm">
+                                            <option value="">Select Relation</option>
+                                            @foreach($relationOptions as $opt)
+                                                <option value="{{ $opt }}" {{ old('members.'.$idx.'.relation', $member->relation ?? '') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                    <td class="align-middle">
+                                        <input type="date" name="members[{{ $idx }}][dob]" class="form-control form-control-sm" value="{{ old('members.'.$idx.'.dob', $member->dob ? $member->dob->format('Y-m-d') : '') }}">
+                                    </td>
+                                    <td class="align-middle">
+                                        <input type="date" name="members[{{ $idx }}][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}" value="{{ old('members.'.$idx.'.valid_from', $member->valid_from ? $member->valid_from->format('Y-m-d') : '') }}">
+                                    </td>
+                                    <td class="align-middle">
+                                        <input type="date" name="members[{{ $idx }}][valid_to]" class="form-control form-control-sm" value="{{ old('members.'.$idx.'.valid_to', $member->valid_to ? $member->valid_to->format('Y-m-d') : '') }}">
+                                    </td>
+                                    <td class="align-middle">
+                                        <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{ $idx }}">
+                                            <input type="file" name="members[{{ $idx }}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" data-row="{{ $idx }}">
+                                            <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{ $idx }}">
+                                                @if(!empty($member->id_photo_path ?? $member->family_photo))
+                                                    <img src="{{ asset('storage/' . ($member->id_photo_path ?? $member->family_photo)) }}" alt="" class="member-preview-img" data-img="{{ $idx }}" style="max-height:60px; border-radius:4px;">
+                                                    <span class="small d-block mt-1 text-muted">Click to change</span>
+                                                @else
+                                                    <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
+                                                    <span class="small d-block mt-1">Upload</span>
+                                                    <span class="small text-muted d-block">JPG, PNG. Max 2 MB</span>
+                                                @endif
+                                            </div>
+                                            <div class="family-idcard-upload-preview-sm d-none position-relative" data-preview="{{ $idx }}">
+                                                <img src="" alt="Preview" class="member-preview-img" data-img="{{ $idx }}" style="max-height:60px; border-radius:4px;">
+                                                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-0 p-0 member-photo-remove" style="width:22px; height:22px; font-size:14px; line-height:1; border-radius:50%;" data-row="{{ $idx }}" aria-label="Remove">&times;</button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle text-center">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-member-btn" data-row="{{ $idx }}" title="Remove row" aria-label="Remove row">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                        </button>
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-3">No other family members.</td>
+                                <tr id="noMembersRow">
+                                    <td colspan="8" class="text-center text-muted py-3">No other family members. Click &quot;Add Family Member&quot; to add one.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+                <p id="noMembersMsg" class="small text-muted mt-2 d-none">Add at least one family member using the button above.</p>
+
+                <template id="familyMemberRowTemplate">
+@verbatim
+                    <tr class="family-member-row" data-row-index="{{INDEX}}">
+                        <td class="align-middle fw-medium row-sno">{{SNO}}</td>
+                        <td class="align-middle">
+                            <input type="text" name="members[{{INDEX}}][name]" class="form-control form-control-sm member-name" placeholder="Name" required>
+                        </td>
+                        <td class="align-middle">
+                            <select name="members[{{INDEX}}][relation]" class="form-select form-select-sm">
+                                <option value="">Select Relation</option>
+                                <option value="Spouse">Spouse</option>
+                                <option value="Son">Son</option>
+                                <option value="Daughter">Daughter</option>
+                                <option value="Father">Father</option>
+                                <option value="Mother">Mother</option>
+                                <option value="Brother">Brother</option>
+                                <option value="Sister">Sister</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </td>
+                        <td class="align-middle">
+                            <input type="date" name="members[{{INDEX}}][dob]" class="form-control form-control-sm">
+                        </td>
+                        <td class="align-middle">
+                            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}">
+                        </td>
+                        <td class="align-middle">
+                            <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control form-control-sm">
+                        </td>
+                        <td class="align-middle">
+                            <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">
+                                <input type="file" name="members[{{INDEX}}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" data-row="{{INDEX}}">
+                                <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{INDEX}}">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
+                                    <span class="small d-block mt-1">Upload</span>
+                                    <span class="small text-muted d-block">JPG, PNG. Max 2 MB</span>
+                                </div>
+                                <div class="family-idcard-upload-preview-sm d-none position-relative" data-preview="{{INDEX}}">
+                                    <img src="" alt="Preview" class="member-preview-img" data-img="{{INDEX}}" style="max-height:60px; border-radius:4px;">
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-0 p-0 member-photo-remove" style="width:22px; height:22px; font-size:14px; line-height:1; border-radius:50%;" data-row="{{INDEX}}" aria-label="Remove">&times;</button>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="align-middle text-center">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-member-btn" data-row="{{INDEX}}" title="Remove row" aria-label="Remove row">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                            </button>
+                        </td>
+                    </tr>
+@endverbatim
+                </template>
 
                 <p class="small text-danger mt-4 mb-0">*Required Fields: All marked fields are mandatory.</p>
 
@@ -157,6 +226,60 @@
             </div>
         </div>
     </form>
+
+    {{-- Template for new family member rows (same layout as above rows) --}}
+    <template id="familyMemberRowTemplate">
+@verbatim
+        <tr class="family-member-row" data-row-index="{{INDEX}}">
+            <td class="align-middle fw-medium row-sno">{{SNO}}</td>
+            <td class="align-middle">
+                <input type="hidden" name="members[{{INDEX}}][id]" value="">
+                <input type="text" name="members[{{INDEX}}][name]" class="form-control form-control-sm member-name" placeholder="Name" required>
+            </td>
+            <td class="align-middle">
+                <select name="members[{{INDEX}}][relation]" class="form-select form-select-sm">
+                    <option value="">Select Relation</option>
+                    <option value="Spouse">Spouse</option>
+                    <option value="Son">Son</option>
+                    <option value="Daughter">Daughter</option>
+                    <option value="Father">Father</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Brother">Brother</option>
+                    <option value="Sister">Sister</option>
+                    <option value="Other">Other</option>
+                </select>
+            </td>
+            <td class="align-middle">
+                <input type="date" name="members[{{INDEX}}][dob]" class="form-control form-control-sm">
+            </td>
+            <td class="align-middle">
+                <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control form-control-sm valid-from-field">
+            </td>
+            <td class="align-middle">
+                <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control form-control-sm">
+            </td>
+            <td class="align-middle">
+                <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">
+                    <input type="file" name="members[{{INDEX}}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" data-row="{{INDEX}}">
+                    <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{INDEX}}">
+                        <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
+                        <span class="small d-block mt-1">Upload</span>
+                        <span class="small text-muted d-block">JPG, PNG. Max 2 MB</span>
+                    </div>
+                    <div class="family-idcard-upload-preview-sm d-none position-relative" data-preview="{{INDEX}}">
+                        <img src="" alt="Preview" class="member-preview-img" data-img="{{INDEX}}" style="max-height:60px; border-radius:4px;">
+                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-0 p-0 member-photo-remove" style="width:22px; height:22px; font-size:14px; line-height:1; border-radius:50%;" data-row="{{INDEX}}" aria-label="Remove">&times;</button>
+                    </div>
+                </div>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-member-btn" data-row="{{INDEX}}" title="Remove row" aria-label="Remove row">
+                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                </button>
+            </td>
+        </tr>
+@endverbatim
+    </template>
 </div>
 
 <style>
@@ -240,46 +363,131 @@
     if (removeBtn) removeBtn.addEventListener('click', function(e) { e.stopPropagation(); clearPreview(); });
 })();
 
-// Apply date restrictions to Valid From field
+// Family members table: add/remove rows, photo preview, and date restrictions
 (function() {
-    var today = new Date().toISOString().split('T')[0];
-    var validFromField = document.querySelector('.valid-from-field');
-    if (validFromField) {
-        validFromField.setAttribute('min', today);
-        validFromField.addEventListener('change', function() {
-            if (this.value && this.value < today) {
-                this.value = today;
-                this.classList.add('is-invalid');
-            } else {
-                this.classList.remove('is-invalid');
-            }
+    var tbody = document.getElementById('familyMembersBody');
+    var addBtn = document.getElementById('addFamilyMemberBtn');
+    var template = document.getElementById('familyMemberRowTemplate');
+    if (!tbody || !addBtn || !template) return;
+
+    var rowIndex = tbody.querySelectorAll('.family-member-row').length || 0;
+
+    function applyDateRestrictions() {
+        var today = new Date().toISOString().split('T')[0];
+        var validFromFields = tbody.querySelectorAll('.valid-from-field');
+        validFromFields.forEach(function(field) {
+            field.setAttribute('min', today);
         });
     }
 
-            this.style.borderColor = '';
-            var files = e.dataTransfer.files;
-            if (files.length && input) { input.files = files; showPreview(files[0]); }
-        });
-    }
-    if (input) input.addEventListener('change', function() { showPreview(this.files[0]); });
-    if (removeBtn) removeBtn.addEventListener('click', function(e) { e.stopPropagation(); clearPreview(); });
-})();
+    function updateRowNumbers() {
+        var rows = tbody.querySelectorAll('.family-member-row');
+        rows.forEach(function(row, i) {
+            row.setAttribute('data-row-index', i);
+            var sno = row.querySelector('.row-sno');
+            if (sno) sno.textContent = i + 1;
 
-// Apply date restrictions to Valid From field
-(function() {
-    var today = new Date().toISOString().split('T')[0];
-    var validFromField = document.querySelector('.valid-from-field');
-    if (validFromField) {
-        validFromField.setAttribute('min', today);
-        validFromField.addEventListener('change', function() {
-            if (this.value && this.value < today) {
-                this.value = today;
-                this.classList.add('is-invalid');
-            } else {
-                this.classList.remove('is-invalid');
-            }
+            // Update name attributes to use new index
+            row.querySelectorAll('[name]').forEach(function(inp) {
+                var name = inp.getAttribute('name');
+                if (!name) return;
+                name = name.replace(/members\[\d+\]/, 'members[' + i + ']');
+                inp.setAttribute('name', name);
+            });
+
+            // Update data-row / placeholder / preview indices
+            row.querySelectorAll('.member-photo-input, .member-photo-cell, [data-placeholder], [data-preview], .member-preview-img, .member-photo-remove, .remove-member-btn').forEach(function(el) {
+                if (el.hasAttribute('data-row')) el.setAttribute('data-row', i);
+                if (el.getAttribute('data-placeholder') !== null) el.setAttribute('data-placeholder', i);
+                if (el.getAttribute('data-preview') !== null) el.setAttribute('data-preview', i);
+                if (el.getAttribute('data-img') !== null) el.setAttribute('data-img', i);
+            });
         });
     }
+
+    function bindRowEvents(row) {
+        if (!row) return;
+        var idx = row.getAttribute('data-row-index');
+        var photoCell = row.querySelector('.member-photo-cell');
+        var input = row.querySelector('.member-photo-input');
+        var placeholder = row.querySelector('[data-placeholder="' + idx + '"]');
+        var preview = row.querySelector('[data-preview="' + idx + '"]');
+        // Always use the img that lives inside the preview container for live previews
+        var img = preview ? preview.querySelector('.member-preview-img[data-img="' + idx + '"]') : null;
+        var removePhotoBtn = row.querySelector('.member-photo-remove');
+        var removeRowBtn = row.querySelector('.remove-member-btn');
+
+        if (photoCell) {
+            photoCell.addEventListener('click', function(e) {
+                if (e.target.closest('.member-photo-remove')) return;
+                if (input) input.click();
+            });
+        }
+        if (input) {
+            input.addEventListener('change', function() {
+                var file = this.files[0];
+                if (!file) return;
+                if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+                    alert('GIF files are not allowed. Please upload JPG or PNG images only.');
+                    this.value = '';
+                    return;
+                }
+                if (!file.type.match(/^image\//)) return;
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    if (img) img.src = e.target.result;
+                    if (placeholder) placeholder.classList.add('d-none');
+                    if (preview) preview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        if (removePhotoBtn) {
+            removePhotoBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (placeholder) placeholder.classList.remove('d-none');
+                if (preview) preview.classList.add('d-none');
+                if (img) img.src = '';
+                if (input) input.value = '';
+            });
+        }
+        if (removeRowBtn) {
+            removeRowBtn.addEventListener('click', function() {
+                var rows = tbody.querySelectorAll('.family-member-row');
+                if (rows.length <= 1) {
+                    alert('At least one family member is required.');
+                    return;
+                }
+                row.remove();
+                updateRowNumbers();
+                applyDateRestrictions();
+            });
+        }
+    }
+
+    function addRow() {
+        var html = template.innerHTML
+            .replace(/\{\{INDEX\}\}/g, rowIndex)
+            .replace(/\{\{SNO\}\}/g, rowIndex + 1);
+        tbody.insertAdjacentHTML('beforeend', html);
+        var newRow = tbody.querySelector('.family-member-row:last-child');
+        rowIndex++;
+        updateRowNumbers();
+        bindRowEvents(newRow);
+        applyDateRestrictions();
+        var noRow = document.getElementById('noMembersRow');
+        if (noRow) noRow.remove();
+    }
+
+    // Initial bindings for existing rows
+    tbody.querySelectorAll('.family-member-row').forEach(function(row) {
+        bindRowEvents(row);
+    });
+    applyDateRestrictions();
+
+    addBtn.addEventListener('click', function() {
+        addRow();
+    });
 })();
 </script>
 @endsection

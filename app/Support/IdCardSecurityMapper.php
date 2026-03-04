@@ -284,7 +284,8 @@ class IdCardSecurityMapper
         $dto->valid_from = $row->card_valid_from;
         $dto->valid_to = $row->card_valid_to;
         $dto->family_member_id = $row->id_card_no ?? null;
-        $dto->card_type = null;
+        // These are used directly in export views (PDF/Excel)
+        $dto->card_type = $row->card_type ?? 'Family';
         $dto->section = null;
         $dto->designation = null;
         $dto->employee_name = $row->emp_id_apply;
@@ -305,31 +306,67 @@ class IdCardSecurityMapper
         // Fetch guardian (primary employee) details
         $guardianName = '--';
         $guardianDesignation = '--';
-        if (!empty($row->emp_id_apply)) {
+        $guardianSection = null;
+        // Prefer created_by (employee pk) to resolve guardian details, fallback to emp_id_apply when needed.
+        if (!empty($row->created_by)) {
             $employee = DB::table('employee_master')
-                ->where('emp_id', $row->emp_id_apply)
-                ->first(['first_name', 'last_name', 'designation_master_pk']);
-            
+                ->leftJoin('designation_master', 'designation_master.pk', '=', 'employee_master.designation_master_pk')
+                ->leftJoin('department_master', 'department_master.pk', '=', 'employee_master.department_master_pk')
+                ->where('employee_master.pk', $row->created_by)
+                ->orWhere('employee_master.pk_old', $row->created_by)
+                ->first([
+                    'employee_master.first_name',
+                    'employee_master.last_name',
+                    'designation_master.designation_name',
+                    'department_master.department_name',
+                ]);
+
             if ($employee) {
                 $guardianName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
-                if ($guardianName === '') {
-                    $guardianName = $row->emp_id_apply;
+                if ($guardianName === '' || $guardianName === null) {
+                    $guardianName = $row->emp_id_apply ?: '--';
                 }
-                
-                // Get designation name
-                if (!empty($employee->designation_master_pk)) {
-                    $designation = DB::table('designation_master')
-                        ->where('pk', $employee->designation_master_pk)
-                        ->value('designation_name');
-                    if ($designation) {
-                        $guardianDesignation = $designation;
-                    }
+                if (!empty($employee->designation_name)) {
+                    $guardianDesignation = $employee->designation_name;
                 }
+                if (!empty($employee->department_name)) {
+                    $guardianSection = $employee->department_name;
+                }
+            }
+        } elseif (!empty($row->emp_id_apply)) {
+            // Fallback: try to resolve via emp_id (card number or employee id)
+            $employee = DB::table('employee_master')
+                ->leftJoin('designation_master', 'designation_master.pk', '=', 'employee_master.designation_master_pk')
+                ->leftJoin('department_master', 'department_master.pk', '=', 'employee_master.department_master_pk')
+                ->where('employee_master.emp_id', $row->emp_id_apply)
+                ->first([
+                    'employee_master.first_name',
+                    'employee_master.last_name',
+                    'designation_master.designation_name',
+                    'department_master.department_name',
+                ]);
+
+            if ($employee) {
+                $guardianName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')) ?: $row->emp_id_apply;
+                if (!empty($employee->designation_name)) {
+                    $guardianDesignation = $employee->designation_name;
+                }
+                if (!empty($employee->department_name)) {
+                    $guardianSection = $employee->department_name;
+                }
+            } else {
+                $guardianName = $row->emp_id_apply;
             }
         }
         
         $dto->guardian_name = $guardianName;
         $dto->guardian_designation = $guardianDesignation;
+        // For exports, surface guardian details as primary employee info
+        $dto->employee_name = $guardianName;
+        $dto->designation = $guardianDesignation !== '--' ? $guardianDesignation : null;
+        if ($guardianSection !== null) {
+            $dto->section = $guardianSection;
+        }
         
         return $dto;
     }
