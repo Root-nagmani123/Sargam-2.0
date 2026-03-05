@@ -97,6 +97,20 @@
 
                                             @endif
 
+                                            <!-- Estate Management -->
+                                            <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}"
+                                                id="mini-11">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span
+                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i
+                                                            class="material-icons menu-icon material-symbols-rounded">house</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Estate Management</span>
+                                                </a>
+                                            </li>
+
                                             @endif
 
                                         </div>
@@ -143,6 +157,9 @@
                     <!-- Forms -->
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
+
+                    <!-- Estate Management -->
+                    <x-menu.setup_estate_management />
 
 
                 </div>

@@ -17,22 +17,7 @@
                             @php
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
                             @endphp
-                            <li class="sidebar-item mt-2" style="background: #4077ad;
-                                border-radius: 30px 0px 0px 30px;
-                                width: 100%;
-                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#estateManagementCollapse" role="button"
-                                    aria-expanded="{{ $estateManagementOpen ? 'true' : 'false' }}" aria-controls="estateManagementCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Estate Management</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3 {{ $estateManagementOpen ? 'show' : '' }}" id="estateManagementCollapse">
-                                {{-- Main flow: Request → Put in HAC → HAC Forward → HAC Approved → Possession Details --}}
-                                <li class="sidebar-item">
+                            <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-estate') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-estate') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Request For Estate</span>
@@ -145,7 +130,6 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Change Request Details</span>
                                     </a>
                                 </li>
-                            </ul>
 
                             {{-- ESTATE MASTER --}}
                             <li class="sidebar-item mt-2" style="background: #4077ad;

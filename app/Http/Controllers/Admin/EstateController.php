@@ -22,6 +22,9 @@ use App\Models\EstateElectricSlab;
 use Illuminate\Support\Facades\Schema;
 use App\Models\EstatePossessionOther;
 use App\Models\EmployeeMaster;
+use App\Models\EstateHouse;
+use App\Models\EstateMonthReadingDetails;
+use Illuminate\Support\Collection;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -117,6 +120,15 @@ class EstateController extends Controller
         }
         return 'home-req-' . sprintf('%02d', $nextNumber);
     }
+
+    /**
+     * Primary key column name for employee_master (pk or pk_old if used).
+     */
+    private function estateEmployeePkColumn(): string
+    {
+        return Schema::hasColumn('employee_master', 'pk') ? 'pk' : 'pk_old';
+    }
+
     public function estateApprovalSetting(EstateApprovalSettingDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.estate_approval_setting');
@@ -358,6 +370,10 @@ class EstateController extends Controller
             ->get();
         $unique = $rows->unique('employee_id')->values();
         $includePk = (int) $request->query('include_pk', 0);
+        $empPkCol = $this->estateEmployeePkColumn();
+        $hasEmpId = Schema::hasColumn('employee_master', 'emp_id');
+        $hasEmployeeId = Schema::hasColumn('employee_master', 'employee_id');
+        $employeeIdSelect = $hasEmpId ? 'em.emp_id' : ($hasEmployeeId ? 'em.employee_id' : 'NULL');
         if ($includePk > 0) {
             $currentReq = EstateHomeRequestDetails::find($includePk);
             if ($currentReq) {
@@ -734,7 +750,7 @@ class EstateController extends Controller
      *
      * @return \Illuminate\Support\Collection<int, int> house PKs (f.pk)
      */
-    private function getEligibleHousePksByEmployeePk(int $employeePk): \Illuminate\Support\Collection
+    private function getEligibleHousePksByEmployeePk(int $employeePk): Collection
     {
         $housePks = collect();
         $empPkCol = $this->estateEmployeePkColumn();
@@ -1327,6 +1343,8 @@ class EstateController extends Controller
         // Derive unit type from selected house (estate_house_master.estate_unit_master_pk)
         $derivedUnitTypePk = $house?->estate_unit_master_pk;
 
+        $requestNo = $request->input('request_no_oth') ?? $this->generateRequestNo();
+
         $data = [
             'estate_other_req_pk' => $validated['estate_other_req_pk'],
             'estate_campus_master_pk' => $validated['estate_campus_master_pk'],
@@ -1342,7 +1360,7 @@ class EstateController extends Controller
             'house_no' => $validated['house_no'] ?? ($house->house_no ?? null),
             'status' => 0,
             'request_no_oth' => $requestNo,
-        ]);
+         ];
 
         $userId = Auth::id();
         $now = now();

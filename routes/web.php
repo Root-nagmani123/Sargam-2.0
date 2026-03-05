@@ -46,16 +46,6 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
-<<<<<<< HEAD
-=======
-use App\Http\Controllers\Admin\IssueManagement\{
-    IssueManagementController,
-    IssueCategoryController,
-    IssueSubCategoryController,
-    IssuePriorityController,
-    IssueEscalationMatrixController
-};
->>>>>>> e785f0d1 (ui chnages in estate)
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
     EstateElectricSlabController,
@@ -117,10 +107,54 @@ Route::get('admin/system/optimize', function () {
     }
     return response()->view('admin.system.optimize-result', compact('steps', 'allOk'));
 })->middleware('auth')->name('admin.system.optimize');
+
+/**
+ * Full optimize flow: clear → config cache → route cache → optimize
+ * Step-by-step proper order. Use after deployment or when caches need refresh.
+ * GET /admin/system/optimize (auth required)
+ */
+Route::get('admin/system/optimize', function () {
+    $steps = [];
+    $run = function ($command, $name) use (&$steps) {
+        try {
+            \Illuminate\Support\Facades\Artisan::call($command);
+            $output = trim(\Illuminate\Support\Facades\Artisan::output());
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => true, 'output' => $output ?: 'OK'];
+        } catch (\Throwable $e) {
+            $steps[] = ['command' => $command, 'name' => $name, 'ok' => false, 'output' => $e->getMessage()];
+        }
+    };
+
+    // Step 1: Clear everything (clean slate)
+    $run('config:clear', 'Config cache clear');
+    $run('cache:clear', 'Application cache clear');
+    $run('view:clear', 'View cache clear');
+    $run('route:clear', 'Route cache clear');
+
+    // Step 2: Cache config & routes
+    $run('config:cache', 'Config cache');
+    $run('route:cache', 'Route cache');
+
+    // Step 3: View cache (if available) and optimize
+    try {
+        \Illuminate\Support\Facades\Artisan::call('view:cache');
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => true, 'output' => trim(\Illuminate\Support\Facades\Artisan::output()) ?: 'OK'];
+    } catch (\Throwable $e) {
+        $steps[] = ['command' => 'view:cache', 'name' => 'View cache', 'ok' => false, 'output' => $e->getMessage()];
+    }
+    $run('optimize', 'Optimize (autoload + bootstrap)');
+
+    $allOk = collect($steps)->every(fn ($s) => $s['ok']);
+    if (request()->wantsJson()) {
+        return response()->json(['success' => $allOk, 'steps' => $steps]);
+    }
+    return response()->view('admin.system.optimize-result', compact('steps', 'allOk'));
+})->middleware('auth')->name('admin.system.optimize');
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
+Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
@@ -146,9 +180,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
+    Route::get('/breadcrumb-showcase', fn () => view('admin.breadcrumb-showcase'))->name('admin.breadcrumb-showcase');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
-    Route::get('/dashboard/students/{id}/history', [ParticipantHistoryController::class, 'show'])->name('admin.dashboard.students.history');
 
     // Member Routes
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
@@ -225,6 +259,8 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
+     Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
+    ->name('admin.stream.toggleStatus');
      Route::post('admin/stream/toggle-status', [StreamController::class, 'toggleStatus'])
     ->name('admin.stream.toggleStatus');
     Route::resource('subject-module', SubjectModuleController::class);
@@ -322,6 +358,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
         Route::delete('delete/{id}', 'delete')->name('delete');
+       // Route::post('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
+
+     Route::post('get-courses-by-status', 'getCoursesByStatus')
+    ->name('get.courses.by.status');
+
+
+
+
+
        // Route::post('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
 
      Route::post('get-courses-by-status', 'getCoursesByStatus')
@@ -435,12 +480,20 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
             Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
             Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
+            Route::post('/memo/get-data', [CourseAttendanceNoticeMapController::class, 'getMemoData'])->name('get_memo_data');
+            Route::post('/memo/get-generated-data', [CourseAttendanceNoticeMapController::class, 'getGeneratedMemoData'])->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
 
             Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
             Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
 
+
+            Route::post('admin/memo-notice-management/filter', 'filter')->name('filter');
+            Route::get('admin/memo-notice-management/filter', 'clear_filter')->name('clear_filter');
+
         });
+
+
 
 
 
@@ -491,6 +544,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
+        Route::post('import', 'processImport')->name('process.import');
         Route::post('import', 'processImport')->name('process.import');
     });
 
@@ -678,38 +732,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
-<<<<<<< HEAD
-=======
-    // Employee ID Card Request Routes
-    Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/export', 'export')->name('export');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{employeeIDCardRequest}', 'show')->name('show');
-        Route::get('/edit/{employeeIDCardRequest}', 'edit')->name('edit');
-        Route::put('/update/{employeeIDCardRequest}', 'update')->name('update');
-        Route::patch('/amend-dup-ext/{employeeIDCardRequest}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
-        Route::delete('/delete/{employeeIDCardRequest}', 'destroy')->name('destroy');
-        Route::post('/restore/{id}', 'restore')->name('restore');
-        Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
-    });
-
-    // Family ID Card Request Routes
-    Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/export', 'export')->name('export');
-        Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
-        Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
-        Route::put('/update/{familyIDCardRequest}', 'update')->name('update');
-        Route::delete('/delete/{familyIDCardRequest}', 'destroy')->name('destroy');
-        Route::post('/restore/{id}', 'restore')->name('restore');
-        Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
-    });
-
->>>>>>> e785f0d1 (ui chnages in estate)
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -738,6 +760,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     //change password work here
+    //change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
@@ -761,23 +784,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
 
-<<<<<<< HEAD
-=======
-    // Who's Who Routes
-    Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
-    Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
-    Route::get('/faculty/whos-who/cadres', [WhosWhoController::class, 'getCadres'])->name('admin.faculty.whos-who.cadres');
-    Route::get('/faculty/whos-who/counsellor-groups', [WhosWhoController::class, 'getCounsellorGroups'])->name('admin.faculty.whos-who.counsellor-groups');
-    Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
-    Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
-    Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
->>>>>>> e785f0d1 (ui chnages in estate)
-
-    // Participant / Dashboard Statistics (charts data)
-    Route::get('/dashboard-statistics/charts', [DashboardStatisticsController::class, 'charts'])->name('admin.dashboard-statistics.charts');
-    Route::post('/dashboard-statistics/save-from-course', [DashboardStatisticsController::class, 'saveSnapshotFromCourse'])->name('admin.dashboard-statistics.save-from-course');
-    Route::post('/dashboard-statistics/{dashboard_statistic}/set-default', [DashboardStatisticsController::class, 'setDefault'])->name('admin.dashboard-statistics.set-default');
-    Route::resource('dashboard-statistics', DashboardStatisticsController::class)->names('admin.dashboard-statistics')->parameters(['dashboard_statistics' => 'dashboard_statistic']);
 
     Route::get('/upcoming-events', function () {
         return view('admin.dashboard.upcoming_events');
@@ -800,8 +806,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
     Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
 
+
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
@@ -809,8 +817,10 @@ Route::middleware(['auth'])->group(function () {
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
 
+
     // AJAX endpoints for course repository
     Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
+
 
     //course repository resource routes (MUST be after AJAX routes)
     Route::resource('course-repository', CourseRepositoryController::class, [
@@ -832,6 +842,7 @@ Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNum
 Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
 Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
 Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/filter-data', [CourseRepositoryController::class, 'filterData'])->name('admin.course-repository.user.filter-data');
 Route::get('/course-repository-user/filter-data', [CourseRepositoryController::class, 'filterData'])->name('admin.course-repository.user.filter-data');
 Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
 
@@ -859,76 +870,20 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
     Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
 
-<<<<<<< HEAD
     // Estate Management Routes (auth required)
     Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->group(function () {
-=======
-// ============================================
-// Issue Management Module Routes (CENTCOM)
-// ============================================
-    Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-
-    // Issue Management - Main Routes
-    Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
-    Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
-    Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
-    Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
-    Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
-    Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
-
-    // AJAX Routes (must come BEFORE parameterized routes like {id})
-    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
-    Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
-    Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
-    Route::get('issue-management/floors', [IssueManagementController::class, 'getFloors'])->name('issue-management.floors');
-    Route::get('issue-management/rooms', [IssueManagementController::class, 'getRooms'])->name('issue-management.rooms');
-
-    // Parameterized Routes (must come AFTER specific routes)
-    Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
-    Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
-    Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
-    Route::put('issue-management/{id}/status', [IssueManagementController::class, 'status_update'])->name('issue-management.status_update');
-
-    // AJAX Routes
-    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
-    Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
-
-    // Category Management
-    Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
-    Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
-    Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
-    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');    // Sub-Category Management
-    Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
-    Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
-    Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
-    Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
-
-    // Priority Management
-    Route::get('issue-priorities', [IssuePriorityController::class, 'index'])->name('issue-priorities.index');
-    Route::post('issue-priorities', [IssuePriorityController::class, 'store'])->name('issue-priorities.store');
-    Route::put('issue-priorities/{id}', [IssuePriorityController::class, 'update'])->name('issue-priorities.update');
-    Route::delete('issue-priorities/{id}', [IssuePriorityController::class, 'destroy'])->name('issue-priorities.destroy');
-
-    // Escalation Matrix (3-level hierarchy)
-    Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
-    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
-    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
-
-    // Estate Management Routes
-    Route::prefix('estate')->name('estate.')->group(function () {
->>>>>>> e785f0d1 (ui chnages in estate)
         // Estate Request for Others
         Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
 
         // Request For Estate (estate_home_request_details + possession)
         Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
-        Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
-
+        Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');   
         // Put In HAC workflow
         Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
         Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
         Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
         Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
+        Route::get('request-details/{id}', [EstateController::class, 'requestAndChangeRequestDetails'])->name('request-details');
         Route::get('request-details/{id}', [EstateController::class, 'requestAndChangeRequestDetails'])->name('request-details');
         Route::get('request-for-estate/vacant-houses', [EstateController::class, 'getVacantHousesForEstateRequest'])->name('request-for-estate.vacant-houses');
         Route::post('request-for-estate', [EstateController::class, 'storeRequestForEstate'])->name('request-for-estate.store');
@@ -945,11 +900,18 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
         // Change Requests (HAC Approved) + New requests
+        // Change Requests (HAC Approved) + New requests
         Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
         Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
         Route::get('change-request/vacant-houses', [EstateController::class, 'getChangeRequestVacantHouses'])->name('change-request.vacant-houses');
         Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
         Route::post('change-request/disapprove/{id}', [EstateController::class, 'disapproveChangeRequest'])->name('change-request.disapprove');
+        Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
+        Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
+        Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
+        Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
+        Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
+        Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
         Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
         Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
         Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
@@ -963,6 +925,11 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::post('add-other-estate-request', [EstateController::class, 'storeOtherEstateRequest'])->name('add-other-estate-request.store');
         Route::delete('other-estate-request/{id}', [EstateController::class, 'destroyOtherEstateRequest'])->name('other-estate-request.destroy');
 
+        // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
+        Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
+        Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
+        Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
+        Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
         // Estate Possession (two different: Possession Details = LBSNAA, Estate Possession for Other = Others)
         Route::get('possession-details', [EstateController::class, 'possessionDetails'])->name('possession-details');
         Route::get('possession-details/create', [EstateController::class, 'possessionDetailsCreate'])->name('possession-details.create');
@@ -987,6 +954,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('update-meter-reading/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypes'])->name('update-meter-reading.unit-sub-types');
         Route::post('update-meter-reading/store', [EstateController::class, 'storeMeterReadings'])->name('update-meter-reading.store');
 
+
         Route::get('update-meter-reading-of-other', [EstateController::class, 'updateMeterReadingOfOther'])->name('update-meter-reading-of-other');
         Route::get('update-meter-reading-of-other/list', [EstateController::class, 'getMeterReadingListOther'])->name('update-meter-reading-of-other.list');
         Route::get('update-meter-reading-of-other/meter-reading-dates', [EstateController::class, 'getMeterReadingDatesOther'])->name('update-meter-reading-of-other.meter-reading-dates');
@@ -994,11 +962,26 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::get('update-meter-reading-of-other/unit-sub-types', [EstateController::class, 'getMeterReadingUnitSubTypesOther'])->name('update-meter-reading-of-other.unit-sub-types');
         Route::post('update-meter-reading-of-other/store', [EstateController::class, 'storeMeterReadingsOther'])->name('update-meter-reading-of-other.store');
 
+
         Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
         Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
 
         // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
+        // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
         Route::get('generate-estate-bill', [EstateController::class, 'generateEstateBill'])->name('generate-estate-bill');
+        Route::post('generate-estate-bill/verify-selected', [EstateController::class, 'verifySelectedBillsLbsna'])->name('generate-estate-bill.verify-selected');
+        Route::post('generate-estate-bill/save-as-draft', [EstateController::class, 'saveAsDraftBillsLbsna'])->name('generate-estate-bill.save-as-draft');
+
+        // Generate Estate Bill for Other (contract employees)
+        Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
+        Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+        Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
+        Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
+
+        Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+        Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
+        Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
+        Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
         Route::post('generate-estate-bill/verify-selected', [EstateController::class, 'verifySelectedBillsLbsna'])->name('generate-estate-bill.verify-selected');
         Route::post('generate-estate-bill/save-as-draft', [EstateController::class, 'saveAsDraftBillsLbsna'])->name('generate-estate-bill.save-as-draft');
 
@@ -1022,6 +1005,13 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
         Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
         Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
 
+        // Define Electric Slab
+        Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+        Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
+        Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
+        Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
+        Route::put('define-electric-slab/{id}', [EstateElectricSlabController::class, 'update'])->name('define-electric-slab.update');
+        Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
         // Define Electric Slab
         Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
         Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
@@ -1095,6 +1085,15 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             })->name('house-status');
 
             Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
+            Route::get('pending-meter-reading', function () {
+                return view('admin.estate.pending_meter_reading');
+            })->name('pending-meter-reading');
+
+            Route::get('house-status', function () {
+                return view('admin.estate.house_status');
+            })->name('house-status');
+
+            Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
             Route::get('bill-report-grid', function () {
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
@@ -1108,11 +1107,4 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
             Route::get('migration-report', [EstateController::class, 'estateMigrationReport'])->name('migration-report');
             Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
         });
-<<<<<<< HEAD
     });
-=======
-    });
-});
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
-    ->middleware('auth');
->>>>>>> e785f0d1 (ui chnages in estate)
