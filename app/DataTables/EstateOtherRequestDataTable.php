@@ -65,8 +65,9 @@ class EstateOtherRequestDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'autoWidth' => false,
+                'scrollX' => true,
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
@@ -94,9 +95,9 @@ class EstateOtherRequestDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('80px'),
-            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true),
-            Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true)->width('140px'),
+            Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true)->width('220px'),
+            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
     }
 

@@ -24,6 +24,11 @@ class EligibilityCriterion extends Model
         return $this->belongsTo(SalaryGrade::class, 'salary_grade_master_pk', 'pk');
     }
 
+    public function salaryGrade(): BelongsTo
+    {
+        return $this->belongsTo(SalaryGrade::class, 'salary_grade_master_pk', 'pk');
+    }
+
     public function unitType(): BelongsTo
     {
         return $this->belongsTo(UnitType::class, 'estate_unit_type_master_pk', 'pk');
