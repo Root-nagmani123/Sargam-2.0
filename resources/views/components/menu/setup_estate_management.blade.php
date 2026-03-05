@@ -170,30 +170,36 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Block/Building</span>
                                     </a>
                                 </li>
+                                {{-- Define Pay Scale - commented out
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.define-pay-scale.*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.define-pay-scale.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Pay Scale</span>
                                     </a>
                                 </li>
+                                --}}
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.eligibility-criteria.*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.eligibility-criteria.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Eligibility - Criteria</span>
                                     </a>
                                 </li>
+                                {{-- Estate Approval Setting - commented out
                                 <li class="sidebar-item border-top mt-2 pt-2">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.estate-approval-setting') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.estate-approval-setting') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Estate Approval Setting</span>
                                     </a>
                                 </li>
+                                --}}
+                                {{-- Add Approved Request House - commented out
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.add-approved-request-house') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.add-approved-request-house') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Add Approved Request House</span>
                                     </a>
                                 </li>
+                                --}}
                             </ul>
 
                             {{-- ESTATE REPORTS --}}
