@@ -69,12 +69,12 @@
                     <table id="purchaseOrdersTable" class="table text-nowrap align-middle w-100">
                         <thead>
                             <tr>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; width: 60px;">S.No</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Order Number</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Vendor Name</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                                <th class="no-print" style="background-color: #004a93; color: #fff; border-color: #004a93; min-width: 180px;">Action</th>
+                                <th>S.No</th>
+                                <th>Order Number</th>
+                                <th>Vendor Name</th>
+                                <th>Store Name</th>
+                                <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -89,15 +89,13 @@
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
-                                <td class="no-print">
-                                    <button type="button" class="btn btn-sm btn-info btn-view-po" data-po-id="{{ $po->id }}" title="View">View</button>
-                                    <button type="button" class="btn btn-sm btn-warning btn-edit-po" data-po-id="{{ $po->id }}" title="Edit">Edit</button>
+                                <td>
+                                    <button type="button" class="text-primary btn-view-po bg-transparent border-0" data-po-id="{{ $po->id }}" title="View"><i class="material-icons material-symbol-rounded">visibility</i></button>
+                                    <button type="button" class="text-primary btn-edit-po bg-transparent border-0" data-po-id="{{ $po->id }}" title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                     <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-primary bg-transparent border-0" title="Delete" style="display: none;">
-                                            <i class="material-symbols-rounded">delete</i>
-                                        </button>
+                                        <button type="submit" class="text-primary bg-transparent border-0" title="Delete" style="display: none;"><i class="material-icons material-symbol-rounded">delete</i></button>
                                     </form>
                                 </td>
                             </tr>

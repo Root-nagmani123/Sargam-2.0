@@ -80,14 +80,12 @@
                                                 data-alert-quantity="{{ $itemsubcategory->alert_quantity ?? '' }}"
                                                 data-description="{{ e($itemsubcategory->description ?? '') }}"
                                                 data-status="{{ e($itemsubcategory->status ?? 'active') }}"
-                                                title="Edit"><i class="material-symbols-rounded">edit</i></button>
+                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.itemsubcategories.destroy', $itemsubcategory->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this item?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete" style="display: none;">
-                                                <i class="material-symbols-rounded">delete</i>
-                                            </button>
+                                            <button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete" style="display: none;"><i class="material-icons material-symbol-rounded">delete</i></button>
                                         </form>
                                     </div>
                                 </td>

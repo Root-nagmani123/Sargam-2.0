@@ -24,57 +24,45 @@
                     </div>
                 @endif
 
-                <div class="table-responsive">
-                    <table id="subStoresTable" class="table text-nowrap align-middle mb-0 w-100">
-                        <thead>
+            <div class="table-responsive">
+                <table id="subStoresTable" class="table  align-middle w-100">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Sub Store Name</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($subStores as $subStore)
                             <tr>
-                                <th style="width: 70px;" class="text-center">#</th>
-                                <th>Sub Store Name</th>
-                                <th style="width: 140px;">Status</th>
-                                <th style="width: 120px;" class="text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($subStores as $subStore)
-                                <tr>
-                                    <td class="text-center">{{ $subStore->id }}</td>
-                                    <td><div class="fw-semibold text-truncate">{{ $subStore->sub_store_name }}</div></td>
-                                    <td>
-                                        <span class="badge bg-{{ $subStore->status_badge_class }} px-3 py-2">
-                                            {{ $subStore->status_label }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-inline-flex gap-1 flex-wrap justify-content-center">
-                                            <button
-                                                type="button"
-                                                class=" text-primary d-inline-flex align-items-center justify-content-center bg-transparent border-0 btn-edit-substore"
+                                <td>{{ $subStore->id }}</td>
+                                <td><div class="fw-semibold">{{ $subStore->sub_store_name }}</div></td>
+                                <td>
+                                    <span class="badge bg-{{ $subStore->status_badge_class }}">
+                                        {{ $subStore->status_label }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" class="text-primary btn-edit-substore bg-transparent border-0"
                                                 data-id="{{ $subStore->id }}"
                                                 data-sub-store-name="{{ e($subStore->sub_store_name) }}"
                                                 data-status="{{ e($subStore->status ?? 'active') }}"
-                                                title="Edit"
-                                            >
-                                                <i class="material-symbols-rounded">edit</i>
-                                            </button>
-                                            <form
-                                                method="POST"
-                                                action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}"
-                                                class="d-inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this sub store?');"
-                                            >
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-primary d-inline-flex align-items-center justify-content-center bg-transparent border-0" title="Delete" style="display: none;">
-                                                    <i class="material-symbols-rounded">delete</i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
+                                        <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}" class="d-inline"
+                                              onsubmit="return confirm('Are you sure you want to delete this sub store?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

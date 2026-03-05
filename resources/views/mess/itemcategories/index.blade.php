@@ -76,7 +76,7 @@
                                                 data-category-type="{{ e($itemcategory->category_type ?? 'raw_material') }}"
                                                 data-description="{{ e($itemcategory->description ?? '') }}"
                                                 data-status="{{ e($itemcategory->status ?? 'active') }}"
-                                                title="Edit"><i class="material-symbols-rounded">edit</i></button>
+                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this category item?');">
                                             @csrf

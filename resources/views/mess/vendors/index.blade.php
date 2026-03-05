@@ -58,7 +58,7 @@
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
                                             data-account-number="{{ e($vendor->account_number ?? '') }}" title="View"><i
-                                                class="material-symbols-rounded">visibility</i></button>
+                                                class="material-icons material-symbol-rounded">visibility</i></button>
                                         <button type="button"
                                             class="text-primary btn-edit-vendor bg-transparent border-0"
                                             data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
@@ -70,7 +70,7 @@
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
                                             data-account-number="{{ e($vendor->account_number ?? '') }}" title="Edit"><i
-                                                class="material-symbols-rounded">edit</i></button>
+                                                class="material-icons material-symbol-rounded">edit</i></button>
                                         <form method="POST"
                                             action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
                                             class="d-inline"
@@ -128,18 +128,11 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Phone <span class="text-danger">*</span></label>
-                            <input
-                                type="text"
-                                name="phone"
-                                id="create_phone"
-                                class="form-control"
-                                required
-                                value="{{ old('phone') }}"
-                                inputmode="numeric"
-                                pattern="[6-9][0-9]{9}"
-                                maxlength="10"
-                                placeholder="10 digit mobile number starting with 6-9">
-                            <div class="text-danger small mt-1" id="create_phone_error" role="alert">@error('phone'){{ $message }}@enderror</div>
+                            <input type="text" name="phone" id="create_phone" class="form-control" required
+                                value="{{ old('phone') }}" inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
+                                placeholder="10 digit mobile number">
+                            <div class="text-danger small mt-1" id="create_phone_error" role="alert">
+                                @error('phone'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Address <span class="text-danger">*</span></label>
@@ -285,64 +278,81 @@
                     <h5 class="modal-title fw-semibold" id="editVendorModalLabel">Edit Vendor</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="edit_vendor_name" class="form-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
-                            <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" id="edit_vendor_email" class="form-control" maxlength="255" placeholder="Optional">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Contact Person <span class="text-danger">*</span></label>
-                            <input type="text" name="contact_person" id="edit_vendor_contact_person" class="form-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
-                            <div class="text-danger small mt-1" id="edit_vendor_contact_person_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Phone <span class="text-danger">*</span></label>
-                            <input
-                                type="text"
-                                name="phone"
-                                id="edit_vendor_phone"
-                                class="form-control"
-                                required
-                                inputmode="numeric"
-                                pattern="[6-9][0-9]{9}"
-                                maxlength="10"
-                                placeholder="10 digit mobile number starting with 6-9">
-                            <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Address <span class="text-danger">*</span></label>
-                            <textarea name="address" id="edit_vendor_address" class="form-control" rows="3" required maxlength="2000" autocomplete="off" placeholder="Up to 2000 characters"></textarea>
-                            <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">GST Number</label>
-                            <input type="text" name="gst_number" id="edit_vendor_gst_number" class="form-control" maxlength="15" pattern="[A-Za-z0-9]+" placeholder="Letters & numbers, max 15">
-                            <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Bank Name</label>
-                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control" maxlength="255" pattern="[a-zA-Z0-9\s\-]+" placeholder="No special characters, max 255">
-                            <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">IFSC Code</label>
-                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code" class="form-control" maxlength="11" pattern="[A-Za-z0-9]+" placeholder="Letters & numbers, max 11">
-                            <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Account Number</label>
-                            <input type="text" name="account_number" id="edit_vendor_account_number" class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="18" placeholder="Digits only, max 18">
-                            <div class="text-danger small mt-1" id="edit_account_number_error" role="alert"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Upload Licence</label>
-                            <input type="file" name="licence_document" class="form-control">
+                <div class="modal-body p-3 p-lg-4 bg-body-tertiary">
+                    <div class="card border-0 shadow-sm overflow-hidden">
+                        <div class="card-body p-3 p-lg-4">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-medium">Vendor Name <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" name="name" id="edit_vendor_name" class="form-control" required
+                                        pattern="[a-zA-Z0-9\s\-]+" maxlength="255" autocomplete="off">
+                                    <div class="text-danger small mt-1" id="edit_vendor_name_error" role="alert"></div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-medium">Email</label>
+                                    <input type="email" name="email" id="edit_vendor_email" class="form-control"
+                                        maxlength="255" placeholder="Optional">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Contact Person <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" name="contact_person" id="edit_vendor_contact_person"
+                                        class="form-control" required pattern="[a-zA-Z0-9\s\-]+" maxlength="255"
+                                        autocomplete="off">
+                                    <div class="text-danger small mt-1" id="edit_vendor_contact_person_error"
+                                        role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Phone <span class="text-danger">*</span></label>
+                                    <input type="text" name="phone" id="edit_vendor_phone" class="form-control" required
+                                        inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
+                                        placeholder="10 digit mobile number">
+                                    <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-medium">Address <span
+                                            class="text-danger">*</span></label>
+                                    <textarea name="address" id="edit_vendor_address" class="form-control" rows="3"
+                                        required maxlength="2000" autocomplete="off"
+                                        placeholder="Up to 2000 characters"></textarea>
+                                    <div class="text-danger small mt-1" id="edit_vendor_address_error" role="alert">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">GST Number</label>
+                                    <input type="text" name="gst_number" id="edit_vendor_gst_number"
+                                        class="form-control" maxlength="15" pattern="[A-Za-z0-9]+"
+                                        placeholder="Letters & numbers, max 15">
+                                    <div class="text-danger small mt-1" id="edit_gst_number_error" role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Bank Name</label>
+                                    <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control"
+                                        maxlength="255" pattern="[a-zA-Z0-9\s\-]+"
+                                        placeholder="No special characters, max 255">
+                                    <div class="text-danger small mt-1" id="edit_bank_name_error" role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">IFSC Code</label>
+                                    <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code"
+                                        class="form-control text-uppercase" maxlength="11" pattern="[A-Za-z0-9]+"
+                                        placeholder="Letters & numbers, max 11">
+                                    <div class="text-danger small mt-1" id="edit_ifsc_code_error" role="alert"></div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Account Number</label>
+                                    <input type="text" name="account_number" id="edit_vendor_account_number"
+                                        class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="18"
+                                        placeholder="Digits only, max 18">
+                                    <div class="text-danger small mt-1" id="edit_account_number_error" role="alert">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium">Upload Licence</label>
+                                    <input type="file" name="licence_document" class="form-control">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
