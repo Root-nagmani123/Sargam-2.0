@@ -2,6 +2,7 @@
 @section('title', 'Sub Store Master')
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Sub Store Master"></x-breadcrum>
     <div class="datatables">
         <div class="card">
             <div class="card-body">
@@ -20,13 +21,13 @@
             @endif
 
             <div class="table-responsive">
-                <table id="subStoresTable" class="table table-bordered table-hover align-middle w-100">
+                <table id="subStoresTable" class="table  align-middle w-100">
                     <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Sub Store Name</th>
-                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
+                            <th>#</th>
+                            <th>Sub Store Name</th>
+                            <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,11 +42,11 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-substore"
+                                        <button type="button" class="text-primary btn-edit-substore bg-transparent border-0"
                                                 data-id="{{ $subStore->id }}"
                                                 data-sub-store-name="{{ e($subStore->sub_store_name) }}"
                                                 data-status="{{ e($subStore->status ?? 'active') }}"
-                                                title="Edit">Edit</button>
+                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this sub store?');">
                                             @csrf

@@ -5,6 +5,7 @@
     $storeTypes = \App\Models\Mess\Store::storeTypes();
 @endphp
 <div class="container-fluid">
+    <x-breadcrum title="Mess Stores"></x-breadcrum>
     <div class="datatables">
         <div class="card">
             <div class="card-body">
@@ -23,15 +24,15 @@
             @endif
 
             <div class="table-responsive">
-                <table id="storesTable" class="table table-bordered table-hover align-middle w-100">
+                <table id="storesTable" class="table text-nowrap align-middle w-100">
                     <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Store Type</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Location</th>
-                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
+                            <th>#</th>
+                            <th>Store Name</th>
+                            <th>Store Type</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -2,77 +2,109 @@
 
 namespace App\Exports\Mess;
 
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
+use Illuminate\Contracts\View\View;
+use Maatwebsite\Excel\Concerns\FromView;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class StockPurchaseDetailsExport implements FromCollection, WithHeadings
+class StockPurchaseDetailsExport implements FromView, WithStyles, WithEvents, WithTitle
 {
-    /** @var \Illuminate\Database\Eloquent\Collection */
     protected $purchaseOrders;
+    protected $fromDate;
+    protected $toDate;
+    protected $selectedVendor;
 
-    public function __construct($purchaseOrders)
+    public function __construct($purchaseOrders, $fromDate, $toDate, $selectedVendor)
     {
         $this->purchaseOrders = $purchaseOrders;
+        $this->fromDate       = $fromDate;
+        $this->toDate         = $toDate;
+        $this->selectedVendor = $selectedVendor;
     }
 
-    public function collection(): Collection
+    public function view(): View
     {
-        $rows = [];
-        foreach ($this->purchaseOrders as $order) {
-            $storeName = $order->store ? $order->store->store_name : 'N/A';
-            $vendorName = $order->vendor ? $order->vendor->name : 'N/A';
-            $billNo = $order->po_number ?? $order->id;
-            $poDate = $order->po_date ? $order->po_date->format('d-m-Y') : '';
-
-            foreach ($order->items as $item) {
-                $qty = $item->quantity ?? 0;
-                $rate = $item->unit_price ?? 0;
-                $taxPercent = $item->tax_percent ?? 0;
-                $subtotal = $qty * $rate;
-                $taxAmount = round($subtotal * ($taxPercent / 100), 2);
-                $total = $subtotal + $taxAmount;
-                $itemName = $item->itemSubcategory->item_name
-                    ?? $item->itemSubcategory->subcategory_name
-                    ?? $item->itemSubcategory->name
-                    ?? 'N/A';
-                $itemCode = $item->itemSubcategory->item_code ?? '—';
-                $unit = $item->unit ?? '—';
-
-                $rows[] = [
-                    $billNo,
-                    $poDate,
-                    $storeName,
-                    $vendorName,
-                    $itemName,
-                    $itemCode,
-                    $unit,
-                    number_format($qty, 2),
-                    number_format($rate, 2),
-                    number_format($taxPercent, 2) . '%',
-                    number_format($taxAmount, 2),
-                    number_format($total, 2),
-                ];
-            }
-        }
-        return collect($rows);
+        return view('admin.mess.reports.excel.stock-purchase-details-excel', [
+            'purchaseOrders' => $this->purchaseOrders,
+            'fromDate'       => $this->fromDate,
+            'toDate'         => $this->toDate,
+            'selectedVendor' => $this->selectedVendor,
+        ]);
     }
 
-    public function headings(): array
+    public function title(): string
+    {
+        return 'Stock Purchase Details';
+    }
+
+
+    public function styles(Worksheet $sheet)
+    {
+        // Merge header cells (rows 1–4 contain header text from the view)
+        $sheet->mergeCells('A1:H1');
+        $sheet->mergeCells('A2:H2');
+        $sheet->mergeCells('A3:H3');
+        $sheet->mergeCells('A4:H4');
+
+        $sheet->getStyle('A1:A4')->getAlignment()->setHorizontal('center');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
+        $sheet->getStyle('A3:A4')->getFont()->setSize(10);
+
+        // Table header (row 6 in the view)
+        $headerRange = 'A6:H6';
+        $sheet->getStyle($headerRange)->getFont()->setBold(true);
+        $sheet->getStyle($headerRange)->getAlignment()->setHorizontal('center');
+        $sheet->getStyle($headerRange)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE9ECEF');
+
+        // Borders for the table
+        $lastRow    = $sheet->getHighestRow();
+        $tableRange = "A6:H{$lastRow}";
+        $sheet->getStyle($tableRange)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
+            ->getColor()->setARGB('FFDEE2E6');
+
+        // Column widths
+        $sheet->getColumnDimension('A')->setWidth(30);
+        $sheet->getColumnDimension('B')->setWidth(14);
+        $sheet->getColumnDimension('C')->setWidth(10);
+        $sheet->getColumnDimension('D')->setWidth(12);
+        $sheet->getColumnDimension('E')->setWidth(12);
+        $sheet->getColumnDimension('F')->setWidth(10);
+        $sheet->getColumnDimension('G')->setWidth(14);
+        $sheet->getColumnDimension('H')->setWidth(14);
+
+        // Right-align numeric columns
+        $sheet->getStyle("D6:H{$lastRow}")
+            ->getAlignment()->setHorizontal('right');
+
+        return [
+            1 => ['alignment' => ['horizontal' => 'center']],
+        ];
+    }
+
+    public function registerEvents(): array
     {
         return [
-            'Bill No',
-            'PO Date',
-            'Store',
-            'Vendor',
-            'Item Name',
-            'Item Code',
-            'Unit',
-            'Quantity',
-            'Unit Price',
-            'Tax %',
-            'Tax Amount',
-            'Total',
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet   = $event->sheet->getDelegate();
+                $lastRow = $sheet->getHighestRow();
+
+                // Freeze header region
+                $sheet->freezePane('A7');
+
+                // Landscape + print area (optional)
+                $sheet->getPageSetup()
+                    ->setOrientation(
+                        \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE
+                    )
+                    ->setPrintArea("A1:H{$lastRow}");
+            },
         ];
     }
 }

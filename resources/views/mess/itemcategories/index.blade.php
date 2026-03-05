@@ -6,6 +6,7 @@
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
 @endphp
 <div class="container-fluid">
+    <x-breadcrum title="Category Item Master"></x-breadcrum>
     <div class="datatables">
         <div class="card">
             <div class="card-body">
@@ -42,15 +43,15 @@
             @endif
 
             <div class="table-responsive">
-                <table id="itemCategoriesTable" class="table table-bordered table-hover align-middle w-100">
+                <table id="itemCategoriesTable" class="table align-middle w-100">
                     <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Category Name</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Category Type</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Item Category Description</th>
-                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
+                            <th>#</th>
+                            <th>Category Name</th>
+                            <th>Category Type</th>
+                            <th>Item Category Description</th>
+                            <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -69,18 +70,18 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-itemcategory"
+                                        <button type="button" class="text-primary btn-edit-itemcategory bg-transparent border-0"
                                                 data-id="{{ $itemcategory->id }}"
                                                 data-category-name="{{ e($itemcategory->category_name) }}"
                                                 data-category-type="{{ e($itemcategory->category_type ?? 'raw_material') }}"
                                                 data-description="{{ e($itemcategory->description ?? '') }}"
                                                 data-status="{{ e($itemcategory->status ?? 'active') }}"
-                                                title="Edit">Edit</button>
+                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this category item?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            <button type="submit" class="text-primary btn-delete-itemcategory bg-transparent border-0" title="Delete" style="display: none;">Delete</button>
                                         </form>
                                     </div>
                                 </td>
