@@ -24,8 +24,7 @@
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseGeneral" role="button" aria-expanded="false" aria-controls="collapseGeneral">
                     <span class="fw-bold">General</span>
-                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon">arrow_right</i>
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
