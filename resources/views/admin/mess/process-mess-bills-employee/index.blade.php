@@ -144,49 +144,38 @@
     {{-- Table card – DataTables client-side search/sort like mess master --}}
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm">
+            <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm" class="no-print">
                 <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
                 <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
                 <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
                 <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 no-print">
+                <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="small text-muted">Show</span>
-                        <select name="per_page" class="form-select form-select-sm choices-select" data-placeholder="Rows per page" style="width: auto;" onchange="this.form.submit();">
-                            <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
-                            <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
-                            <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
-                            <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
-                        </select>
-                        <span class="small text-muted">entries</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn btn-link btn-sm p-0 text-dark" title="Export to Excel">
-                            <i class="material-symbols-rounded" style="font-size: 1.35rem;">file_download</i>
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
+                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
+                            <span>Export</span>
                         </a>
-                        <button type="button" class="btn btn-link btn-sm p-0 text-dark no-print" title="Print" onclick="printProcessMessBillsMainTable()">
-                            <i class="material-symbols-rounded" style="font-size: 1.35rem;">print</i>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print" onclick="printProcessMessBillsMainTable()">
+                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">print</i>
+                            <span>Print</span>
                         </button>
-                        <label class="small text-muted mb-0">Search:</label>
-                        <input type="text" name="search" class="form-control form-control-sm" style="width: 180px;"
-                               value="{{ request('search') }}" placeholder="Name or invoice...">
                     </div>
                 </div>
             </form>
 
             <div class="table-responsive">
-                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
-                    <thead>
+                    <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
+                        <thead>
                         <tr>
-                            <th>S.No.</th>
-                            <th>Buyer Name</th>
-                            <th>Slip No.</th>
-                            <th>Invoice Date</th>
-                            <th>Client Type</th>
-                            <th class="text-end">Total</th>
-                            <th>Payment Type</th>
-                            <th>Status</th>
-                            <th class="text-center no-print">Actions</th>
+                            <th class="text-nowrap py-2">S.No.</th>
+                            <th class="text-nowrap py-2">Buyer Name</th>
+                            <th class="text-nowrap py-2">Slip No.</th>
+                            <th class="text-nowrap py-2">Invoice Date</th>
+                            <th class="text-nowrap py-2">Client Type</th>
+                            <th class="text-nowrap py-2 text-end">Total</th>
+                            <th class="text-nowrap py-2">Payment Type</th>
+                            <th class="text-nowrap py-2">Status</th>
+                            <th class="text-nowrap py-2 text-center no-print">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -201,7 +190,11 @@
                                 $receiptId = $isDateRange ? 'dr-' . $bill->id : 'ki-' . ($bill->pk ?? $bill->id);
                             @endphp
                             <tr class="{{ ($bill->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
-                                <td>{{ $bills->firstItem() + $index }}</td>
+                                <td>
+                                    {{ (method_exists($bills, 'firstItem') && !is_null($bills->firstItem()))
+                                        ? $bills->firstItem() + $index
+                                        : $index + 1 }}
+                                </td>
                                 <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
                                 <td>{{ $slipNo }}</td>
                                 <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>
@@ -235,69 +228,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="datatables">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle mb-0" id="processMessBillsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="text-nowrap py-2">S.No.</th>
-                                <th class="text-nowrap py-2">Buyer Name</th>
-                                <th class="text-nowrap py-2">Slip No.</th>
-                                <th class="text-nowrap py-2">Invoice Date</th>
-                                <th class="text-nowrap py-2">Client Type</th>
-                                <th class="text-nowrap py-2 text-end">Total</th>
-                                <th class="text-nowrap py-2">Payment Type</th>
-                                <th class="text-nowrap py-2">Status</th>
-                                <th class="text-nowrap py-2 text-center no-print">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php
-                                $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
-                            @endphp
-                            @forelse($bills as $index => $bill)
-                                @php
-                                    $billId = $bill->id ?? $bill->pk ?? 0;
-                                    $isDateRange = ($bill->source_type ?? '') === 'date_range';
-                                    $slipNo = $isDateRange ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT) : 'SV-' . str_pad($bill->pk ?? $bill->id ?? 0, 6, '0', STR_PAD_LEFT);
-                                    $receiptId = $isDateRange ? 'dr-' . $bill->id : 'ki-' . ($bill->pk ?? $bill->id);
-                                @endphp
-                                <tr class="{{ ($bill->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
-                                    <td>{{ $slipNo }}</td>
-                                    <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>
-                                    <td>{{ $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—'))) }}</td>
-                                    <td class="text-end fw-semibold">₹ {{ number_format($bill->net_total, 2) }}</td>
-                                    <td>{{ $paymentTypeMap[$bill->payment_type ?? 1] ?? '—' }}</td>
-                                    <td>
-                                        @if(($bill->status ?? 0) == 2)
-                                            <span class="badge bg-success">Paid</span>
-                                        @elseif(($bill->status ?? 0) == 1)
-                                            <span class="badge bg-warning text-dark">Partial</span>
-                                        @else
-                                            <span class="badge bg-secondary">Unpaid</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center no-print">
-                                        <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $receiptId) }}" target="_blank"
-                                           class="btn btn-sm btn-outline-primary" title="Print receipt">
-                                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center py-5 text-muted">
-                                        <i class="material-symbols-rounded d-block mb-2" style="font-size: 2.5rem;">inbox</i>
-                                        No bills found for the selected date range.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -305,7 +235,7 @@
 @include('components.mess-master-datatables', [
     'tableId' => 'processMessBillsTable',
     'searchPlaceholder' => 'Search name or invoice no.',
-    'orderColumn' => [[3, 'desc']],
+    'orderColumn' => [[0, 'asc']],
     'actionColumnIndex' => 8,
     'infoLabel' => 'bills',
 ])

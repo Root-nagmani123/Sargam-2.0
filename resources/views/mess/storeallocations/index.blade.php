@@ -43,8 +43,8 @@
     </div>
 
     <div class="table-responsive">
-        <table class="table table-striped table-hover text-nowrap align-middle mb-0" id="storeAllocationTable">
-            <thead class="table-light">
+        <table class="table text-nowrap align-middle mb-0" id="storeAllocationTable">
+            <thead>
                 <tr>
                     <th style="width: 60px;">S.No</th>
                     <th class="store-alloc-sort" data-sort="store">Store Name <span class="sort-icon"></span></th>
@@ -67,7 +67,7 @@
                     <td class="text-end">{{ $item->quantity }}</td>
                     <td>{{ $allocation->allocation_date ? $allocation->allocation_date->format('d-m-Y') : '—' }}</td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-primary px-2 py-1 btn-edit-allocation" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
+                        <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
                             <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
                         </button>
                     </td>
