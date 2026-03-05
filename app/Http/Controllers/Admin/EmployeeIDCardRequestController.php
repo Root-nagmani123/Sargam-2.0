@@ -186,15 +186,6 @@ class EmployeeIDCardRequestController extends Controller
     public function create()
     {
         $authUserId = Auth::user()->user_id ?? Auth::id();
-        $employeePk = null;
-        if ($authUserId) {
-            $authEmp = EmployeeMaster::where('pk', $authUserId)->orWhere('pk_old', $authUserId)->first();
-            $employeePk = $authEmp?->pk;
-        }
-        if ($employeePk && static::hasApprovedIdCard($employeePk)) {
-            return redirect()->route('admin.employee_idcard.index')
-                ->with('error', 'You already have an approved ID card. A new request cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.');
-        }
 
         $cardTypes = DB::table('sec_id_cardno_master')->orderBy('sec_card_name')->pluck('sec_card_name');
 
@@ -309,17 +300,11 @@ class EmployeeIDCardRequestController extends Controller
 
     public function store(Request $request)
     {
-       
         $authUserId = Auth::user()->user_id ?? Auth::id();
         $authEmployeePk = null;
         if ($authUserId) {
             $authEmp = EmployeeMaster::where('pk', $authUserId)->orWhere('pk_old', $authUserId)->first();
             $authEmployeePk = $authEmp?->pk;
-        }
-        if ($authEmployeePk && static::hasApprovedIdCard($authEmployeePk)) {
-            throw ValidationException::withMessages([
-                'employee_type' => 'You already have an approved ID card. A new request cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
-            ]);
         }
 
         $validated = $request->validate([
@@ -370,6 +355,15 @@ class EmployeeIDCardRequestController extends Controller
             $employeePk = $emp?->pk;
         }
 
+        // Restrict NEW self ID card only when user already has an approved card.
+        // Allow requests for others (employee_master_pk != logged-in employee) even if current user has a card.
+        $isDupOrExt = in_array(($validated['request_for'] ?? 'Own ID Card'), ['Replacement', 'Duplication', 'Extension'], true);
+        if ($employeePk && $authEmployeePk && $employeePk === $authEmployeePk && !$isDupOrExt && static::hasApprovedIdCard($employeePk)) {
+            throw ValidationException::withMessages([
+                'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
+            ]);
+        }
+
         $employeeType = $validated['employee_type'];
         $cardNameCode = $employeeType === 'Permanent Employee' ? 'p' : 'c';
         $cardMasterPk = IdCardSecurityLookup::resolveCardMasterPk($validated['card_type']);
@@ -384,8 +378,6 @@ class EmployeeIDCardRequestController extends Controller
                 'sub_type' => 'Invalid Sub Type for the selected Card Type (security mapping not found).',
             ]);
         }
-
-        $isDupOrExt = in_array(($validated['request_for'] ?? 'Own ID Card'), ['Replacement', 'Duplication', 'Extension'], true);
 
         $photoPath = null;
         if ($employeeType === 'Permanent Employee' && $request->hasFile('photo_perm')) {

@@ -415,22 +415,24 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary rounded-start-2 d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details">
+                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary {{ $request->status === 'Approved' ? 'rounded-2' : 'rounded-start-2' }} d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                                 </a>
-                                                <form action="{{ route('admin.employee_idcard.restore', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-outline-success rounded-0 px-2 py-1" title="Restore">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i>
-                                                    </button>
-                                                </form>
-                                                <form action="{{ route('admin.employee_idcard.forceDelete', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this request? This action cannot be undone.');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Delete Permanently">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i>
-                                                    </button>
-                                                </form>
+                                                @if($request->status !== 'Approved')
+                                                    <form action="{{ route('admin.employee_idcard.restore', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-outline-success rounded-0 px-2 py-1" title="Restore">
+                                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i>
+                                                        </button>
+                                                    </form>
+                                                    <form action="{{ route('admin.employee_idcard.forceDelete', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this request? This action cannot be undone.');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Delete Permanently">
+                                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>

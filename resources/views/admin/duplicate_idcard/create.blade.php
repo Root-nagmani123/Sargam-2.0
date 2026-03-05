@@ -239,7 +239,7 @@
             alert(message);
         }
 
-        btnFetch.addEventListener('click', function () {
+        function fetchByCardNumber() {
             const cardNo = cardInput.value.trim();
             const type = typeSelect.value || 'Permanent';
             if (!cardNo) {
@@ -280,6 +280,25 @@
                     btnFetch.disabled = false;
                     showToast('Error while fetching ID card details. Please try again.', true);
                 });
+        }
+
+        // Existing behaviour: user can click the fetch button.
+        btnFetch.addEventListener('click', function () {
+            fetchByCardNumber();
+        });
+
+        // New behaviour: auto-fetch as soon as user finishes entering a valid ID.
+        // Trigger on blur; also on Enter key in the input.
+        cardInput.addEventListener('blur', function () {
+            if (cardInput.value.trim()) {
+                fetchByCardNumber();
+            }
+        });
+        cardInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                fetchByCardNumber();
+            }
         });
     }
 

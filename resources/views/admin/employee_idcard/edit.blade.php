@@ -160,7 +160,7 @@
                     <div class="col-md-6">
                         <label for="id_card_valid_upto" class="form-label">ID Card Valid Upto</label>
                         <input type="date" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
-                               value="{{ $idCardValidUptoEdit }}" placeholder="DD/MM/YYYY" readonly>
+                               value="{{ $idCardValidUptoEdit }}" placeholder="DD/MM/YYYY">
                         @error('id_card_valid_upto')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
