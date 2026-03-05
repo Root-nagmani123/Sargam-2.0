@@ -3,6 +3,7 @@
 @section('setup_content')
 <div class="container-fluid idcard-create-page">
     <x-breadcrum title="Edit ID Card Request"></x-breadcrum>
+    <x-session_message />
 
     <form action="{{ route('admin.employee_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         @csrf
@@ -33,7 +34,7 @@
                 @php $isContractual = ($request->employee_type ?? '') === 'Contractual Employee'; @endphp
                 <div class="row g-3">
                     <!-- Row 1: Card Type, Sub Type, Request For -->
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="card_type" class="form-label">Card Type <span class="text-danger">*</span></label>
                         <select name="card_type" id="card_type" class="form-select @error('card_type') is-invalid @enderror" required>
                             <option value="">Select Card Type</option>
@@ -45,11 +46,10 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="sub_type" class="form-label">Sub Type <span class="text-danger">*</span></label>
                         <select name="sub_type" id="sub_type" class="form-select @error('sub_type') is-invalid @enderror" required>
                             <option value="">Select Sub Type</option>
-                            <?php print_r($request->sub_type); exit; ?>
                             @if(!empty($request->sub_type))
                                 <option value="{{ $request->sub_type }}" selected>{{ $request->sub_type }}</option>
                             @endif
@@ -58,7 +58,7 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label for="request_for" class="form-label">Request For <span class="text-danger">*</span></label>
                         <select name="request_for" id="request_for" class="form-select @error('request_for') is-invalid @enderror" required>
                             @if($isContractual)
@@ -85,15 +85,26 @@
                     <div class="col-md-6">
                         <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" 
-                               value="{{ old('name', $request->name) }}" readonly required>
+                               value="{{ old('name', $request->name) }}" required>
                         @error('name')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-md-6">
                         <label for="designation" class="form-label">Designation</label>
-                        <input type="text" name="designation" id="designation" class="form-control @error('designation') is-invalid @enderror" 
-                               value="{{ old('designation', $request->designation) }}" readonly>
+                        <select name="designation" id="designation" class="form-select @error('designation') is-invalid @enderror">
+                            <option value="">-- Select Designation --</option>
+                            @php
+                                $currentDesignation = old('designation', $request->designation ?? '');
+                                $designationList = $designations ?? [];
+                                if ($currentDesignation && !isset($designationList[$currentDesignation])) {
+                                    $designationList = [$currentDesignation => $currentDesignation] + $designationList;
+                                }
+                            @endphp
+                            @foreach($designationList as $pk => $name)
+                                <option value="{{ $name }}" {{ $currentDesignation == $name ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
                         @error('designation')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -103,7 +114,7 @@
                     <div class="col-md-6">
                         <label for="date_of_birth" class="form-label">Date of Birth</label>
                         <input type="date" name="date_of_birth" id="date_of_birth" class="form-control @error('date_of_birth') is-invalid @enderror" 
-                               value="{{ old('date_of_birth', $request->date_of_birth ? (\Carbon\Carbon::parse($request->date_of_birth)->format('Y-m-d')) : '') }}" readonly>
+                               value="{{ old('date_of_birth', $request->date_of_birth ? (\Carbon\Carbon::parse($request->date_of_birth)->format('Y-m-d')) : '') }}">
                         @error('date_of_birth')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -111,25 +122,45 @@
                     <div class="col-md-6">
                         <label for="father_name" class="form-label">Father Name</label>
                         <input type="text" name="father_name" id="father_name" class="form-control @error('father_name') is-invalid @enderror" 
-                               value="{{ old('father_name', $request->father_name) }}" readonly>
+                               value="{{ old('father_name', $request->father_name) }}">
                         @error('father_name')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <!-- Row 4: Academy Joining, ID Card Valid Upto -->
+                    <!-- Row 4: Academy Joining, ID Card Valid Upto (date inputs need Y-m-d) -->
+                    @php
+                        $academyJoiningEdit = old('academy_joining');
+                        if ($academyJoiningEdit === null || $academyJoiningEdit === '') {
+                            $academyJoiningEdit = $request->academy_joining ?? '';
+                            if ($academyJoiningEdit && preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', trim($academyJoiningEdit), $m)) {
+                                $academyJoiningEdit = $m[3] . '-' . $m[2] . '-' . $m[1];
+                            }
+                        }
+                        $idCardValidUptoEdit = old('id_card_valid_upto');
+                        if ($idCardValidUptoEdit === null || $idCardValidUptoEdit === '') {
+                            $raw = $request->card_valid_to ?? $request->id_card_valid_upto ?? null;
+                            if ($raw instanceof \DateTimeInterface) {
+                                $idCardValidUptoEdit = $raw->format('Y-m-d');
+                            } elseif (!empty($raw) && is_string($raw) && preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', trim($raw), $m)) {
+                                $idCardValidUptoEdit = $m[3] . '-' . $m[2] . '-' . $m[1];
+                            } else {
+                                $idCardValidUptoEdit = is_string($raw) ? $raw : ($raw ?? '');
+                            }
+                        }
+                    @endphp
                     <div class="col-md-6">
                         <label for="academy_joining" class="form-label">Academy Joining</label>
                         <input type="date" name="academy_joining" id="academy_joining" class="form-control @error('academy_joining') is-invalid @enderror" 
-                               value="{{ old('academy_joining', $request->academy_joining ?? '') }}" readonly>
+                               value="{{ $academyJoiningEdit }}">
                         @error('academy_joining')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
                     <div class="col-md-6">
                         <label for="id_card_valid_upto" class="form-label">ID Card Valid Upto</label>
-                        <input type="text" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
-                               value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY" readonly>
+                        <input type="date" name="id_card_valid_upto" id="id_card_valid_upto" class="form-control @error('id_card_valid_upto') is-invalid @enderror" 
+                               value="{{ $idCardValidUptoEdit }}" placeholder="DD/MM/YYYY">
                         @error('id_card_valid_upto')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -139,7 +170,7 @@
                     <div class="col-md-6">
                         <label for="mobile_number" class="form-label">Mobile Number</label>
                         <input type="tel" name="mobile_number" id="mobile_number" class="form-control @error('mobile_number') is-invalid @enderror" 
-                               value="{{ old('mobile_number', $request->mobile_number) }}" placeholder="10 digit mobile number" readonly>
+                               value="{{ old('mobile_number', $request->mobile_number) }}" placeholder="10 digit mobile number">
                         @error('mobile_number')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -148,7 +179,7 @@
                     <div class="col-md-6">
                         <label for="telephone_number" class="form-label">Telephone Number</label>
                         <input type="tel" name="telephone_number" id="telephone_number" class="form-control @error('telephone_number') is-invalid @enderror" 
-                               value="{{ old('telephone_number', $request->telephone_number) }}" readonly>
+                               value="{{ old('telephone_number', $request->telephone_number) }}">
                         @error('telephone_number')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -177,8 +208,8 @@
                         @enderror
                     </div>
                     <div class="col-md-6">
-                        <label for="approval_authority" class="form-label">Approval Authority</label>
-                        <select name="approval_authority" id="approval_authority" class="form-select @error('approval_authority') is-invalid @enderror">
+                        <label for="approval_authority" class="form-label">Approval Authority <span class="text-danger">*</span></label>
+                        <select name="approval_authority" id="approval_authority" class="form-select @error('approval_authority') is-invalid @enderror" required>
                             <option value="">--Select--</option>
                             @foreach($approvalAuthorityEmployees ?? [] as $emp)
                                 @php $empName = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')); @endphp
@@ -222,10 +253,11 @@
                         @endif
                         <div class="idcard-upload-zone" id="photoUploadArea">
                             <input type="file" name="photo" id="photo" class="d-none @error('photo') is-invalid @enderror" 
-                                   accept="image/*" onchange="displayFileName(this, 'photoName')">
+                                   accept=".jpeg,.jpg,.png,.gif" onchange="displayFileName(this, 'photoName')">
                             <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                             <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                         </div>
+                        <small class="text-muted d-block">Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
                         <small id="photoName" class="d-block mt-2 text-body-secondary"></small>
                         @error('photo')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -246,6 +278,7 @@
                             <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                             <p class="mt-2 mb-0">Click to upload or drag and drop</p>
                         </div>
+                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX. Max size: 5 MB</small>
                         <small id="joiningLetterName" class="d-block mt-2 text-body-secondary"></small>
                         @error('joining_letter')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -312,12 +345,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_from_edit" class="form-label">ID Card Valid From</label>
-                                <input type="text" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
+                                <input type="date" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
                                 @error('id_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_upto_edit" class="form-label">ID Card Valid Upto</label>
-                                <input type="text" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
+                                <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
                                 @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6" id="firReceiptFieldEdit" style="display:none;">
@@ -327,6 +360,7 @@
                                     <div class="idcard-upload-placeholder {{ $request->fir_receipt ? 'd-none' : '' }}" id="firReceiptPlaceholderEdit">
                                         <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                         <p class="mt-2 mb-0 small">Upload FIR filed against lost card</p>
+                                        <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                     </div>
                                     <div class="idcard-upload-preview idcard-doc-preview {{ $request->fir_receipt ? '' : 'd-none' }}" id="firReceiptPreviewEdit">
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
@@ -346,6 +380,7 @@
                                     <div class="idcard-upload-placeholder {{ $request->payment_receipt ? 'd-none' : '' }}" id="paymentReceiptPlaceholderEdit">
                                         <i class="material-icons material-symbols-rounded idcard-upload-icon">upload</i>
                                         <p class="mt-2 mb-0 small">Click to upload</p>
+                                        <p class="mb-0 small text-muted">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</p>
                                     </div>
                                     <div class="idcard-upload-preview idcard-doc-preview {{ $request->payment_receipt ? '' : 'd-none' }}" id="paymentReceiptPreviewEdit">
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>

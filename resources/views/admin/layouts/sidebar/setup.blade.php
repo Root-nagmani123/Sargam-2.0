@@ -105,6 +105,26 @@
 
                                             @endif
                                             @endif
+                                            @if(! hasRole('Student-OT'))
+                                          <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">shield</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Security</span>
+                                                </a>
+                                            </li>
+                                             <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">report_problem</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Centcom</span>
+                                                </a>
+                                            </li>
+                                            @endif
 
                                         </div>
                                     </div>
@@ -145,6 +165,14 @@
                     <!-- Academic -->
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mappings />
+
+                    <!-- Security Management (Vehicle & Visitor Pass) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_security_management />
+
+                     <!-- Issue Management (CENTCOM) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_issue_management />
 
                     <!-- Forms -->
                     <!-- ---------------------------------- -->

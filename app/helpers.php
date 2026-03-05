@@ -5,6 +5,25 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Auth;
 
+function getEmployeeIdsForUser($userId)
+{
+    if ($userId === null || $userId === '') {
+        return [];
+    }
+    $userId = (string) $userId;
+    $ids = [$userId];
+    if (Schema::hasTable('employee_master') && Schema::hasColumn('employee_master', 'pk_old')) {
+        $row = DB::table('employee_master')
+            ->where('pk', $userId)
+            ->orWhere('pk_old', $userId)
+            ->select('pk', 'pk_old')
+            ->first();
+        if ($row) {
+            $ids = array_filter(array_unique([$row->pk, $row->pk_old]));
+        }
+    }
+    return array_map('strval', $ids);
+}
 function view_file_link($path)
 {
     return $path ? asset('storage/' . $path) : null;
