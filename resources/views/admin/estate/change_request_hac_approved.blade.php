@@ -196,31 +196,31 @@
                         <div class="row g-3 mb-3">
                             <div class="col-12 col-md">
                                 <label for="allot_estate_campus" class="form-label fw-semibold text-primary small text-uppercase">Estate Name</label>
-                                <select class="form-select form-select-sm" id="allot_estate_campus">
+                                <select class="form-select form-select-sm allot-required" id="allot_estate_campus">
                                     <option value="">— Select —</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md">
                                 <label for="allot_unit_type" class="form-label fw-semibold text-primary small text-uppercase">Unit Type</label>
-                                <select class="form-select form-select-sm" id="allot_unit_type">
+                                <select class="form-select form-select-sm allot-required" id="allot_unit_type">
                                     <option value="">— Select —</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md">
                                 <label for="allot_building" class="form-label fw-semibold text-primary small text-uppercase">Building Name</label>
-                                <select class="form-select form-select-sm" id="allot_building">
+                                <select class="form-select form-select-sm allot-required" id="allot_building">
                                     <option value="">— Select —</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md">
                                 <label for="allot_unit_sub_type" class="form-label fw-semibold text-primary small text-uppercase">Unit Sub Type</label>
-                                <select class="form-select form-select-sm" id="allot_unit_sub_type">
+                                <select class="form-select form-select-sm allot-required" id="allot_unit_sub_type">
                                     <option value="">— Select —</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md">
                                 <label for="allot_estate_house_master_pk" class="form-label fw-semibold text-primary small text-uppercase">House No.</label>
-                                <select class="form-select form-select-sm" id="allot_estate_house_master_pk" name="estate_house_master_pk" required>
+                                <select class="form-select form-select-sm allot-required" id="allot_estate_house_master_pk" name="estate_house_master_pk" required>
                                     <option value="">— Select —</option>
                                 </select>
                             </div>
@@ -233,7 +233,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-lg me-1"></i> Cancel
                     </button>
-                    <button type="submit" class="btn btn-success px-4" id="btnSubmitAllot">
+                    <button type="submit" class="btn btn-success px-4" id="btnSubmitAllot" disabled>
                         <i class="bi bi-house-add me-1"></i> Allot
                     </button>
                 </div>
@@ -620,6 +620,20 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                 .html('<option value="">---select---</option>').val('').prop('disabled', false);
         }
 
+        function isAllotFormValid() {
+            var estate = $('#allot_estate_campus').val();
+            var unitType = $('#allot_unit_type').val();
+            var building = $('#allot_building').val();
+            var unitSubType = $('#allot_unit_sub_type').val();
+            var housePk = $('#allot_estate_house_master_pk').val();
+            return !!(estate && unitType && building && unitSubType && housePk);
+        }
+
+        function updateAllotSubmitButton() {
+            var btn = document.getElementById('btnSubmitAllot');
+            if (btn) btn.disabled = !isAllotFormValid();
+        }
+
         function loadAllotBlocks() {
             var campusId = $('#allot_estate_campus').val();
             var unitTypeId = $('#allot_unit_type').val();
@@ -716,6 +730,7 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                         $('#allot_estate_house_master_pk').append('<option value="' + h.pk + '">' + label + '</option>');
                     });
                     $('#allotNoHouses').toggleClass('d-none', vacantList.length > 0);
+                    updateAllotSubmitButton();
                 })
                 .catch(function() {
                     allotLoading.classList.add('d-none');
@@ -733,18 +748,19 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                 $('#allot_unit_type').append('<option value="' + ut.pk + '">' + (ut.unit_type || ut.pk) + '</option>');
             });
             loadAllotBlocks();
+            updateAllotSubmitButton();
         });
-        $('#allot_unit_type').on('change', loadAllotBlocks);
-        $('#allot_building').on('change', loadAllotUnitSubTypes);
-        $('#allot_unit_sub_type').on('change', loadAllotVacantHouses);
+        $('#allot_unit_type').on('change', function() { loadAllotBlocks(); updateAllotSubmitButton(); });
+        $('#allot_building').on('change', function() { loadAllotUnitSubTypes(); updateAllotSubmitButton(); });
+        $('#allot_unit_sub_type').on('change', function() { loadAllotVacantHouses(); updateAllotSubmitButton(); });
+        $('#allot_estate_house_master_pk').on('change', updateAllotSubmitButton);
 
         if (allotForm) {
             allotForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 var submitBtn = document.getElementById('btnSubmitAllot');
-                var housePk = document.getElementById('allot_estate_house_master_pk').value;
-                if (!housePk) {
-                    allotFormError.textContent = 'Please select Estate, Unit Type, Building, Unit Sub Type, and House No. to allot.';
+                if (!isAllotFormValid()) {
+                    allotFormError.textContent = 'Please select Estate Name, Unit Type, Building Name, Unit Sub Type, and House No. All fields are required to allot.';
                     allotFormError.classList.remove('d-none');
                     return;
                 }

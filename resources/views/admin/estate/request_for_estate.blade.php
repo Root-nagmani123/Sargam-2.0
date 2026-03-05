@@ -24,6 +24,17 @@
             </div>
 
             <div id="request-for-estate-card-body">
+            <div class="row align-items-center mb-3">
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
+                    <select id="estateStatusFilter" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="0">Pending</option>
+                        <option value="1">Allotted</option>
+                        <option value="2">Rejected</option>
+                    </select>
+                </div>
+            </div>
             <div class="table-responsive request-for-estate-table-wrap">
                 {!! $dataTable->table([
                     'class' => 'table text-nowrap align-middle mb-0',
@@ -230,12 +241,22 @@
     <script>
     $(function() {
         var deleteRequestEstateUrl = '';
+        var $requestForEstateTable = $('#requestForEstateTable');
+        if ($requestForEstateTable.length && $.fn.DataTable && $requestForEstateTable.DataTable) {
+            $requestForEstateTable.on('preXhr.dt', function(e, settings, data) {
+                var val = $('#estateStatusFilter').val();
+                data.status_filter = (val !== undefined && val !== null) ? val : '';
+            });
+            $('#estateStatusFilter').on('change', function() {
+                $requestForEstateTable.DataTable().ajax.reload(null, false);
+            });
+        }
         var addEditModalEl = document.getElementById('addEditRequestEstateModal');
         var addEditModal = addEditModalEl ? new bootstrap.Modal(addEditModalEl) : null;
         var deleteModalEl = document.getElementById('deleteRequestEstateModal');
         var deleteModal = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
 
-        function loadRequestEstateEmployees(includePk, thenSelectPk) {
+        function loadRequestEstateEmployees(includePk, thenSelectPk, onDone) {
             var url = '{{ route("admin.estate.request-for-estate.employees") }}';
             if (includePk) url += '?include_pk=' + includePk;
             var $sel = $('#modal_employee_pk');
@@ -247,6 +268,7 @@
                     });
                     if (thenSelectPk) $sel.val(thenSelectPk);
                 }
+                if (typeof onDone === 'function') onDone();
             });
         }
 
@@ -324,8 +346,9 @@
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
-            loadRequestEstateEmployees(rowPk, employeePk);
-            if (addEditModal) addEditModal.show();
+            loadRequestEstateEmployees(rowPk, employeePk, function() {
+                if (addEditModal) addEditModal.show();
+            });
         });
 
         $('#modal_employee_pk').on('change', function() {

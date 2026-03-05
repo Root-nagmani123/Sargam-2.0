@@ -427,6 +427,37 @@ class EstateController extends Controller
                 : "COALESCE(NULLIF(TRIM(em.emp_id), ''), '')")
             : ($hasEmployeeId ? "COALESCE(NULLIF(TRIM(em.employee_id), ''), '')" : "''");
 
+        // Employees who have an active estate request (Allotted, or Pending and not Rejected)
+        // should NOT appear in the Add Estate Request employee dropdown.
+        // Rejected = main status=2, or status=0 with app_status=2 or hac_status=2 (so they can request again).
+        $hasAppStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_home_request_details', 'app_status');
+        $hasHacStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_home_request_details', 'hac_status');
+        $activeQuery = EstateHomeRequestDetails::where('employee_pk', '>', 0)
+            ->where(function ($q) use ($hasAppStatus, $hasHacStatus) {
+                $q->where('status', 1); // Allotted → always exclude
+                if ($hasAppStatus && $hasHacStatus) {
+                    // Pending but not rejected (app_status=2 or hac_status=2 = rejected → allow in dropdown)
+                    $q->orWhere(function ($q2) {
+                        $q2->where('status', 0)
+                            ->where(function ($q3) {
+                                $q3->whereNull('app_status')->orWhere('app_status', '!=', 2);
+                            })
+                            ->where(function ($q3) {
+                                $q3->whereNull('hac_status')->orWhere('hac_status', '!=', 2);
+                            });
+                    });
+                } else {
+                    $q->orWhere('status', 0); // No app/hac columns: exclude all Pending
+                }
+            });
+        $activeEmployeePks = $activeQuery
+            ->pluck('employee_pk')
+            ->filter()
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->toArray();
+
         $query = DB::table('estate_house_master as h')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->join('estate_campus_master as a', 'h.estate_campus_master_pk', '=', 'a.pk')
@@ -484,6 +515,10 @@ class EstateController extends Controller
             }
         }
 
+        if (!empty($activeEmployeePks)) {
+            $query->whereNotIn('em.' . $empPkCol, $activeEmployeePks);
+        }
+
         $rows = $query->get();
 
         // Fallback: if no employees from estate-eligibility chain (e.g. no houses/payroll/eligibility setup), load from employee_master so dropdown shows names
@@ -499,6 +534,9 @@ class EstateController extends Controller
                 ->where('em.status', 1)
                 ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
                 ->orderBy('em.' . $empPkCol);
+            if (!empty($activeEmployeePks)) {
+                $fallbackQuery->whereNotIn('em.' . $empPkCol, $activeEmployeePks);
+            }
             if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
                 $fallbackEmployeeIds = $employeeIds;
                 if (empty($fallbackEmployeeIds)) {
@@ -690,10 +728,12 @@ class EstateController extends Controller
 
         $occupiedHousePks = DB::table('estate_possession_details')
             ->whereNotNull('estate_house_master_pk')
+            ->where('return_home_status', 0)
             ->pluck('estate_house_master_pk')
             ->merge(
                 DB::table('estate_possession_other')
                     ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0)
                     ->pluck('estate_house_master_pk')
             )
             ->unique()
@@ -1391,13 +1431,16 @@ class EstateController extends Controller
         $eligibilityTypePk = (int) ($homeReq->eligibility_type_pk ?? 62);
         $eligibilityLabel = 'Type-' . ($eligibilityTypePk == 61 ? 'I' : ($eligibilityTypePk == 62 ? 'II' : ($eligibilityTypePk == 63 ? 'III' : 'IV')));
 
-        // Fetch vacant houses by eligibility type (same logic as getVacantHousesForEstateRequest)
+        // Fetch vacant houses by eligibility type (same logic as getChangeRequestVacantHouses)
+        // Only houses with active possession (return_home_status = 0) are treated as occupied.
         $occupiedHousePks = DB::table('estate_possession_details')
             ->whereNotNull('estate_house_master_pk')
+            ->where('return_home_status', 0)
             ->pluck('estate_house_master_pk')
             ->merge(
                 DB::table('estate_possession_other')
                     ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0)
                     ->pluck('estate_house_master_pk')
             )
             ->unique()
@@ -1407,6 +1450,9 @@ class EstateController extends Controller
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
             ->where('h.used_home_status', 0)
+            ->whereNotNull('h.house_no')
+            ->where('h.house_no', '!=', '')
+            ->where('h.house_no', '!=', '0')
             ->select('h.pk', 'h.house_no', 'b.block_name')
             ->orderBy('b.block_name')
             ->orderBy('h.house_no');
@@ -1415,15 +1461,19 @@ class EstateController extends Controller
             $housesQuery->whereNotIn('h.pk', $occupiedHousePks->toArray());
         }
 
-        $vacantHouses = $housesQuery->get()->map(function ($row) {
-            $houseNo = trim($row->house_no ?? '') ?: (string) $row->pk;
-            return [
-                'pk' => (int) $row->pk,
-                'house_no' => $row->house_no ?? '',
-                'block_name' => $row->block_name ?? '',
-                'label' => ($row->block_name ? $row->block_name . ' - ' : '') . $houseNo,
-            ];
-        });
+        $vacantHouses = $housesQuery->get()
+            ->filter(function ($row) {
+                return trim($row->house_no ?? '') !== '' && trim($row->house_no) !== '0';
+            })
+            ->map(function ($row) {
+                $houseNo = trim($row->house_no);
+                return [
+                    'pk' => (int) $row->pk,
+                    'house_no' => $houseNo,
+                    'block_name' => $row->block_name ?? '',
+                    'label' => ($row->block_name ? $row->block_name . ' - ' : '') . $houseNo,
+                ];
+            });
 
         // Campuses and unit types per campus for dependent dropdowns
         $campuses = DB::table('estate_campus_master')
@@ -1565,74 +1615,113 @@ class EstateController extends Controller
         }
 
         $empPkCol = $this->estateEmployeePkColumn();
-        $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
-        if (! $employeePk && $homeReq->employee_id) {
+        $employeePk = null;
+
+        // Prefer resolving via employee_id (stable identifier) so that
+        // estate_home_request_details.employee_pk ki purani / mixed mapping se issue na aaye.
+        if ($homeReq->employee_id) {
             if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id')) {
-                $employeePk = DB::table('employee_master')->where('emp_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')
+                    ->where('emp_id', $homeReq->employee_id)
+                    ->value($empPkCol);
             }
             if (! $employeePk && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id')) {
-                $employeePk = DB::table('employee_master')->where('employee_id', $homeReq->employee_id)->value($empPkCol);
+                $employeePk = DB::table('employee_master')
+                    ->where('employee_id', $homeReq->employee_id)
+                    ->value($empPkCol);
             }
-            $employeePk = $employeePk ? (int) $employeePk : null;
         }
+
+        // Fallback: agar employee_id se resolve nahi hua aur employee_pk column me valid PK pada ho.
+        if (! $employeePk && $homeReq->employee_pk) {
+            $employeePk = DB::table('employee_master')
+                ->where($empPkCol, $homeReq->employee_pk)
+                ->value($empPkCol);
+        }
+
+        $employeePk = $employeePk ? (int) $employeePk : null;
 
         $eligibilityTypePk = (int) ($homeReq->eligibility_type_pk ?? 62);
         $eligibilityLabel = 'Type-' . ($eligibilityTypePk == 61 ? 'I' : ($eligibilityTypePk == 62 ? 'II' : ($eligibilityTypePk == 63 ? 'III' : 'IV')));
 
-        $occupiedHousePks = DB::table('estate_possession_details')
-            ->whereNotNull('estate_house_master_pk')
-            ->pluck('estate_house_master_pk')
-            ->merge(
-                DB::table('estate_possession_other')
-                    ->whereNotNull('estate_house_master_pk')
-                    ->pluck('estate_house_master_pk')
-            )
-            ->unique()
-            ->values();
-
-        // Dropdown = wahi query: employee → payroll_salary_master → salary_grade → estate_eligibility_mapping → unit_sub_type → estate_house_master, used_home_status=0 (occupied exclude)
+        // Dropdown = DB admin ki query ke bilkul kareeb:
+        // employee → payroll_salary_master → salary_grade → estate_eligibility_mapping → unit_sub_type → estate_house_master
+        // Sirf estate_house_master.used_home_status = 0 pe rely karte hain.
+        // Yahan par possession tables (estate_possession_details / estate_possession_other) se koi extra whereNotIn filter nahi lagaya ja raha,
+        // taa ki UI ka result exactly aapki manual SQL se match kare.
+        // Policy:
+        // - Primary: salary-grade se aaye huye houses.
+        // - Pehle requested eligibility type (e.g. Type-II → 62) try karein.
+        // - Agar us type me koi eligible + vacant house nahi milta, to lower type pe fallback:
+        //   * Type-II (62) → Type-I (61)
+        //   * Type-III (63) → 63, phir 62, phir 61
+        //   * Type-I (61) ya koi aur custom type: sirf wahi type.
         $eligibleHousePks = $employeePk ? $this->getEligibleHousePksByEmployeePk($employeePk)->unique()->values() : collect();
         $eligibleHousesCountFromQuery = $eligibleHousePks->count();
 
-        $housesQuery = DB::table('estate_house_master as h')
-            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
-            ->join('estate_campus_master as a', 'h.estate_campus_master_pk', '=', 'a.pk')
-            ->join('estate_unit_type_master as c', 'h.estate_unit_master_pk', '=', 'c.pk')
-            ->where('h.used_home_status', 0)
-            ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
-            ->select(
-                'h.pk',
-                'h.house_no',
-                'b.block_name',
-                'h.estate_campus_master_pk as campus_pk',
-                'a.campus_name',
-                'h.estate_unit_master_pk as unit_type_pk',
-                'c.unit_type'
-            )
-            ->orderBy('b.block_name')
-            ->orderBy('h.house_no');
-
-        if ($eligibleHousePks->isNotEmpty()) {
-            $housesQuery->whereIn('h.pk', $eligibleHousePks->toArray());
+        // Build priority chain for unit sub types
+        $unitSubTypePriority = [];
+        if ($eligibilityTypePk === 63) {
+            $unitSubTypePriority = [63, 62, 61];
+        } elseif ($eligibilityTypePk === 62) {
+            $unitSubTypePriority = [62, 61];
+        } elseif ($eligibilityTypePk === 61) {
+            $unitSubTypePriority = [61];
+        } elseif ($eligibilityTypePk > 0) {
+            $unitSubTypePriority = [$eligibilityTypePk];
         }
 
-        if ($occupiedHousePks->isNotEmpty()) {
-            $housesQuery->whereNotIn('h.pk', $occupiedHousePks->toArray());
-        }
+        $vacantHouses = collect();
 
-        $vacantHouses = $housesQuery->get()->map(function ($row) {
-            $houseNo = trim($row->house_no ?? '') ?: (string) $row->pk;
-            return [
-                'pk' => (int) $row->pk,
-                'house_no' => $row->house_no ?? '',
-                'block_name' => $row->block_name ?? '',
-                'campus_pk' => (int) ($row->campus_pk ?? 0),
-                'campus_name' => $row->campus_name ?? '',
-                'unit_type_pk' => (int) ($row->unit_type_pk ?? 0),
-                'unit_type' => $row->unit_type ?? '',
-                'label' => ($row->block_name ? $row->block_name . ' - ' : '') . $houseNo,
-            ];
-        });
+        foreach ($unitSubTypePriority as $subTypePk) {
+            $housesQuery = DB::table('estate_house_master as h')
+                ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+                ->join('estate_campus_master as a', 'h.estate_campus_master_pk', '=', 'a.pk')
+                ->join('estate_unit_type_master as c', 'h.estate_unit_master_pk', '=', 'c.pk')
+                ->where('h.used_home_status', 0)
+                ->whereNotNull('h.house_no')
+                ->where('h.house_no', '!=', '')
+                ->where('h.estate_unit_sub_type_master_pk', $subTypePk)
+                ->select(
+                    'h.pk',
+                    'h.house_no',
+                    'b.block_name',
+                    'h.estate_campus_master_pk as campus_pk',
+                    'a.campus_name',
+                    'h.estate_unit_master_pk as unit_type_pk',
+                    'c.unit_type'
+                )
+                ->orderBy('b.block_name')
+                ->orderBy('h.house_no');
+
+            if ($eligibleHousePks->isNotEmpty()) {
+                // Salary-grade based eligibility (manual DB query ke hisaab se)
+                $housesQuery->whereIn('h.pk', $eligibleHousePks->toArray());
+            }
+
+            $set = $housesQuery->get()
+                ->filter(function ($row) {
+                    return trim($row->house_no ?? '') !== '';
+                })
+                ->map(function ($row) {
+                    $houseNo = trim($row->house_no);
+                    return [
+                        'pk' => (int) $row->pk,
+                        'house_no' => $houseNo,
+                        'block_name' => $row->block_name ?? '',
+                        'campus_pk' => (int) ($row->campus_pk ?? 0),
+                        'campus_name' => $row->campus_name ?? '',
+                        'unit_type_pk' => (int) ($row->unit_type_pk ?? 0),
+                        'unit_type' => $row->unit_type ?? '',
+                        'label' => ($row->block_name ? $row->block_name . ' - ' : '') . $houseNo,
+                    ];
+                });
+
+            if ($set->isNotEmpty()) {
+                $vacantHouses = $set;
+                break;
+            }
+        }
 
         // Keep Estate + Unit Type dropdowns aligned with eligible & vacant houses only.
         $campuses = $vacantHouses
@@ -1933,12 +2022,20 @@ class EstateController extends Controller
      */
     public function storeOtherEstateRequest(Request $request)
     {
+        $noSpecialChars = 'regex:/^[\pL\pN\s.\-\']+$/u';
         $validated = $request->validate([
-            'employee_name' => 'required|string|max:500',
-            'father_name' => 'required|string|max:500',
-            'section' => 'required|string|max:500',
-            'doj_academy' => 'required|date',
-            'designation' => 'nullable|string|max:500',
+            'employee_name' => ['required', 'string', 'max:500', $noSpecialChars],
+            'father_name' => ['required', 'string', 'max:500', $noSpecialChars],
+            'section' => ['required', 'string', 'max:500', $noSpecialChars],
+            'doj_academy' => ['required', 'date', 'after_or_equal:1950-01-01', 'before_or_equal:today'],
+            'designation' => ['nullable', 'string', 'max:500', $noSpecialChars],
+        ], [
+            'employee_name.regex' => 'Employee name may only contain letters, numbers, spaces, hyphen, apostrophe and dot.',
+            'father_name.regex' => 'Father name may only contain letters, numbers, spaces, hyphen, apostrophe and dot.',
+            'section.regex' => 'Section may only contain letters, numbers, spaces, hyphen, apostrophe and dot.',
+            'designation.regex' => 'Designation may only contain letters, numbers, spaces, hyphen, apostrophe and dot.',
+            'doj_academy.after_or_equal' => 'DOJ in Academy must be on or after 01-01-1950.',
+            'doj_academy.before_or_equal' => 'DOJ in Academy cannot be a future date.',
         ]);
 
         $data = [

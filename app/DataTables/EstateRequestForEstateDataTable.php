@@ -81,11 +81,14 @@ class EstateRequestForEstateDataTable extends DataTable
                 $raiseChangeLink = $raiseChangeUrl !== ''
                     ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>'
                     : '';
+                $isAllotted = (int) ($row->status ?? 0) === 1;
+                $editLink = $isAllotted ? '' : '<a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>';
+                $deleteLink = $isAllotted ? '' : '<a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>';
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
                     <a href="' . e($detailsUrl) . '" class="text-primary" title="Request &amp; Change Details"><i class="material-icons material-symbols-rounded">visibility</i></a>
                     ' . $raiseChangeLink . '
-                    <a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>
-                    <a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>
+                    ' . $editLink . '
+                    ' . $deleteLink . '
                 </div>';
             })
             ->rawColumns(['status', 'change'])
@@ -163,6 +166,15 @@ class EstateRequestForEstateDataTable extends DataTable
             } else {
                 // No mapped employee → show nothing
                 $query->whereRaw('1 = 0');
+            }
+        }
+
+        // Status filter: All (empty), Pending (0), Allotted (1), Rejected (2)
+        $statusFilter = request('status_filter');
+        if ($statusFilter !== null && $statusFilter !== '') {
+            $statusVal = (int) $statusFilter;
+            if (in_array($statusVal, [0, 1, 2], true)) {
+                $query->where('estate_home_request_details.status', $statusVal);
             }
         }
 

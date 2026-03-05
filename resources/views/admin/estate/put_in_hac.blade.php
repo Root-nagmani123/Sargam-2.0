@@ -120,6 +120,7 @@
             var btn = $(this);
             btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status"></span> Processing...');
 
+            var requestSucceeded = false;
             $.ajax({
                 url: putInHacUrl,
                 type: 'POST',
@@ -130,11 +131,13 @@
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                 success: function(res) {
                     if (res.success && res.message) {
+                        requestSucceeded = true;
                         $('#putInHacTable').DataTable().ajax.reload(null, false);
                         var alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2"></i><span class="flex-grow-1">' + res.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
                         $('#put-in-hac-card-body').find('.alert-success').remove();
                         $('#put-in-hac-card-body').prepend(alertHtml);
                         setTimeout(function() { $('#put-in-hac-card-body .alert-success').fadeOut(); }, 4000);
+                        btn.prop('disabled', true).html('<i class="bi bi-check2-square me-1"></i> Put Selected in HAC');
                     }
                 },
                 error: function(xhr) {
@@ -144,8 +147,13 @@
                     $('#put-in-hac-card-body').prepend(alertHtml);
                 },
                 complete: function() {
-                    btn.prop('disabled', false).html('<i class="bi bi-check2-square me-1"></i> Put Selected in HAC');
-                    updateSelectedCount();
+                    btn.html('<i class="bi bi-check2-square me-1"></i> Put Selected in HAC');
+                    if (requestSucceeded) {
+                        btn.prop('disabled', true);
+                        $('#selectedCountText').text('0 selected');
+                    } else {
+                        updateSelectedCount();
+                    }
                 }
             });
         });

@@ -37,14 +37,25 @@ class EstateRequestPutInHacDataTable extends DataTable
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
             ->editColumn('current_alot', fn ($row) => e($row->current_alot ?? '—'))
-            ->editColumn('remarks', fn ($row) => \Illuminate\Support\Str::limit(e($row->remarks ?? ''), 80))
+            ->editColumn('remarks', function ($row) {
+                $raw = (string) ($row->remarks ?? '');
+                $display = \Illuminate\Support\Str::limit($raw, 80);
+                $displayEscaped = e($display);
+                if ($raw === '') {
+                    return '—';
+                }
+                if (mb_strlen($raw) > 80) {
+                    return '<span title="' . e($raw) . '" class="text-truncate d-inline-block" style="max-width:200px;">' . $displayEscaped . '</span>';
+                }
+                return $displayEscaped;
+            })
             ->addColumn('put_in_hac', function ($row) {
                 return '<div class="form-check form-check-inline d-flex justify-content-center">
                     <input type="checkbox" class="form-check-input put-in-hac-checkbox" data-pk="' . (int) $row->pk . '" data-req-id="' . e($row->req_id ?? '') . '">
                     <label class="form-check-label visually-hidden">Put in HAC</label>
                 </div>';
             })
-            ->rawColumns(['put_in_hac'])
+            ->rawColumns(['remarks', 'put_in_hac'])
             ->filter(function ($query) {
                 $searchValue = trim((string) request()->input('search.value', ''));
                 if ($searchValue !== '') {

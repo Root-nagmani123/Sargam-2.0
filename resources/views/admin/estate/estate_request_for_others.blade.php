@@ -30,7 +30,7 @@
             @endif
 <hr class="my-2">
             <!-- Table Section -->
-            <div class="table-responsive">
+            <div class="table-responsive estate-request-others-table-wrap">
                 {!! $dataTable->table(['class' => 'table align-middle mb-0', 'aria-describedby' => 'estate-request-caption']) !!}
             </div>
             <div id="estate-request-caption" class="visually-hidden">Estate Request for Others list</div>
@@ -56,22 +56,23 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="modal_employee_name" class="form-label">Employee Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_employee_name" name="employee_name" required>
+                            <input type="text" class="form-control other-estate-no-special" id="modal_employee_name" name="employee_name" required
+                                maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed." placeholder="e.g. John Doe">
                         </div>
                         <div class="col-md-6">
                             <label for="modal_father_name" class="form-label">Father Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_father_name" name="father_name" required>
+                            <input type="text" class="form-control other-estate-no-special" id="modal_father_name" name="father_name" required
+                                maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed." placeholder="e.g. Robert Doe">
                         </div>
                         <div class="col-md-6">
                             <label for="modal_section" class="form-label">Section <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="modal_section" name="section" required>
+                            <input type="text" class="form-control other-estate-no-special" id="modal_section" name="section" required
+                                maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed." placeholder="e.g. Administration">
                         </div>
                         <div class="col-md-6">
                             <label for="modal_doj_academy" class="form-label">DOJ in Academy <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" id="modal_doj_academy" name="doj_academy" required>
-                                <span class="input-group-text"><i class="bi bi-calendar"></i></span>
-                            </div>
+                            <input type="date" class="form-control" id="modal_doj_academy" name="doj_academy" required min="1950-01-01" max="{{ date('Y-m-d') }}">
+                            <small class="text-muted d-block mt-1">Date must be between 01-01-1950 and today.</small>
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-4">
@@ -108,6 +109,17 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+    .estate-request-others-table-wrap #estateRequestTable_wrapper {
+        min-width: 0;
+    }
+    .estate-request-others-table-wrap #estateRequestTable {
+        width: 100% !important;
+    }
+</style>
+@endpush
+
 @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
@@ -116,12 +128,18 @@
         var addEditModalEl = document.getElementById('addEditOtherRequestModal');
         var addEditModal = addEditModalEl ? new bootstrap.Modal(addEditModalEl) : null;
 
+        function setDojAcademyMaxToday() {
+            var today = new Date().toISOString().split('T')[0];
+            $('#modal_doj_academy').attr('max', today);
+        }
+
         // ---- Add: open modal with empty form ----
         $('#btn-open-add-other-request').on('click', function() {
             $('#addEditOtherRequestModalLabel').text('Add Other Estate Request');
             $('#other_request_id').val('');
             $('#modal_employee_name, #modal_father_name, #modal_section, #modal_doj_academy').val('');
             $('#addEditOtherRequestFormErrors').addClass('d-none').find('ul').empty();
+            setDojAcademyMaxToday();
             if (addEditModal) addEditModal.show();
         });
 
@@ -135,7 +153,17 @@
             $('#modal_section').val($btn.data('section') || '');
             $('#modal_doj_academy').val($btn.data('doj_academy') || '');
             $('#addEditOtherRequestFormErrors').addClass('d-none').find('ul').empty();
+            setDojAcademyMaxToday();
             if (addEditModal) addEditModal.show();
+        });
+
+        // Allow only letters (any language), numbers, space, hyphen, apostrophe, dot (no special characters)
+        var otherEstateStripRegex = /[^\p{L}\p{N}\s.\-' ]/gu;
+        $(document).on('input', '.other-estate-no-special', function() {
+            var $el = $(this);
+            var val = $el.val();
+            var cleaned = val.replace(otherEstateStripRegex, '');
+            if (cleaned !== val) $el.val(cleaned);
         });
 
         // ---- Form submit via AJAX ----
@@ -145,6 +173,35 @@
             var $errors = $('#addEditOtherRequestFormErrors');
             var $btn = $('#btnSubmitOtherRequest');
             $errors.addClass('d-none').find('ul').empty();
+
+            var allowedRegex = /^[\p{L}\p{N}\s.\-' ]+$/u;
+            var fields = [
+                { id: '#modal_employee_name', name: 'Employee name' },
+                { id: '#modal_father_name', name: 'Father name' },
+                { id: '#modal_section', name: 'Section' }
+            ];
+            var invalid = [];
+            fields.forEach(function(f) {
+                var v = ($(f.id).val() || '').trim();
+                if (v && !allowedRegex.test(v)) {
+                    invalid.push(f.name + ' may only contain letters, numbers, spaces, hyphen, apostrophe and dot.');
+                }
+            });
+            var dojVal = $('#modal_doj_academy').val() || '';
+            if (dojVal) {
+                var doj = new Date(dojVal);
+                var minDoj = new Date('1950-01-01');
+                var today = new Date();
+                today.setHours(23, 59, 59, 999);
+                if (doj < minDoj) invalid.push('DOJ in Academy must be on or after 01-01-1950.');
+                if (doj > today) invalid.push('DOJ in Academy cannot be a future date.');
+            }
+            if (invalid.length > 0) {
+                var $ul = $errors.removeClass('d-none').find('ul');
+                invalid.forEach(function(msg) { $ul.append('<li>' + msg + '</li>'); });
+                return;
+            }
+
             $btn.prop('disabled', true);
 
             $.ajax({
