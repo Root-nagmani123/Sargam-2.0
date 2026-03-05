@@ -1,13 +1,16 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid stock-summary-report">
+    <x-breadcrum title="Stock Summary Report"></x-breadcrum>
     <!-- Filters Section (Hide on Print) -->
-    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-        <h4>Stock Summary Report</h4>
-    </div>
-
-    <div class="card mb-3 no-print">
+    <div class="card mb-4 border-0 shadow-sm no-print">
+        <div class="card-header bg-white border-0 pb-0">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h5 class="mb-0 fw-semibold text-dark">Filter Stock Summary</h5>
+                <span class="text-muted small">Refine results by date, store type &amp; store</span>
+            </div>
+        </div>
         <div class="card-body">
             <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}">
                 <div class="row g-3">
@@ -23,14 +26,14 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select">
+                        <select name="store_type" id="store_type" class="form-select choices-select" data-placeholder="Select Store Type">
                             <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
                             <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
                         </select>
                     </div>
                     <div class="col-md-4" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
                         <label class="form-label">Main Store</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select choices-select" data-placeholder="All Main Stores">
                             <option value="">All Main Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
@@ -41,7 +44,7 @@
                     </div>
                     <div class="col-md-4" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
                         <label class="form-label">Sub Store</label>
-                        <select name="store_id" class="form-select">
+                        <select name="store_id" class="form-select choices-select" data-placeholder="All Sub Stores">
                             <option value="">All Sub Stores</option>
                             @foreach($subStores as $subStore)
                                 <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>
@@ -52,63 +55,83 @@
                     </div>
                 </div>
                 <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ti ti-filter"></i> Generate Report
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
+                        Apply Filters
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-secondary">
-                        <i class="ti ti-refresh"></i> Reset
+                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">refresh</span>
+                        Reset
                     </a>
-                    <button type="button" class="btn btn-primary" onclick="window.print()" title="Print report or choose Save as PDF in print dialog">
-                        <i class="ti ti-file-export"></i> Print as PDF
+                    <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
+                        Print as PDF
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success" title="Export to Excel">
-                        <i class="ti ti-file-spreadsheet"></i> Export Excel
+                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
+                        Export Excel
                     </a>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Report Header -->
+<div class="card">
+    <div class="card-body">
+            <!-- Report Header -->
     <div class="report-header text-center mb-4">
-        <h4 class="fw-bold">Stock Summary Report</h4>
-        <p class="mb-1">Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}</p>
-        <p class="text-primary mb-0">
-            <strong>Store:</strong> {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
+        <h4 class="fw-bold text-uppercase mb-1">Stock Summary Report</h4>
+        <p class="mb-1 text-muted">
+            <span class="badge bg-light text-dark fw-normal px-3 py-2">
+                Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
+            </span>
+        </p>
+        <p class="mb-0">
+            <span class="badge bg-primary-subtle text-primary-emphasis fw-normal px-3 py-2">
+                <strong>Store:</strong>
+                {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
+            </span>
         </p>
     </div>
 
     <!-- Report Table -->
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <span class="fw-semibold text-dark">Stock Movement Summary</span>
+            <span class="text-muted small">
+                Total items: {{ count($reportData) }}
+            </span>
+        </div>
+        <div class="table-responsive">
+        <table class="table text-nowrap align-middle mb-0">
             <thead>
-                <tr style="background-color: #cbd5e0;">
+                <tr>
                     <th rowspan="2" class="text-center align-middle" style="width: 60px;">SR.<br>No</th>
                     <th rowspan="2" class="text-center align-middle" style="min-width: 150px;">Item Name</th>
                     <th rowspan="2" class="text-center align-middle" style="min-width: 100px;">Item Code</th>
                     <th rowspan="2" class="text-center align-middle" style="min-width: 80px;">Unit</th>
-                    <th colspan="3" class="text-center" style="background-color: #bfdbfe;">Opening</th>
-                    <th colspan="3" class="text-center" style="background-color: #fde68a;">Purchase</th>
-                    <th colspan="3" class="text-center" style="background-color: #fed7aa;">Sale</th>
-                    <th colspan="3" class="text-center" style="background-color: #bbf7d0;">Closing</th>
+                    <th colspan="3" class="text-center">Opening</th>
+                    <th colspan="3" class="text-center">Purchase</th>
+                    <th colspan="3" class="text-center">Sale</th>
+                    <th colspan="3" class="text-center">Closing</th>
                 </tr>
-                <tr style="background-color: #cbd5e0;">
+                <tr>
                     <!-- Opening -->
-                    <th class="text-center" style="background-color: #bfdbfe;">Qty</th>
-                    <th class="text-center" style="background-color: #bfdbfe;">Rate</th>
-                    <th class="text-center" style="background-color: #bfdbfe;">Amount</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-center">Rate</th>
+                    <th class="text-center">Amount</th>
                     <!-- Purchase -->
-                    <th class="text-center" style="background-color: #fde68a;">Qty</th>
-                    <th class="text-center" style="background-color: #fde68a;">Rate</th>
-                    <th class="text-center" style="background-color: #fde68a;">Amount</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-center">Rate</th>
+                    <th class="text-center">Amount</th>
                     <!-- Sale -->
-                    <th class="text-center" style="background-color: #fed7aa;">Qty</th>
-                    <th class="text-center" style="background-color: #fed7aa;">Rate</th>
-                    <th class="text-center" style="background-color: #fed7aa;">Amount</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-center">Rate</th>
+                    <th class="text-center">Amount</th>
                     <!-- Closing -->
-                    <th class="text-center" style="background-color: #bbf7d0;">Qty</th>
-                    <th class="text-center" style="background-color: #bbf7d0;">Rate</th>
-                    <th class="text-center" style="background-color: #bbf7d0;">Amount</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-center">Rate</th>
+                    <th class="text-center">Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -169,8 +192,119 @@
                 @endif
             </tbody>
         </table>
+        </div>
+    </div>
     </div>
 </div>
+</div>
+
+<script>
+function printStockSummary() {
+    const table = document.querySelector('.stock-summary-report .table-responsive table');
+    if (!table) {
+        window.print();
+        return;
+    }
+
+    const title     = 'Stock Summary Report';
+    const dateRange = 'Stock Summary Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}';
+    const storeName = '{{ $selectedStoreName ?? ($storeType == 'main' ? "Officer\'s Main Mess(Primary)" : 'All Sub Stores') }}';
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) { window.print(); return; }
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 9px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    /* LBSNAA watermark */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: url("https://www.lbsnaa.gov.in/admin_assets/images/logo.png") center center no-repeat;
+      background-size: 240px 240px;
+      opacity: 0.06;
+      z-index: -1;
+    }
+    .lbsnaa-header { border-bottom: 2px solid #004a93; padding-bottom:.75rem; margin-bottom:1rem; }
+    .brand-line-1 { font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; color:#004a93; }
+    .brand-line-2 { font-size:1.1rem; font-weight:700; text-transform:uppercase; color:#222; }
+    .brand-line-3 { font-size:.8rem; color:#555; }
+    .report-meta { font-size:.8rem; margin-bottom:.75rem; }
+    .report-meta span { display:inline-block; margin-right:1.5rem; }
+    table { width:100%; border-collapse:collapse; font-size: 8px; }
+    th, td { padding:2px 4px; border:1px solid #dee2e6; }
+    thead th { background:#f8f9fa; font-weight:600; }
+    /* Allow wrapping so all columns stay on the page */
+    .table,
+    .table * {
+      white-space: normal !important;
+    }
+
+    /* Ensure full table prints, not scrollable area only */
+    .table-responsive {
+      overflow: visible !important;
+    }
+    thead { display:table-header-group; }
+    @page {
+      size: A4 landscape;
+      margin: 0.5in;
+    }
+    @media print {
+      body { margin:0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row align-items-center lbsnaa-header">
+      <div class="col-auto d-none d-print-block">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="48">
+      </div>
+      <div class="col">
+        <div class="brand-line-1">Government of India</div>
+        <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+        <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+      </div>
+      <div class="col-auto d-none d-print-block">
+        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="48">
+      </div>
+    </div>
+
+    <div class="mb-2">
+      <h5 class="mb-1">${title}</h5>
+      <div class="report-meta">
+        <span><strong>Period:</strong> ${dateRange}</span>
+        <span><strong>Store:</strong> ${storeName}</span>
+        <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      ${table.outerHTML}
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', function() { window.print(); });
+  <\/script>
+</body>
+</html>`);
+    printWindow.document.close();
+}
+</script>
 
 <style>
     @media print {
@@ -275,5 +409,33 @@
             });
         }
     });
+</script>
+
+{{-- Choices.js (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<script>
+    (function () {
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof window.Choices === 'undefined') return;
+
+            document
+                .querySelectorAll('.stock-summary-report select.choices-select')
+                .forEach(function (el) {
+                    if (el.dataset.choicesInitialized === 'true') return;
+
+                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
+
+                    new Choices(el, {
+                        shouldSort: false,
+                        placeholder: true,
+                        placeholderValue: placeholder,
+                        searchPlaceholderValue: 'Search...',
+                    });
+
+                    el.dataset.choicesInitialized = 'true';
+                });
+        });
+    })();
 </script>
 @endsection

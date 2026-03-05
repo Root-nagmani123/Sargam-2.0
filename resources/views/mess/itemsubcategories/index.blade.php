@@ -5,6 +5,7 @@
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
 @endphp
 <div class="container-fluid">
+    <x-breadcrum title="Subcategory Item Master"></x-breadcrum>
     <div class="datatables">
         <div class="card">
             <div class="card-body">
@@ -41,17 +42,17 @@
             @endif
 
             <div class="table-responsive">
-                <table id="itemSubcategoriesTable" class="table table-bordered table-hover align-middle w-100">
+                <table id="itemSubcategoriesTable" class="table align-middle w-100">
                     <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Category</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Item Name</th>
-                            <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Item Code</th>
-                            <th style="width: 140px; background-color: #004a93; color: #fff; border-color: #004a93;">Unit Measurement</th>
-                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Alert Qty</th>
-                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
+                            <th>#</th>
+                            <th>Category</th>
+                            <th>Item Name</th>
+                            <th>Item Code</th>
+                            <th>Unit Measurement</th>
+                            <th>Alert Qty</th>
+                            <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -70,7 +71,7 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-itemsubcategory"
+                                        <button type="button" class="text-primary btn-edit-itemsubcategory bg-transparent border-0"
                                                 data-id="{{ $itemsubcategory->id }}"
                                                 data-category-id="{{ $itemsubcategory->category_id ?? '' }}"
                                                 data-item-name="{{ e($itemsubcategory->item_name) }}"
@@ -79,12 +80,12 @@
                                                 data-alert-quantity="{{ $itemsubcategory->alert_quantity ?? '' }}"
                                                 data-description="{{ e($itemsubcategory->description ?? '') }}"
                                                 data-status="{{ e($itemsubcategory->status ?? 'active') }}"
-                                                title="Edit">Edit</button>
+                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.itemsubcategories.destroy', $itemsubcategory->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this item?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            <button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete" style="display: none;"><i class="material-icons material-symbol-rounded">delete</i></button>
                                         </form>
                                     </div>
                                 </td>

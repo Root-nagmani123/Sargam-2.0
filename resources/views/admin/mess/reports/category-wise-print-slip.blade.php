@@ -1,29 +1,37 @@
 @extends('admin.layouts.master')
 @section('title', 'Print Slip - Category Wise')
 @section('setup_content')
-<div class="container-fluid {{ request('print_all') ? 'print-all-mode' : '' }}">
+<div class="container-fluid py-3 py-md-4 {{ request('print_all') ? 'print-all-mode' : '' }}">
+    <x-breadcrum title="Print Slip - Category Wise"></x-breadcrum>
     @if(!request('print_all'))
     <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-        <h4>Print Slip – Category Wise</h4>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="card mb-3 no-print">
-        <div class="card-body">
+    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print">
+        <div class="card-header bg-white border-0 pb-0">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <h5 class="mb-0 fw-semibold text-dark">Filter Print Slip - Category Wise</h5>
+                    <p class="mb-0 text-muted small">Refine results by date, client type &amp; buyer name</p>
+                </div>
+                <span class="badge bg-light text-secondary fw-normal d-flex align-items-center">
+                    <span class="material-icons me-1" style="font-size: 16px;">info</span>
+                    Smart filters
+                </span>
+            </div>
+        </div>
+        <div class="card-body pt-3">
             <form method="GET" action="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="filterForm">
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="form-label">From Date</label>
+                <div class="row g-3 g-md-4">
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">From Date</label>
                         <input type="date" name="from_date" class="form-control" value="{{ request('from_date') }}">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">To Date</label>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">To Date</label>
                         <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Select Employee / OT/Course</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
+                    <div class="col-12 col-md-3 col-lg-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select form-select-sm">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -32,9 +40,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Select Client Type</label>
-                        <select id="clientTypePk" class="form-select" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
+                    <div class="col-12 col-md-3 col-lg-3">
+                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
+                        <select id="clientTypePk" class="form-select form-select-sm" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -55,9 +63,9 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Select Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
+                    <div class="col-12 col-md-6 col-lg-2">
+                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
+                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select form-select-sm">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php
@@ -95,18 +103,22 @@
                         </select>
                     </div>
                 </div>
-                <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ti ti-filter"></i> Apply Filters
+                <div class="mt-3 pt-2 border-top d-flex flex-wrap gap-2 align-items-center">
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
+                        <span class="material-icons me-1" style="font-size: 18px;">filter_list</span>
+                        Apply Filters
                     </button>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-secondary">
-                        <i class="ti ti-refresh"></i> Reset
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
+                        <span class="material-icons me-1" style="font-size: 18px;">refresh</span>
+                        Reset
                     </a>
-                    <button type="button" class="btn btn-outline-primary" id="btnPrintAll" title="Print or Save as PDF">
-                        <i class="ti ti-printer"></i> Print
+                    <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" id="btnPrintAll" title="Print or Save as PDF">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
+                        Print
                     </button>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel', request()->query()) }}" class="btn btn-success" title="Export to Excel">
-                        <i class="ti ti-file-spreadsheet"></i> Export Excel
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
+                        Export Excel
                     </a>
                 </div>
             </form>
@@ -114,7 +126,9 @@
     </div>
     @endif
 
-    @php
+    <div class="card">
+        <div class="card-body">
+        @php
         $fromDateFormatted = request('from_date') ? \Carbon\Carbon::parse(request('from_date'))->format('d-F-Y') : 'Start';
         $toDateFormatted = request('to_date') ? \Carbon\Carbon::parse(request('to_date'))->format('d-F-Y') : 'End';
         $sectionsToShow = request('print_all') && isset($allBuyersSections) ? $allBuyersSections : collect([$groupedSections]);
@@ -154,17 +168,17 @@
                 <span class="report-client-type">CLIENT TYPE : <strong>{{ $clientTypeLabel }}</strong></span>
             </div>
             <div class="table-responsive">
-                <table class="table table-bordered print-slip-table align-middle">
+                <table class="table text-nowrap table-sm mb-0 print-slip-table align-middle">
                     <thead>
                         <tr>
-                            <th class="th-slip-no">SLIP NO.</th>
-                            <th class="th-buyer">BUYER NAME</th>
-                            <th class="th-status">STATUS</th>
-                            <th class="th-item">ITEM NAME</th>
-                            <th class="th-date">REQUEST DATE</th>
-                            <th class="th-qty">QTY.</th>
-                            <th class="th-price">PRICE</th>
-                            <th class="th-amount">AMOUNT</th>
+                            <th class="th-slip-no">Slip No.</th>
+                            <th class="th-buyer">Buyer Name</th>
+                            <th class="th-status">Status</th>
+                            <th class="th-item">Item Name</th>
+                            <th class="th-date">Request Date</th>
+                            <th class="th-qty">Quantity</th>
+                            <th class="th-price">Price</th>
+                            <th class="th-amount">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -246,7 +260,11 @@
         })();
         </script>
     @endif
+        </div>
+    </div>
 </div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 
 <style>
     /* Report header – same on screen and print */
@@ -256,7 +274,7 @@
         font-weight: bold;
     }
     .report-title-bar {
-        background-color: #495057;
+        background-color: #004a93;
         color: #fff;
         padding: 8px 12px;
         font-size: 0.95rem;
@@ -272,10 +290,7 @@
     .report-client-type { font-weight: 500; }
 
     /* Table – light blue header like reference image */
-    .print-slip-table thead tr {
-        background-color: #b0d4e8 !important;
-        border-color: #8eb8d0;
-    }
+
     .print-slip-table thead th {
         border-color: #8eb8d0 !important;
         color: #1a1a1a;
@@ -377,16 +392,129 @@ window.addEventListener('load', function() {
 </script>
 @endif
 
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
 <script>
+function printCategoryWiseSlip() {
+    const tables = document.querySelectorAll('.print-slip-section .table-responsive table');
+    if (!tables.length) {
+        window.print();
+        return;
+    }
+
+    const title = 'Print Slip - Category Wise';
+    const dateRange = '{{ (request('from_date') || request('to_date')) ? "Between $fromDateFormatted To $toDateFormatted" : "All Dates" }}';
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) { window.print(); return; }
+
+    let sectionsHtml = '';
+    tables.forEach(function(tbl, index) {
+        sectionsHtml += `
+      <div class="print-page mb-3">
+        <div class="row align-items-center lbsnaa-header">
+          <div class="col-auto d-none d-print-block">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="48">
+          </div>
+          <div class="col">
+            <div class="brand-line-1">Government of India</div>
+            <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+            <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+          </div>
+          <div class="col-auto d-none d-print-block">
+            <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="48">
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <h5 class="mb-1">${title}</h5>
+          <div class="report-meta">
+            <span><strong>Period:</strong> ${dateRange}</span>
+            <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          ${tbl.outerHTML}
+        </div>
+
+        <div class="print-footer text-center mt-2 pt-1">
+          <small>OFFICER'S MESS LBSNAA MUSSOORIE</small>
+        </div>
+      </div>`;
+    });
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 9px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .lbsnaa-header { border-bottom: 2px solid #004a93; padding-bottom:.75rem; margin-bottom:1rem; }
+    .brand-line-1 { font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; color:#004a93; }
+    .brand-line-2 { font-size:1.1rem; font-weight:700; text-transform:uppercase; color:#222; }
+    .brand-line-3 { font-size:.8rem; color:#555; }
+    .report-meta { font-size:.8rem; margin-bottom:.75rem; }
+    .report-meta span { display:inline-block; margin-right:1.5rem; }
+    table { width:100%; border-collapse:collapse; font-size: 8px; }
+    th, td { padding:2px 4px; border:1px solid #dee2e6; }
+    thead th { background:#f8f9fa; font-weight:600; }
+    .table,
+    .table * {
+      white-space: normal !important;
+    }
+    .table-responsive {
+      overflow: visible !important;
+    }
+    thead { display:table-header-group; }
+    .print-page {
+      page-break-after: always;
+    }
+    .print-page:last-child {
+      page-break-after: auto;
+    }
+    .print-footer {
+      border-top: 1px solid #dee2e6;
+      font-size: .7rem;
+      color: #666;
+    }
+    @page {
+      size: A4;
+      margin: 0.5in;
+    }
+    @media print {
+      body { margin:0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    ${sectionsHtml}
+  </div>
+
+  <script>
+    window.addEventListener('load', function() { window.print(); });
+  <\/script>
+</body>
+</html>`);
+    printWindow.document.close();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     var btnPrintAll = document.getElementById('btnPrintAll');
     if (btnPrintAll) {
         btnPrintAll.addEventListener('click', function(e) {
             e.preventDefault();
-            var base = window.location.pathname + window.location.search;
-            var sep = base.indexOf('?') >= 0 ? '&' : '?';
-            var url = base + sep + 'print_all=1';
-            window.open(url, '_blank', 'noopener');
+            printCategoryWiseSlip();
         });
     }
 
@@ -415,117 +543,164 @@ document.addEventListener('DOMContentLoaded', function() {
         @endif
     ];
     const employeeNames = { 'academy staff': [ @foreach($employees ?? [] as $e){ value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },@endforeach ], 'faculty': [ @foreach($faculties ?? [] as $f){ value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },@endforeach ], 'mess staff': [ @foreach($messStaff ?? [] as $m){ value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },@endforeach ] };
-    
-    if (clientTypeSlug && clientTypePk && clientTypePkBuyer) {
-    function fillClientTypeSelect() {
-        const slug = clientTypeSlug.value;
-        clientTypePk.innerHTML = '<option value="">All</option>';
-        clientTypePk.name = (slug === 'ot') ? 'course_master_pk' : 'client_type_pk';
-        if (slug === 'ot' && otCourseOptions.length) {
-            otCourseOptions.forEach(function(o) {
-                const opt = document.createElement('option');
-                opt.value = o.value;
-                opt.textContent = o.text;
-                clientTypePk.appendChild(opt);
-            });
-        } else if (slug && clientTypeOptions[slug]) {
-            clientTypeOptions[slug].forEach(function(o) {
-                const opt = document.createElement('option');
-                opt.value = o.value;
-                opt.textContent = o.text;
-                opt.dataset.clientName = o.dataClientName || '';
-                clientTypePk.appendChild(opt);
-            });
-        }
-        fillBuyerNameSelect();
-    }
-    
-    function fillBuyerNameSelect() {
-        clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
-        const slug = clientTypeSlug.value;
-        const selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
-        const dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-        const selectedValue = clientTypePk.value;
 
-        if (slug === 'employee' && dataClientName && employeeNames[dataClientName]) {
-            employeeNames[dataClientName].forEach(function(o) {
-                const opt = document.createElement('option');
-                opt.value = o.value;
-                opt.textContent = o.text;
-                clientTypePkBuyer.appendChild(opt);
-            });
-        } else if (slug === 'ot' && selectedValue) {
-            clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
-            fetch(studentsByCourseUrl + '/' + selectedValue, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
-                    (data.students || []).forEach(function(s) {
+    if (clientTypeSlug && clientTypePk && clientTypePkBuyer) {
+        // Enhance dropdowns with Choices.js if available
+        let clientTypeSlugChoices = null;
+        let clientTypePkChoices = null;
+        let clientTypePkBuyerChoices = null;
+
+        if (window.Choices) {
+            const baseConfig = {
+                searchEnabled: true,
+                shouldSort: false,
+                itemSelectText: '',
+                removeItemButton: false
+            };
+            clientTypeSlugChoices = new Choices(clientTypeSlug, baseConfig);
+            clientTypePkChoices = new Choices(clientTypePk, baseConfig);
+            clientTypePkBuyerChoices = new Choices(clientTypePkBuyer, baseConfig);
+        }
+
+        function fillClientTypeSelect() {
+            const slug = clientTypeSlug.value;
+            const useChoices = !!clientTypePkChoices;
+
+            clientTypePk.name = (slug === 'ot') ? 'course_master_pk' : 'client_type_pk';
+
+            if (useChoices) {
+                let choicesData = [{ value: '', label: 'All', selected: true }];
+                if (slug === 'ot' && otCourseOptions.length) {
+                    otCourseOptions.forEach(function(o) {
+                        choicesData.push({ value: o.value, label: o.text });
+                    });
+                } else if (slug && clientTypeOptions[slug]) {
+                    clientTypeOptions[slug].forEach(function(o) {
+                        choicesData.push({ value: o.value, label: o.text, customProperties: { clientName: o.dataClientName || '' } });
+                    });
+                }
+                clientTypePkChoices.clearChoices();
+                clientTypePkChoices.setChoices(choicesData, 'value', 'label', true);
+            } else {
+                clientTypePk.innerHTML = '<option value="">All</option>';
+                if (slug === 'ot' && otCourseOptions.length) {
+                    otCourseOptions.forEach(function(o) {
                         const opt = document.createElement('option');
-                        opt.value = s.display_name || '';
-                        opt.textContent = s.display_name || '—';
+                        opt.value = o.value;
+                        opt.textContent = o.text;
+                        clientTypePk.appendChild(opt);
+                    });
+                } else if (slug && clientTypeOptions[slug]) {
+                    clientTypeOptions[slug].forEach(function(o) {
+                        const opt = document.createElement('option');
+                        opt.value = o.value;
+                        opt.textContent = o.text;
+                        opt.dataset.clientName = o.dataClientName || '';
+                        clientTypePk.appendChild(opt);
+                    });
+                }
+            }
+            fillBuyerNameSelect();
+        }
+
+        function resolveEmployeeCategoryName(slug, selectedValue) {
+            if (slug !== 'employee' || !selectedValue) return '';
+            const list = clientTypeOptions['employee'] || [];
+            const match = list.find(function(o) { return String(o.value) === String(selectedValue); });
+            return match ? (match.dataClientName || '') : '';
+        }
+
+        function fillBuyerNameSelect() {
+            const slug = clientTypeSlug.value;
+            const useChoices = !!clientTypePkBuyerChoices;
+            const selectedValue = clientTypePk.value;
+
+            let dataClientName = '';
+            if (slug === 'employee') {
+                const selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
+                if (selectedOpt && selectedOpt.dataset && selectedOpt.dataset.clientName) {
+                    dataClientName = selectedOpt.dataset.clientName || '';
+                } else {
+                    dataClientName = resolveEmployeeCategoryName(slug, selectedValue);
+                }
+            }
+
+            function setBuyerChoices(list, preserveValue) {
+                if (useChoices) {
+                    let choicesData = [{ value: '', label: 'All Buyers', selected: !preserveValue }];
+                    (list || []).forEach(function(o) {
+                        choicesData.push({ value: o.value, label: o.text });
+                    });
+                    clientTypePkBuyerChoices.clearChoices();
+                    clientTypePkBuyerChoices.setChoices(choicesData, 'value', 'label', true);
+                    if (preserveValue) {
+                        clientTypePkBuyerChoices.setChoiceByValue(preserveValue);
+                    }
+                } else {
+                    clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
+                    (list || []).forEach(function(o) {
+                        const opt = document.createElement('option');
+                        opt.value = o.value;
+                        opt.textContent = o.text;
                         clientTypePkBuyer.appendChild(opt);
                     });
-                    if (preservedBuyerName) {
-                        var hasMatch = false;
-                        for (var i = 0; i < clientTypePkBuyer.options.length; i++) {
-                            if (clientTypePkBuyer.options[i].value === preservedBuyerName) { hasMatch = true; break; }
-                        }
-                        if (!hasMatch) {
-                            var o = document.createElement('option');
-                            o.value = preservedBuyerName;
-                            o.textContent = preservedBuyerName;
-                            clientTypePkBuyer.appendChild(o);
-                        }
-                        clientTypePkBuyer.value = preservedBuyerName;
+                    if (preserveValue) {
+                        clientTypePkBuyer.value = preserveValue;
                     }
-                })
-                .catch(function() {
-                    clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
-                    if (preservedBuyerName) {
-                        var opt = document.createElement('option');
-                        opt.value = preservedBuyerName;
-                        opt.textContent = preservedBuyerName;
-                        clientTypePkBuyer.appendChild(opt);
-                        clientTypePkBuyer.value = preservedBuyerName;
-                    }
-                });
-        } else if (slug === 'course') {
-            if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
-                clientTypeOptions['course'].forEach(function(o) {
-                    const opt = document.createElement('option');
-                    opt.value = o.text;
-                    opt.textContent = o.text;
-                    clientTypePkBuyer.appendChild(opt);
-                });
-            } else if (otCourseOptions.length) {
-                otCourseOptions.forEach(function(o) {
-                    const opt = document.createElement('option');
-                    opt.value = o.text;
-                    opt.textContent = o.text;
-                    clientTypePkBuyer.appendChild(opt);
-                });
+                }
             }
-        } else if (slug && clientTypeOptions[slug]) {
-            clientTypeOptions[slug].forEach(function(o) {
-                const opt = document.createElement('option');
-                opt.value = o.text;
-                opt.textContent = o.text;
-                clientTypePkBuyer.appendChild(opt);
-            });
-        }
-    }
-    
-    clientTypeSlug.addEventListener('change', function() { fillClientTypeSelect(); });
-    clientTypePk.addEventListener('change', function() { fillBuyerNameSelect(); });
 
-    if (clientTypeSlug.value === 'ot') {
-        clientTypePk.name = 'course_master_pk';
-        if (clientTypePk.value) fillBuyerNameSelect();
-    }
-    if (clientTypeSlug.value === 'course') {
-        fillBuyerNameSelect();
-    }
+            if (slug === 'employee' && dataClientName && employeeNames[dataClientName]) {
+                setBuyerChoices(employeeNames[dataClientName], preservedBuyerName);
+            } else if (slug === 'ot' && selectedValue) {
+                if (!useChoices) {
+                    clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
+                }
+                fetch(studentsByCourseUrl + '/' + selectedValue, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        const students = (data.students || []).map(function(s) {
+                            return { value: s.display_name || '', text: s.display_name || '—' };
+                        });
+                        setBuyerChoices(students, preservedBuyerName);
+                    })
+                    .catch(function() {
+                        setBuyerChoices([], preservedBuyerName);
+                    });
+            } else if (slug === 'course') {
+                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
+                    const list = clientTypeOptions['course'].map(function(o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    setBuyerChoices(list, preservedBuyerName);
+                } else if (otCourseOptions.length) {
+                    const list = otCourseOptions.map(function(o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    setBuyerChoices(list, preservedBuyerName);
+                } else {
+                    setBuyerChoices([], preservedBuyerName);
+                }
+            } else if (slug && clientTypeOptions[slug]) {
+                const list = clientTypeOptions[slug].map(function(o) {
+                    return { value: o.text, text: o.text };
+                });
+                setBuyerChoices(list, preservedBuyerName);
+            } else {
+                setBuyerChoices([], preservedBuyerName);
+            }
+        }
+
+        clientTypeSlug.addEventListener('change', function() { fillClientTypeSelect(); });
+        clientTypePk.addEventListener('change', function() { fillBuyerNameSelect(); });
+
+        if (clientTypeSlug.value === 'ot') {
+            clientTypePk.name = 'course_master_pk';
+            if (clientTypePk.value) fillBuyerNameSelect();
+        }
+        if (clientTypeSlug.value === 'course') {
+            fillBuyerNameSelect();
+        }
     }
 });
 </script>
