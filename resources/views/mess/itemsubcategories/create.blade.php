@@ -6,13 +6,13 @@
         <div class="card-body">
             <h4 class="mb-3">Add Subcategory Item</h4>
 
-            <form method="POST" action="{{ route('admin.mess.itemsubcategories.store') }}">
+            <form method="POST" action="{{ route('admin.mess.itemsubcategories.store') }}" id="createItemSubcategoryPageForm">
                 @csrf
 
                 @include('mess.itemsubcategories._form', ['itemsubcategory' => null, 'categories' => $categories])
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-success">Save</button>
+                    <button type="submit" class="btn btn-success" id="createItemSubcategoryPageSubmitBtn">Save</button>
                     <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
@@ -20,3 +20,19 @@
     </div>
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('createItemSubcategoryPageForm');
+    var btn = document.getElementById('createItemSubcategoryPageSubmitBtn');
+    if (form && btn) {
+        form.addEventListener('submit', function() {
+            if (form.checkValidity() && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+            }
+        });
+    }
+});
+</script>
+@endpush

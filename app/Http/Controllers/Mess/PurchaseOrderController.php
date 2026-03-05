@@ -17,9 +17,25 @@ use Illuminate\Support\Facades\Storage;
 
 class PurchaseOrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $purchaseOrders = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items'])->latest()->get();
+        $query = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items']);
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('po_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('po_date', '<=', $request->date_to);
+        }
+        if ($request->filled('vendor_id')) {
+            $query->where('vendor_id', $request->vendor_id);
+        }
+        if ($request->filled('store_id')) {
+            $query->where('store_id', $request->store_id);
+        }
+
+        $purchaseOrders = $query->latest('po_date')->get();
+
         $vendors = Vendor::orderBy('name')->get();
         $stores = Store::where('status', 1)->orderBy('store_name')->get();
         $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()
@@ -31,7 +47,16 @@ class PurchaseOrderController extends Controller
             ]);
         $po_number = $this->generatePoNumber();
         $paymentModes = ['Cash' => 'Cash', 'Card' => 'Card', 'UPI' => 'UPI', 'Bank Transfer' => 'Bank Transfer', 'Credit' => 'Credit'];
-        return view('mess.purchaseorders.index', compact('purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes'));
+
+        $filterDateFrom = $request->get('date_from', '');
+        $filterDateTo = $request->get('date_to', '');
+        $filterVendorId = $request->get('vendor_id', '');
+        $filterStoreId = $request->get('store_id', '');
+
+        return view('mess.purchaseorders.index', compact(
+            'purchaseOrders', 'vendors', 'stores', 'itemSubcategories', 'po_number', 'paymentModes',
+            'filterDateFrom', 'filterDateTo', 'filterVendorId', 'filterStoreId'
+        ));
     }
 
     public function create(Request $request)

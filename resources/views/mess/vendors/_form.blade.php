@@ -49,9 +49,9 @@
             required
             value="{{ $oldPhone }}"
             inputmode="numeric"
-            pattern="[0-9]{10}"
+            pattern="[6-9][0-9]{9}"
             maxlength="10"
-            placeholder="10 digit mobile number">
+            placeholder="10 digit mobile number starting with 6-9">
         <div class="text-danger small mt-1" id="vendor_phone_error">@error('phone'){{ $message }}@enderror</div>
     </div>
 </div>
@@ -86,7 +86,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (digitsOnly.length !== 10) {
-            phoneError.textContent = 'Phone number must be exactly 10 digits.';
+            phoneError.textContent = 'Phone number must be exactly 10 digits and start with 6, 7, 8, or 9.';
+            phoneInput.classList.add('is-invalid');
+            return false;
+        }
+
+        if (!/^[6-9][0-9]{9}$/.test(digitsOnly)) {
+            phoneError.textContent = 'Phone number must be exactly 10 digits and start with 6, 7, 8, or 9.';
             phoneInput.classList.add('is-invalid');
             return false;
         }

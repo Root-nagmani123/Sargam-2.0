@@ -230,32 +230,60 @@ class SellingVoucherDateRangeController extends Controller
         try {
             DB::beginTransaction();
 
-            // storeId + storeType already normalized above
-
             $issueDate = now()->toDateString();
-            $report = SellingVoucherDateRangeReport::create([
-                'date_from' => $issueDate,
-                'date_to' => $issueDate,
-                'store_id' => $storeId,
-                'store_type' => $storeType,
-                'report_title' => null,
-                'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
-                'total_amount' => 0,
-                'remarks' => $request->remarks,
-                'reference_number' => $request->reference_number,
-                'order_by' => $request->order_by,
-                'client_type_slug' => $request->client_type_slug,
-                'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
-                'client_name' => $request->client_name,
-                'payment_type' => (int) $request->payment_type,
-                'issue_date' => $issueDate,
-                'created_by' => Auth::id(),
-                'updated_by' => Auth::id(),
-            ]);
+            $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
 
-            if ($request->hasFile('bill_file')) {
-                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
-                $report->update(['bill_path' => $path]);
+            // One bill per person: reuse existing unpaid report for same buyer (same store + client)
+            $report = SellingVoucherDateRangeReport::query()
+                ->where('store_id', $storeId)
+                ->where('store_type', $storeType)
+                ->where('client_type_slug', $request->client_type_slug)
+                ->where('status', '!=', SellingVoucherDateRangeReport::STATUS_APPROVED)
+                ->where(function ($q) use ($clientTypePk) {
+                    if ($clientTypePk !== null) {
+                        $q->where('client_type_pk', $clientTypePk);
+                    } else {
+                        $q->whereNull('client_type_pk');
+                    }
+                })
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$report) {
+                $report = SellingVoucherDateRangeReport::create([
+                    'date_from' => $issueDate,
+                    'date_to' => $issueDate,
+                    'store_id' => $storeId,
+                    'store_type' => $storeType,
+                    'report_title' => null,
+                    'status' => SellingVoucherDateRangeReport::STATUS_DRAFT,
+                    'total_amount' => 0,
+                    'remarks' => $request->remarks,
+                    'reference_number' => $request->reference_number,
+                    'order_by' => $request->order_by,
+                    'client_type_slug' => $request->client_type_slug,
+                    'client_type_pk' => $clientTypePk,
+                    'client_name' => $request->client_name,
+                    'payment_type' => (int) $request->payment_type,
+                    'issue_date' => $issueDate,
+                    'created_by' => Auth::id(),
+                    'updated_by' => Auth::id(),
+                ]);
+
+                if ($request->hasFile('bill_file')) {
+                    $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                    $report->update(['bill_path' => $path]);
+                }
+            } else {
+                // Add to existing bill: extend date_to and issue_date to latest
+                $newDate = Carbon::parse($issueDate);
+                if ($report->date_to < $newDate) {
+                    $report->update(['date_to' => $newDate, 'issue_date' => $newDate, 'updated_by' => Auth::id()]);
+                }
+                if ($request->hasFile('bill_file')) {
+                    $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                    $report->update(['bill_path' => $path]);
+                }
             }
 
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
@@ -281,7 +309,7 @@ class SellingVoucherDateRangeController extends Controller
                 ]);
             }
 
-            $report->update(['total_amount' => $grandTotal]);
+            $report->increment('total_amount', $grandTotal);
 
             DB::commit();
 
@@ -360,6 +388,13 @@ class SellingVoucherDateRangeController extends Controller
     {
         $report = SellingVoucherDateRangeReport::with(['items.itemSubcategory'])->findOrFail($id);
 
+        if ($report->status == SellingVoucherDateRangeReport::STATUS_APPROVED) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Edit is disabled for approved voucher.'], 403);
+            }
+            return redirect()->route('admin.mess.selling-voucher-date-range.index')->with('error', 'Edit is disabled for approved voucher.');
+        }
+
         if ($request->wantsJson()) {
             $clientTypeSlug = $report->clientTypeCategory ? $report->clientTypeCategory->client_type : ($report->client_type_slug ?? 'employee');
             $storeType = $report->store_type ?? 'store';
@@ -407,6 +442,10 @@ class SellingVoucherDateRangeController extends Controller
     public function update(Request $request, $id)
     {
         $report = SellingVoucherDateRangeReport::findOrFail($id);
+
+        if ($report->status == SellingVoucherDateRangeReport::STATUS_APPROVED) {
+            return redirect()->route('admin.mess.selling-voucher-date-range.index')->with('error', 'Edit is disabled for approved voucher.');
+        }
 
         $request->validate([
             'inve_store_master_pk' => ['required', function ($attribute, $value, $fail) {

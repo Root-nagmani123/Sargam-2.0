@@ -5,7 +5,7 @@
     <div class="datatables">
         <div class="card">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <h4 class="mb-0">Purchase Orders</h4>
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
                         Create Purchase Order
@@ -17,6 +17,53 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
+
+                {{-- Filters --}}
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 border rounded bg-light no-print">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label small mb-0">Date From</label>
+                            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ $filterDateFrom }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-0">Date To</label>
+                            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ $filterDateTo }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-0">Vendor</label>
+                            <select name="vendor_id" class="form-select form-select-sm">
+                                <option value="">All Vendors</option>
+                                @foreach($vendors as $v)
+                                    <option value="{{ $v->id }}" {{ (string)$filterVendorId === (string)$v->id ? 'selected' : '' }}>{{ $v->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-0">Store</label>
+                            <select name="store_id" class="form-select form-select-sm">
+                                <option value="">All Stores</option>
+                                @foreach($stores as $s)
+                                    <option value="{{ $s->id }}" {{ (string)$filterStoreId === (string)$s->id ? 'selected' : '' }}>{{ $s->store_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-auto">
+                            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                            <button type="button" class="btn btn-sm btn-outline-primary ms-1" onclick="window.print()" title="Print list or Save as PDF">
+                                <i class="ti ti-printer"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                {{-- Print header: standard format (shown only when printing) --}}
+                <div class="print-only report-header text-center mb-3" style="display: none;">
+                    <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
+                    <div class="report-title-bar">Purchase Orders</div>
+                    <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
+                </div>
+
                 <div class="table-responsive">
                     <table id="purchaseOrdersTable" class="table table-bordered table-hover align-middle w-100">
                         <thead>
@@ -26,7 +73,7 @@
                                 <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Vendor Name</th>
                                 <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
                                 <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; min-width: 180px;">Action</th>
+                                <th class="no-print" style="background-color: #004a93; color: #fff; border-color: #004a93; min-width: 180px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -41,7 +88,7 @@
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
-                                <td>
+                                <td class="no-print">
                                     <button type="button" class="btn btn-sm btn-info btn-view-po" data-po-id="{{ $po->id }}" title="View">View</button>
                                     <button type="button" class="btn btn-sm btn-warning btn-edit-po" data-po-id="{{ $po->id }}" title="Edit">Edit</button>
                                     <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
@@ -59,6 +106,34 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Print header – standard level (matches category-wise-print-slip) */
+    .report-mess-title {
+        color: #1a1a1a;
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+    .report-title-bar {
+        background-color: #495057;
+        color: #fff;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+    }
+    .report-print-date { color: #6c757d; }
+
+    @media print {
+        .no-print { display: none !important; }
+        .print-only { display: block !important; }
+        .dataTables_length, .dataTables_filter, .dataTables_info, .dataTables_paginate { display: none !important; }
+        /* Hide layout header and sidebar so only report content prints */
+        .topbar, header.topbar, .left-sidebar, .side-mini-panel, #sidebarTabContent, .navbar { display: none !important; }
+        body * { visibility: visible; }
+        .report-header { margin-top: 0; border-bottom: 2px solid #2c3e50; padding-bottom: 8px; }
+        .report-mess-title { font-size: 16px; font-weight: 700; }
+        .report-title-bar { font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>
 
 @include('components.mess-master-datatables', [
     'tableId' => 'purchaseOrdersTable',
@@ -451,6 +526,9 @@
                 </div>
             </div>
             <div class="modal-footer border-top">
+                <button type="button" class="btn btn-outline-primary btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print">
+                    <i class="ti ti-printer"></i> Print
+                </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
@@ -993,6 +1071,56 @@
             }
         });
     }
+
+    // Print View modal content – correct design with standard header
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-print-view-modal');
+        if (!btn) return;
+        var sel = btn.getAttribute('data-print-target');
+        if (!sel) return;
+        var modal = document.querySelector(sel);
+        if (!modal) return;
+        var content = modal.querySelector('.modal-content');
+        if (!content) return;
+        var win = window.open('', '_blank', 'width=900,height=700');
+        if (!win) { alert('Please allow popups to print.'); return; }
+        var title = (modal.querySelector('.modal-title') || {}).textContent || 'Purchase Order Details';
+        var printedOn = new Date();
+        var dateStr = printedOn.getDate().toString().padStart(2,'0') + '/' + (printedOn.getMonth()+1).toString().padStart(2,'0') + '/' + printedOn.getFullYear() + ', ' + printedOn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        var bodyContent = content.innerHTML;
+        bodyContent = bodyContent.replace(/<button[^>]*btn-close[^>]*>[\s\S]*?<\/button>/gi, '');
+        bodyContent = bodyContent.replace(/<div class="modal-footer[^"]*"[^>]*>[\s\S]*?<\/div>\s*$/i, '');
+        var printHeader = '<div class="print-doc-header" style="text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
+            '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
+            '<div style="background:#495057;color:#fff;padding:6px 12px;font-size:13px;display:inline-block;margin:4px 0;">Purchase Order Details</div>' +
+            '<div style="font-size:11px;color:#6c757d;margin-top:6px;">Printed on ' + dateStr + '</div></div>';
+        var printCss = '<style>' +
+            '@page { size: A4; margin: 14mm; }' +
+            'body { font-family: Arial, sans-serif; font-size: 12px; color: #212529; padding: 0 12px; margin: 0; background: #fff; }' +
+            '.print-doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.modal-header { border-bottom: 1px solid #dee2e6; padding-bottom: 8px; margin-bottom: 12px; }' +
+            '.modal-header .modal-title { font-size: 14px; font-weight: 600; }' +
+            '.modal-body { color: #212529; }' +
+            '.card { margin-bottom: 14px; page-break-inside: avoid; }' +
+            '.card-header { font-weight: 600; font-size: 12px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #dee2e6; }' +
+            '.card-body .row { display: flex; flex-wrap: wrap; margin: 0 -6px; }' +
+            '.card-body .col-md-4 { width: 33.33%; box-sizing: border-box; padding: 0 6px 10px; }' +
+            '.card-body .col-md-12 { width: 100%; box-sizing: border-box; padding: 0 6px 10px; }' +
+            '.card-body .form-label, .card-body label { font-size: 10px; color: #6c757d; display: block; margin-bottom: 2px; }' +
+            '.card-body p, .card-body .fw-medium { margin: 0; font-size: 12px; }' +
+            'table { width: 100%; border-collapse: collapse; font-size: 11px; }' +
+            'th, td { border: 1px solid #adb5bd; padding: 6px 8px; text-align: left; }' +
+            'thead th { background: #af2910 !important; color: #fff !important; border-color: #8b2009; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.card-footer { font-weight: 600; padding-top: 8px; border-top: 1px solid #dee2e6; margin-top: 4px; font-size: 12px; }' +
+            '.badge { display: inline-block; padding: 2px 6px; font-size: 10px; border-radius: 4px; }' +
+            '.btn-close, .modal-footer { display: none !important; }' +
+            '@media print { body { padding: 0; } .print-doc-header { margin-bottom: 12px; } }' +
+            '</style>';
+        win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader + '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
+        win.document.close();
+        win.focus();
+        setTimeout(function() { win.print(); win.close(); }, 350);
+    });
 
 })();
 </script>

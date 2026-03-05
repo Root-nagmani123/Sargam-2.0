@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @php
-        $receiptId = $bill->id ?? $bill->pk ?? '—';
+        $receiptNo = $receiptNo ?? $invoiceNo ?? '—';
+        $invoiceNo = $invoiceNo ?? $receiptNo ?? '—';
         $storeName = $bill->resolved_store_name ?? '—';
         $dateFrom = isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
         $dateTo = isset($bill->date_to) && $bill->date_to ? $bill->date_to->format('d-m-Y') : ($bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—');
@@ -14,7 +15,7 @@
         $dueAmount = (float) ($dueAmount ?? max(0, $totalAmount - $paidAmount));
         $paymentStatusLabel = $paymentStatusLabel ?? ($paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid'));
     @endphp
-    <title>Bill Receipt #{{ $receiptId }}</title>
+    <title>Bill Receipt {{ $receiptNo }}</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 14px; padding: 24px; max-width: 720px; margin: 0 auto; color: #333; }
@@ -71,6 +72,10 @@
 
     <hr>
 
+    <div class="client-row">
+        <span><span class="client-label">Receipt No</span>: <span class="client-value">{{ $receiptNo }}</span></span>
+        <span><span class="client-label">Invoice No</span>: <span class="client-value">{{ $invoiceNo }}</span></span>
+    </div>
     <div class="client-row">
         <span><span class="client-label">Client Name</span>: <span class="client-value">{{ $bill->client_name ?? ($bill->clientTypeCategory?->client_name ?? '—') }}</span></span>
         <span><span class="client-label">Client Type</span>: <span class="client-value">{{ $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—'))) }}</span></span>

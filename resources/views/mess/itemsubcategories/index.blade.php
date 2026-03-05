@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
     attachLiveValidation('edit_item_name', 'edit_item_name_error', validateItemName);
     attachLiveValidation('edit_unit_measurement', 'edit_unit_measurement_error', validateUnitMeasurement);
 
-    // Create form submit validation
+    // Create form submit validation; prevent double submit
     var createForm = document.querySelector('#createItemSubcategoryModal form');
     if (createForm) {
         createForm.addEventListener('submit', function(e) {
@@ -294,11 +294,19 @@ document.addEventListener('DOMContentLoaded', function() {
             var r2 = validateUnitMeasurement(document.getElementById('create_unit_measurement').value);
             showLiveError(document.getElementById('create_item_name'), document.getElementById('create_item_name_error'), r1);
             showLiveError(document.getElementById('create_unit_measurement'), document.getElementById('create_unit_measurement_error'), r2);
-            if (!r1.valid || !r2.valid) e.preventDefault();
+            if (!r1.valid || !r2.valid) {
+                e.preventDefault();
+                return;
+            }
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+            }
         });
     }
 
-    // Edit form submit validation
+    // Edit form submit validation; prevent double submit
     var editForm = document.getElementById('editItemSubcategoryForm');
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
@@ -306,7 +314,15 @@ document.addEventListener('DOMContentLoaded', function() {
             var r2 = validateUnitMeasurement(document.getElementById('edit_unit_measurement').value);
             showLiveError(document.getElementById('edit_item_name'), document.getElementById('edit_item_name_error'), r1);
             showLiveError(document.getElementById('edit_unit_measurement'), document.getElementById('edit_unit_measurement_error'), r2);
-            if (!r1.valid || !r2.valid) e.preventDefault();
+            if (!r1.valid || !r2.valid) {
+                e.preventDefault();
+                return;
+            }
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
+            }
         });
     }
 

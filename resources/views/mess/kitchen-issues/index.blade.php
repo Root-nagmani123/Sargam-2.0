@@ -42,11 +42,11 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">Start Date</label>
-                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
+                        <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm" value="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">End Date</label>
-                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
+                        <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
                     <div class="col-md-2 d-flex align-items-end gap-1">
                         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
@@ -105,7 +105,7 @@
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
@@ -131,7 +131,7 @@
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
@@ -656,6 +656,9 @@
                 </div>
             </div>
             <div class="modal-footer border-top">
+                <button type="button" class="btn btn-outline-primary btn-print-view-modal" data-print-target="#viewSellingVoucherModal" title="Print">
+                    <i class="ti ti-printer"></i> Print
+                </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
@@ -713,6 +716,18 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+
+    // Filter: End Date must not be before Start Date
+    var filterStart = document.getElementById('filter_start_date');
+    var filterEnd = document.getElementById('filter_end_date');
+    if (filterStart && filterEnd) {
+        filterStart.addEventListener('change', function() {
+            filterEnd.min = this.value || '';
+            if (filterEnd.value && this.value && filterEnd.value < this.value) {
+                filterEnd.value = this.value;
+            }
+        });
+    }
 
     // Prevent double submit on Add Selling Voucher form (stops double entry)
     var sellingVoucherModalForm = document.getElementById('sellingVoucherModalForm');
@@ -1615,11 +1630,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             console.log('Loading edit data for voucher:', voucherId);
             fetch(editSvBaseUrl + '/' + voucherId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => {
-                    if (!r.ok) throw new Error('HTTP error ' + r.status);
-                    return r.json();
-                })
-                .then(data => {
+                .then(r => r.json().then(data => ({ ok: r.ok, status: r.status, data })))
+                .then(({ ok, status, data }) => {
+                    if (!ok) {
+                        alert(data && data.error ? data.error : 'Failed to load voucher (HTTP ' + status + ').');
+                        return;
+                    }
                     console.log('Edit data:', data);
                     if (data.error) { alert(data.error); return; }
                     const v = data.voucher;
@@ -1844,7 +1860,34 @@ document.addEventListener('DOMContentLoaded', function() {
         (new bootstrap.Modal(modal)).show();
     }
     @endif
-    
+
+    // Print View modal content (Selling Voucher) – correct design with standard header
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-print-view-modal');
+        if (!btn) return;
+        var sel = btn.getAttribute('data-print-target');
+        if (!sel) return;
+        var modalEl = document.querySelector(sel);
+        if (!modalEl) return;
+        var content = modalEl.querySelector('.modal-content');
+        if (!content) return;
+        var win = window.open('', '_blank', 'width=900,height=700');
+        if (!win) { alert('Please allow popups to print.'); return; }
+        var title = (modalEl.querySelector('.modal-title') || {}).textContent || 'Selling Voucher';
+        var printedOn = new Date();
+        var dateStr = printedOn.getDate().toString().padStart(2,'0') + '/' + (printedOn.getMonth()+1).toString().padStart(2,'0') + '/' + printedOn.getFullYear() + ', ' + printedOn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        var bodyContent = content.innerHTML.replace(/<button[^>]*btn-close[^>]*>[\s\S]*?<\/button>/gi, '');
+        var printHeader = '<div class="print-doc-header" style="text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
+            '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
+            '<div style="background:#495057;color:#fff;padding:6px 12px;font-size:13px;display:inline-block;margin:4px 0;">Selling Voucher</div>' +
+            '<div style="font-size:11px;color:#6c757d;margin-top:6px;">Printed on ' + dateStr + '</div></div>';
+        var printCss = '<style>@page{size:A4;margin:14mm;}body{font-family:Arial,sans-serif;font-size:12px;color:#212529;padding:0 12px;margin:0;background:#fff;}.print-doc-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}.modal-header{border-bottom:1px solid #dee2e6;padding-bottom:8px;margin-bottom:12px;}.modal-body{color:#212529;}.card{margin-bottom:14px;page-break-inside:avoid;}.card-header{font-weight:600;font-size:12px;margin-bottom:8px;}.card-body table th,.card-body table td{border:1px solid #adb5bd;padding:6px 8px;}table{width:100%;border-collapse:collapse;font-size:11px;}thead th{background:#af2910!important;color:#fff!important;border-color:#8b2009;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.card-footer{font-weight:600;padding-top:8px;}.btn-close,.modal-footer{display:none!important;}@media print{body{padding:0;}}</style>';
+        win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader + '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
+        win.document.close();
+        win.focus();
+        setTimeout(function() { win.print(); win.close(); }, 350);
+    });
+
     console.log('✅ All event listeners attached successfully');
     console.log('Script initialization complete');
 });

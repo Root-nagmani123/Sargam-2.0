@@ -98,7 +98,7 @@ class VendorController extends Controller
                 'max:255',
                 'regex:' . self::NAME_PATTERN,
             ],
-            'phone' => ['required', 'string', 'regex:/^[0-9]{10}$/'],
+            'phone' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/'],
             'address' => [
                 'required',
                 'string',
@@ -115,7 +115,7 @@ class VendorController extends Controller
             'contact_person.regex' => 'Contact person may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
             'address.regex' => 'Address may only contain letters, numbers, spaces, hyphens, commas, periods and new lines. Special characters are not allowed.',
             'address.max' => 'Address cannot exceed 2000 characters.',
-            'phone.regex' => 'The phone number must be exactly 10 digits.',
+            'phone.regex' => 'The phone number must be 10 digits and start with 6, 7, 8, or 9.',
             'gst_number.regex' => 'GST number may only contain letters and numbers. No special characters.',
             'gst_number.max' => 'GST number cannot exceed 15 characters.',
             'bank_name.regex' => 'Bank name may only contain letters, numbers, spaces and hyphens. No special characters.',

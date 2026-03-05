@@ -62,9 +62,7 @@ class VendorItemMappingDataTable extends DataTable
             ->filterColumn('item_name', function ($query, $keyword) {
                 $query->where(function ($q) use ($keyword) {
                     $q->whereHas('itemSubcategory', function ($sub) use ($keyword) {
-                        $sub->where('item_name', 'like', "%{$keyword}%")
-                            ->orWhere('subcategory_name', 'like', "%{$keyword}%")
-                            ->orWhere('name', 'like', "%{$keyword}%");
+                        $sub->where('name', 'like', "%{$keyword}%");
                     })->orWhereHas('itemCategory', function ($sub) use ($keyword) {
                         $sub->where('category_name', 'like', "%{$keyword}%");
                     });
@@ -93,9 +91,7 @@ class VendorItemMappingDataTable extends DataTable
                     $query->where(function ($sub) use ($searchValue) {
                         $sub->whereHas('vendor', fn ($q) => $q->where('name', 'like', "%{$searchValue}%"))
                             ->orWhereHas('itemSubcategory', function ($q) use ($searchValue) {
-                                $q->where('item_name', 'like', "%{$searchValue}%")
-                                    ->orWhere('subcategory_name', 'like', "%{$searchValue}%")
-                                    ->orWhere('name', 'like', "%{$searchValue}%")
+                                $q->where('name', 'like', "%{$searchValue}%")
                                     ->orWhere('item_code', 'like', "%{$searchValue}%")
                                     ->orWhere('subcategory_code', 'like', "%{$searchValue}%")
                                     ->orWhere('unit_measurement', 'like', "%{$searchValue}%");

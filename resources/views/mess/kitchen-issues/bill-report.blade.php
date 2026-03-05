@@ -25,11 +25,11 @@
                     </div>
                     <div class="col-md-2">
                         <label>Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}">
+                        <input type="date" name="start_date" id="filter_start_date" class="form-control" value="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
                     <div class="col-md-2">
                         <label>End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}">
+                        <input type="date" name="end_date" id="filter_end_date" class="form-control" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
                     <div class="col-md-2">
                         <label>Payment Status</label>
@@ -153,6 +153,21 @@
     </div>
     @endif
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var filterStart = document.getElementById('filter_start_date');
+    var filterEnd = document.getElementById('filter_end_date');
+    if (filterStart && filterEnd) {
+        filterStart.addEventListener('change', function() {
+            filterEnd.min = this.value || '';
+            if (filterEnd.value && this.value && filterEnd.value < this.value) {
+                filterEnd.value = this.value;
+            }
+        });
+    }
+});
+</script>
 
 <style>
 @media print {

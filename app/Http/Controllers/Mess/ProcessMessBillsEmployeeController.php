@@ -33,10 +33,8 @@ class ProcessMessBillsEmployeeController extends Controller
     ];
     public function index(Request $request)
     {
-        $perPage = $request->get('per_page', 10);
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
-        $search = $request->search;
         $clientType = $request->filled('client_type') ? $request->client_type : null;
         $buyerName = $request->filled('buyer_name') ? trim($request->buyer_name) : null;
 
@@ -106,48 +104,37 @@ class ProcessMessBillsEmployeeController extends Controller
             $kitchenIssueQuery->where('client_name', 'like', '%' . $buyerName . '%');
         }
 
-        // Union both queries
+        // Union both queries – load all rows for date range so DataTables can search/sort client-side
         $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
-
-        // Wrap in subquery for pagination and search
-        $bills = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
+        $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
             ->mergeBindings($unionQuery->getQuery())
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($query) use ($search) {
-                    $query->where('client_name', 'like', "%{$search}%")
-                          ->orWhere('id', 'like', "%{$search}%");
-                });
-            })
             ->orderBy('issue_date', 'desc')
             ->orderBy('id', 'desc')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->limit(5000)
+            ->get();
 
-        // Load relationships for each bill and keep source_type so slip numbers (DR- vs SV-) are unique
-        $bills->getCollection()->transform(function ($bill) {
+        // Load full models for each row so view can render slip no, net_total, etc.
+        $bills = $rows->map(function ($bill) {
             if ($bill->source_type === 'date_range') {
                 $model = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])->find($bill->id);
                 if ($model) {
                     $model->setAttribute('source_type', 'date_range');
                 }
                 return $model;
-            } else {
-                $model = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
-                if ($model) {
-                    $model->setAttribute('source_type', 'kitchen_issue');
-                }
-                return $model;
             }
-        });
+            $model = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
+            if ($model) {
+                $model->setAttribute('source_type', 'kitchen_issue');
+            }
+            return $model;
+        })->filter()->values();
 
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
-        // Y-m-d for flatpickr defaultDate so the selected range is preserved after filter (avoids d-m-Y parse issues)
         $effectiveDateFromYmd = $dateFrom;
         $effectiveDateToYmd = $dateTo;
 
-        // Summary stats for the same date range (for dashboard cards)
-        $stats = $this->getSummaryStats($dateFrom, $dateTo, $search, $clientType, $buyerName);
+        $stats = $this->getSummaryStats($dateFrom, $dateTo, null, $clientType, $buyerName);
 
         return view('admin.mess.process-mess-bills-employee.index', compact('bills', 'effectiveDateFrom', 'effectiveDateTo', 'effectiveDateFromYmd', 'effectiveDateToYmd', 'stats', 'clientType', 'buyerName'));
     }
@@ -227,7 +214,8 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
-        $search = $request->search;
+        $search = $request->filled('search') ? trim((string) $request->search) : null;
+        $search = ($search !== null && $search !== '') ? $search : null;
         $clientType = $request->filled('client_type') ? $request->client_type : null;
         $buyerName = $request->filled('buyer_name') ? trim($request->buyer_name) : null;
 
@@ -297,8 +285,13 @@ class ProcessMessBillsEmployeeController extends Controller
             ->mergeBindings($unionQuery->getQuery())
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($query) use ($search) {
-                    $query->where('client_name', 'like', "%{$search}%")
-                          ->orWhere('id', 'like', "%{$search}%");
+                    $query->where('client_name', 'like', '%' . $search . '%');
+                    if (is_numeric($search)) {
+                        $query->orWhere('id', '=', (int) $search);
+                    }
+                    if (preg_match('/^(?:SV|DR)-(\d+)$/i', $search, $m)) {
+                        $query->orWhere('id', '=', (int) $m[1]);
+                    }
                 });
             })
             ->orderBy('issue_date', 'desc')
@@ -390,7 +383,12 @@ class ProcessMessBillsEmployeeController extends Controller
         $dueAmount = max(0, $totalAmount - $paidAmount);
         $paymentStatusLabel = $paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
 
-        return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill', 'paidAmount', 'dueAmount', 'paymentStatusLabel'));
+        $invoiceNo = $isDateRange
+            ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT)
+            : 'SV-' . str_pad($bill->pk ?? $bill->id, 6, '0', STR_PAD_LEFT);
+        $receiptNo = $invoiceNo;
+
+        return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill', 'paidAmount', 'dueAmount', 'paymentStatusLabel', 'invoiceNo', 'receiptNo'));
     }
 
     /**
@@ -429,8 +427,15 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $clientTypeDisplay = $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—')));
 
+        $invoiceNo = $isDateRange
+            ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT)
+            : 'SV-' . str_pad($bill->pk ?? $bill->id, 6, '0', STR_PAD_LEFT);
+        $receiptNo = $invoiceNo;
+
         return response()->json([
             'bill_id' => $isDateRange ? 'dr-' . $bill->id : 'ki-' . $bill->pk,
+            'receipt_no' => $receiptNo,
+            'invoice_no' => $invoiceNo,
             'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
             'client_type' => $clientTypeDisplay,
             'date_from' => $dateFrom,
@@ -728,6 +733,13 @@ class ProcessMessBillsEmployeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'This bill is already fully paid!',
+            ], 400);
+        }
+
+        if ($amount > $dueBefore) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment amount cannot exceed the balance due (₹ ' . number_format($dueBefore, 2) . ').',
             ], 400);
         }
 

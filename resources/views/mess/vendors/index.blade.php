@@ -124,9 +124,9 @@
                                 required
                                 value="{{ old('phone') }}"
                                 inputmode="numeric"
-                                pattern="[0-9]{10}"
+                                pattern="[6-9][0-9]{9}"
                                 maxlength="10"
-                                placeholder="10 digit mobile number">
+                                placeholder="10 digit mobile number starting with 6-9">
                             <div class="text-danger small mt-1" id="create_phone_error" role="alert">@error('phone'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-12">
@@ -261,9 +261,9 @@
                                 class="form-control"
                                 required
                                 inputmode="numeric"
-                                pattern="[0-9]{10}"
+                                pattern="[6-9][0-9]{9}"
                                 maxlength="10"
-                                placeholder="10 digit mobile number">
+                                placeholder="10 digit mobile number starting with 6-9">
                             <div class="text-danger small mt-1" id="edit_phone_error" role="alert"></div>
                         </div>
                         <div class="col-12">
@@ -408,7 +408,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return { valid: false, message: 'Phone number is required.' };
             }
             if (digits.length !== 10) {
-                return { valid: false, message: 'Phone number must be exactly 10 digits.' };
+                return { valid: false, message: 'Phone number must be exactly 10 digits and start with 6, 7, 8, or 9.' };
+            }
+            if (!/^[6-9][0-9]{9}$/.test(digits)) {
+                return { valid: false, message: 'Phone number must be exactly 10 digits and start with 6, 7, 8, or 9.' };
             }
             return { valid: true };
         })();
@@ -490,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return rGst.valid && rBank.valid && rIfsc.valid && rAcc.valid;
     }
 
-    // Create form: prevent submit if invalid
+    // Create form: prevent submit if invalid; prevent double submit
     var createForm = document.querySelector('#createVendorModal form');
     if (createForm) {
         createForm.addEventListener('submit', function(e) {
@@ -502,11 +505,19 @@ document.addEventListener('DOMContentLoaded', function() {
             showLiveError(document.getElementById('create_vendor_name'), document.getElementById('create_vendor_name_error'), r1);
             showLiveError(document.getElementById('create_contact_person'), document.getElementById('create_contact_person_error'), r2);
             showLiveError(document.getElementById('create_address'), document.getElementById('create_address_error'), r3);
-            if (!r1.valid || !r2.valid || !r3.valid || !r4.valid || !rOpt) e.preventDefault();
+            if (!r1.valid || !r2.valid || !r3.valid || !r4.valid || !rOpt) {
+                e.preventDefault();
+                return;
+            }
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Saving...';
+            }
         });
     }
 
-    // Edit form: prevent submit if invalid
+    // Edit form: prevent submit if invalid; prevent double submit
     var editForm = document.getElementById('editVendorForm');
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
@@ -518,7 +529,15 @@ document.addEventListener('DOMContentLoaded', function() {
             showLiveError(document.getElementById('edit_vendor_name'), document.getElementById('edit_vendor_name_error'), r1);
             showLiveError(document.getElementById('edit_vendor_contact_person'), document.getElementById('edit_vendor_contact_person_error'), r2);
             showLiveError(document.getElementById('edit_vendor_address'), document.getElementById('edit_vendor_address_error'), r3);
-            if (!r1.valid || !r2.valid || !r3.valid || !r4.valid || !rOpt) e.preventDefault();
+            if (!r1.valid || !r2.valid || !r3.valid || !r4.valid || !rOpt) {
+                e.preventDefault();
+                return;
+            }
+            var btn = this.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) {
+                btn.disabled = true;
+                btn.textContent = 'Updating...';
+            }
         });
     }
 

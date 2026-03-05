@@ -300,27 +300,60 @@ class KitchenIssueController extends Controller
                 'section' => KitchenIssueMaster::CLIENT_SECTION,
                 'other' => KitchenIssueMaster::CLIENT_OTHER,
             ];
+            $clientType = $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE;
+            $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
 
-            $master = KitchenIssueMaster::create([
-                'store_id' => $storeId,
-                'store_type' => $storeType,
-                'payment_type' => $request->payment_type,
-                'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
-                'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
-                'client_id' => $request->client_id,
-                'name_id' => $request->name_id,
-                'client_name' => $request->client_name,
-                'issue_date' => $request->issue_date,
-                'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
-                'status' => KitchenIssueMaster::STATUS_PENDING, // Unpaid by default; Process Mess Bills "Generate Payment" sets to APPROVED (Paid)
-                'remarks' => $request->remarks,
-                'reference_number' => $request->reference_number,
-                'order_by' => $request->order_by,
-            ]);
+            // One bill per person: reuse existing unpaid selling voucher for same buyer (same store + client)
+            $master = KitchenIssueMaster::query()
+                ->where('store_id', $storeId)
+                ->where('store_type', $storeType)
+                ->where('client_type', $clientType)
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('status', '!=', KitchenIssueMaster::STATUS_APPROVED)
+                ->where(function ($q) use ($clientTypePk) {
+                    if ($clientTypePk !== null) {
+                        $q->where('client_type_pk', $clientTypePk);
+                    } else {
+                        $q->whereNull('client_type_pk');
+                    }
+                })
+                ->orderByDesc('pk')
+                ->first();
 
-            if ($request->hasFile('bill_file')) {
-                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
-                $master->update(['bill_path' => $path]);
+            if (!$master) {
+                $master = KitchenIssueMaster::create([
+                    'store_id' => $storeId,
+                    'store_type' => $storeType,
+                    'payment_type' => $request->payment_type,
+                    'client_type' => $clientType,
+                    'client_type_pk' => $clientTypePk,
+                    'client_id' => $request->client_id,
+                    'name_id' => $request->name_id,
+                    'client_name' => $request->client_name,
+                    'issue_date' => $request->issue_date,
+                    'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
+                    'status' => KitchenIssueMaster::STATUS_PENDING,
+                    'remarks' => $request->remarks,
+                    'reference_number' => $request->reference_number,
+                    'order_by' => $request->order_by,
+                ]);
+
+                if ($request->hasFile('bill_file')) {
+                    $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                    $master->update(['bill_path' => $path]);
+                }
+            } else {
+                // Add to existing bill: update issue_date to latest purchase date
+                $newIssueDate = $request->issue_date instanceof Carbon
+                    ? $request->issue_date
+                    : Carbon::parse($request->issue_date);
+                if ($newIssueDate->gt($master->issue_date)) {
+                    $master->update(['issue_date' => $newIssueDate]);
+                }
+                if ($request->hasFile('bill_file')) {
+                    $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                    $master->update(['bill_path' => $path]);
+                }
             }
 
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
@@ -447,6 +480,13 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::with(['items.itemSubcategory', 'clientTypeCategory'])->findOrFail($id);
 
+        if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Edit is disabled for approved voucher.'], 403);
+            }
+            return redirect()->route('admin.mess.material-management.index')->with('error', 'Edit is disabled for approved voucher.');
+        }
+
         if ($request->wantsJson()) {
             // Map numeric client_type back to slug
             $clientTypeSlugMap = [
@@ -529,6 +569,10 @@ class KitchenIssueController extends Controller
     public function update(Request $request, $id)
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
+
+        if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
+            return redirect()->route('admin.mess.material-management.index')->with('error', 'Edit is disabled for approved voucher.');
+        }
 
         $request->validate([
             'store_id' => ['required', function ($attribute, $value, $fail) {
