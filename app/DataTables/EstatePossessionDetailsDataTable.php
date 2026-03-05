@@ -96,7 +96,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'epd.possession_date',
                 'epd.electric_meter_reading',
             ])
-            ->where('epd.estate_change_id', -1)
+            // Show all possession records (estate_change_id -1 = form-added, null = allot flow, or change-request id). Do not filter so staging/local both show full list.
             ->orderBy('epd.pk', 'desc');
     }
 
@@ -138,15 +138,17 @@ class EstatePossessionDetailsDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('request_id')->name('ehrd.req_id')->title('REQUEST ID')->orderable(true)->searchable(true),
-            Column::make('emp_name')->name('ehrd.emp_name')->title('NAME')->orderable(true)->searchable(true),
-            Column::make('employee_id')->name('ehrd.employee_id')->title('EMPLOYEE ID')->orderable(true)->searchable(true),
-            Column::make('emp_designation')->name('ehrd.emp_designation')->title('DESIGNATION')->orderable(true)->searchable(true),
-            Column::make('estate_name')->name('ec.campus_name')->title('ESTATE NAME')->orderable(true)->searchable(true),
-            Column::make('building_name')->name('eb.block_name')->title('BUILDING NAME')->orderable(true)->searchable(true),
-            Column::make('unit_type')->name('eut.unit_type')->title('UNIT TYPE')->orderable(true)->searchable(true),
-            Column::make('unit_sub_type')->name('eust.unit_sub_type')->title('UNIT SUB TYPE')->orderable(true)->searchable(true),
-            Column::make('house_no')->name('ehm.house_no')->title('HOUSE NO.')->orderable(true)->searchable(true),
+            // searchable(false) so Yajra does not add WHERE using model table + data name (estate_home_request_details.request_id);
+            // global search is handled by the custom filter() above with correct aliases (ehrd.req_id etc.)
+            Column::make('request_id')->name('ehrd.req_id')->title('REQUEST ID')->orderable(true)->searchable(false),
+            Column::make('emp_name')->name('ehrd.emp_name')->title('NAME')->orderable(true)->searchable(false),
+            Column::make('employee_id')->name('ehrd.employee_id')->title('EMPLOYEE ID')->orderable(true)->searchable(false),
+            Column::make('emp_designation')->name('ehrd.emp_designation')->title('DESIGNATION')->orderable(true)->searchable(false),
+            Column::make('estate_name')->name('ec.campus_name')->title('ESTATE NAME')->orderable(true)->searchable(false),
+            Column::make('building_name')->name('eb.block_name')->title('BUILDING NAME')->orderable(true)->searchable(false),
+            Column::make('unit_type')->name('eut.unit_type')->title('UNIT TYPE')->orderable(true)->searchable(false),
+            Column::make('unit_sub_type')->name('eust.unit_sub_type')->title('UNIT SUB TYPE')->orderable(true)->searchable(false),
+            Column::make('house_no')->name('ehm.house_no')->title('HOUSE NO.')->orderable(true)->searchable(false),
             Column::make('allotment_date')->name('epd.allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date')->name('epd.possession_date')->title('POSSESSION DATE')->orderable(true)->searchable(false),
             Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('ELECTRIC METER READING')->orderable(false)->searchable(false),
