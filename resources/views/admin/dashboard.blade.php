@@ -307,7 +307,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
         @endif
 
-        @if(hasRole('Admin') || hasRole('Training-Induction'))
+        {{--@if(hasRole('Admin') || hasRole('Training-Induction'))
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.dashboard-statistics.charts') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card card-rose h-100">
@@ -322,7 +322,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 </div>
             </a>
         </div>
-        @endif
+        @endif--}}
     </div>
 
     <div class="row g-4">
