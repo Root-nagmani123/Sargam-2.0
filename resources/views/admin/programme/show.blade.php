@@ -91,7 +91,6 @@
                                         {{ $course->course_type }}
                                     </div>
                                 </div>
-                                @endif
                             </div>
                             
                             @if($course->description)
