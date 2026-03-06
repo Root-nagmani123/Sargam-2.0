@@ -357,13 +357,16 @@ class SellingVoucherDateRangeController extends Controller
                 $retQty = (float) ($item->return_quantity ?? 0);
                 $rate = (float) $item->rate;
                 $amount = max(0, $qty - $retQty) * $rate;
+                $itemIssueDate = $item->issue_date
+                    ? (Carbon::parse($item->issue_date)->format('d/m/Y'))
+                    : $issueDateFormatted;
                 return [
                     'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
                     'unit' => $item->unit ?? '—',
                     'quantity' => $qty,
                     'available_quantity' => (float) ($item->available_quantity ?? 0),
                     'return_quantity' => $retQty,
-                    'issue_date' => $issueDateFormatted,
+                    'issue_date' => $itemIssueDate,
                     'rate' => number_format($item->rate, 2),
                     'amount' => number_format($amount, 2),
                 ];

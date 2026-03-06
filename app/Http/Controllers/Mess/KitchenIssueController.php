@@ -32,10 +32,19 @@ class KitchenIssueController extends Controller
      */
     public function index(Request $request)
     {
-        $query = KitchenIssueMaster::with(['store', 'items.itemSubcategory', 'clientTypeCategory', 'course', 'employee', 'student']);
+        // This page lists only Selling Vouchers (type 1); data is in kitchen_issue_master + kitchen_issue_items
+        $query = KitchenIssueMaster::with(['store', 'items.itemSubcategory', 'clientTypeCategory', 'course', 'employee', 'student'])
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
 
         if ($request->filled('store')) {
-            $query->where('store_id', $request->store);
+            $storeFilter = $request->store;
+            if (str_starts_with((string) $storeFilter, 'sub_')) {
+                $query->where('store_type', 'sub_store')->where('store_id', (int) str_replace('sub_', '', $storeFilter));
+            } else {
+                $query->where(function ($q) use ($storeFilter) {
+                    $q->where('store_type', 'store')->where('store_id', $storeFilter);
+                });
+            }
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -49,8 +58,12 @@ class KitchenIssueController extends Controller
         if ($request->filled('kitchen_issue_type')) {
             $query->where('kitchen_issue_type', $request->kitchen_issue_type);
         }
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('issue_date', [$request->start_date, $request->end_date]);
+        // Date filter: support only start_date, only end_date, or both
+        if ($request->filled('start_date')) {
+            $query->where('issue_date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->where('issue_date', '<=', $request->end_date);
         }
 
         // DataTables handles pagination/search on the client; return full filtered set.
