@@ -355,10 +355,16 @@ class EmployeeIDCardRequestController extends Controller
             $employeePk = $emp?->pk;
         }
 
-        // Restrict NEW self ID card only when user already has an approved card.
-        // Allow requests for others (employee_master_pk != logged-in employee) even if current user has a card.
-        $isDupOrExt = in_array(($validated['request_for'] ?? 'Own ID Card'), ['Replacement', 'Duplication', 'Extension'], true);
-        if ($employeePk && $authEmployeePk && $employeePk === $authEmployeePk && !$isDupOrExt && static::hasApprovedIdCard($employeePk)) {
+        // Restrict NEW *own* ID card only when user already has an approved card.
+        // Do NOT block when request is for "Others ID Card" or "Family ID Card" (applying for someone else).
+        $requestFor = $validated['request_for'] ?? 'Own ID Card';
+        $isDupOrExt = in_array($requestFor, ['Replacement', 'Duplication', 'Extension'], true);
+        $isForSelf = $employeePk && $authEmployeePk && $employeePk === $authEmployeePk;
+        $blockOwnNewCard = $isForSelf
+            && $requestFor === 'Own ID Card'
+            && !$isDupOrExt
+            && static::hasApprovedIdCard($employeePk);
+        if ($blockOwnNewCard) {
             throw ValidationException::withMessages([
                 'employee_type' => 'You already have an approved ID card. A new request for yourself cannot be created. For duplicate or extension, use the Duplicate ID Card or relevant option.',
             ]);
@@ -786,6 +792,8 @@ class EmployeeIDCardRequestController extends Controller
             'academy_joining' => 'nullable|date',
             'id_card_valid_upto' => 'nullable|string|max:50',
             'id_card_valid_from' => 'nullable|string|max:50',
+            'id_card_valid_upto_extension' => 'nullable|string|max:50',
+            'id_card_valid_from_extension' => 'nullable|string|max:50',
             'id_card_number' => 'nullable|string|max:50',
             'mobile_number' => 'nullable|string|max:20',
             'telephone_number' => 'nullable|string|max:20',
@@ -888,9 +896,13 @@ class EmployeeIDCardRequestController extends Controller
         }
         $row->card_type = $cardNameCode;
 
-        // Preserve existing dates when not provided (e.g. readonly field not submitted or empty)
-        $cardValidFrom = !empty($validated['id_card_valid_from']) ? static::parseDateToYmd($validated['id_card_valid_from']) : $row->card_valid_from;
-        $cardValidTo = !empty($validated['id_card_valid_upto']) ? static::parseDateToYmd($validated['id_card_valid_upto']) : $row->card_valid_to;
+        // Prefer main form fields; use extension modal fields (Duplication/Extension) when main are empty
+        $cardValidFrom = !empty($validated['id_card_valid_from'])
+            ? static::parseDateToYmd($validated['id_card_valid_from'])
+            : (!empty($validated['id_card_valid_from_extension']) ? static::parseDateToYmd($validated['id_card_valid_from_extension']) : $row->card_valid_from);
+        $cardValidTo = !empty($validated['id_card_valid_upto'])
+            ? static::parseDateToYmd($validated['id_card_valid_upto'])
+            : (!empty($validated['id_card_valid_upto_extension']) ? static::parseDateToYmd($validated['id_card_valid_upto_extension']) : $row->card_valid_to);
         if ($cardValidFrom instanceof \DateTimeInterface) {
             $cardValidFrom = $cardValidFrom->format('Y-m-d');
         }
