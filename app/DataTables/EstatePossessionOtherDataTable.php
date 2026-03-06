@@ -34,13 +34,9 @@ class EstatePossessionOtherDataTable extends DataTable
             ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? 'N/A')
             ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
             ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
-            ->editColumn('meter_reading_oth', function ($row) {
-                $latestCurr = $row->getAttribute('latest_curr_month_elec_red');
-                if ($latestCurr !== null && $latestCurr !== '') {
-                    return $latestCurr;
-                }
-                return $row->meter_reading_oth ?? '---';
-            })
+            // Always show the possession record's stored last month reading,
+            // which we keep in sync whenever meter readings are updated.
+            ->editColumn('meter_reading_oth', fn($row) => $row->meter_reading_oth ?? '---')
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
                 if (empty($searchValue)) {
@@ -120,7 +116,8 @@ class EstatePossessionOtherDataTable extends DataTable
             ->leftJoin('estate_house_master as ehm', 'estate_possession_other.estate_house_master_pk', '=', 'ehm.pk')
             ->leftJoinSub($latestOtherReadings, 'emro_latest', function ($join) {
                 $join->on('emro_latest.estate_possession_other_pk', '=', 'estate_possession_other.pk');
-            });
+            })
+            ->orderByDesc('estate_possession_other.pk');
     }
 
     public function html(): HtmlBuilder
@@ -137,7 +134,8 @@ class EstatePossessionOtherDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[0, 'desc']],
+                // Default sort: newest possession first (by S.NO. which maps to pk desc)
+                'order' => [[1, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',

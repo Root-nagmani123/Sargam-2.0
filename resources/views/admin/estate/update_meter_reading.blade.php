@@ -251,7 +251,7 @@ $(document).ready(function() {
                 const meterSlot = row.meter_slot || 1;
                 const rowKey = row.pk + '_' + meterSlot;
                 window.meterReadingRowData[rowKey] = { pk: row.pk, meter_slot: meterSlot, new_meter_no: newMeterNo, curr_month_elec_red: newMeterReading };
-                const tr = '<tr data-last-reading="'+ lastReadingVal +'" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
+                const tr = '<tr data-last-reading="'+ lastReadingVal +'" data-existing-curr="'+ newMeterReading +'" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
@@ -296,11 +296,28 @@ $(document).ready(function() {
 
     $(document).on('input change', '.new-meter-reading', function() {
         const $row = $(this).closest('tr');
-        syncRowDataFromInputs($row);
         const lastVal = $row.data('last-reading');
+        const existingVal = $row.data('existing-curr');
+
         const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
-        const currVal = $(this).val();
-        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        const existingCurr = (existingVal !== '' && existingVal !== undefined && !isNaN(parseFloat(existingVal))) ? parseFloat(existingVal) : null;
+
+        let currVal = $(this).val();
+        let currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+
+        // Block user from entering value less than last month / existing current.
+        let minAllowed = lastReading;
+        if (existingCurr !== null) {
+            minAllowed = (minAllowed !== null) ? Math.max(minAllowed, existingCurr) : existingCurr;
+        }
+        if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
+            currReading = minAllowed;
+            currVal = String(minAllowed);
+            $(this).val(currVal);
+        }
+
+        syncRowDataFromInputs($row);
+
         let unit = 'N/A';
         if (lastReading !== null && currReading !== null && currReading >= lastReading) {
             unit = currReading - lastReading;
