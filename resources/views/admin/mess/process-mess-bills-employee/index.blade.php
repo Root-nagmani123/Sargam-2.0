@@ -201,7 +201,7 @@
                                 $receiptId = $isDateRange ? 'dr-' . $bill->id : 'ki-' . ($bill->pk ?? $bill->id);
                             @endphp
                             <tr class="{{ ($bill->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
-                                <td>{{ $bills->firstItem() + $index }}</td>
+                                <td>{{ $index + 1 }}</td>
                                 <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
                                 <td>{{ $slipNo }}</td>
                                 <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>

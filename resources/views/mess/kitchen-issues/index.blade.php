@@ -66,7 +66,7 @@
     </div>
     <hr class="my-2">
         <div class="table-responsive sv-table-wrapper">
-        <table class="table align-middle mb-0" id="sellingVouchersTable">
+        <table class="table text-nowrap align-middle mb-0" id="sellingVouchersTable">
             <thead>
                 <tr>
                     <th>Serial No.</th>
