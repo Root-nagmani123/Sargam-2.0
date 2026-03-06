@@ -123,6 +123,8 @@ $(document).ready(function() {
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
     const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
+    const possessionPks = @json($possessionPks ?? '');
+    const prefill = @json($prefill ?? null);
 
     // For this grid we avoid DataTables to prevent focus issues while typing.
     let dataTable = null;
@@ -162,12 +164,18 @@ $(document).ready(function() {
             var sel = (ut.unit_type === 'Residential') ? ' selected' : '';
             $('#unit_name').append('<option value="'+ut.pk+'"'+sel+'>'+ut.unit_type+'</option>');
         });
+        if (prefill && String(prefill.estate_campus_master_pk) === String(campusId)) {
+            $('#unit_name').val(prefill.estate_unit_type_master_pk || '');
+        }
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
                 $('#building').html('<option value="">All</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
+                if (prefill && String(prefill.estate_campus_master_pk) === String(campusId)) {
+                    $('#building').val(prefill.estate_block_master_pk || '');
+                }
             }
         });
     });
@@ -206,6 +214,9 @@ $(document).ready(function() {
             unit_type_id: $('#unit_name').val() || '',
             unit_sub_type_id: $('#unit_sub_type').val() || ''
         };
+        if (possessionPks) {
+            params.possession_pks = typeof possessionPks === 'string' ? possessionPks : (Array.isArray(possessionPks) ? possessionPks.join(',') : '');
+        }
         $.get(listUrl, params, function(res) {
             if (!res.status || !res.data || res.data.length === 0) {
                 $('#meterReadingSaveForm').hide();
@@ -226,8 +237,8 @@ $(document).ready(function() {
                 const currVal = (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '');
                 const rowKey = row.pk;
                 window.otherMeterRowData[rowKey] = { curr_month_elec_red: currVal };
-                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-pk="'+ row.pk +'">' +
-                    '<td><input type="checkbox" class="form-check-input row-check"></td>' +
+                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ (currVal !== '' ? currVal : '') +'" data-pk="'+ row.pk +'">' +
+                    '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1" aria-label="Select row"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.last_reading_date || 'N/A') +'</td>' +
@@ -246,7 +257,8 @@ $(document).ready(function() {
     });
 
     $('#select_all').on('change', function() {
-        $('.row-check').prop('checked', $(this).prop('checked'));
+        const checked = $(this).prop('checked');
+        $('.row-check').prop('checked', checked).trigger('change');
     });
 
     function syncOtherRowDataFromInputs($row) {
@@ -261,11 +273,28 @@ $(document).ready(function() {
 
     $(document).on('input change', '.curr-reading', function() {
         const $row = $(this).closest('tr');
-        syncOtherRowDataFromInputs($row);
         const lastVal = $row.data('last-reading');
+        const existingVal = $row.data('existing-curr');
+
         const lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
-        const currVal = $(this).val();
-        const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+        const existingCurr = (existingVal !== '' && existingVal !== undefined && !isNaN(parseFloat(existingVal))) ? parseFloat(existingVal) : null;
+
+        let currVal = $(this).val();
+        let currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+
+        // Block user from entering value less than last month / existing current.
+        let minAllowed = lastReading;
+        if (existingCurr !== null) {
+            minAllowed = (minAllowed !== null) ? Math.max(minAllowed, existingCurr) : existingCurr;
+        }
+        if (minAllowed !== null && currReading !== null && currReading < minAllowed) {
+            currReading = minAllowed;
+            currVal = String(minAllowed);
+            $(this).val(currVal);
+        }
+
+        syncOtherRowDataFromInputs($row);
+
         let unit = 'N/A';
         if (lastReading !== null && currReading !== null && currReading >= lastReading) {
             unit = currReading - lastReading;
@@ -273,9 +302,26 @@ $(document).ready(function() {
         $row.find('.unit-cell').text(unit);
     });
 
+    // Require current reading only for selected rows (gives immediate feedback).
+    $(document).on('change', '.row-check', function() {
+        const $row = $(this).closest('tr');
+        const $input = $row.find('.curr-reading');
+        if ($(this).prop('checked')) {
+            $input.attr('required', 'required');
+        } else {
+            $input.removeAttr('required');
+        }
+    });
+
     $('#meterReadingSaveForm').on('submit', function(e) {
         // No DataTable pagination; submit normally.
     });
+
+    // Prefill form when coming from Estate Possession for Other with single selection
+    if (prefill) {
+        $('#estate_name').val(prefill.estate_campus_master_pk || '').trigger('change');
+        $('#unit_sub_type').val(prefill.estate_unit_sub_type_master_pk || '');
+    }
 });
 </script>
 @endpush

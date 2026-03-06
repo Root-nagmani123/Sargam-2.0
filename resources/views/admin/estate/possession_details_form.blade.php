@@ -6,20 +6,13 @@
 <div class="container-fluid py-4">
     <x-breadcrum title="Add Possession Details"></x-breadcrum>
     <x-estate-workflow-stepper current="possession-details" />
+    <x-session_message />
 
     <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
         <div class="card-body p-4 p-lg-5">
             <h2 class="h5 fw-semibold mb-1">Add Possession Details</h2>
             <p class="text-muted small mb-4">Requester list contains only allotted users (from HAC Approved flow).</p>
             <hr class="my-4">
-
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0" aria-hidden="true"></i>
-                    <span class="flex-grow-1">{{ session('error') }}</span>
-                    <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
 
             <form method="POST" action="{{ route('admin.estate.possession-details.store') }}" id="possessionDetailsForm" class="needs-validation" novalidate>
                 @csrf
@@ -119,23 +112,30 @@
                         <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <input
-                                type="number"
+                                type="text"
                                 class="form-control"
                                 id="electric_meter_reading_primary"
                                 name="electric_meter_reading_primary"
-                                min="0"
+                                required
+                                inputmode="numeric"
+                                pattern="[0-9]{1,10}"
+                                maxlength="10"
                                 value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', 0)) }}"
                                 placeholder="Primary"
+                                oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
                             >
                             <span class="input-group-text">/</span>
                             <input
-                                type="number"
+                                type="text"
                                 class="form-control"
                                 id="electric_meter_reading_secondary"
                                 name="electric_meter_reading_secondary"
-                                min="0"
+                                inputmode="numeric"
+                                pattern="[0-9]{1,10}"
+                                maxlength="10"
                                 value="{{ old('electric_meter_reading_secondary') }}"
                                 placeholder="Secondary"
+                                oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
                             >
                         </div>
                         <input type="hidden" id="electric_meter_reading" name="electric_meter_reading" value="{{ old('electric_meter_reading', 0) }}">

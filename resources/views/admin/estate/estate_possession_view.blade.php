@@ -5,6 +5,7 @@
 @section('setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Possession View"></x-breadcrum>
+    <x-session_message />
     <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
         <div class="card-body p-4 p-lg-5">
             <h2 class="h5 fw-semibold mb-1">Possession View</h2>
@@ -92,7 +93,7 @@
                     <div class="col-12 col-md-6">
                         <label for="allotment_date" class="form-label">Allotment Date <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="date" class="form-control" id="allotment_date" name="allotment_date" value="{{ old('allotment_date', isset($record) && $record->allotment_date ? $record->allotment_date->format('Y-m-d') : '') }}">
+                            <input type="date" class="form-control" id="allotment_date" name="allotment_date" required value="{{ old('allotment_date', isset($record) && $record->allotment_date ? $record->allotment_date->format('Y-m-d') : '') }}">
                             <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
                         </div>
                         <div class="form-text">Allotment Date</div>
@@ -100,15 +101,37 @@
                     <div class="col-12 col-md-6">
                         <label for="possession_date_oth" class="form-label">Possession Date <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="date" class="form-control" id="possession_date_oth" name="possession_date_oth" value="{{ old('possession_date_oth', isset($record) && $record->possession_date_oth ? $record->possession_date_oth->format('Y-m-d') : '') }}">
+                            <input type="date" class="form-control" id="possession_date_oth" name="possession_date_oth" required value="{{ old('possession_date_oth', isset($record) && $record->possession_date_oth ? $record->possession_date_oth->format('Y-m-d') : '') }}">
                             <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
                         </div>
                         <div class="form-text">Possession Date</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="meter_reading_oth" name="meter_reading_oth" value="{{ old('meter_reading_oth', isset($record) ? $record->meter_reading_oth : '') }}" min="0" placeholder="Primary">
-                        <div class="form-text">Electric Meter Reading (Primary)</div>
+                        <div class="input-group">
+                            <input type="text"
+                                   class="form-control"
+                                   id="meter_reading_oth_primary"
+                                   name="meter_reading_oth"
+                                   inputmode="numeric"
+                                   pattern="[0-9]{1,10}"
+                                   maxlength="10"
+                                   value="{{ old('meter_reading_oth', isset($record) ? $record->meter_reading_oth : '') }}"
+                                   placeholder="Primary (max 10 digits)"
+                                   oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);">
+                            <span class="input-group-text">/</span>
+                            <input type="text"
+                                   class="form-control"
+                                   id="meter_reading_oth_secondary"
+                                   name="meter_reading_oth1"
+                                   inputmode="numeric"
+                                   pattern="[0-9]{1,10}"
+                                   maxlength="10"
+                                   value="{{ old('meter_reading_oth1', isset($record) ? $record->meter_reading_oth1 : '') }}"
+                                   placeholder="Secondary (max 10 digits)"
+                                   oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);">
+                        </div>
+                        <div class="form-text">Electric Meter Reading (Primary / Secondary)</div>
                     </div>
                 </div>
 
@@ -137,10 +160,16 @@ $(document).ready(function() {
     const housesUrl = "{{ route('admin.estate.possession.houses') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
 
-    const recordBlock = @json(isset($record) ? $record->estate_block_master_pk : null);
-    const recordUnitType = @json(isset($record) ? $record->estate_unit_type_master_pk : null);
-    const recordUnitSub = @json(isset($record) ? $record->estate_unit_sub_type_master_pk : null);
-    const recordHouse = @json(isset($record) ? $record->estate_house_master_pk : null);
+    // Preserve dependent dropdown state after validation errors (old input),
+    // and also when editing an existing record.
+    let initialSelections = {
+        campus: @json(old('estate_campus_master_pk', isset($record) ? $record->estate_campus_master_pk : null)),
+        unitType: @json(old('estate_unit_type_master_pk', isset($record) ? $record->estate_unit_type_master_pk : null)),
+        block: @json(old('estate_block_master_pk', isset($record) ? $record->estate_block_master_pk : null)),
+        unitSub: @json(old('estate_unit_sub_type_master_pk', isset($record) ? $record->estate_unit_sub_type_master_pk : null)),
+        house: @json(old('estate_house_master_pk', isset($record) ? $record->estate_house_master_pk : null)),
+    };
+    let isInitializing = true;
 
     // Requester change -> fill request_id and section
     $('#estate_other_req_pk').change(function() {
@@ -157,12 +186,20 @@ $(document).ready(function() {
         $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
         $('#estate_house_master_pk').html('<option value="">Select</option>');
         if (!campusId) return;
+
+        if (!isInitializing) {
+            initialSelections.unitType = null;
+            initialSelections.block = null;
+            initialSelections.unitSub = null;
+            initialSelections.house = null;
+        }
+
         var list = unitTypesByCampus[campusId] || [];
         $.each(list, function(i, ut) {
-            var sel = (recordUnitType && recordUnitType == ut.pk) ? 'selected' : '';
+            var sel = (initialSelections.unitType && initialSelections.unitType == ut.pk) ? 'selected' : '';
             $('#estate_unit_type_master_pk').append('<option value="'+ut.pk+'" '+sel+'>'+ut.unit_type+'</option>');
         });
-        if (list.length && !recordUnitType && list.length === 1) {
+        if (list.length && !initialSelections.unitType && list.length === 1) {
             $('#estate_unit_type_master_pk').val(list[0].pk);
         }
         if (list.length) loadBlocks();
@@ -173,6 +210,11 @@ $(document).ready(function() {
         $('#estate_block_master_pk').html('<option value="">Select</option>');
         $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
         $('#estate_house_master_pk').html('<option value="">Select</option>');
+        if (!isInitializing) {
+            initialSelections.block = null;
+            initialSelections.unitSub = null;
+            initialSelections.house = null;
+        }
         loadBlocks();
     });
 
@@ -186,7 +228,7 @@ $(document).ready(function() {
         }, function(res) {
             if (res.status && res.data) {
                 $.each(res.data, function(i, b) {
-                    var sel = (recordBlock && recordBlock == b.pk) ? 'selected' : '';
+                    var sel = (initialSelections.block && initialSelections.block == b.pk) ? 'selected' : '';
                     $('#estate_block_master_pk').append('<option value="'+b.pk+'" '+sel+'>'+b.block_name+'</option>');
                 });
                 loadUnitSubTypes();
@@ -198,6 +240,10 @@ $(document).ready(function() {
     $('#estate_block_master_pk').change(function() {
         $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
         $('#estate_house_master_pk').html('<option value="">Select</option>');
+        if (!isInitializing) {
+            initialSelections.unitSub = null;
+            initialSelections.house = null;
+        }
         loadUnitSubTypes();
     });
 
@@ -213,7 +259,7 @@ $(document).ready(function() {
         }, function(res) {
             if (res.status && res.data) {
                 $.each(res.data, function(i, u) {
-                    var sel = (recordUnitSub && recordUnitSub == u.pk) ? 'selected' : '';
+                    var sel = (initialSelections.unitSub && initialSelections.unitSub == u.pk) ? 'selected' : '';
                     $('#estate_unit_sub_type_master_pk').append('<option value="'+u.pk+'" '+sel+'>'+u.unit_sub_type+'</option>');
                 });
                 loadHouses();
@@ -224,6 +270,9 @@ $(document).ready(function() {
     // Unit sub type change -> load houses
     $('#estate_unit_sub_type_master_pk').change(function() {
         $('#estate_house_master_pk').html('<option value="">Select</option>');
+        if (!isInitializing) {
+            initialSelections.house = null;
+        }
         loadHouses();
     });
 
@@ -241,10 +290,11 @@ $(document).ready(function() {
         }, function(res) {
             if (res.status && res.data) {
                 $.each(res.data, function(i, h) {
-                    var sel = (recordHouse && recordHouse == h.pk) ? 'selected' : '';
+                    var sel = (initialSelections.house && initialSelections.house == h.pk) ? 'selected' : '';
                     $('#estate_house_master_pk').append('<option value="'+h.pk+'" data-house-no="'+h.house_no+'" '+sel+'>'+h.house_no+'</option>');
                 });
                 updateHouseNoDisplay();
+                isInitializing = false;
             }
         });
     }
@@ -259,9 +309,9 @@ $(document).ready(function() {
     }
 
     // Load initial data if editing
-    @if(isset($record) && $record)
+    if (initialSelections.campus) {
         $('#estate_campus_master_pk').trigger('change');
-    @endif
+    }
 });
 </script>
 @endpush

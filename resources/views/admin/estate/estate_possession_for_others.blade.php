@@ -16,7 +16,7 @@
                     <p class="text-muted small mb-0">This page displays all Possession added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
-                    <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2 text-decoration-none">
+                    <a href="{{ route('admin.estate.update-meter-reading-of-other') }}" id="btnUpdateReading" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2 text-decoration-none">
                         <i class="bi bi-speedometer2"></i>
                         <span>Update Reading</span>
                     </a>
@@ -132,10 +132,48 @@
         border-color: var(--bs-primary);
     }
     @media print {
+        @page {
+            size: A4 landscape;
+            margin: 8mm;
+        }
         .no-print { display: none !important; }
         #estatePossessionTable_wrapper .dataTables_length,
         #estatePossessionTable_wrapper .dataTables_filter,
         #estatePossessionTable_wrapper .dataTables_paginate { display: none !important; }
+
+        /* DataTables scrollX can clip columns on print; force full table rendering */
+        .estate-possession-table-wrapper,
+        #estatePossessionTable_wrapper .dataTables_scroll,
+        #estatePossessionTable_wrapper .dataTables_scrollBody,
+        #estatePossessionTable_wrapper .dataTables_scrollHead {
+            overflow: visible !important;
+        }
+        #estatePossessionTable_wrapper .dataTables_scrollBody {
+            height: auto !important;
+            max-height: none !important;
+        }
+        /* Avoid duplicated header tables and ensure header prints nicely */
+        #estatePossessionTable_wrapper .dataTables_scrollHead {
+            display: none !important;
+        }
+        #estatePossessionTable_wrapper table,
+        #estatePossessionTable_wrapper table.dataTable {
+            width: 100% !important;
+        }
+        body {
+            /* Fit wide tables in one page width */
+            zoom: 0.78;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        #estatePossessionTable_wrapper th,
+        #estatePossessionTable_wrapper td {
+            white-space: normal !important;
+            word-break: break-word;
+            font-size: 11px;
+            padding: 0.35rem 0.4rem !important;
+        }
+        #estatePossessionTable_wrapper thead { display: table-header-group; }
     }
     .estate-possession-table-wrapper {
         overflow-x: auto;
@@ -178,8 +216,143 @@
         table.on('draw', function() { buildColumnToggle(); });
         buildColumnToggle();
 
+        function buildPrintableTableHtml() {
+            // Clone the rendered table (after switching to "All" rows).
+            var $clone = $('#estatePossessionTable').clone();
+            $clone.removeAttr('id');
+
+            // Remove non-data columns (checkbox / actions) from clone.
+            var removeIdx = [];
+            $clone.find('thead th').each(function(i) {
+                var header = ($(this).text() || '').trim();
+                if (!header || header.toLowerCase() === 'actions') {
+                    removeIdx.push(i);
+                }
+            });
+            removeIdx.sort(function(a, b) { return b - a; }); // remove from right to left
+            $clone.find('tr').each(function() {
+                var $cells = $(this).children('th,td');
+                removeIdx.forEach(function(idx) {
+                    $cells.eq(idx).remove();
+                });
+            });
+
+            // Ensure borders are visible in print.
+            $clone.addClass('table table-bordered table-striped');
+
+            return $clone.prop('outerHTML');
+        }
+
+        function openPrintWindow(tableHtml) {
+            var title = 'Estate Possession for Other';
+            var win = window.open('', '_blank');
+            if (!win) {
+                // Popup blocked: fallback to normal print.
+                window.print();
+                return;
+            }
+
+            win.document.open();
+            win.document.write(
+                '<!doctype html><html><head><meta charset="utf-8">' +
+                '<title>' + title + '</title>' +
+                '<style>' +
+                '@page{size:A4 landscape;margin:8mm;}' +
+                'body{font-family:Arial, sans-serif;font-size:11px;color:#111;}' +
+                'h2{margin:0 0 8px 0;font-size:14px;}' +
+                'table{width:100%;border-collapse:collapse;}' +
+                'th,td{border:1px solid #333;padding:4px 6px;vertical-align:top;word-break:break-word;white-space:normal;}' +
+                'thead{display:table-header-group;}' +
+                'tr{page-break-inside:avoid;}' +
+                '</style></head><body>' +
+                '<h2>' + title + '</h2>' +
+                tableHtml +
+                '</body></html>'
+            );
+            win.document.close();
+
+            // Give browser time to layout before printing.
+            setTimeout(function() {
+                win.focus();
+                win.print();
+                // Closing helps avoid leaving extra tabs.
+                win.close();
+            }, 250);
+        }
+
         $('#btnPrint').on('click', function() {
-            window.print();
+            if (!table) {
+                window.print();
+                return;
+            }
+
+            // Print should include ALL rows and ALL data columns (scrollX + pagination otherwise hides details).
+            // This will generate multiple pages when data is large (expected).
+            var originalLen = table.page.len();
+            var originalPage = table.page();
+            var colCount = table.columns().count();
+            var originalVisibility = [];
+            for (var i = 0; i < colCount; i++) {
+                originalVisibility[i] = table.column(i).visible();
+            }
+
+            // Hide non-data columns for print (checkbox + actions).
+            var checkboxCol = 0;
+            var actionsCol = colCount - 1;
+            for (var c = 0; c < colCount; c++) {
+                if (c === checkboxCol || c === actionsCol) {
+                    table.column(c).visible(false, false);
+                } else {
+                    table.column(c).visible(true, false);
+                }
+            }
+            table.columns.adjust();
+
+            var restore = function() {
+                // Restore column visibility
+                for (var i = 0; i < colCount; i++) {
+                    table.column(i).visible(originalVisibility[i], false);
+                }
+                table.page.len(originalLen);
+                table.page(originalPage);
+                table.columns.adjust();
+                table.draw(false);
+            };
+
+            // Ensure restore runs once even if onafterprint doesn't fire consistently.
+            var restored = false;
+            var safeRestore = function() {
+                if (restored) return;
+                restored = true;
+                restore();
+            };
+
+            // Load all rows for printing (DataTables "All").
+            table.one('draw', function() {
+                setTimeout(function() {
+                    var tableHtml = buildPrintableTableHtml();
+                    openPrintWindow(tableHtml);
+                    // Restore after we trigger the print window.
+                    setTimeout(safeRestore, 800);
+                }, 250);
+            });
+
+            table.page.len(-1).draw();
+        });
+
+        $('#btnUpdateReading').on('click', function(e) {
+            e.preventDefault();
+            var ids = [];
+            $('#estatePossessionTable .row-select-possession:checked').each(function() {
+                var id = $(this).data('id');
+                if (id) ids.push(id);
+            });
+            if (ids.length !== 1) {
+                alert('Please select exactly one member to update reading.');
+                return;
+            }
+            var baseUrl = "{{ route('admin.estate.update-meter-reading-of-other') }}";
+            window.location = baseUrl + '?possession_pks=' + ids[0];
         });
 
         $(document).on('click', '.btn-delete-possession', function(e) {

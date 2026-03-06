@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var dataTableInstance = null;
     var tableEl = document.getElementById('listMeterReadingTable');
     var tbody = tableEl ? tableEl.querySelector('tbody') : null;
+    var lastLoadedParams = null;
 
     function destroyDataTable() {
         if (dataTableInstance && typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#listMeterReadingTable')) {
@@ -100,6 +101,8 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select Bill Month.');
             return;
         }
+
+        lastLoadedParams = { bill_month: billMonth, block_id: blockId };
 
         destroyDataTable();
         if (tbody) {
@@ -161,6 +164,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.getElementById('btnShow').addEventListener('click', loadData);
+
+    // When user navigates back from edit/update screen, browsers may restore this page from bfcache.
+    // In that case the table shows stale DOM. Refresh automatically to reflect saved readings.
+    window.addEventListener('pageshow', function(event) {
+        var navEntry = (performance && performance.getEntriesByType) ? performance.getEntriesByType('navigation')[0] : null;
+        var isBackForward = (navEntry && navEntry.type === 'back_forward') || event.persisted;
+        if (!isBackForward) return;
+
+        // Refresh only if user had loaded data once (so we don't fetch on a first visit).
+        if (lastLoadedParams && lastLoadedParams.bill_month) {
+            loadData();
+        }
+    });
 });
 </script>
 @endpush
