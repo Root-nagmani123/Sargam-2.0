@@ -6,8 +6,15 @@
         <div class="card-header bg-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1">Vehicle Pass Application - Approval Review</h4>
-                    <small class="text-muted">Request ID: <code>{{ $application->vehicle_req_id }}</code></small>
+                    <h4 class="mb-1">
+                        Vehicle Pass Application - Approval Review
+                        @if(isset($application->request_type) && $application->request_type === 'duplicate')
+                            <span class="badge bg-warning ms-2">Duplicate Pass</span>
+                        @else
+                            <span class="badge bg-info ms-2">Regular Pass</span>
+                        @endif
+                    </h4>
+                    <small class="text-muted">Request ID: <code>{{ $application->vehicle_req_id ?? $application->vehicle_tw_pk }}</code></small>
                 </div>
                 <div>
                     <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="btn btn-secondary">
@@ -143,10 +150,33 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
+                        <label class="form-label fw-bold">Employee ID</label>
+                        <div class="form-control bg-light">
+                            <strong>{{ $application->employee_id_card ?? '--' }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
                         <label class="form-label fw-bold">Employee Name</label>
                         <div class="form-control bg-light">
                             @if($application->employee)
-                                {{ $application->employee->emp_name }}
+                                {{ trim($application->employee->first_name . ' ' . ($application->employee->last_name ?? '')) ?: '--' }}
+                            @else
+                                <span class="text-muted">--</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Designation</label>
+                        <div class="form-control bg-light">
+                            @if($application->employee && $application->employee->designation)
+                                {{ $application->employee->designation->designation_name ?? '--' }}
                             @else
                                 <span class="text-muted">--</span>
                             @endif
@@ -155,10 +185,10 @@
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Employee Code</label>
+                        <label class="form-label fw-bold">Department</label>
                         <div class="form-control bg-light">
-                            @if($application->employee)
-                                {{ $application->employee->emp_code ?? '--' }}
+                            @if($application->employee && $application->employee->department)
+                                {{ $application->employee->department->department_name ?? '--' }}
                             @else
                                 <span class="text-muted">--</span>
                             @endif
@@ -289,7 +319,7 @@
                         </h5>
                         <div class="row">
                             <div class="col-md-6">
-                                <form action="{{ route('admin.security.vehicle_pass_approval.approve', encrypt($application->vehicle_tw_pk)) }}" method="POST">
+                                <form action="{{ route('admin.security.vehicle_pass_approval.approve', $application->encrypted_id) }}" method="POST">
                                     @csrf
                                     <div class="mb-3">
                                         <label for="forward_status_approve" class="form-label">Forward Status</label>
@@ -309,7 +339,7 @@
                                 </form>
                             </div>
                             <div class="col-md-6">
-                                <form action="{{ route('admin.security.vehicle_pass_approval.reject', encrypt($application->vehicle_tw_pk)) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this application?')">
+                                <form action="{{ route('admin.security.vehicle_pass_approval.reject', $application->encrypted_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this application?')">
                                     @csrf
                                     <div class="mb-3">
                                         <label for="remarks_reject" class="form-label">Rejection Reason <span class="text-danger">*</span></label>

@@ -1,0 +1,111 @@
+{{-- Shared table for Approval I and Approval II - same columns and layout --}}
+@props(['requests', 'approvalStage' => 1])
+
+<div class="table-responsive">
+    <table class="table text-nowrap align-middle mb-0" id="approvalTable">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAll" aria-label="Select all"></th>
+                <th>S.No.</th>
+                <th>Photo</th>
+                <th>Employee Name</th>
+                <th>Designation</th>
+                <th>Father Name</th>
+                <th>ID Card No</th>
+                <th>ID Type</th>
+                <th>Request Type</th>
+                <th>Date of Birth</th>
+                <th>Blood Group</th>
+                <th>Contact No</th>
+                <th>Valid From</th>
+                <th>Valid To</th>
+                <th>Approved/Reject</th>
+                <th>Request Date</th>
+                <th>Requested By</th>
+                <th>Requested Section</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($requests as $index => $req)
+                <tr>
+                    <td class="text-center"><input type="checkbox" class="row-check" value="{{ $req->id }}" aria-label="Select row"></td>
+                    <td class="text-center fw-medium">{{ $requests->firstItem() + $index }}</td>
+                    <td class="text-center">
+                        @if($req->photo)
+                            @php
+                                $photoPath = str_starts_with($req->photo, 'idcard/')
+                                    ? $req->photo
+                                    : 'idcard/photos/' . $req->photo;
+                                $photoExists = \Storage::disk('public')->exists($photoPath);
+                                $photoUrl = $photoExists ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
+                            @endphp
+                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block">
+                                <img src="{{ $photoUrl }}" alt="Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6; cursor:pointer;" title="Click to view full photo">
+                            </a>
+                        @else
+                            <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No photo available">
+                        @endif
+                    </td>
+                    <td>{{ $req->name ?? '--' }}</td>
+                    <td>{{ $req->designation ?? '--' }}</td>
+                    <td>{{ $req->father_name ?? '--' }}</td>
+                    <td>{{ $req->id_card_number ?? '--' }}</td>
+                    <td>{{ $req->card_type ?? '--' }}</td>
+                    <td>
+                        @if(isset($req->request_type) && $req->request_type === 'duplicate')
+                            <span class="badge bg-info">Duplicate</span>
+                        @else
+                            <span class="badge bg-secondary">Regular</span>
+                        @endif
+                    </td>
+                    <td>{{ $req->date_of_birth ? (\Carbon\Carbon::parse($req->date_of_birth)->format('d-m-Y')) : '--' }}</td>
+                    <td>{{ $req->blood_group ?? '--' }}</td>
+                    <td>{{ $req->mobile_number ?? $req->telephone_number ?? '--' }}</td>
+                    <td>{{ $req->id_card_valid_from ?? '--' }}</td>
+                    <td>{{ $req->id_card_valid_upto ?? '--' }}</td>
+                    <td>
+                        @if(isset($req->is_view_only) && $req->is_view_only)
+                            {{-- Contractual requests at Approval 2 are view-only --}}
+                            <span class="badge bg-info">View Only</span>
+                            <br>
+                            <small class="text-muted">Approved at Level 1</small>
+                        @else
+                            <div class="d-flex gap-1 flex-wrap">
+                                @php
+                                    // Determine the encryption key based on request type
+                                    $encryptKey = $req->id;
+                                    if (isset($req->request_type) && $req->request_type === 'duplicate') {
+                                        // For duplicate contractual: c-dup-pk
+                                        // For duplicate permanent: p-dup-pk
+                                        if (is_string($encryptKey) && str_starts_with($encryptKey, 'c-')) {
+                                            $encryptKey = 'c-dup-' . substr($encryptKey, 2);
+                                        } else {
+                                            $encryptKey = 'p-dup-' . $encryptKey;
+                                        }
+                                    }
+                                @endphp
+                                <form action="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.approve1', encrypt($encryptKey)) : route('admin.security.employee_idcard_approval.approve2', encrypt($encryptKey)) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-link p-0 text-success text-decoration-none" title="Approve">Approve</button>
+                                </form>
+                                <span class="text-muted">|</span>
+                                <button type="button" class="btn btn-link p-0 text-danger text-decoration-none reject-btn" title="Reject"
+                                    data-name="{{ $req->name }}"
+                                    data-url="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.reject1', encrypt($encryptKey)) : route('admin.security.employee_idcard_approval.reject2', encrypt($encryptKey)) }}">Reject</button>
+                            </div>
+                        @endif
+                    </td>
+                    <td>{{ $req->created_at ? $req->created_at->format('d-m-Y') : '--' }}</td>
+                    <td>{{ $req->requested_by ?? '--' }}</td>
+                    <td>{{ $req->requested_section ?? '--' }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="19" class="text-center text-muted py-4">
+                        No pending requests for {{ $approvalStage === 1 ? 'Approval I' : 'Approval II' }}.
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
