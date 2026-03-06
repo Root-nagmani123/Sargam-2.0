@@ -285,21 +285,17 @@ class EstateController extends Controller
         if ($isEdit) {
             $rules['status'] = 'required|integer|in:0,1,2';
         }
+        // NOTE: This endpoint is used by "Request For Estate" add/edit modal which does not collect
+        // any meter reading. Keep it optional, but validate format if provided by other flows.
         $messages = [
-            'meter_reading_oth.required' => 'Electric Meter Reading is required.',
             'meter_reading_oth.regex' => 'Electric Meter Reading must be numbers only (max 10 digits).',
             'meter_reading_oth.max' => 'Electric Meter Reading must be at most 10 digits.',
         ];
-
-        // Enforce "numbers only" + "max 10 digits" in a user-friendly way.
-        // Also keep the DB-safe upper bound (INT) to avoid overflow writes.
-        $rules['meter_reading_oth'] = ($request->get('redirect_to') === 'return-house')
-            ? 'nullable|regex:/^[0-9]{1,10}$/|max:10'
-            : 'required|regex:/^[0-9]{1,10}$/|max:10';
+        $rules['meter_reading_oth'] = 'nullable|regex:/^[0-9]{1,10}$/|max:10';
 
         $validated = $request->validate($rules, $messages);
 
-        // DB column is INT; hard guard against overflow even if 10 digits is entered.
+        // DB column (wherever stored) is INT; hard guard against overflow if provided.
         if (!empty($validated['meter_reading_oth']) && (int) $validated['meter_reading_oth'] > 2147483647) {
             return redirect()
                 ->back()
