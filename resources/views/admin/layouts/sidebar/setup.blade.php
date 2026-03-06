@@ -1,23 +1,22 @@
 <aside class="side-mini-panel with-vertical sidebar-google-style">
-    <div style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
+    <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
-            <div style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
-                <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+        <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
+            <div class="flex-fill d-flex flex-column" style="min-height: 0;">
+                <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
                     <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
     <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
         data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
 
-        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded"
-            style="font-size: 24px;">
+        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
             menu
         </i>
 
     </a>
 </div>
-                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto; min-height: 0;">
+                    <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer"></div>
@@ -30,7 +29,7 @@
                                         <div class="simplebar-content" style="padding: 0px;">
                                             <li class="mini-nav-item" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">dashboard_customize</i>
                                                     </span>
@@ -41,7 +40,7 @@
                                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">calendar_month</i>
                                                     </span>
@@ -51,7 +50,7 @@
                                             
                                             <li class="mini-nav-item" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">user_attributes</i>
                                                     </span>
@@ -61,7 +60,7 @@
                                             @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                                             <li class="mini-nav-item" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">menu_open</i>
                                                     </span>
@@ -70,7 +69,7 @@
                                             </li>
                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-3">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                         <i class="material-icons menu-icon material-symbols-rounded">note_add</i>
                                                     </span>
@@ -138,7 +137,8 @@
     width: 90px;
 }
 #sidebar-setup .sidebar-google-style .mini-nav {
-    background: #F0F0F0 !important;
+    background: var(--bs-secondary-bg-subtle) !important;
+    border: 1px solid var(--bs-border-color-translucent);
     padding: 12px 0;
     border-radius: 10px;
 }
@@ -147,7 +147,7 @@
     margin: 0;
 }
 #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
-    color: #555 !important;
+    color: var(--bs-secondary-color) !important;
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item {
     list-style: none;
@@ -169,6 +169,7 @@
     height: auto !important;
     min-height: 56px;
     width: 100%;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 #sidebar-setup .sidebar-google-style .sidebar-google-item {
     display: flex !important;
@@ -194,24 +195,28 @@
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
     font-size: 24px !important;
-    color: #555 !important;
+    color: var(--bs-secondary-color) !important;
 }
 #sidebar-setup .sidebar-google-style .sidebar-google-label {
     font-size: 11px;
-    color: #555 !important;
+    color: var(--bs-secondary-color) !important;
     font-weight: 400;
     text-align: center;
     line-height: 1.2;
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
-    color: #333 !important;
+    color: var(--bs-emphasis-color) !important;
+}
+#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item > a:focus-visible {
+    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
+    outline-offset: 2px;
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
-    background: #E0E0E0 !important;
+    background: var(--bs-primary-bg-subtle) !important;
     border-radius: 10px;
     padding: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
     transition: all 0.2s ease;
     transform: scale(1.05);
     margin: 4px 8px;
@@ -220,7 +225,7 @@
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
-    color: #333 !important;
+    color: var(--bs-primary-text-emphasis) !important;
 }
 #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
     display: none !important;
