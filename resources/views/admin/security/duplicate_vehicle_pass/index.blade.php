@@ -9,13 +9,9 @@
         <p class="text-muted small mb-0">Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} entries</p>
     </div>
 
-    <div class="no-print">
+    <div class="no-print mb-3">
         <x-breadcrum title="Duplicate Vehicle Pass Request"></x-breadcrum>
     </div>
-
-    <p class="text-muted mb-4 no-print">
-        This page displays all vehicle pass request added in the system, and provides options to manage records such as edit, delete, excel upload, excel download, print etc.
-    </p>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -30,8 +26,18 @@
         </div>
     @endif
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 no-print">
+                <div>
+                    <h5 class="card-title mb-1 fw-semibold">
+                        Duplicate Vehicle Pass Request
+                    </h5>
+                    <p class="card-subtitle text-muted small mb-0">
+                        View and manage all duplicate vehicle pass requests. You can search, filter, print, and perform actions on each record.
+                    </p>
+                </div>
+            </div>
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 no-print">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <form method="GET" class="d-flex align-items-center gap-2">
@@ -46,30 +52,39 @@
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
                     </form>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleColumnsBtn" title="Show / hide columns">
+                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="toggleColumnsBtn" title="Show / hide document column">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">view_column</i>
+                        <span class="d-none d-sm-inline">Columns</span>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Print">
+                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" onclick="window.history.back()" title="Back">
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">arrow_back</i>
+                        <span class="d-none d-sm-inline">Back</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">print</i>
+                        <span class="d-none d-sm-inline">Print</span>
                     </button>
                 </div>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <form method="GET" class="d-flex gap-2 align-items-center">
                         <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
-                        <label class="text-muted small">Search within table:</label>
+                        <label class="text-muted small mb-0">Search within table:</label>
                         <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Search..." style="width:200px">
-                        <button class="btn btn-sm btn-primary">Search</button>
+                        <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i>
+                            <span>Search</span>
+                        </button>
                     </form>
-                    <a href="{{ route('admin.security.duplicate_vehicle_pass.create') }}" class="btn btn-success btn-sm">
+                    <a href="{{ route('admin.security.duplicate_vehicle_pass.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1">
                         <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:18px;">add</i>
                         Add New Request
                     </a>
                 </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle mb-0" id="duplicateVehPassTable">
-                    <thead class="table-primary text-white">
+            <div class="table-responsive border rounded-3">
+                <table class="table table-striped table-hover align-middle mb-0" id="duplicateVehPassTable">
+                    <thead class="table-primary text-white sticky-top">
                         <tr>
                             <th style="width:50px">S.NO.</th>
                             <th class="col-emp">EMPLOYEE NAME</th>
@@ -92,8 +107,9 @@
                                 <td class="col-veh">{{ $r->vehicle_no ?? '--' }}</td>
                                 <td class="col-doc">
                                     @if($r->doc_upload)
-                                        <a href="{{ asset('storage/' . $r->doc_upload) }}" target="_blank" class="text-primary">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i> Download
+                                        <a href="{{ asset('storage/' . $r->doc_upload) }}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i>
+                                            <span class="d-none d-sm-inline">Download</span>
                                         </a>
                                     @else
                                         --
@@ -113,26 +129,31 @@
                                 </td>
                                 <td class="col-action">
                                     <div class="d-flex align-items-center gap-1">
-                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.show', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-primary" title="View">
+                                        <a href="{{ route('admin.security.duplicate_vehicle_pass.show', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" title="View">
                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
+                                            <span class="d-none d-md-inline">View</span>
                                         </a>
                                         @if((int)$r->vech_card_status === 1)
-                                            <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-success" title="Edit">
+                                            <a href="{{ route('admin.security.duplicate_vehicle_pass.edit', encrypt($r->vehicle_tw_pk)) }}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Edit">
                                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+                                                <span class="d-none d-md-inline">Edit</span>
                                             </a>
                                             <form action="{{ route('admin.security.duplicate_vehicle_pass.delete', encrypt($r->vehicle_tw_pk)) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this request?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" title="Delete">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                                    <span class="d-none d-md-inline">Delete</span>
                                                 </button>
                                             </form>
                                         @else
-                                            <button class="btn btn-sm btn-outline-secondary" title="Edit Disabled" disabled>
+                                            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Edit Disabled" disabled>
                                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+                                                <span class="d-none d-md-inline">Edit</span>
                                             </button>
-                                            <button class="btn btn-sm btn-outline-secondary" title="Delete Disabled" disabled>
+                                            <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="Delete Disabled" disabled>
                                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                                <span class="d-none d-md-inline">Delete</span>
                                             </button>
                                         @endif
                                     </div>

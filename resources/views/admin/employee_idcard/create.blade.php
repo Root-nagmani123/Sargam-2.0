@@ -768,28 +768,46 @@
         if (preview) preview.classList.add('d-none');
         if (fileNameEl) fileNameEl.textContent = '';
     }
-    document.getElementById('fir_receipt_modal').addEventListener('change', function() {
-        showDocPreviewModal(this, 'firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
-    });
-    document.getElementById('payment_receipt_modal').addEventListener('change', function() {
-        showDocPreviewModal(this, 'paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
-    });
-    document.getElementById('firReceiptRemove').addEventListener('click', function(e) {
-        e.stopPropagation();
-        document.getElementById('fir_receipt_modal').value = '';
-        clearDocPreviewModal('firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
-    });
-    document.getElementById('paymentReceiptRemove').addEventListener('click', function(e) {
-        e.stopPropagation();
-        document.getElementById('payment_receipt_modal').value = '';
-        clearDocPreviewModal('paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
-    });
-    document.getElementById('firReceiptUploadArea').addEventListener('click', function(e) {
-        if (!e.target.closest('button')) document.getElementById('fir_receipt_modal').click();
-    });
-    document.getElementById('paymentReceiptUploadArea').addEventListener('click', function(e) {
-        if (!e.target.closest('button')) document.getElementById('payment_receipt_modal').click();
-    });
+    var firReceiptInput = document.getElementById('fir_receipt_modal');
+    if (firReceiptInput) {
+        firReceiptInput.addEventListener('change', function() {
+            showDocPreviewModal(this, 'firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
+        });
+    }
+    var paymentReceiptInput = document.getElementById('payment_receipt_modal');
+    if (paymentReceiptInput) {
+        paymentReceiptInput.addEventListener('change', function() {
+            showDocPreviewModal(this, 'paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
+        });
+    }
+    var firReceiptRemove = document.getElementById('firReceiptRemove');
+    if (firReceiptRemove) {
+        firReceiptRemove.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (firReceiptInput) firReceiptInput.value = '';
+            clearDocPreviewModal('firReceiptPlaceholder', 'firReceiptPreview', 'firReceiptFileName');
+        });
+    }
+    var paymentReceiptRemove = document.getElementById('paymentReceiptRemove');
+    if (paymentReceiptRemove) {
+        paymentReceiptRemove.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (paymentReceiptInput) paymentReceiptInput.value = '';
+            clearDocPreviewModal('paymentReceiptPlaceholder', 'paymentReceiptPreview', 'paymentReceiptFileName');
+        });
+    }
+    var firReceiptUploadArea = document.getElementById('firReceiptUploadArea');
+    if (firReceiptUploadArea && firReceiptInput) {
+        firReceiptUploadArea.addEventListener('click', function(e) {
+            if (!e.target.closest('button')) firReceiptInput.click();
+        });
+    }
+    var paymentReceiptUploadArea = document.getElementById('paymentReceiptUploadArea');
+    if (paymentReceiptUploadArea && paymentReceiptInput) {
+        paymentReceiptUploadArea.addEventListener('click', function(e) {
+            if (!e.target.closest('button')) paymentReceiptInput.click();
+        });
+    }
 
     function showPhotoPreview(input, placeholderId, previewId, imgId) {
         var placeholder = document.getElementById(placeholderId);
@@ -839,32 +857,47 @@
         if (fileNameEl) fileNameEl.textContent = '';
     }
 
-    document.getElementById('photo_perm').addEventListener('change', function() {
-        showPhotoPreview(this, 'photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
-    });
-    document.getElementById('photo_cont').addEventListener('change', function() {
-        showPhotoPreview(this, 'photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
-    });
-    document.getElementById('documents').addEventListener('change', function() {
-        showDocPreview(this, 'documentsPlaceholder', 'documentsPreview', 'documentsFileName');
-    });
-    document.getElementById('joining_letter_perm').addEventListener('change', function() {
-        showDocPreview(this, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
-        var successEl = document.getElementById('joiningLetterSuccessPerm');
-        var successText = document.getElementById('joiningLetterSuccessTextPerm');
-        if (this.files && this.files.length) {
-            if (successEl) successEl.classList.remove('d-none');
-            if (successText) successText.textContent = 'Selected file: ' + this.files[0].name + ' — will be uploaded on submit.';
-        } else {
-            if (successEl) successEl.classList.add('d-none');
-            if (successText) successText.textContent = 'Joining document selected — will be uploaded on submit.';
-        }
-    });
-    document.getElementById('joining_letter_cont').addEventListener('change', function() {
-        showDocPreview(this, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
-        var successEl = document.getElementById('joiningLetterSuccessCont');
-        if (successEl) successEl.classList.toggle('d-none', !this.files || !this.files.length);
-    });
+    var photoPermInput = document.getElementById('photo_perm');
+    if (photoPermInput) {
+        photoPermInput.addEventListener('change', function() {
+            showPhotoPreview(this, 'photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
+        });
+    }
+    var photoContInput = document.getElementById('photo_cont');
+    if (photoContInput) {
+        photoContInput.addEventListener('change', function() {
+            showPhotoPreview(this, 'photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
+        });
+    }
+    var documentsInput = document.getElementById('documents');
+    if (documentsInput) {
+        documentsInput.addEventListener('change', function() {
+            showDocPreview(this, 'documentsPlaceholder', 'documentsPreview', 'documentsFileName');
+        });
+    }
+    var joiningLetterPermInput = document.getElementById('joining_letter_perm');
+    if (joiningLetterPermInput) {
+        joiningLetterPermInput.addEventListener('change', function() {
+            showDocPreview(this, 'joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+            var successEl = document.getElementById('joiningLetterSuccessPerm');
+            var successText = document.getElementById('joiningLetterSuccessTextPerm');
+            if (this.files && this.files.length) {
+                if (successEl) successEl.classList.remove('d-none');
+                if (successText) successText.textContent = 'Selected file: ' + this.files[0].name + ' — will be uploaded on submit.';
+            } else {
+                if (successEl) successEl.classList.add('d-none');
+                if (successText) successText.textContent = 'Joining document selected — will be uploaded on submit.';
+            }
+        });
+    }
+    var joiningLetterContInput = document.getElementById('joining_letter_cont');
+    if (joiningLetterContInput) {
+        joiningLetterContInput.addEventListener('change', function() {
+            showDocPreview(this, 'joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+            var successEl = document.getElementById('joiningLetterSuccessCont');
+            if (successEl) successEl.classList.toggle('d-none', !this.files || !this.files.length);
+        });
+    }
 
     function openDocPreview(inputId) {
         var input = document.getElementById(inputId);
@@ -875,51 +908,67 @@
         setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
     }
 
-    document.getElementById('joiningLetterPreviewBtnPerm').addEventListener('click', function(e) {
-        e.stopPropagation();
-        openDocPreview('joining_letter_perm');
-    });
-    document.getElementById('joiningLetterPreviewBtnCont').addEventListener('click', function(e) {
-        e.stopPropagation();
-        openDocPreview('joining_letter_cont');
-    });
+    var joiningLetterPreviewBtnPerm = document.getElementById('joiningLetterPreviewBtnPerm');
+    if (joiningLetterPreviewBtnPerm) {
+        joiningLetterPreviewBtnPerm.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openDocPreview('joining_letter_perm');
+        });
+    }
+    var joiningLetterPreviewBtnCont = document.getElementById('joiningLetterPreviewBtnCont');
+    if (joiningLetterPreviewBtnCont) {
+        joiningLetterPreviewBtnCont.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openDocPreview('joining_letter_cont');
+        });
+    }
 
-    document.getElementById('photoRemovePerm').addEventListener('click', function(e) {
-        e.stopPropagation();
-        var input = document.getElementById('photo_perm');
-        input.value = '';
-        clearPhotoPreview('photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
-    });
-    document.getElementById('photoRemoveCont').addEventListener('click', function(e) {
-        e.stopPropagation();
-        var input = document.getElementById('photo_cont');
-        input.value = '';
-        clearPhotoPreview('photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
-    });
-    document.getElementById('documentsRemove').addEventListener('click', function(e) {
-        e.stopPropagation();
-        var input = document.getElementById('documents');
-        input.value = '';
-        clearDocPreview('documentsPlaceholder', 'documentsPreview', 'documentsFileName');
-    });
-    document.getElementById('joiningLetterRemovePerm').addEventListener('click', function(e) {
-        e.stopPropagation();
-        var input = document.getElementById('joining_letter_perm');
-        input.value = '';
-        clearDocPreview('joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
-        var successEl = document.getElementById('joiningLetterSuccessPerm');
-        var successText = document.getElementById('joiningLetterSuccessTextPerm');
-        if (successEl) successEl.classList.add('d-none');
-        if (successText) successText.textContent = 'Joining document selected — will be uploaded on submit.';
-    });
-    document.getElementById('joiningLetterRemoveCont').addEventListener('click', function(e) {
-        e.stopPropagation();
-        var input = document.getElementById('joining_letter_cont');
-        input.value = '';
-        clearDocPreview('joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
-        var successEl = document.getElementById('joiningLetterSuccessCont');
-        if (successEl) successEl.classList.add('d-none');
-    });
+    var photoRemovePerm = document.getElementById('photoRemovePerm');
+    if (photoRemovePerm && photoPermInput) {
+        photoRemovePerm.addEventListener('click', function(e) {
+            e.stopPropagation();
+            photoPermInput.value = '';
+            clearPhotoPreview('photoPlaceholderPerm', 'photoPreviewPerm', 'photoPreviewImgPerm');
+        });
+    }
+    var photoRemoveCont = document.getElementById('photoRemoveCont');
+    if (photoRemoveCont && photoContInput) {
+        photoRemoveCont.addEventListener('click', function(e) {
+            e.stopPropagation();
+            photoContInput.value = '';
+            clearPhotoPreview('photoPlaceholderCont', 'photoPreviewCont', 'photoPreviewImgCont');
+        });
+    }
+    var documentsRemove = document.getElementById('documentsRemove');
+    if (documentsRemove && documentsInput) {
+        documentsRemove.addEventListener('click', function(e) {
+            e.stopPropagation();
+            documentsInput.value = '';
+            clearDocPreview('documentsPlaceholder', 'documentsPreview', 'documentsFileName');
+        });
+    }
+    var joiningLetterRemovePerm = document.getElementById('joiningLetterRemovePerm');
+    if (joiningLetterRemovePerm && joiningLetterPermInput) {
+        joiningLetterRemovePerm.addEventListener('click', function(e) {
+            e.stopPropagation();
+            joiningLetterPermInput.value = '';
+            clearDocPreview('joiningLetterPlaceholderPerm', 'joiningLetterPreviewPerm', 'joiningLetterFileNamePerm');
+            var successEl = document.getElementById('joiningLetterSuccessPerm');
+            var successText = document.getElementById('joiningLetterSuccessTextPerm');
+            if (successEl) successEl.classList.add('d-none');
+            if (successText) successText.textContent = 'Joining document selected — will be uploaded on submit.';
+        });
+    }
+    var joiningLetterRemoveCont = document.getElementById('joiningLetterRemoveCont');
+    if (joiningLetterRemoveCont && joiningLetterContInput) {
+        joiningLetterRemoveCont.addEventListener('click', function(e) {
+            e.stopPropagation();
+            joiningLetterContInput.value = '';
+            clearDocPreview('joiningLetterPlaceholderCont', 'joiningLetterPreviewCont', 'joiningLetterFileNameCont');
+            var successEl = document.getElementById('joiningLetterSuccessCont');
+            if (successEl) successEl.classList.add('d-none');
+        });
+    }
 
     var uploadAreas = [
         { areaId: 'photoUploadAreaPerm', inputId: 'photo_perm' },
