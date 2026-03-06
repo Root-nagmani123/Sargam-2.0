@@ -2,27 +2,27 @@
 @props(['requests', 'approvalStage' => 1])
 
 <div class="table-responsive">
-    <table class="table table-bordered table-hover align-middle mb-0" id="approvalTable">
-        <thead class="table-primary">
+    <table class="table text-nowrap align-middle mb-0" id="approvalTable">
+        <thead>
             <tr>
-                <th style="width:50px;" class="text-center"><input type="checkbox" id="selectAll" aria-label="Select all"></th>
-                <th style="width:50px;" class="text-center">S.No.</th>
-                <th style="width:70px;" class="text-center">PHOTO</th>
-                <th>EMPLOYEE NAME</th>
-                <th>DESIGNATION</th>
-                <th>FATHER NAME</th>
-                <th>ID CARD NO</th>
-                <th>ID TYPE</th>
-                <th>REQUEST TYPE</th>
-                <th>DATE OF BIRTH</th>
-                <th>BLOOD GROUP</th>
-                <th>CONTACT NO</th>
-                <th>VALID FROM</th>
-                <th>VALID TO</th>
-                <th>APPROVED/REJECT</th>
-                <th>REQUEST DATE</th>
-                <th>REQUESTED BY</th>
-                <th>REQUESTED SECTION</th>
+                <th><input type="checkbox" id="selectAll" aria-label="Select all"></th>
+                <th>S.No.</th>
+                <th>Photo</th>
+                <th>Employee Name</th>
+                <th>Designation</th>
+                <th>Father Name</th>
+                <th>ID Card No</th>
+                <th>ID Type</th>
+                <th>Request Type</th>
+                <th>Date of Birth</th>
+                <th>Blood Group</th>
+                <th>Contact No</th>
+                <th>Valid From</th>
+                <th>Valid To</th>
+                <th>Approved/Reject</th>
+                <th>Request Date</th>
+                <th>Requested By</th>
+                <th>Requested Section</th>
             </tr>
         </thead>
         <tbody>
