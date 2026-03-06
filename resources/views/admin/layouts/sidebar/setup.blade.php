@@ -104,7 +104,6 @@
                                             @endif
 
                                             @endif
-                                            @endif
                                             @if(! hasRole('Student-OT'))
                                           <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
