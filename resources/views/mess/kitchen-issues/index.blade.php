@@ -1391,9 +1391,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function getEditRowHtml(index, item) {
-        const options = itemSubcategories.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '"' + (item && item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
-        ).join('');
+        const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories;
+        const options = sourceItems.map(s => {
+            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
+            if (s.price_tiers && s.price_tiers.length > 0) {
+                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
+            }
+            return '<option value="' + s.id + '" ' + attrs + (item && item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        }).join('');
         const qty = item ? item.quantity : '';
         const avail = item ? item.available_quantity : 0;
         const rate = item ? item.rate : '';
@@ -1428,6 +1433,54 @@ document.addEventListener('DOMContentLoaded', function() {
             const btn = row.querySelector('.sv-remove-row');
             if (btn) btn.disabled = rows.length <= 1;
         });
+    }
+
+    function updateEditItemDropdowns() {
+        const rows = document.querySelectorAll('#editModalItemsBody .sv-item-row');
+        rows.forEach(row => {
+            const select = row.querySelector('.sv-item-select');
+            if (!select) return;
+
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Item</option>';
+
+            const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories;
+            sourceItems.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.item_name || '—';
+                option.setAttribute('data-unit', item.unit_measurement || '');
+                option.setAttribute('data-rate', item.standard_cost || 0);
+                option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.price_tiers && item.price_tiers.length > 0) {
+                    option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+                }
+                if (item.id == currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            updateUnit(row);
+        });
+        updateEditGrandTotal();
+    }
+
+    function buildEditItemsTable(items) {
+        const tbody = document.getElementById('editModalItemsBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (!Array.isArray(items) || items.length === 0) {
+            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(0, null));
+            editRowIndex = 1;
+        } else {
+            items.forEach((item, i) => {
+                tbody.insertAdjacentHTML('beforeend', getEditRowHtml(i, item));
+            });
+            editRowIndex = items.length;
+        }
+        updateEditRemoveButtons();
+        updateEditGrandTotal();
     }
 
     // View button handler (mousedown ensures single-tap works with DataTables)
@@ -1697,16 +1750,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             editBillLinkEl.innerHTML = '';
                         }
                     }
-                    const tbody = document.getElementById('editModalItemsBody');
-                    tbody.innerHTML = '';
-                    if (items.length === 0) {
-                        tbody.insertAdjacentHTML('beforeend', getEditRowHtml(0, null));
-                        editRowIndex = 1;
-                    } else {
-                        items.forEach((item, i) => {
-                            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(i, item));
+                    editCurrentStoreId = storeSelect ? storeSelect.value || '' : null;
+                    const openEditModalWithItems = function() {
+                        buildEditItemsTable(items);
+                        const modal = new bootstrap.Modal(document.getElementById('editSellingVoucherModal'));
+                        modal.show();
+                    };
+                    if (editCurrentStoreId) {
+                        fetchStoreItems(editCurrentStoreId, function() {
+                            updateEditItemDropdowns();
+                            openEditModalWithItems();
                         });
-                        editRowIndex = items.length;
+                    } else {
+                        filteredItems = itemSubcategories;
+                        openEditModalWithItems();
                     }
                     const isOt = (v.client_type_slug || '') === 'ot';
                     const isCourse = (v.client_type_slug || '') === 'course';
@@ -1735,10 +1792,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
                     }
                     updateEditModalNameField();
-                    updateEditGrandTotal();
-                    updateEditRemoveButtons();
-                    const modal = new bootstrap.Modal(document.getElementById('editSellingVoucherModal'));
-                    modal.show();
                 })
                 .catch(err => { 
                     console.error('Error loading voucher for edit:', err); 
@@ -1755,6 +1808,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
                 editRowIndex++;
                 updateEditRemoveButtons();
+                updateEditGrandTotal();
             }
         });
     }
@@ -1793,6 +1847,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateEditRemoveButtons();
                 }
             }
+        });
+    }
+
+    // Store selection change in EDIT modal
+    const editStoreSelect = document.querySelector('#editSellingVoucherModal select.edit-store');
+    if (editStoreSelect) {
+        editStoreSelect.addEventListener('change', function() {
+            const storeId = this.value;
+            editCurrentStoreId = storeId;
+            if (!storeId) {
+                filteredItems = itemSubcategories;
+                updateEditItemDropdowns();
+                return;
+            }
+            fetchStoreItems(storeId, function() {
+                updateEditItemDropdowns();
+            });
         });
     }
 

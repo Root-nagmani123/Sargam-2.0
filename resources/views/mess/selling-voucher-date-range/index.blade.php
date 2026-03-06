@@ -859,6 +859,43 @@
         });
     }
 
+    function updateEditItemDropdowns() {
+        const rows = document.querySelectorAll('#editModalItemsBody .edit-dr-item-row');
+        rows.forEach(row => {
+            const select = row.querySelector('.edit-dr-item-select');
+            if (!select) return;
+
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select Item</option>';
+
+            const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories;
+            sourceItems.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.item_name || '—';
+                option.setAttribute('data-unit', item.unit_measurement || '');
+                option.setAttribute('data-rate', item.standard_cost || 0);
+                option.setAttribute('data-available', item.available_quantity || 0);
+                if (item.price_tiers && item.price_tiers.length > 0) {
+                    option.setAttribute('data-price-tiers', JSON.stringify(item.price_tiers));
+                }
+                if (item.id == currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            const o = select.options[select.selectedIndex];
+            const unitInp = row.querySelector('.edit-dr-unit');
+            const availInp = row.querySelector('.edit-dr-avail');
+            if (unitInp) unitInp.value = (o && o.dataset.unit) ? o.dataset.unit : '—';
+            if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
+            updateEditRowLeft(row);
+            updateEditRowTotal(row);
+        });
+        updateEditGrandTotal();
+    }
+
     function getAddRowHtml(index) {
         const options = filteredItems.map(s => {
             let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
@@ -1378,9 +1415,14 @@
     // Edit modal row helpers
     function getEditRowHtml(index, item) {
         item = item || {};
-        const options = itemSubcategories.map(s =>
-            '<option value="' + s.id + '" data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '"' + (item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>'
-        ).join('');
+        const sourceItems = Array.isArray(filteredItems) && filteredItems.length > 0 ? filteredItems : itemSubcategories;
+        const options = sourceItems.map(s => {
+            let attrs = 'data-unit="' + (s.unit_measurement || '').replace(/"/g, '&quot;') + '" data-rate="' + (s.standard_cost || 0) + '" data-available="' + (s.available_quantity || 0) + '"';
+            if (s.price_tiers && s.price_tiers.length > 0) {
+                attrs += ' data-price-tiers="' + (JSON.stringify(s.price_tiers) || '').replace(/"/g, '&quot;') + '"';
+            }
+            return '<option value="' + s.id + '" ' + attrs + (item.item_subcategory_id == s.id ? ' selected' : '') + '>' + (s.item_name || '—').replace(/</g, '&lt;') + '</option>';
+        }).join('');
         const avail = item.available_quantity != null ? item.available_quantity : '';
         const qty = item.quantity != null ? item.quantity : '';
         const rate = item.rate != null ? item.rate : '';
@@ -1436,12 +1478,22 @@
         const sel = newTr.querySelector('.edit-dr-item-select');
         const opt = sel && sel.options[sel.selectedIndex];
         newTr.querySelector('.edit-dr-unit').value = (opt && opt.dataset.unit) ? opt.dataset.unit : '—';
+        const initAvailInp = newTr.querySelector('.edit-dr-avail');
+        if (initAvailInp && opt && opt.dataset.available) {
+            initAvailInp.value = opt.dataset.available;
+        }
         newTr.querySelector('.edit-dr-avail').addEventListener('input', function() { updateEditRowLeft(newTr); });
         newTr.querySelector('.edit-dr-qty').addEventListener('input', function() { enforceQtyWithinAvailable(newTr, '.edit-dr-avail', '.edit-dr-qty'); updateEditRowTotal(newTr); updateEditGrandTotal(); });
         newTr.querySelector('.edit-dr-rate').addEventListener('input', function() { updateEditRowTotal(newTr); updateEditGrandTotal(); });
         newTr.querySelector('.edit-dr-item-select').addEventListener('change', function() {
             const o = this.options[this.selectedIndex];
             newTr.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit : '—';
+            const availInp = newTr.querySelector('.edit-dr-avail');
+            if (availInp && o && o.dataset.available) {
+                availInp.value = o.dataset.available;
+            }
+            updateEditRowTotal(newTr);
+            updateEditGrandTotal();
         });
         newTr.querySelector('.edit-dr-remove-row').addEventListener('click', function() {
             newTr.remove();
@@ -1616,6 +1668,39 @@
         }, true);
     }
 
+    function buildEditItemsTable(items) {
+        const tbody = document.getElementById('editModalItemsBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        editRowIndex = 0;
+        (items || []).forEach(function(item) {
+            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, item));
+            editRowIndex++;
+        });
+        if (tbody.querySelectorAll('.edit-dr-item-row').length === 0) {
+            tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, {}));
+            editRowIndex++;
+        }
+        tbody.querySelectorAll('.edit-dr-item-row').forEach(function(row) {
+            row.querySelector('.edit-dr-avail').addEventListener('input', function() { updateEditRowLeft(row); });
+            row.querySelector('.edit-dr-qty').addEventListener('input', function() { updateEditRowTotal(row); updateEditGrandTotal(); });
+            row.querySelector('.edit-dr-rate').addEventListener('input', function() { updateEditRowTotal(row); updateEditGrandTotal(); });
+            row.querySelector('.edit-dr-item-select').addEventListener('change', function() {
+                const o = this.options[this.selectedIndex];
+                row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit : '—';
+                const availInp = row.querySelector('.edit-dr-avail');
+                if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
+                updateEditRowTotal(row);
+                updateEditGrandTotal();
+            });
+            row.querySelector('.edit-dr-remove-row').addEventListener('click', function() {
+                row.remove();
+                updateEditGrandTotal();
+            });
+        });
+        updateEditGrandTotal();
+    }
+
     // Edit report (mousedown ensures single-tap works with DataTables)
     document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-edit-report');
@@ -1705,35 +1790,41 @@
                         if (editNameInp) { editNameInp.style.display = 'block'; editNameInp.readOnly = false; editNameInp.placeholder = 'Client / section / role name'; editNameInp.setAttribute('required', 'required'); }
                     }
                     updateEditDrNameField();
-                    const tbody = document.getElementById('editModalItemsBody');
-                    tbody.innerHTML = '';
-                    editRowIndex = 0;
-                    (data.items || []).forEach(function(item) {
-                        tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, item));
-                        editRowIndex++;
-                    });
-                    if (tbody.querySelectorAll('.edit-dr-item-row').length === 0) {
-                        tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, {}));
-                        editRowIndex++;
+                    editCurrentStoreId = v.store_id || '';
+                    const items = data.items || [];
+                    const openEditModalWithItems = function() {
+                        buildEditItemsTable(items);
+                        new bootstrap.Modal(document.getElementById('editReportModal')).show();
+                    };
+                    if (editCurrentStoreId) {
+                        fetchStoreItems(editCurrentStoreId, function() {
+                            updateEditItemDropdowns();
+                            openEditModalWithItems();
+                        });
+                    } else {
+                        filteredItems = itemSubcategories;
+                        openEditModalWithItems();
                     }
-                    tbody.querySelectorAll('.edit-dr-item-row').forEach(function(row) {
-                        row.querySelector('.edit-dr-avail').addEventListener('input', function() { updateEditRowLeft(row); });
-                        row.querySelector('.edit-dr-qty').addEventListener('input', function() { updateEditRowTotal(row); updateEditGrandTotal(); });
-                        row.querySelector('.edit-dr-rate').addEventListener('input', function() { updateEditRowTotal(row); updateEditGrandTotal(); });
-                        row.querySelector('.edit-dr-item-select').addEventListener('change', function() {
-                            const o = this.options[this.selectedIndex];
-                            row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit : '—';
-                        });
-                        row.querySelector('.edit-dr-remove-row').addEventListener('click', function() {
-                            row.remove();
-                            updateEditGrandTotal();
-                        });
-                    });
-                    updateEditGrandTotal();
-                    new bootstrap.Modal(document.getElementById('editReportModal')).show();
                 })
                 .catch(err => { console.error(err); alert('Failed to load report for edit.'); });
     }, true);
+
+    // Store selection change in EDIT modal
+    const editStoreSelect = document.querySelector('#editReportModal select[name="inve_store_master_pk"]');
+    if (editStoreSelect) {
+        editStoreSelect.addEventListener('change', function() {
+            const storeId = this.value;
+            editCurrentStoreId = storeId;
+            if (!storeId) {
+                filteredItems = itemSubcategories;
+                updateEditItemDropdowns();
+                return;
+            }
+            fetchStoreItems(storeId, function() {
+                updateEditItemDropdowns();
+            });
+        });
+    }
 
     // Reset add modal when opened
     const addReportModal = document.getElementById('addReportModal');
