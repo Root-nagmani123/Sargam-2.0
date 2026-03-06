@@ -285,7 +285,28 @@ class EstateController extends Controller
         if ($isEdit) {
             $rules['status'] = 'required|integer|in:0,1,2';
         }
-        $validated = $request->validate($rules);
+        $messages = [
+            'meter_reading_oth.required' => 'Electric Meter Reading is required.',
+            'meter_reading_oth.regex' => 'Electric Meter Reading must be numbers only (max 10 digits).',
+            'meter_reading_oth.max' => 'Electric Meter Reading must be at most 10 digits.',
+        ];
+
+        // Enforce "numbers only" + "max 10 digits" in a user-friendly way.
+        // Also keep the DB-safe upper bound (INT) to avoid overflow writes.
+        $rules['meter_reading_oth'] = ($request->get('redirect_to') === 'return-house')
+            ? 'nullable|regex:/^[0-9]{1,10}$/|max:10'
+            : 'required|regex:/^[0-9]{1,10}$/|max:10';
+
+        $validated = $request->validate($rules, $messages);
+
+        // DB column is INT; hard guard against overflow even if 10 digits is entered.
+        if (!empty($validated['meter_reading_oth']) && (int) $validated['meter_reading_oth'] > 2147483647) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['meter_reading_oth' => 'Electric Meter Reading value is too large. Please enter up to 10 digits.'])
+                ->with('error', 'Please correct the errors and try again.');
+        }
 
         $user = Auth::user();
         $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
@@ -2143,20 +2164,62 @@ class EstateController extends Controller
      */
     public function storePossession(Request $request)
     {
-        $validated = $request->validate([
+        $rules = [
             'estate_other_req_pk' => 'required|exists:estate_other_req,pk',
-            'estate_campus_master_pk' => 'required|integer',
-            'estate_block_master_pk' => 'required|integer',
-            'estate_unit_sub_type_master_pk' => 'required|integer',
-            'estate_house_master_pk' => 'required|integer',
-            'possession_date_oth' => 'nullable|date',
-            'allotment_date' => 'nullable|date',
+            'estate_campus_master_pk' => 'required|integer|exists:estate_campus_master,pk',
+            'estate_block_master_pk' => 'required|integer|exists:estate_block_master,pk',
+            'estate_unit_sub_type_master_pk' => 'required|integer|exists:estate_unit_sub_type_master,pk',
+            'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
             'returning_date' => 'nullable|date',
-            'meter_reading_oth' => 'nullable|integer',
             'house_no' => 'nullable|string|max:100',
             'remarks' => 'nullable|string|max:1000',
             'noc_document' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
-        ]);
+        ];
+
+        // Possession View (normal add/edit) requires these fields.
+        // Return-house flow reuses this endpoint, so keep those fields optional there.
+        if ($request->get('redirect_to') === 'return-house') {
+            $rules['possession_date_oth'] = 'nullable|date';
+            $rules['allotment_date'] = 'nullable|date';
+            $rules['meter_reading_oth'] = 'nullable|regex:/^[0-9]{1,10}$/';
+            $rules['meter_reading_oth1'] = 'nullable|regex:/^[0-9]{1,10}$/';
+        } else {
+            $rules['possession_date_oth'] = 'required|date';
+            $rules['allotment_date'] = 'required|date';
+            // Allow primary OR secondary; enforce "at least one" in after() hook.
+            $rules['meter_reading_oth'] = 'nullable|regex:/^[0-9]{1,10}$/';
+            $rules['meter_reading_oth1'] = 'nullable|regex:/^[0-9]{1,10}$/';
+        }
+
+        $messages = [
+            'meter_reading_oth.regex' => 'Primary meter reading must be numbers only (max 10 digits).',
+            'meter_reading_oth1.regex' => 'Secondary meter reading must be numbers only (max 10 digits).',
+        ];
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, $messages);
+        $validator->after(function ($v) use ($request) {
+            if ($request->get('redirect_to') === 'return-house') {
+                return;
+            }
+            $p = trim((string) $request->input('meter_reading_oth', ''));
+            $s = trim((string) $request->input('meter_reading_oth1', ''));
+            if ($p === '' && $s === '') {
+                $v->errors()->add('meter_reading_oth', 'Electric Meter Reading is required (enter Primary or Secondary).');
+            }
+        });
+
+        $validated = $validator->validate();
+
+        // DB columns are INT; hard guard against overflow.
+        foreach (['meter_reading_oth', 'meter_reading_oth1'] as $k) {
+            if (!empty($validated[$k]) && (int) $validated[$k] > 2147483647) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->withErrors([$k => 'Electric Meter Reading is too large. Please enter up to 10 digits.'])
+                    ->with('error', 'Please correct the errors and try again.');
+            }
+        }
 
         if ($request->get('redirect_to') !== 'return-house') {
             $duplicateQuery = EstatePossessionOther::where('estate_other_req_pk', $validated['estate_other_req_pk']);
@@ -2174,6 +2237,12 @@ class EstateController extends Controller
         $house = DB::table('estate_house_master')
             ->where('pk', $validated['estate_house_master_pk'])
             ->first();
+        if (!$house) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Selected house not found. Please reselect the house and try again.');
+        }
 
         // Derive unit type from selected house (estate_house_master.estate_unit_master_pk)
         $derivedUnitTypePk = $house?->estate_unit_master_pk;
@@ -2191,7 +2260,7 @@ class EstateController extends Controller
             'possession_date_oth' => $validated['possession_date_oth'] ?? null,
             'allotment_date' => $validated['allotment_date'] ?? null,
             'meter_reading_oth' => $validated['meter_reading_oth'] ?? null,
-            'meter_reading_oth1' => null,
+            'meter_reading_oth1' => $validated['meter_reading_oth1'] ?? null,
             'house_no' => $validated['house_no'] ?? ($house->house_no ?? null),
             'status' => 0,
             'create_date' => now(),
@@ -2266,6 +2335,7 @@ class EstateController extends Controller
                 (int) $request->id,
                 $validated['possession_date_oth'] ?? null,
                 $validated['meter_reading_oth'] ?? null,
+                $validated['meter_reading_oth1'] ?? null,
                 $validated['house_no'] ?? ($house->house_no ?? null),
                 $house?->meter_one ?? null,
                 $house?->meter_two ?? null,
@@ -2283,6 +2353,7 @@ class EstateController extends Controller
                 (int) $createdPossession->pk,
                 $validated['possession_date_oth'] ?? null,
                 $validated['meter_reading_oth'] ?? null,
+                $validated['meter_reading_oth1'] ?? null,
                 $validated['house_no'] ?? ($house->house_no ?? null),
                 $house?->meter_one ?? null,
                 $house?->meter_two ?? null,
@@ -2364,6 +2435,7 @@ class EstateController extends Controller
         int $possessionPk,
         $possessionDate,
         $meterReading,
+        $meterReading2,
         ?string $houseNo,
         $meterOne,
         $meterTwo,
@@ -2401,6 +2473,9 @@ class EstateController extends Controller
             if ($reading->last_month_elec_red === null && $meterReading !== null && $meterReading !== '') {
                 $update['last_month_elec_red'] = (int) $meterReading;
             }
+            if ($reading->last_month_elec_red2 === null && $meterReading2 !== null && $meterReading2 !== '') {
+                $update['last_month_elec_red2'] = (int) $meterReading2;
+            }
             $reading->update($update);
             return;
         }
@@ -2411,6 +2486,8 @@ class EstateController extends Controller
             'to_date' => $toDate,
             'last_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : null,
             'curr_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : 0,
+            'last_month_elec_red2' => ($meterReading2 !== null && $meterReading2 !== '') ? (int) $meterReading2 : null,
+            'curr_month_elec_red2' => ($meterReading2 !== null && $meterReading2 !== '') ? (int) $meterReading2 : 0,
             'bill_month' => $billMonth,
             'bill_year' => $billYear,
             'notify_employee_status' => 0,
@@ -3065,7 +3142,13 @@ class EstateController extends Controller
      */
     public function storePossessionDetails(Request $request)
     {
-        $validated = $request->validate([
+        $messages = [
+            'electric_meter_reading_primary.required' => 'Electric Meter Reading is required.',
+            'electric_meter_reading_primary.regex' => 'Primary meter reading must be numbers only (max 10 digits).',
+            'electric_meter_reading_secondary.regex' => 'Secondary meter reading must be numbers only (max 10 digits).',
+        ];
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'estate_home_request_details_pk' => 'required|integer|exists:estate_home_request_details,pk',
             'estate_campus_master_pk' => 'required|integer',
             'estate_block_master_pk' => 'required|integer',
@@ -3073,8 +3156,17 @@ class EstateController extends Controller
             'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
             'allotment_date' => 'required|date',
             'possession_date' => 'required|date',
-            'electric_meter_reading' => 'nullable|integer|min:0',
-        ]);
+            'electric_meter_reading_primary' => 'required|regex:/^[0-9]{1,10}$/',
+            'electric_meter_reading_secondary' => 'nullable|regex:/^[0-9]{1,10}$/',
+            // keep legacy hidden field for backward compatibility; don't validate it strictly
+            'electric_meter_reading' => 'nullable',
+        ], $messages);
+
+        $validated = $validator->validate();
+
+        $primary = trim((string) ($validated['electric_meter_reading_primary'] ?? ''));
+        $secondary = trim((string) ($validated['electric_meter_reading_secondary'] ?? ''));
+        $electricReading = $primary !== '' ? (int) $primary : ($secondary !== '' ? (int) $secondary : 0);
 
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
             ->findOrFail((int) $validated['estate_home_request_details_pk']);
@@ -3174,7 +3266,7 @@ class EstateController extends Controller
             'emploee_master_pk' => $employeePk,
             'allotment_date' => $validated['allotment_date'],
             'possession_date' => $validated['possession_date'],
-            'electric_meter_reading' => (int) ($validated['electric_meter_reading'] ?? 0),
+            'electric_meter_reading' => $electricReading,
             'estate_house_master_pk' => (int) $house->pk,
             'estate_change_id' => -1,
         ];
@@ -3187,7 +3279,7 @@ class EstateController extends Controller
             $this->upsertMonthReadingOnPossession(
                 (int) $existingPossession->pk,
                 $validated['possession_date'] ?? null,
-                $validated['electric_meter_reading'] ?? null,
+                $electricReading,
                 $house->house_no ?? null,
                 $house->meter_one ?? null,
                 $house->meter_two ?? null
@@ -3202,7 +3294,7 @@ class EstateController extends Controller
             $this->upsertMonthReadingOnPossession(
                 $createdPossessionPk,
                 $validated['possession_date'] ?? null,
-                $validated['electric_meter_reading'] ?? null,
+                $electricReading,
                 $house->house_no ?? null,
                 $house->meter_one ?? null,
                 $house->meter_two ?? null
@@ -3512,6 +3604,7 @@ class EstateController extends Controller
     /**
      * Update Meter Reading of Other - Form page.
      * Unit types per campus (same as possession-view): only unit types that have houses in that campus.
+     * When possession_pks (comma-separated) is present, loads selected possessions and passes prefill + card-wise data.
      */
     public function updateMeterReadingOfOther()
     {
@@ -3542,8 +3635,49 @@ class EstateController extends Controller
             ->orderBy('unit_sub_type')
             ->get(['pk', 'unit_sub_type']);
 
+        $prefill = null;
+        $selectedPossessions = [];
+        $possessionPks = '';
+
+        $possessionPksParam = request('possession_pks');
+        if ($possessionPksParam !== null && $possessionPksParam !== '') {
+            $ids = is_array($possessionPksParam)
+                ? array_map('intval', $possessionPksParam)
+                : array_map('intval', array_filter(explode(',', (string) $possessionPksParam)));
+            $ids = array_values(array_unique(array_filter($ids)));
+            if (!empty($ids)) {
+                $possessions = EstatePossessionOther::whereIn('pk', $ids)
+                    ->with('estateOtherRequest')
+                    ->orderBy('pk')
+                    ->get();
+                foreach ($possessions as $p) {
+                    $req = $p->estateOtherRequest;
+                    $selectedPossessions[] = [
+                        'pk' => $p->pk,
+                        'name' => $req ? ($req->emp_name ?? 'N/A') : 'N/A',
+                        'request_no_oth' => $req ? ($req->request_no_oth ?? '') : '',
+                        'estate_campus_master_pk' => $p->estate_campus_master_pk,
+                        'estate_block_master_pk' => $p->estate_block_master_pk,
+                        'estate_unit_type_master_pk' => $p->estate_unit_type_master_pk,
+                        'estate_unit_sub_type_master_pk' => $p->estate_unit_sub_type_master_pk,
+                    ];
+                }
+                $possessionPks = implode(',', $ids);
+                $first = $possessions->first();
+                if ($first) {
+                    $prefill = [
+                        'estate_campus_master_pk' => $first->estate_campus_master_pk,
+                        'estate_block_master_pk' => $first->estate_block_master_pk,
+                        'estate_unit_type_master_pk' => $first->estate_unit_type_master_pk,
+                        'estate_unit_sub_type_master_pk' => $first->estate_unit_sub_type_master_pk,
+                    ];
+                }
+            }
+        }
+
         return view('admin.estate.update_meter_reading_of_other', compact(
-            'campuses', 'unitTypesByCampus', 'billMonths', 'unitSubTypes'
+            'campuses', 'unitTypesByCampus', 'billMonths', 'unitSubTypes',
+            'prefill', 'selectedPossessions', 'possessionPks'
         ));
     }
 
@@ -3837,13 +3971,67 @@ class EstateController extends Controller
      */
     public function storeMeterReadings(Request $request)
     {
-        $validated = $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'readings' => 'required|array',
             'readings.*.pk' => 'required|exists:estate_month_reading_details,pk',
             'readings.*.meter_slot' => 'nullable|in:1,2',
             'readings.*.curr_month_elec_red' => 'nullable|numeric|min:0',
             'readings.*.new_meter_no' => 'nullable|string|max:50',
         ]);
+
+        $validator->after(function ($v) use ($request) {
+            $readings = (array) $request->input('readings', []);
+            $pks = collect($readings)->pluck('pk')->filter()->map(fn ($x) => (int) $x)->values()->all();
+            if (empty($pks)) {
+                return;
+            }
+            $rows = EstateMonthReadingDetails::whereIn('pk', $pks)
+                ->get([
+                    'pk',
+                    'last_month_elec_red',
+                    'curr_month_elec_red',
+                    'last_month_elec_red2',
+                    'curr_month_elec_red2',
+                ])
+                ->keyBy('pk');
+
+            foreach ($readings as $idx => $item) {
+                if (!array_key_exists('curr_month_elec_red', $item)) {
+                    continue;
+                }
+                $currVal = $item['curr_month_elec_red'];
+                if ($currVal === null || $currVal === '') {
+                    continue; // empty = no change
+                }
+                $pk = isset($item['pk']) ? (int) $item['pk'] : 0;
+                $row = $rows->get($pk);
+                if (! $row) {
+                    continue;
+                }
+
+                $meterSlot = isset($item['meter_slot']) ? (int) $item['meter_slot'] : 1;
+                $curr = (int) $currVal;
+                if ($meterSlot === 2) {
+                    $prev = (int) ($row->last_month_elec_red2 ?? 0);
+                    $existingCurr = $row->curr_month_elec_red2 !== null ? (int) $row->curr_month_elec_red2 : null;
+                    $field = "readings.$idx.curr_month_elec_red";
+                } else {
+                    $prev = (int) ($row->last_month_elec_red ?? 0);
+                    $existingCurr = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
+                    $field = "readings.$idx.curr_month_elec_red";
+                }
+
+                $minAllowed = $existingCurr !== null ? max($prev, $existingCurr) : $prev;
+                if ($curr < $minAllowed) {
+                    $v->errors()->add(
+                        $field,
+                        'Current month reading cannot be less than existing current reading or last month reading.'
+                    );
+                }
+            }
+        });
+
+        $validated = $validator->validate();
 
         $readings = array_values($validated['readings']);
 
@@ -4080,6 +4268,17 @@ class EstateController extends Controller
             $query->where('epo.estate_unit_sub_type_master_pk', $unitSubTypeId);
         }
 
+        $possessionPksParam = $request->get('possession_pks');
+        if ($possessionPksParam !== null && $possessionPksParam !== '') {
+            $ids = is_array($possessionPksParam)
+                ? array_map('intval', $possessionPksParam)
+                : array_map('intval', array_filter(explode(',', (string) $possessionPksParam)));
+            $ids = array_values(array_unique(array_filter($ids)));
+            if (!empty($ids)) {
+                $query->whereIn('epo.pk', $ids);
+            }
+        }
+
         $query->with('estatePossessionOther.estateOtherRequest');
         $rows = $query->get()->map(function ($row) {
             $poss = $row->estatePossessionOther;
@@ -4185,24 +4384,93 @@ class EstateController extends Controller
      */
     public function storeMeterReadingsOther(Request $request)
     {
-        $validated = $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'readings' => 'required|array',
-            'readings.*.pk' => 'required|exists:estate_month_reading_details_other,pk',
+            'readings.*.pk' => 'required|integer|exists:estate_month_reading_details_other,pk',
+            'readings.*.selected' => 'nullable|in:1',
             'readings.*.curr_month_elec_red' => 'nullable|integer|min:0',
         ]);
 
-        foreach ($validated['readings'] as $item) {
+        $validator->after(function ($v) use ($request) {
+            $readings = (array) $request->input('readings', []);
+            $selected = collect($readings)->filter(fn ($r) => !empty($r['selected']));
+            if ($selected->isEmpty()) {
+                $v->errors()->add('readings', 'Please select at least one row to update.');
+                return;
+            }
+
+            $pks = $selected->pluck('pk')->filter()->map(fn ($x) => (int) $x)->values()->all();
+            $rows = EstateMonthReadingDetailsOther::whereIn('pk', $pks)
+                ->get(['pk', 'house_no', 'last_month_elec_red', 'curr_month_elec_red'])
+                ->keyBy('pk');
+
+            foreach ($readings as $idx => $item) {
+                if (empty($item['selected'])) {
+                    continue;
+                }
+                $pk = isset($item['pk']) ? (int) $item['pk'] : 0;
+                $currVal = $item['curr_month_elec_red'] ?? null;
+                $currProvided = !($currVal === null || $currVal === '');
+                if (!$currProvided) {
+                    $v->errors()->add("readings.$idx.curr_month_elec_red", 'Current month reading is required for selected rows.');
+                    continue;
+                }
+
+                $curr = (int) $currVal;
+                $row = $rows->get($pk);
+                if (!$row) {
+                    $v->errors()->add("readings.$idx.pk", 'Selected meter reading row not found.');
+                    continue;
+                }
+
+                $prev = (int) ($row->last_month_elec_red ?? 0);
+                $existingCurr = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
+                // Floor value: cannot go below last month, and also cannot go below any already-saved current reading.
+                $minAllowed = $existingCurr !== null ? max($prev, $existingCurr) : $prev;
+                if ($curr < $minAllowed) {
+                    $house = $row->house_no ? (" (House: {$row->house_no})") : '';
+                    $msgBase = $existingCurr !== null
+                        ? "Current month reading cannot be less than existing current reading or last month reading{$house}."
+                        : "Current month reading must be greater than or equal to last month reading{$house}.";
+                    $v->errors()->add("readings.$idx.curr_month_elec_red", $msgBase);
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors($validator)
+                ->with('error', 'Please correct the errors and try again.');
+        }
+
+        $readings = (array) $request->input('readings', []);
+        $selected = collect($readings)->filter(fn ($r) => !empty($r['selected']))->values();
+        $pks = $selected->pluck('pk')->filter()->map(fn ($x) => (int) $x)->values()->all();
+        $rows = EstateMonthReadingDetailsOther::whereIn('pk', $pks)
+            ->get(['pk', 'last_month_elec_red', 'curr_month_elec_red', 'estate_possession_other_pk'])
+            ->keyBy('pk');
+
+        foreach ($selected as $item) {
             $pk = (int) ($item['pk'] ?? 0);
             $currVal = $item['curr_month_elec_red'] ?? null;
             $curr = ($currVal !== null && $currVal !== '') ? (int) $currVal : null;
+            if ($pk <= 0 || $curr === null) {
+                continue;
+            }
 
-            $row = EstateMonthReadingDetailsOther::find($pk);
-            if (! $row) {
+            $row = $rows->get($pk);
+            if (!$row) {
                 continue;
             }
 
             $prev = (int) ($row->last_month_elec_red ?? 0);
-            $units = ($curr !== null && $curr >= $prev) ? $curr - $prev : 0;
+            $existingCurr = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
+
+            // We already validated that $curr is not less than either last_month or existing current,
+            // but keep units based on last_month_elec_red (billing logic).
+            $units = $curr >= $prev ? $curr - $prev : 0;
             $charge = $units > 0 ? $this->calculateElectricChargeForUnits(null, $units) : 0.0;
 
             EstateMonthReadingDetailsOther::where('pk', $pk)->update([
@@ -4211,6 +4479,13 @@ class EstateController extends Controller
                 'electricty_charges' => $charge,
                 'per_unit' => $units, // reuse per_unit column to store units for reference
             ]);
+
+            // Also sync latest reading on base possession record so listing reflects change immediately.
+            if (!empty($row->estate_possession_other_pk)) {
+                DB::table('estate_possession_other')
+                    ->where('pk', (int) $row->estate_possession_other_pk)
+                    ->update(['meter_reading_oth' => $curr]);
+            }
         }
 
         return redirect()
