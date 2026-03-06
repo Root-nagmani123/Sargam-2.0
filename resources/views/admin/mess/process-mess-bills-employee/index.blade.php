@@ -1,7 +1,8 @@
 @extends('admin.layouts.master')
 @section('title', 'Process Mess Bills')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid process-mess-bills-employee-report">
+    <x-breadcrum title="Process Mess Bills"></x-breadcrum>
     {{-- Report Header (Print Only) --}}
     @php
         $dateFromDisplay = $effectiveDateFrom ?? now()->startOfMonth()->format('d-m-Y');
@@ -112,7 +113,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Client Type</label>
-                        <select name="client_type" class="form-select form-select-sm">
+                        <select name="client_type" class="form-select form-select-sm choices-select" data-placeholder="All client types">
                             <option value="">All</option>
                             <option value="employee" {{ ($clientType ?? '') === 'employee' ? 'selected' : '' }}>Employee</option>
                             <option value="ot" {{ ($clientType ?? '') === 'ot' ? 'selected' : '' }}>OT</option>
@@ -143,13 +144,96 @@
     {{-- Table card – DataTables client-side search/sort like mess master --}}
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-end align-items-center mb-2 gap-2 no-print">
-                <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name'])) }}" class="btn btn-link btn-sm p-0 text-dark" title="Export to Excel">
-                    <i class="material-symbols-rounded" style="font-size: 1.35rem;">file_download</i>
-                </a>
-                <button type="button" class="btn btn-link btn-sm p-0 text-dark no-print" title="Print" onclick="window.print()">
-                    <i class="material-symbols-rounded" style="font-size: 1.35rem;">print</i>
-                </button>
+            <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm">
+                <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
+                <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
+                <input type="hidden" name="client_type" value="{{ $clientType ?? request('client_type') }}">
+                <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 no-print">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small text-muted">Show</span>
+                        <select name="per_page" class="form-select form-select-sm choices-select" data-placeholder="Rows per page" style="width: auto;" onchange="this.form.submit();">
+                            <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                            <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
+                            <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
+                        </select>
+                        <span class="small text-muted">entries</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn btn-link btn-sm p-0 text-dark" title="Export to Excel">
+                            <i class="material-symbols-rounded" style="font-size: 1.35rem;">file_download</i>
+                        </a>
+                        <button type="button" class="btn btn-link btn-sm p-0 text-dark no-print" title="Print" onclick="printProcessMessBillsMainTable()">
+                            <i class="material-symbols-rounded" style="font-size: 1.35rem;">print</i>
+                        </button>
+                        <label class="small text-muted mb-0">Search:</label>
+                        <input type="text" name="search" class="form-control form-control-sm" style="width: 180px;"
+                               value="{{ request('search') }}" placeholder="Name or invoice...">
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Buyer Name</th>
+                            <th>Slip No.</th>
+                            <th>Invoice Date</th>
+                            <th>Client Type</th>
+                            <th class="text-end">Total</th>
+                            <th>Payment Type</th>
+                            <th>Status</th>
+                            <th class="text-center no-print">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php
+                            $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
+                        @endphp
+                        @forelse($bills as $index => $bill)
+                            @php
+                                $billId = $bill->id ?? $bill->pk ?? 0;
+                                $isDateRange = ($bill->source_type ?? '') === 'date_range';
+                                $slipNo = $isDateRange ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT) : 'SV-' . str_pad($bill->pk ?? $bill->id ?? 0, 6, '0', STR_PAD_LEFT);
+                                $receiptId = $isDateRange ? 'dr-' . $bill->id : 'ki-' . ($bill->pk ?? $bill->id);
+                            @endphp
+                            <tr class="{{ ($bill->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
+                                <td>{{ $bills->firstItem() + $index }}</td>
+                                <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
+                                <td>{{ $slipNo }}</td>
+                                <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>
+                                <td>{{ $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—'))) }}</td>
+                                <td class="text-end fw-semibold">₹ {{ number_format($bill->net_total, 2) }}</td>
+                                <td>{{ $paymentTypeMap[$bill->payment_type ?? 1] ?? '—' }}</td>
+                                <td>
+                                    @if(($bill->status ?? 0) == 2)
+                                        <span class="badge bg-success">Paid</span>
+                                    @elseif(($bill->status ?? 0) == 1)
+                                        <span class="badge bg-warning text-dark">Partial</span>
+                                    @else
+                                        <span class="badge bg-secondary">Unpaid</span>
+                                    @endif
+                                </td>
+                                <td class="text-center no-print">
+                                    <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $receiptId) }}" target="_blank"
+                                       class="btn btn-sm btn-outline-primary" title="Print receipt">
+                                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="material-symbols-rounded d-block mb-2" style="font-size: 2.5rem;">inbox</i>
+                                    No bills found for the selected date range.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
             <div class="datatables">
                 <div class="table-responsive">
@@ -269,7 +353,7 @@
                     <div class="payment-detail-grid">
                         <div class="payment-detail-row">
                             <label class="payment-detail-label">Payment Mode</label>
-                            <select name="payment_mode" id="payNowPaymentMode" class="payment-detail-input form-select form-select-sm">
+                            <select name="payment_mode" id="payNowPaymentMode" class="payment-detail-input form-select form-select-sm choices-select" data-placeholder="Select mode">
                                 <option value="cash">Cash</option>
                                 <option value="cheque">Cheque</option>
                                 <option value="deduct_from_salary">Deduct From Salary</option>
@@ -398,26 +482,69 @@
     }
     .report-header h4 { margin-bottom: 8px; color: #000; font-weight: bold; }
     .report-header p { color: #333; font-size: 14px; margin: 4px 0; }
-    body { font-size: 12px; }
-    .table { font-size: 11px; }
-    .table th, .table td { padding: 6px !important; }
-    @page { margin: 1cm; size: A4; }
+    html, body {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        font-size: 11px;
+    }
+    .page-wrapper,
+    .body-wrapper,
+    .container-fluid.process-mess-bills-employee-report {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .process-mess-bills-employee-report .card,
+    .process-mess-bills-employee-report .card-body {
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+    .process-mess-bills-employee-report .table-responsive {
+        overflow: visible !important;
+    }
+    .process-mess-bills-employee-report .table {
+        width: 100% !important;
+        table-layout: fixed;
+        font-size: 10px;
+    }
+    .process-mess-bills-employee-report .table th,
+    .process-mess-bills-employee-report .table td {
+        padding: 4px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        vertical-align: top !important;
+    }
+    /*
+     * Let the browser choose orientation / scaling for printing instead of
+     * forcing A4 landscape, which could crop the right or bottom content
+     * on some printers. Slightly larger margins also help avoid clipping.
+     */
+    @page {
+        margin: 12mm;
+        size: auto;
+    }
 }
 </style>
 <div class="modal fade" id="addProcessMessBillsModal" tabindex="-1" aria-labelledby="addProcessMessBillsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-light">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header bg-light border-0 py-3">
                 <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addProcessMessBillsModalLabel">
-                    <i class="material-symbols-rounded">receipt_long</i>
-                    Generate Invoice & Process Payment
+                    <span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <i class="material-symbols-rounded" style="font-size: 1.3rem;">receipt_long</i>
+                    </span>
+                    <span>Generate Invoice &amp; Process Payment</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <form id="addModalFilterForm">
+            <div class="modal-body bg-body-tertiary">
+                <form id="addModalFilterForm" class="mb-3">
                     @csrf
-                    <div class="row g-3 mb-2">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_from" id="modal_date_from" class="form-control form-control-sm"
@@ -430,7 +557,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Client Type</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm">
+                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm choices-select" data-placeholder="All client types">
                                 <option value="">All</option>
                                 <option value="employee">Employee</option>
                                 <option value="ot">OT</option>
@@ -450,7 +577,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Mode of Payment</label>
-                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm">
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm choices-select" data-placeholder="Select mode">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
@@ -458,19 +585,21 @@
                         </div>
                     </div>
                     <div class="row g-2 mb-4">
-                        <div class="col-md-12 d-flex gap-2 align-items-center">
-                            <button type="button" class="btn btn-primary btn-sm" id="modalLoadBillsBtn">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i> Load Bills
+                        <div class="col-md-12 d-flex flex-wrap gap-2 align-items-center">
+                            <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1" id="modalLoadBillsBtn">
+                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
+                                <span>Load Bills</span>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="modalClearFiltersBtn">
-                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list_off</i> Clear Filters
+                            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="modalClearFiltersBtn">
+                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list_off</i>
+                                <span>Clear Filters</span>
                             </button>
                         </div>
                     </div>
                 </form>
 
                 {{-- Bulk actions (shown when rows selected) --}}
-                <div class="d-none align-items-center gap-2 mb-3 p-2 rounded bg-light" id="modalBulkActionsBar">
+                <div class="d-none align-items-center gap-2 mb-3 p-2 rounded-3 bg-light border border-dashed" id="modalBulkActionsBar">
                     <span class="small fw-semibold" id="modalSelectedCount">0 selected</span>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="modalBulkInvoiceBtn">Generate Invoice (selected)</button>
                     <button type="button" class="btn btn-sm btn-outline-success" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
@@ -488,12 +617,21 @@
                         <span class="small text-muted">entries</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <input type="text" id="modalSearch" class="form-control form-control-sm" style="width: 200px;" placeholder="Search bills...">
+                        <div class="input-group input-group-sm" style="width: 220px;">
+                            <span class="input-group-text bg-transparent border-end-0">
+                                <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
+                            </span>
+                            <input type="text" id="modalSearch" class="form-control form-control-sm border-start-0" placeholder="Search bills...">
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printProcessMessBillsTable()" title="Print bills list">
+                            <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">print</i>
+                            <span>Print</span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle mb-0">
+                <div class="table-responsive rounded-3 border bg-white">
+                    <table id="modalBillsTable" class="table table-sm table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th class="text-nowrap py-2" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
@@ -514,12 +652,12 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2 border-top">
                     <div class="small text-muted" id="modalPaginationInfo">Showing 0 to 0 of 0 entries</div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer bg-light border-0 rounded-bottom-3">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -528,6 +666,8 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof flatpickr !== 'undefined') {
@@ -563,6 +703,27 @@ document.addEventListener('DOMContentLoaded', function() {
         flatpickr('#modal_invoice_date', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#payNowPaymentDate', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#payNowChequeDate', { dateFormat: 'd-m-Y', allowInput: true });
+    }
+
+    // Initialize Choices.js on all dropdowns within this report
+    if (typeof window.Choices !== 'undefined') {
+        document
+            .querySelectorAll('.process-mess-bills-employee-report select.choices-select')
+            .forEach(function (el) {
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                var placeholder = el.getAttribute('data-placeholder') || 'Select';
+
+                new Choices(el, {
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: placeholder,
+                    searchPlaceholderValue: 'Search...',
+                    itemSelectText: '',
+                });
+
+                el.dataset.choicesInitialized = 'true';
+            });
     }
 
     var modalBillsData = [];
@@ -953,6 +1114,243 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+</script>
+<script>
+function printProcessMessBillsMainTable() {
+    var table = document.getElementById('processMessBillsTable');
+    if (!table) {
+        window.print();
+        return;
+    }
+
+    var printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        window.print();
+        return;
+    }
+
+    var title = 'Process Mess Bills - Employee';
+    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
+
+    var originalThead = table.querySelector('thead');
+    var originalTbody = table.querySelector('tbody');
+    var firstHeaderRow = originalThead ? originalThead.querySelector('tr') : null;
+    var columnsCount = firstHeaderRow ? firstHeaderRow.children.length : 8;
+    var columnHeadHtml = originalThead ? originalThead.innerHTML : '';
+    var bodyHtml       = originalTbody ? originalTbody.innerHTML : table.innerHTML;
+
+    var printableTable = `
+      <table class="table table-sm table-bordered align-middle mb-0">
+        <thead>
+          <tr>
+            <th colspan="${columnsCount}">
+              <div class="d-flex justify-content-between align-items-center mb-2 lbsnaa-header">
+                <div class="d-flex align-items-center gap-2">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
+                  <div>
+                    <div class="brand-line-1">Government of India</div>
+                    <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+                    <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+                  </div>
+                </div>
+                <div class="d-none d-print-block">
+                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
+                </div>
+              </div>
+              <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
+                <span><strong>${title}</strong></span>
+                <span>${periodText}</span>
+                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
+              </div>
+            </th>
+          </tr>
+          ${columnHeadHtml}
+        </thead>
+        <tbody>
+          ${bodyHtml}
+        </tbody>
+      </table>`;
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 10px;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .lbsnaa-header {
+      border-bottom: 2px solid #004a93;
+      padding-bottom: .75rem;
+      margin-bottom: 1rem;
+    }
+    .brand-line-1 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: #004a93; }
+    .brand-line-2 { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; color: #222; }
+    .brand-line-3 { font-size: .8rem; color: #555; }
+    .report-meta { font-size: .8rem; margin-bottom: .75rem; }
+    .report-meta span { display: inline-block; margin-right: 1.5rem; }
+    .container-fluid { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; }
+    th, td {
+      padding: 4px 6px;
+      border: 1px solid #dee2e6;
+      white-space: normal !important;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+    }
+    thead th { background: #f8f9fa; font-weight: 600; }
+    .table, .table * { white-space: normal !important; }
+    .table-responsive { overflow: visible !important; }
+    thead { display: table-header-group; }
+    @page { size: A4 landscape; margin: 8mm; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="table-responsive">
+      ${printableTable}
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', function() { window.print(); });
+  <\/script>
+</body>
+</html>`);
+    printWindow.document.close();
+}
+
+function printProcessMessBillsTable() {
+    var table = document.getElementById('modalBillsTable');
+    if (!table) {
+        window.print();
+        return;
+    }
+
+    var dateFrom = document.getElementById('modal_date_from')?.value || '';
+    var dateTo   = document.getElementById('modal_date_to')?.value || '';
+
+    var printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        window.print();
+        return;
+    }
+
+    var title = 'Process Mess Bills - Invoice & Payment';
+    var periodText = dateFrom || dateTo
+        ? ('From ' + (dateFrom || 'Start') + ' To ' + (dateTo || 'End'))
+        : 'All Dates';
+
+    // Build printable table with LBSNAA header inside thead so it repeats on every page
+    var originalThead = table.querySelector('thead');
+    var originalTbody = table.querySelector('tbody');
+    var firstHeaderRow = originalThead ? originalThead.querySelector('tr') : null;
+    var columnsCount = firstHeaderRow ? firstHeaderRow.children.length : 8;
+    var columnHeadHtml = originalThead ? originalThead.innerHTML : '';
+    var bodyHtml       = originalTbody ? originalTbody.innerHTML : table.innerHTML;
+
+    var printableTable = `
+      <table class="table table-sm table-bordered align-middle mb-0">
+        <thead>
+          <tr>
+            <th colspan="${columnsCount}">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
+                  <div>
+                    <div class="brand-line-1">Government of India</div>
+                    <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
+                    <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
+                  </div>
+                </div>
+                <div class="d-none d-print-block">
+                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
+                </div>
+              </div>
+              <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
+                <span><strong>${title}</strong></span>
+                <span>${periodText}</span>
+                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
+              </div>
+            </th>
+          </tr>
+          ${columnHeadHtml}
+        </thead>
+        <tbody>
+          ${bodyHtml}
+        </tbody>
+      </table>`;
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 10px;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .lbsnaa-header {
+      border-bottom: 2px solid #004a93;
+      padding-bottom: .75rem;
+      margin-bottom: 1rem;
+    }
+    .brand-line-1 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: #004a93; }
+    .brand-line-2 { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; color: #222; }
+    .brand-line-3 { font-size: .8rem; color: #555; }
+    .report-meta { font-size: .8rem; margin-bottom: .75rem; }
+    .report-meta span { display: inline-block; margin-right: 1.5rem; }
+    .container-fluid { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; }
+    th, td {
+      padding: 4px 6px;
+      border: 1px solid #dee2e6;
+      white-space: normal !important;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+    }
+    thead th { background: #f8f9fa; font-weight: 600; }
+    .table, .table * { white-space: normal !important; }
+    .table-responsive { overflow: visible !important; }
+    thead { display: table-header-group; }
+    @page { size: A4 landscape; margin: 8mm; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="table-responsive">
+      ${printableTable}
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', function() { window.print(); });
+  <\/script>
+</body>
+</html>`);
+    printWindow.document.close();
+}
 </script>
 @endpush
 

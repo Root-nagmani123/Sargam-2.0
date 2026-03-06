@@ -122,10 +122,13 @@ class ReportController extends Controller
         $storeId = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
 
-        [$reportData] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+        [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
 
         $fileName = 'stock-summary-report-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
-        return Excel::download(new StockSummaryExport($reportData), $fileName);
+        return Excel::download(
+            new \App\Exports\Mess\StockSummaryViewExport($reportData, $fromDate, $toDate, $storeId, $storeType, $selectedStoreName),
+            $fileName
+        );
     }
 
     /**
@@ -150,10 +153,21 @@ class ReportController extends Controller
         $baseQuery->orderBy('po_date', 'asc')->orderBy('id', 'asc');
         $purchaseOrders = $baseQuery->get();
 
+        // Match defaults with the main report
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
-        $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+
+        $selectedVendor = null;
+        if ($request->filled('vendor_id')) {
+            $selectedVendor = Vendor::find($request->vendor_id);
+        }
+
         $fileName = 'stock-purchase-details-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
-        return Excel::download(new StockPurchaseDetailsExport($purchaseOrders), $fileName);
+
+        return Excel::download(
+            new StockPurchaseDetailsExport($purchaseOrders, $fromDate, $toDate, $selectedVendor),
+            $fileName
+        );
     }
 
     /**
@@ -162,7 +176,7 @@ class ReportController extends Controller
     public function stockBalanceTillDateExcel(Request $request)
     {
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
-        $storeId = $request->filled('store_id') ? $request->store_id : null;
+        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $items = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
         $reportData = [];
 
@@ -216,8 +230,17 @@ class ReportController extends Controller
             ];
         }
 
+        // Resolve selected store name for Excel header.
+        $selectedStoreName = null;
+        if ($storeId) {
+            $selectedStoreName = Store::find($storeId)?->store_name;
+        }
+
         $fileName = 'stock-balance-till-date-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
-        return Excel::download(new StockBalanceTillDateExport($reportData), $fileName);
+        return Excel::download(
+            new StockBalanceTillDateExport($reportData, $tillDate, $selectedStoreName),
+            $fileName
+        );
     }
 
     /**
@@ -297,7 +320,10 @@ class ReportController extends Controller
         }
 
         $fileName = 'purchase-sale-quantity-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
-        return Excel::download(new PurchaseSaleQuantityExport($reportData), $fileName);
+        return Excel::download(
+            new PurchaseSaleQuantityExport($reportData, $fromDate, $toDate, $viewType),
+            $fileName
+        );
     }
 
     /**
@@ -419,7 +445,14 @@ class ReportController extends Controller
             ->values();
 
         $fileName = 'category-wise-print-slip-' . now()->format('Y-m-d_His') . '.xlsx';
-        return Excel::download(new CategoryWisePrintSlipExport($vouchers), $fileName);
+        return Excel::download(
+            new CategoryWisePrintSlipExport(
+                $vouchers,
+                $request->from_date ?? null,
+                $request->to_date ?? null
+            ),
+            $fileName
+        );
     }
 
     /**
