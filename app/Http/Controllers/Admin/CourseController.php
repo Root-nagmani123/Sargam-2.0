@@ -19,7 +19,7 @@ use App\Services\CourseService;
 class CourseController extends Controller
 {
 
-    
+
     public function index(CourseMasterDataTable $dataTable)
     {
         $data_course_id =  get_Role_by_course();
@@ -107,7 +107,7 @@ class CourseController extends Controller
             ];
             $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
             $selectedSupportingSection = $courseMasterObj->user_role_master_pk ?? '';
-            
+
             return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid course ID');
@@ -120,7 +120,7 @@ class CourseController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validated();
-            
+
             // Delegate all business logic to the service
             $courseService->createOrUpdateCourse($validated, $request->course_id);
 
@@ -133,7 +133,7 @@ class CourseController extends Controller
             \Log::error('Course creation error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Something went wrong. Please try again.');
         }
-    } 
+    }
 
 
 
@@ -142,19 +142,19 @@ class CourseController extends Controller
         try {
             // Decrypt the ID
             $decryptedId = decrypt($id);
-            
+
             // Find the course with coordinators
             $course = CourseMaster::with('courseCordinatorMater')->findOrFail($decryptedId);
-            
+
             // Get coordinator details
             $coordinators = $course->courseCordinatorMater;
             $coordinatorName = $coordinators->first()->Coordinator_name ?? 'Not Assigned';
             $assistantCoordinators = $coordinators->pluck('Assistant_Coordinator_name')->filter()->unique()->values()->toArray();
-            
+
             // Get faculty details for coordinators
             $coordinatorFaculty = FacultyMaster::where('full_name', $coordinatorName)->first();
             $assistantCoordinatorFaculties = FacultyMaster::whereIn('full_name', $assistantCoordinators)->get();
-            
+
             return response()->json([
                 'success' => true,
                 'course' => [
@@ -195,16 +195,16 @@ class CourseController extends Controller
         // try {
             // Decrypt the ID
             $decryptedId = decrypt($id);
-            
+
             // Find the course with coordinators
             $course = CourseMaster::with('courseCordinatorMater')->findOrFail($decryptedId);
-            
+
             // Get coordinator details
             $coordinators = $course->courseCordinatorMater;
-            
+
             // Get coordinator PK from the first coordinator record
             $coordinatorPk = $coordinators->first()->Coordinator_name ?? null;
-            
+
             // Get assistant coordinator PKs - filter out null/empty values
             $assistantCoordinatorPks = $coordinators->pluck('Assistant_Coordinator_name')
                 ->filter(function($pk) {
@@ -213,7 +213,7 @@ class CourseController extends Controller
                 ->unique()
                 ->values()
                 ->toArray();
-            
+
             // Fetch coordinator faculty using PK
             $coordinatorFaculty = null;
             $coordinatorName = 'Not Assigned';
@@ -221,20 +221,20 @@ class CourseController extends Controller
                 $coordinatorFaculty = FacultyMaster::find($coordinatorPk);
                 $coordinatorName = $coordinatorFaculty ? $coordinatorFaculty->full_name : 'Not Assigned';
             }
-            
+
             // Fetch assistant coordinator faculties using PKs
             $assistantCoordinatorFaculties = FacultyMaster::whereIn('pk', $assistantCoordinatorPks)->get();
-            
-          
-            
+
+
+
             // Map assistant coordinators with their names, photos and roles
             $assistantCoordinatorsData = [];
             foreach ($coordinators as $coordinator) {
                 if ($coordinator->Assistant_Coordinator_name) {
                     $assistantFaculty = $assistantCoordinatorFaculties->firstWhere('pk', $coordinator->Assistant_Coordinator_name);
-                    
-                 
-                    
+
+
+
                     $assistantCoordinatorsData[] = [
                         'name' => $assistantFaculty ? $assistantFaculty->full_name : 'Not Assigned',
                         'role' => $coordinator->assistant_coordinator_role ?? 'Not Specified',
@@ -266,16 +266,16 @@ class CourseController extends Controller
         try {
             // Decrypt the ID
             $decryptedId = decrypt($id);
-            
+
             // Find the course with coordinators
             $course = CourseMaster::with('courseCordinatorMater')->findOrFail($decryptedId);
-            
+
             // Get coordinator details
             $coordinators = $course->courseCordinatorMater;
-            
+
             // Get coordinator PK from the first coordinator record
             $coordinatorPk = $coordinators->first()->Coordinator_name ?? null;
-            
+
             // Get assistant coordinator PKs - filter out null/empty values
             $assistantCoordinatorPks = $coordinators->pluck('Assistant_Coordinator_name')
                 ->filter(function($pk) {
@@ -284,7 +284,7 @@ class CourseController extends Controller
                 ->unique()
                 ->values()
                 ->toArray();
-            
+
             // Fetch coordinator faculty using PK
             $coordinatorFaculty = null;
             $coordinatorName = 'Not Assigned';
@@ -292,10 +292,10 @@ class CourseController extends Controller
                 $coordinatorFaculty = FacultyMaster::find($coordinatorPk);
                 $coordinatorName = $coordinatorFaculty ? $coordinatorFaculty->full_name : 'Not Assigned';
             }
-            
+
             // Fetch assistant coordinator faculties using PKs
             $assistantCoordinatorFaculties = FacultyMaster::whereIn('pk', $assistantCoordinatorPks)->get();
-            
+
             // Map assistant coordinators with their names, photos and roles
             $assistantCoordinatorsData = [];
             foreach ($coordinators as $coordinator) {
@@ -308,7 +308,7 @@ class CourseController extends Controller
                     ];
                 }
             }
-            
+
             // Generate PDF
             $pdf = Pdf::loadView('admin.programme.pdf', compact(
                 'course',
@@ -316,11 +316,11 @@ class CourseController extends Controller
                 'coordinatorFaculty',
                 'assistantCoordinatorsData'
             ));
-            
+
             $pdf->setPaper('a4', 'portrait');
-            
+
             $filename = 'Course_' . str_replace(' ', '_', $course->course_name) . '_' . date('Y-m-d') . '.pdf';
-            
+
             return $pdf->download($filename);
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
             \Log::error('Decryption error in course PDF download: ' . $e->getMessage());
@@ -339,10 +339,10 @@ class CourseController extends Controller
         try {
             $decryptedId = decrypt($id);
             $course = CourseMaster::with('courseCordinatorMater')->findOrFail($decryptedId);
-            
+
             $coordinators = $course->courseCordinatorMater;
             $allAssistantNames = $coordinators->pluck('Assistant_Coordinator_name')->toArray();
-            
+
             return response()->json([
                 'course_id' => $decryptedId,
                 'course_name' => $course->course_name,
@@ -368,13 +368,13 @@ class CourseController extends Controller
         try {
             $decryptedId = decrypt($id);
             $course = CourseMaster::findOrFail($decryptedId);
-            
+
             // Delete related course coordinators
             $course->courseCordinatorMater()->delete();
-            
+
             // Delete the course
             $course->delete();
-            
+
             DB::commit();
             return redirect()->route('programme.index')->with('success', 'Course deleted successfully');
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {

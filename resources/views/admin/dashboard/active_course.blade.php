@@ -54,7 +54,10 @@
 
 <script>
 $(document).ready(function (){
-    $('#active_course').DataTable();
+    $('#active_course').DataTable({
+        pageLength: 10,
+        processing: true
+    });
 });
 </script>
 @endpush

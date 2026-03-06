@@ -12,9 +12,12 @@ use Carbon\Carbon;
 use App\Models\CalendarEvent;
 use App\Models\FacultyMaster;
 
+
+
 class DashboardController extends Controller
 {
-function active_course(Request $request)
+
+function active_course_06032026(Request $request)
 {
    $active_courses = DB::table('course_master')
         ->where('active_inactive', 1)
@@ -22,7 +25,22 @@ function active_course(Request $request)
         ->where('end_date', '>=', now())
         ->get();
     return view('admin.dashboard.active_course', compact('active_courses'));
-    
+}
+
+   function active_course(Request $request)
+{
+    $selectedSupportingSection = $request->supporting_section; // role id
+
+    $active_courses = DB::table('course_master')
+        ->where('active_inactive', 1)
+        ->whereDate('start_year', '<=', now())
+        ->whereDate('end_date', '>=', now())
+        ->when($selectedSupportingSection, function ($query) use ($selectedSupportingSection) {
+            $query->where('user_role_master_pk', $selectedSupportingSection);
+        })
+        ->get();
+
+    return view('admin.dashboard.active_course', compact('active_courses'));
 }
 
 function incoming_course(Request $request)
@@ -42,7 +60,7 @@ function guest_faculty()
        ->where('active_inactive', 1)
        ->select('pk', 'full_name', 'mobile_no', 'faculty_sector', 'email_id', 'photo_uplode_path')
        ->get();
-   
+
    // Fetch feedback data and session count for each guest faculty
    $guest_faculty = $guest_faculty->map(function ($faculty) {
        // Get feedback grouped by session (timetable_pk)
@@ -70,7 +88,7 @@ function guest_faculty()
            ->groupBy('tf.timetable_pk', 'tf.topic_name', 'cm.course_name', 'cm.pk', 'sm.subject_name', 'tt.START_DATE', 'tt.class_session')
            ->orderBy('tt.START_DATE', 'desc')
            ->get();
-       
+
        // Count total sessions for this faculty from timetable
        $sessionCount = DB::table('timetable')
            ->where('active_inactive', 1)
@@ -80,13 +98,13 @@ function guest_faculty()
                      ->orWhere('faculty_master', $faculty->pk);
            })
            ->count();
-       
+
        // Calculate summary statistics
        $totalFeedback = $feedbackData->count();
        $totalParticipants = $feedbackData->sum('participant_count');
        $avgContent = $feedbackData->avg('avg_content_percent') ?? 0;
        $avgPresentation = $feedbackData->avg('avg_presentation_percent') ?? 0;
-       
+
        $faculty->feedback = $feedbackData;
        $faculty->session_count = $sessionCount;
        $faculty->feedback_summary = [
@@ -95,12 +113,12 @@ function guest_faculty()
            'avg_content' => round($avgContent, 2),
            'avg_presentation' => round($avgPresentation, 2),
        ];
-       
+
        return $faculty;
    });
-   
+
     return view('admin.dashboard.guest_faculty', compact('guest_faculty'));
-    
+
 }
 function inhouse_faculty()
 {
@@ -169,15 +187,15 @@ function sessions(Request $request)
 {
     $userId = Auth::user()->user_id;
     $sessions = collect([]);
-    
+
     // Fetch sessions for Internal Faculty or Guest Faculty
     if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
         // Get faculty_master.pk from user_id
         $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
-        
+
         if ($faculty) {
             $facultyPk = $faculty->pk;
-            
+
             // Fetch sessions with related data
             $sessions = CalendarEvent::where('active_inactive', 1)
                 ->where(function ($query) use ($facultyPk) {
@@ -192,24 +210,24 @@ function sessions(Request $request)
                 ->orderBy('START_DATE', 'desc')
                 ->orderBy('class_session', 'asc')
                 ->get();
-            
+
             // Process sessions to include additional details
             $sessions = $sessions->map(function ($session) {
                 // Get course name
                 $courseName = DB::table('course_master')
                     ->where('pk', $session->course_master_pk)
                     ->value('course_name') ?? 'N/A';
-                
+
                 // Get subject name
                 $subjectName = DB::table('subject_master')
                     ->where('pk', $session->subject_master_pk)
                     ->value('subject_name') ?? 'N/A';
-                
+
                 // Get module name
                 $moduleName = DB::table('subject_module_master')
                     ->where('pk', $session->subject_module_master_pk)
                     ->value('module_name') ?? 'N/A';
-                
+
                 // Parse faculty names
                 $facultyIds = json_decode($session->faculty_master, true);
                 if (!is_array($facultyIds)) {
@@ -219,22 +237,22 @@ function sessions(Request $request)
                     ->whereIn('pk', $facultyIds)
                     ->pluck('full_name')
                     ->implode(', ') ?: 'N/A';
-                
+
                 // Parse group names
                 $groupIds = json_decode($session->group_name, true) ?? [];
                 $groupNames = DB::table('group_type_master_course_master_map')
                     ->whereIn('pk', $groupIds)
                     ->pluck('group_name')
                     ->implode(', ') ?: 'N/A';
-                
+
                 // Get session time
                 $sessionTime = $session->class_session;
                 if ($session->session_type == 1 && $session->classSession) {
-                    $sessionTime = $session->classSession->shift_name . ' (' . 
-                                   $session->classSession->start_time . ' - ' . 
+                    $sessionTime = $session->classSession->shift_name . ' (' .
+                                   $session->classSession->start_time . ' - ' .
                                    $session->classSession->end_time . ')';
                 }
-                
+
                 return [
                     'pk' => $session->pk,
                     'course_name' => $courseName,
@@ -257,7 +275,7 @@ function sessions(Request $request)
             });
         }
     }
-    
+
     return view('admin.dashboard.sessions', compact('sessions'));
 }
 
