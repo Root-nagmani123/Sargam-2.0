@@ -391,11 +391,30 @@
     width: 100%;
   }
 
-  /* DataTables wrapper sometimes overflows */
+  /* DataTables wrapper: let only the table container scroll horizontally,
+     keep toolbar (length, search, info, pagination) fixed */
   .body-wrapper div.dataTables_wrapper {
     width: 100%;
-    overflow-x: auto;
+    overflow-x: visible;
     -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop & tablet (global DataTables toolbar alignment)
+   Ensure "Search" input hugs the right edge while "Show entries" stays left */
+@media (min-width: 768px) {
+  .body-wrapper .dataTables_wrapper .row:first-child,
+  .body-wrapper .dataTables_wrapper .dt-row:first-child {
+    display: flex;
+    align-items: center;
+  }
+
+  .body-wrapper .dataTables_wrapper .row:first-child > [class*="col-"]:last-child,
+  .body-wrapper .dataTables_wrapper .dt-row:first-child > div:last-child {
+    display: flex;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+    max-width: 100%;
   }
 }
 
@@ -438,7 +457,8 @@
     min-width: 80px;
     max-width: 100%;
     min-height: 38px;
-    padding: 0.375rem 2rem 0.375rem 0.5rem;
+    /* extra right padding so native arrow doesn't overlap text */
+    padding: 0.375rem 3rem 0.375rem 0.5rem;
   }
   .body-wrapper .dataTables_filter input {
     margin-left: 0 !important;

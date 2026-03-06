@@ -1,7 +1,7 @@
 {{--
     Reusable DataTable with pagination and live auto-search for mess master modules.
     Options: tableId, searchPlaceholder, orderColumn (int|array), orderDir, actionColumnIndex (int|array),
-    infoLabel, searchDelay, ordering, pageLength, lengthMenu.
+    infoLabel, searchDelay, ordering, pageLength, lengthMenu, responsive (bool).
 --}}
 @php
     $tableId = $tableId ?? 'masterTable';
@@ -15,6 +15,7 @@
     $ordering = isset($ordering) ? (bool) $ordering : true;
     $pageLength = (int) ($pageLength ?? 10);
     $lengthMenu = $lengthMenu ?? [[10, 25, 50, 100], [10, 25, 50, 100]];
+    $responsive = isset($responsive) ? (bool) $responsive : false;
     $columnDefs = count($actionColumnIndices) > 0
         ? [['orderable' => false, 'targets' => $actionColumnIndices]]
         : [];
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: {{ $pageLength }},
         lengthMenu: lengthMenu,
         searchDelay: {{ $searchDelay }},
+        responsive: {{ $responsive ? 'true' : 'false' }},
         dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         language: {
             search: '',

@@ -5,6 +5,7 @@
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
 @endphp
 <div class="container-fluid">
+    <x-breadcrum title="Client Types Master"></x-breadcrum>
     <div class="datatables">
         <div class="card">
             <div class="card-body">
@@ -21,16 +22,16 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-
+<hr class="my-2">
             <div class="table-responsive">
-                <table id="clientTypesTable" class="table table-bordered table-hover align-middle w-100">
+                <table id="clientTypesTable" class="table  align-middle w-100">
                     <thead>
                         <tr>
-                            <th style="width: 70px; background-color: #004a93; color: #fff; border-color: #004a93;">#</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Client Types</th>
-                            <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Client Name</th>
-                            <th style="width: 120px; background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                            <th style="width: 160px; background-color: #004a93; color: #fff; border-color: #004a93;">Action</th>
+                            <th>#</th>
+                            <th>Client Types</th>
+                            <th>Client Name</th>
+                            <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -46,12 +47,12 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-clienttype"
+                                        <button type="button" class="text-primary btn-edit-clienttype bg-transparent border-0"
                                                 data-id="{{ $clientType->id }}"
                                                 data-client-type="{{ e($clientType->client_type) }}"
                                                 data-client-name="{{ e($clientType->client_name) }}"
                                                 data-status="{{ e($clientType->status ?? 'active') }}"
-                                                title="Edit">Edit</button>
+                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this client type?');">
                                             @csrf

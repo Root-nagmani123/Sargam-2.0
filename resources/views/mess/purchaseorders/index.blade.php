@@ -2,6 +2,7 @@
 @section('title', 'Purchase Orders')
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Purchase Orders"></x-breadcrum>
     <div class="datatables">
         <div class="card">
             <div class="card-body">
@@ -17,63 +18,17 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
-
-                {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 border rounded bg-light no-print">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-2">
-                            <label class="form-label small mb-0">Date From</label>
-                            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ $filterDateFrom }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small mb-0">Date To</label>
-                            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ $filterDateTo }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small mb-0">Vendor</label>
-                            <select name="vendor_id" class="form-select form-select-sm">
-                                <option value="">All Vendors</option>
-                                @foreach($vendors as $v)
-                                    <option value="{{ $v->id }}" {{ (string)$filterVendorId === (string)$v->id ? 'selected' : '' }}>{{ $v->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small mb-0">Store</label>
-                            <select name="store_id" class="form-select form-select-sm">
-                                <option value="">All Stores</option>
-                                @foreach($stores as $s)
-                                    <option value="{{ $s->id }}" {{ (string)$filterStoreId === (string)$s->id ? 'selected' : '' }}>{{ $s->store_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-auto">
-                            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
-                            <button type="button" class="btn btn-sm btn-outline-primary ms-1" onclick="window.print()" title="Print list or Save as PDF">
-                                <i class="ti ti-printer"></i> Print
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
-                {{-- Print header: standard format (shown only when printing) --}}
-                <div class="print-only report-header text-center mb-3" style="display: none;">
-                    <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
-                    <div class="report-title-bar">Purchase Orders</div>
-                    <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
-                </div>
-
+                <hr class="my-2">
                 <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table table-bordered table-hover align-middle w-100">
+                    <table id="purchaseOrdersTable" class="table text-nowrap align-middle w-100">
                         <thead>
                             <tr>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93; width: 60px;">S.No</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Order Number</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Vendor Name</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Store Name</th>
-                                <th style="background-color: #004a93; color: #fff; border-color: #004a93;">Status</th>
-                                <th class="no-print" style="background-color: #004a93; color: #fff; border-color: #004a93; min-width: 180px;">Action</th>
+                                <th>S.No</th>
+                                <th>Order Number</th>
+                                <th>Vendor Name</th>
+                                <th>Store Name</th>
+                                <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -88,13 +43,13 @@
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
-                                <td class="no-print">
-                                    <button type="button" class="btn btn-sm btn-info btn-view-po" data-po-id="{{ $po->id }}" title="View">View</button>
-                                    <button type="button" class="btn btn-sm btn-warning btn-edit-po" data-po-id="{{ $po->id }}" title="Edit">Edit</button>
+                                <td>
+                                    <button type="button" class="text-primary btn-view-po bg-transparent border-0" data-po-id="{{ $po->id }}" title="View"><i class="material-icons material-symbol-rounded">visibility</i></button>
+                                    <button type="button" class="text-primary btn-edit-po bg-transparent border-0" data-po-id="{{ $po->id }}" title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                     <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                        <button type="submit" class="text-primary bg-transparent border-0" title="Delete" style="display: none;"><i class="material-icons material-symbol-rounded">delete</i></button>
                                     </form>
                                 </td>
                             </tr>
@@ -445,91 +400,110 @@
 
 {{-- View Purchase Order Modal (read-only) --}}
 <div class="modal fade" id="viewPurchaseOrderModal" tabindex="-1" aria-labelledby="viewPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header border-bottom bg-light">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-body-tertiary border-0 py-3 px-4">
                 <h5 class="modal-title fw-semibold" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="card mb-4">
-                    <div class="card-header bg-white py-2">
+            <div class="modal-body p-3 p-lg-4 bg-body-tertiary">
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header bg-white border-0 py-3 px-4">
                         <h6 class="mb-0 fw-semibold text-primary">Order Details</h6>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-3 p-lg-4">
                         <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label text-muted small">Order Number</label>
-                                <p class="mb-0 fw-medium" id="viewPoNumber">—</p>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Order Number</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewPoNumber">&mdash;</p>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label text-muted small">Order Date</label>
-                                <p class="mb-0 fw-medium" id="viewPoDate">—</p>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Order Date</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewPoDate">&mdash;</p>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label text-muted small">Store Name</label>
-                                <p class="mb-0 fw-medium" id="viewStoreName">—</p>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Store Name</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewStoreName">&mdash;</p>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label text-muted small">Vendor Name</label>
-                                <p class="mb-0 fw-medium" id="viewVendorName">—</p>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Vendor Name</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewVendorName">&mdash;</p>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label text-muted small">Payment Mode</label>
-                                <p class="mb-0 fw-medium" id="viewPaymentCode">—</p>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Payment Mode</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewPaymentCode">&mdash;</p>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label text-muted small">Contact Number</label>
-                                <p class="mb-0 fw-medium" id="viewContactNumber">—</p>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Contact Number</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewContactNumber">&mdash;</p>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label text-muted small">Status</label>
-                                <p class="mb-0"><span class="badge" id="viewStatus">—</span></p>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Status</label>
+                                    <p class="mb-0"><span class="badge" id="viewStatus">&mdash;</span></p>
+                                </div>
                             </div>
-                            <div class="col-md-12">
-                                <label class="form-label text-muted small">Delivery Address</label>
-                                <p class="mb-0 fw-medium" id="viewDeliveryAddress">—</p>
+                            <div class="col-12">
+                                <div class="border rounded-3 p-3 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Delivery Address</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewDeliveryAddress">&mdash;</p>
+                                </div>
                             </div>
-                            <div class="col-md-12">
-                                <label class="form-label text-muted small">Bill</label>
-                                <p class="mb-0" id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></p>
+                            <div class="col-12">
+                                <div class="border rounded-3 p-3 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Bill</label>
+                                    <p class="mb-0" id="viewBillWrap">
+                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" style="display: none;">View / Download Bill</a>
+                                        <span id="viewBillNone" class="text-muted">No bill uploaded</span>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="card mb-4">
-                    <div class="card-header bg-white py-2">
+
+                <div class="card border-0 shadow-sm mb-0 overflow-hidden">
+                    <div class="card-header bg-white border-0 py-3 px-4">
                         <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-bordered mb-0">
-                                <thead style="background-color: #af2910;">
+                            <table class="table align-middle mb-0">
+                                <thead>
                                     <tr>
-                                        <th style="color: #fff; border-color: #af2910;">Item Name</th>
-                                        <th style="color: #fff; border-color: #af2910;">Unit</th>
-                                        <th style="color: #fff; border-color: #af2910;">Item Code</th>
-                                        <th style="color: #fff; border-color: #af2910;">Quantity</th>
-                                        <th style="color: #fff; border-color: #af2910;">Unit Price</th>
-                                        <th style="color: #fff; border-color: #af2910;">Tax (%)</th>
-                                        <th style="color: #fff; border-color: #af2910;">Total Amount</th>
+                                        <th class="text-nowrap">Item Name</th>
+                                        <th class="text-nowrap">Unit</th>
+                                        <th class="text-nowrap">Item Code</th>
+                                        <th class="text-nowrap">Quantity</th>
+                                        <th class="text-nowrap">Unit Price</th>
+                                        <th class="text-nowrap">Tax (%)</th>
+                                        <th class="text-nowrap">Total Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody id="viewPoItemsBody"></tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-light d-flex justify-content-end align-items-center">
+                    <div class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-3 px-4">
                         <span class="fw-semibold">Grand Total:</span>
-                        <span class="fs-5 text-primary fw-bold ms-2" id="viewPoGrandTotal">₹0.00</span>
+                        <span class="fs-5 text-primary fw-bold ms-2" id="viewPoGrandTotal">&#8377;0.00</span>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-primary btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print">
-                    <i class="ti ti-printer"></i> Print
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer bg-white border-0 pt-3 px-4 pb-4">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -1125,3 +1099,4 @@
 })();
 </script>
 @endsection
+

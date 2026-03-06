@@ -48680,7 +48680,8 @@ body .apexcharts-tooltip-title {
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
     padding-left: 0.5rem;
-    padding-right: 0.625rem;
+    /* extra right padding so dropdown arrow never overlaps text */
+    padding-right: 2.5rem;
     font-size: 0.765625rem;
     border-radius: 5px;
     border-color: var(--bs-border-color);
