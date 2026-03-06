@@ -112,48 +112,26 @@
                 </a>
             </div>
             <div class="card-body p-0">
-                <!-- Active / Archive Tabs -->
-                @php
-                    $currentTab = request('tab', 'active');
-                    $queryParams = request()->except('tab', 'page');
-                    $activeTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'active']));
-                    $archiveTabUrl = route('admin.issue-management.index', array_merge($queryParams, ['tab' => 'archive']));
-                @endphp
-                <ul class="nav nav-tabs nav-tabs-issue px-4 pt-3 gap-1" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ $currentTab === 'active' ? 'active' : '' }} d-inline-flex align-items-center gap-2"
-                           href="{{ $activeTabUrl }}"
-                           role="tab">
-                            <iconify-icon icon="solar:play-circle-bold"></iconify-icon>
-                            Active
-                            @if(isset($activeCount))
-                                <span class="badge bg-primary rounded-pill">{{ $activeCount }}</span>
-                            @endif
-                        </a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ $currentTab === 'archive' ? 'active' : '' }} d-inline-flex align-items-center gap-2"
-                           href="{{ $archiveTabUrl }}"
-                           role="tab">
-                            <iconify-icon icon="solar:archive-down-minimistic-bold"></iconify-icon>
-                            Archive
-                            @if(isset($archiveCount))
-                                <span class="badge bg-secondary rounded-pill">{{ $archiveCount }}</span>
-                            @endif
-                        </a>
-                    </li>
-                </ul>
-
                 <!-- Filters -->
                 <div class="p-4 pb-0">
                     <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4">
-                        <input type="hidden" name="tab" value="{{ $currentTab }}">
                         <div class="d-flex align-items-center gap-2 mb-3">
                             <iconify-icon icon="solar:filter-bold-duotone" class="text-primary"></iconify-icon>
                             <span class="fw-semibold small text-body-secondary">Filters</span>
                         </div>
                         <div class="row g-3">
-                            <div class="col-12 col-md-6 col-lg-3">
+                            <div class="col-12 col-md-6 col-lg-2">
+                                <label class="form-label small fw-medium text-body-secondary">Show</label>
+                                <select name="raised_by" class="form-select form-select-sm">
+                                    <option value="all" {{ request('raised_by', 'all') == 'all' ? 'selected' : '' }}>All issues (raised by me or others)</option>
+                                    <option value="self" {{ request('raised_by') == 'self' ? 'selected' : '' }}>Raised by me only</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-2">
+                                <label class="form-label small fw-medium text-body-secondary">Search</label>
+                                <input type="text" name="search" class="form-control form-control-sm" placeholder="ID, description, category..." value="{{ request('search') }}">
+                            </div>
+                            <div class="col-12 col-md-2 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Status</label>
                                 <select name="status" class="form-select form-select-sm">
                                     <option value="">All Status</option>
@@ -164,7 +142,7 @@
                                     <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6 col-lg-3">
+                            <div class="col-12 col-md-3 col-lg-3">
                                 <label class="form-label small fw-medium text-body-secondary">Category</label>
                                 <select name="category" class="form-select form-select-sm">
                                     <option value="">All Categories</option>
@@ -175,21 +153,40 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-3 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Date From</label>
                                 <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
                             </div>
-                            <div class="col-12 col-md-6 col-lg-2">
+                            <div class="col-12 col-md-3 col-lg-2">
                                 <label class="form-label small fw-medium text-body-secondary">Date To</label>
                                 <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
                             </div>
-                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2">
+                            <div class="col-12 col-lg-2 d-flex align-items-end gap-2 flex-wrap">
                                 <button type="submit" class="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2">
                                     <iconify-icon icon="solar:magnifer-bold"></iconify-icon>
                                     Apply
                                 </button>
-                                <a href="{{ route('admin.issue-management.index', ['tab' => $currentTab]) }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">
-                                    <iconify-icon icon="solar:refresh-bold"></iconify-icon>
+                                <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">
+                                    Clear Filters
+                                </a>
+                                @php
+                                    $exportParams = array_filter([
+                                        'search' => request('search'),
+                                        'status' => request('status'),
+                                        'category' => request('category'),
+                                        'priority' => request('priority'),
+                                        'date_from' => request('date_from'),
+                                        'date_to' => request('date_to'),
+                                        'raised_by' => request('raised_by'),
+                                    ]);
+                                @endphp
+                                <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Export to Excel">
+                                    <iconify-icon icon="solar:document-bold-duotone"></iconify-icon>
+                                    <span class="d-none d-md-inline">Excel</span>
+                                </a>
+                                <a href="{{ route('admin.issue-management.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm d-flex align-items-center gap-1" title="Export to PDF">
+                                    <iconify-icon icon="solar:document-text-bold-duotone"></iconify-icon>
+                                    <span class="d-none d-md-inline">PDF</span>
                                 </a>
                             </div>
                         </div>
@@ -206,7 +203,7 @@
                                 <th>Category</th>
                                 <th>Description</th>
                                 <th>Priority</th>
-                                <th>Behalf</th>
+                               
                                 <th>Status</th>
                                 <th class="text-end pe-4">Actions</th>
                             </tr>
@@ -225,9 +222,7 @@
                                     @endphp
                                     <span class="badge badge-pill bg-{{ $priorityClass }} {{ $priorityClass == 'warning' ? 'text-dark' : '' }}">{{ $p }}</span>
                                 </td>
-                                <td>
-                                    <span class="badge badge-pill bg-{{ $issue->behalf == 0 ? 'primary' : 'secondary' }}">{{ $issue->behalf_label }}</span>
-                                </td>
+                               
                                 <td>
                                     @php
                                         $s = (int) $issue->issue_status;
@@ -240,9 +235,11 @@
                                         <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-action btn-info btn-sm" title="View">
                                             <iconify-icon icon="solar:eye-bold"></iconify-icon>
                                         </a>
+                                        @if($issue->issue_logger == Auth::user()->user_id || $issue->created_by == Auth::user()->user_id)
                                         <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning btn-sm" title="Edit">
                                             <iconify-icon icon="solar:pen-bold"></iconify-icon>
                                         </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -253,19 +250,9 @@
                                         <div class="empty-state-icon">
                                             <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1"></iconify-icon>
                                         </div>
-                                        <h6 class="text-body-secondary mb-1">No {{ $currentTab === 'archive' ? 'archived' : 'active' }} issues</h6>
-                                        <p class="small text-body-secondary mb-0">
-                                            @if($currentTab === 'archive')
-                                                Completed issues will appear here.
-                                            @else
-                                                Try adjusting your filters or log a new issue.
-                                            @endif
-                                        </p>
-                                        @if($currentTab === 'active')
+                                        <h6 class="text-body-secondary mb-1">No issues</h6>
+                                        <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
                                         <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm mt-3">Log New Issue</a>
-                                        @else
-                                        <a href="{{ route('admin.issue-management.index', ['tab' => 'active']) }}" class="btn btn-outline-primary btn-sm mt-3">View Active Issues</a>
-                                        @endif
                                     </div>
                                 </td>
                             </tr>

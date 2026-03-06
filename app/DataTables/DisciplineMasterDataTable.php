@@ -30,23 +30,23 @@ class DisciplineMasterDataTable extends DataTable
 if($row->active_inactive == 1){
     return '
                 <a href="'.$edit.'" title="Edit">
-                    <i class="material-icons">edit</i>
+                    <span class="material-icons material-symbols-rounded text-primary">edit</span>
                 </a>
               
-                    <button style="border:none;background:none " disabled title="Delete">
-                        <i class="material-icons text-danger">delete</i>
-                    </button>';
+                    <a href="javascript:void(0)" style="border:none;background:none " disabled title="Delete">
+                        <span class="material-icons material-symbols-rounded text-primary">delete</span>
+                    </a>';
 }else{
 return '
                 <a href="'.$edit.'" title="Edit">
-                    <i class="material-icons">edit</i>
+                    <span class="material-icons material-symbols-rounded text-primary">edit</span>
                 </a>
 
                 <form action="'.$delete.'" method="POST" style="display:inline">
                     '.csrf_field().method_field('DELETE').'
-                    <button onclick="return confirm(\'Delete?\')" style="border:none;background:none">
-                        <i class="material-icons text-danger">delete</i>
-                    </button>
+                    <a href="javascript:void(0)" onclick="return confirm(\'Delete?\')" style="border:none;background:none">
+                        <span class="material-icons material-symbols-rounded text-primary">delete</span>
+                    </a>
                 </form>';
 }
                 
@@ -88,6 +88,12 @@ return '
             ->setTableId('discipline-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->pageLength(10);
+            ->pageLength(10)
+            ->parameters([
+                'responsive' => false,
+                'autoWidth' => false,
+                'scrollX' => false,
+                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            ]);
     }
 }

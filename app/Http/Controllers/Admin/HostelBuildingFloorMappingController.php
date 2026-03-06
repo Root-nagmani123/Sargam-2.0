@@ -31,26 +31,32 @@ class HostelBuildingFloorMappingController extends Controller
 
     public function store(Request $request)
     {
-
         $request->validate([
             'hostelbuilding' => 'required',
             'hostel_floor_name' => 'required'
         ]);
 
-        if ($request->pk) {
-            $message = 'Hostel Building Floor mapping updated successfully.';
-            $hostelBuildingFloor = HostelBuildingFloorMapping::findOrFail(decrypt($request->pk));
-        } else {
-            $message = 'Hostel Building Floor mapping created successfully.';
-            $hostelBuildingFloor = new HostelBuildingFloorMapping();
+        try {
+            if ($request->filled('pk')) {
+                $message = 'Hostel Building Floor mapping updated successfully.';
+                $decryptedPk = decrypt($request->pk);
+                $hostelBuildingFloor = HostelBuildingFloorMapping::findOrFail($decryptedPk);
+            } else {
+                $message = 'Hostel Building Floor mapping created successfully.';
+                $hostelBuildingFloor = new HostelBuildingFloorMapping();
+            }
+            $hostelBuildingFloor->hostel_building_master_pk = $request->hostelbuilding;
+            $hostelBuildingFloor->hostel_floor_master_pk = $request->hostel_floor_name;
+            $hostelBuildingFloor->active_inactive = 1;
+
+            $hostelBuildingFloor->save();
+
+            return redirect()->route('hostel.building.map.index')->with('success', $message);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            return redirect()->back()->withInput()->with('error', 'Invalid or expired form data. Please try again.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->with('error', 'Unable to save mapping. ' . $e->getMessage());
         }
-        $hostelBuildingFloor->hostel_building_master_pk = $request->hostelbuilding;
-        $hostelBuildingFloor->hostel_floor_master_pk = $request->hostel_floor_name;
-        $hostelBuildingFloor->active_inactive = 1;
-
-        $hostelBuildingFloor->save();
-
-        return redirect()->route('hostel.building.map.index')->with('success', $message);
     }
 
     public function edit($id)
