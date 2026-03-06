@@ -345,13 +345,13 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_from_edit" class="form-label">ID Card Valid From</label>
-                                <input type="date" name="id_card_valid_from" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
-                                @error('id_card_valid_from')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                <input type="date" name="id_card_valid_from_extension" id="id_card_valid_from_edit" class="form-control" value="{{ old('id_card_valid_from_extension', $request->id_card_valid_from) }}" placeholder="DD/MM/YYYY">
+                                @error('id_card_valid_from_extension')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label for="id_card_valid_upto_edit" class="form-label">ID Card Valid Upto</label>
-                                <input type="date" name="id_card_valid_upto" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
-                                @error('id_card_valid_upto')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                <input type="date" name="id_card_valid_upto_extension" id="id_card_valid_upto_edit" class="form-control" value="{{ old('id_card_valid_upto_extension', $request->id_card_valid_upto) }}" placeholder="DD/MM/YYYY">
+                                @error('id_card_valid_upto_extension')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6" id="firReceiptFieldEdit" style="display:none;">
                                 <label class="form-label">Upload FIR (First Information Report) <span class="text-danger">*</span> <span class="text-muted">(Required when Card Lost)</span></label>

@@ -317,8 +317,8 @@
                                     <th class="py-3">Request date</th>
                                     <th class="py-3">Employee Name</th>
                                     <th class="py-3">Designation</th>
-                                     <th class="py-3">Duplication</th>
-                                    <th class="py-3">Extension</th>
+                                    {{--<th class="py-3">Duplication</th>
+                                    <th class="py-3">Extension</th>--}}
                                     <th class="py-3">Status</th>
                                     <th class="text-end py-3 pe-4">Actions</th>
                                 </tr>
@@ -344,7 +344,7 @@
                                             $validFromYmd = isset($request->card_valid_from) && $request->card_valid_from ? \Carbon\Carbon::parse($request->card_valid_from)->format('Y-m-d') : '';
                                             $validUptoYmd = isset($request->card_valid_to) && $request->card_valid_to ? \Carbon\Carbon::parse($request->card_valid_to)->format('Y-m-d') : '';
                                         @endphp
-                                        <td class="text-center">
+                                        {{--<td class="text-center">
                                             @if($request->status === 'Approved' && $isPermanent)
                                                 <button type="button"
                                                         class="btn btn-sm btn-outline-info idcard-archive-ext-btn"
@@ -389,7 +389,7 @@
                                             @else
                                                 <span class="text-body-tertiary">--</span>
                                             @endif
-                                        </td>
+                                        </td>--}}
 
                                         <td>
                                             @php
