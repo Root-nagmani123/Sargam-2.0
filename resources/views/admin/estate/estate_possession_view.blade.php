@@ -109,23 +109,25 @@
                     <div class="col-12 col-md-6">
                         <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="text"
+                            <input type="number"
                                    class="form-control"
                                    id="meter_reading_oth_primary"
                                    name="meter_reading_oth"
                                    inputmode="numeric"
-                                   pattern="[0-9]{1,10}"
+                                   min="0"
+                                   step="1"
                                    maxlength="10"
                                    value="{{ old('meter_reading_oth', isset($record) ? $record->meter_reading_oth : '') }}"
                                    placeholder="Primary (max 10 digits)"
                                    oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);">
                             <span class="input-group-text">/</span>
-                            <input type="text"
+                            <input type="number"
                                    class="form-control"
                                    id="meter_reading_oth_secondary"
                                    name="meter_reading_oth1"
                                    inputmode="numeric"
-                                   pattern="[0-9]{1,10}"
+                                   min="0"
+                                   step="1"
                                    maxlength="10"
                                    value="{{ old('meter_reading_oth1', isset($record) ? $record->meter_reading_oth1 : '') }}"
                                    placeholder="Secondary (max 10 digits)"
@@ -177,6 +179,21 @@ $(document).ready(function() {
         $('#request_id_display').val(opt.attr('data-request-no') || '');
         $('#section_display').val(opt.attr('data-section') || opt.attr('data-designation') || '');
     }).trigger('change');
+
+    function sanitizeOtherMeterInputs() {
+        $('#meter_reading_oth_primary, #meter_reading_oth_secondary').each(function() {
+            this.value = String(this.value || '').replace(/\D/g, '').slice(0, 10);
+        });
+    }
+    $('#meter_reading_oth_primary, #meter_reading_oth_secondary').on('input change', function() {
+        sanitizeOtherMeterInputs();
+    });
+    $('#meter_reading_oth_primary, #meter_reading_oth_secondary').on('keydown', function(e) {
+        if (['e', 'E', '+', '-'].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+    sanitizeOtherMeterInputs();
 
     // Campus change -> fill unit types from pre-loaded data (campus + house_master + unit_type_master join), then blocks
     $('#estate_campus_master_pk').change(function() {

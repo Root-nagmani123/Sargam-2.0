@@ -18,10 +18,7 @@
                 <div class="row g-3 mb-4">
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select Bill Month" required>
-                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-                        </div>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" placeholder="Select Bill Month" max="{{ date('Y-m') }}" required>
                         <div class="form-text">Select Bill Month</div>
                     </div>
                     <div class="col-12 col-md-6 col-lg-4">
@@ -203,6 +200,12 @@ $(document).ready(function() {
         const { bill_month: billMonth, bill_year: billYear } = parseBillMonthInput(billMonthVal);
         if (!billMonth || !billYear) {
             alert('Please select Bill Month.');
+            return;
+        }
+        const today = new Date();
+        const maxMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+        if (billMonthVal > maxMonth) {
+            alert('Bill Month cannot be a future month. Please select current month or earlier.');
             return;
         }
         const params = {
