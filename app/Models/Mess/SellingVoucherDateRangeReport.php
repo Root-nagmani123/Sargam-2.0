@@ -127,7 +127,7 @@ class SellingVoucherDateRangeReport extends Model
     public static function statusLabels(): array
     {
         return [
-            self::STATUS_DRAFT => 'Draft',
+            self::STATUS_DRAFT => 'Pending',
             self::STATUS_FINAL => 'Final',
             self::STATUS_APPROVED => 'Approved',
         ];

@@ -26,7 +26,7 @@
                         <label class="form-label small">Status</label>
                         <select name="status" class="form-select form-select-sm">
                             <option value="">All</option>
-                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Draft</option>
+                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                             <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Final</option>
                             <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Approved</option>
                         </select>
@@ -92,7 +92,7 @@
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
                             <td>
-                                @if($report->status == 0)<span class="badge bg-warning">Draft</span>
+                                @if($report->status == 0)<span class="badge bg-warning">Pending</span>
                                 @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
                                 @elseif($report->status == 4)<span class="badge bg-primary">Completed</span>
                                 @else<span class="badge bg-success">Final</span>@endif
@@ -130,7 +130,7 @@
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'Online' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
                             <td>
-                                @if($report->status == 0)<span class="badge bg-warning">Draft</span>
+                                @if($report->status == 0)<span class="badge bg-warning">Pending</span>
                                 @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
                                 @else<span class="badge bg-success">Final</span>@endif
                             </td>
