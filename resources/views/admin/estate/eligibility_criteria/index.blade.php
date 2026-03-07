@@ -17,7 +17,7 @@
                 </div>
                 <div class="flex-shrink-0 d-flex flex-wrap gap-2">
                     <a href="{{ route('admin.estate.eligibility-criteria.create') }}" class="btn btn-success px-3" title="Add New"><i class="bi bi-plus-lg me-1"></i> Add New</a>
-                    <button type="button" class="btn btn-outline-secondary px-3" onclick="window.print()" title="Print"><i class="bi bi-printer"></i></button>
+                    <button type="button" class="btn btn-outline-secondary px-3" id="btnPrintEligibilityCriteria" title="Print"><i class="bi bi-printer"></i></button>
                 </div>
             </div>
 
@@ -35,4 +35,71 @@
 
 @push('scripts')
     {!! $dataTable->scripts(attributes: ['type' => 'module']) !!}
+    <script>
+        (function() {
+            function buildPrintableTableHtml(tableElement) {
+                var clone = tableElement.cloneNode(true);
+
+                // Drop action column from print output.
+                Array.from(clone.querySelectorAll('tr')).forEach(function(tr) {
+                    if (tr.lastElementChild) {
+                        tr.removeChild(tr.lastElementChild);
+                    }
+                });
+
+                return clone.outerHTML;
+            }
+
+            function openPrintWindow(tableHtml) {
+                var win = window.open('', '_blank', 'width=1200,height=900');
+                if (!win) {
+                    alert('Please allow popups to print this list.');
+                    return;
+                }
+
+                win.document.open();
+                win.document.write(
+                    '<!doctype html>' +
+                    '<html><head><title>Eligibility - Criteria</title>' +
+                    '<style>' +
+                    'body{font-family:Arial,sans-serif;padding:16px;color:#111827;}' +
+                    'h2{margin:0 0 12px 0;font-size:20px;}' +
+                    'table{width:100%;border-collapse:collapse;font-size:12px;}' +
+                    'th,td{border:1px solid #d1d5db;padding:8px;vertical-align:top;text-align:left;}' +
+                    'th{background:#f3f4f6;font-weight:600;}' +
+                    '</style></head><body>' +
+                    '<h2>Eligibility - Criteria</h2>' +
+                    tableHtml +
+                    '</body></html>'
+                );
+                win.document.close();
+
+                // Close popup after print dialog closes (print or cancel),
+                // so user stays on the listing page.
+                win.onafterprint = function() {
+                    win.close();
+                };
+
+                setTimeout(function() {
+                    win.focus();
+                    win.print();
+                }, 250);
+            }
+
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('#btnPrintEligibilityCriteria');
+                if (!btn) {
+                    return;
+                }
+
+                var table = document.getElementById('eligibilityCriteriaTable');
+                if (!table) {
+                    alert('Table not found.');
+                    return;
+                }
+
+                openPrintWindow(buildPrintableTableHtml(table));
+            });
+        })();
+    </script>
 @endpush

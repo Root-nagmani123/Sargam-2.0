@@ -217,30 +217,41 @@
         buildColumnToggle();
 
         function buildPrintableTableHtml() {
-            // Clone the rendered table (after switching to "All" rows).
-            var $clone = $('#estatePossessionTable').clone();
-            $clone.removeAttr('id');
-
-            // Remove non-data columns (checkbox / actions) from clone.
-            var removeIdx = [];
-            $clone.find('thead th').each(function(i) {
-                var header = ($(this).text() || '').trim();
-                if (!header || header.toLowerCase() === 'actions') {
-                    removeIdx.push(i);
-                }
+            var visibleIndexes = [];
+            table.columns().every(function(i) {
+                var header = ($(this.header()).text() || '').trim();
+                if (!header || header.toLowerCase() === 'actions') return;
+                if (this.visible()) visibleIndexes.push(i);
             });
-            removeIdx.sort(function(a, b) { return b - a; }); // remove from right to left
-            $clone.find('tr').each(function() {
-                var $cells = $(this).children('th,td');
-                removeIdx.forEach(function(idx) {
-                    $cells.eq(idx).remove();
+
+            var html = '<table class="table table-bordered table-striped">';
+            html += '<thead><tr>';
+            visibleIndexes.forEach(function(colIdx) {
+                var h = ($(table.column(colIdx).header()).text() || '').trim();
+                html += '<th>' + h + '</th>';
+            });
+            html += '</tr></thead><tbody>';
+
+            table.rows({ search: 'applied' }).nodes().each(function(rowNode) {
+                var $row = $(rowNode);
+                if ($row.hasClass('child')) return;
+                html += '<tr>';
+                visibleIndexes.forEach(function(colIdx) {
+                    var cellNode = table.cell(rowNode, colIdx).node();
+                    var cellHtml = '';
+                    if (cellNode) {
+                        var $cell = $(cellNode).clone();
+                        $cell.find('input, button, select, textarea').remove();
+                        $cell.find('a.btn, .btn, .form-check-input').remove();
+                        cellHtml = ($cell.html() || '').trim();
+                    }
+                    html += '<td>' + cellHtml + '</td>';
                 });
+                html += '</tr>';
             });
 
-            // Ensure borders are visible in print.
-            $clone.addClass('table table-bordered table-striped');
-
-            return $clone.prop('outerHTML');
+            html += '</tbody></table>';
+            return html;
         }
 
         function openPrintWindow(tableHtml) {
@@ -286,36 +297,13 @@
                 return;
             }
 
-            // Print should include ALL rows and ALL data columns (scrollX + pagination otherwise hides details).
-            // This will generate multiple pages when data is large (expected).
+            // Print should include ALL rows while respecting current show/hide column state.
             var originalLen = table.page.len();
             var originalPage = table.page();
-            var colCount = table.columns().count();
-            var originalVisibility = [];
-            for (var i = 0; i < colCount; i++) {
-                originalVisibility[i] = table.column(i).visible();
-            }
-
-            // Hide non-data columns for print (checkbox + actions).
-            var checkboxCol = 0;
-            var actionsCol = colCount - 1;
-            for (var c = 0; c < colCount; c++) {
-                if (c === checkboxCol || c === actionsCol) {
-                    table.column(c).visible(false, false);
-                } else {
-                    table.column(c).visible(true, false);
-                }
-            }
-            table.columns.adjust();
 
             var restore = function() {
-                // Restore column visibility
-                for (var i = 0; i < colCount; i++) {
-                    table.column(i).visible(originalVisibility[i], false);
-                }
                 table.page.len(originalLen);
                 table.page(originalPage);
-                table.columns.adjust();
                 table.draw(false);
             };
 

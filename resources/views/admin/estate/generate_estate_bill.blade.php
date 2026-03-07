@@ -30,7 +30,7 @@
                     <div id="bill_month_help" class="form-text small">Select the month for billing</div>
                 </div>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type <span class="text-danger">*</span></label>
+                    <label for="unit_sub_type_pk" class="form-label fw-medium">Unit Sub Type </label>
                     <select class="form-select" id="unit_sub_type_pk" name="unit_sub_type_pk" aria-label="Select Unit Sub Type" aria-describedby="unit_sub_type_help">
                         <option value="">— Select Unit Sub Type —</option>
                         @foreach($unitSubTypes as $ust)
