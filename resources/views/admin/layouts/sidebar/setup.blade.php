@@ -104,7 +104,7 @@
                                             @endif
 
                                             @endif
-                                            @endif
+                                          
                                              @if(hasRole('Staff') || hasRole('Doctor') || hasRole('Internal Faculty'))
                                             <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
                                                 <a href="javascript:void(0)"
@@ -156,6 +156,10 @@
                     <!-- Academic -->
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mappings />
+
+                <!-- Issue Management (CENTCOM) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_issue_management />
 
                     <!-- Forms -->
                     <!-- ---------------------------------- -->
