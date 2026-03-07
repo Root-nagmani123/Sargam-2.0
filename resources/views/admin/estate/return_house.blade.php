@@ -9,6 +9,24 @@
     .form-check-label-border:has(.form-check-input:checked) { border-color: var(--bs-primary); background-color: rgba(var(--bs-primary-rgb), 0.08); }
     .form-check-label-border .form-check-input { margin: 0; }
     .form-check-label-border .form-check-label-text { font-weight: 500; }
+    .prefill-locked { background-color: var(--bs-secondary-bg, #f8f9fa); cursor: not-allowed; pointer-events: none; }
+    .noc-file-wrap { position: relative; }
+    .noc-clear-btn {
+        position: absolute;
+        top: 50%;
+        right: 0.5rem;
+        transform: translateY(-50%);
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 0;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        line-height: 1;
+        z-index: 2;
+    }
 </style>
 <div class="container-fluid py-2">
     <!-- Breadcrumb -->
@@ -21,7 +39,7 @@
             <p class="text-body-secondary small mb-0">Manage house returns and request new allotments</p>
         </div>
         <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#requestHouseModal">
-            <i class="bi bi-plus-circle me-2"></i>Request House
+            <i class="bi bi-plus-circle me-2"></i>Return House
         </button>
     </div>
 
@@ -157,8 +175,13 @@
                         <div class="row g-3 mb-2">
                             <div class="col-md-6">
                                 <label for="request_noc_document" class="form-label fw-medium">Upload NOC Document</label>
-                                <input type="file" class="form-control" id="request_noc_document" name="noc_document" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                                <div class="form-text">PDF, DOC, or image files</div>
+                                <div class="noc-file-wrap">
+                                    <input type="file" class="form-control pe-4" id="request_noc_document" name="noc_document">
+                                    <button type="button" class="btn btn-sm btn-danger noc-clear-btn d-none" id="clear_request_noc_document" aria-label="Remove selected file" title="Remove file">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">Any file type allowed (max 5 MB)</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="request_remarks" class="form-label fw-medium">Remarks</label>
@@ -183,7 +206,7 @@
     <!-- Data Table Card (Other Employee) -->
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-header bg-body-secondary bg-opacity-10 border-0 py-3 px-4">
-            <h5 class="card-title fw-semibold mb-0">Return House List (Other Employee)</h5>
+            <h5 class="card-title fw-semibold mb-0">Return House List</h5>
         </div>
         <div class="card-body p-4">
             <div class="table-responsive return-house-table-wrap">
@@ -230,6 +253,11 @@
     var campusesList = @json($campuses ?? []);
 
     $(document).ready(function() {
+        var prefilledFieldsLocked = false;
+        var lockedPrefillSelector = '#request_section_name, #request_estate_name, #request_unit_name, #request_building_name, #request_house_no, #request_unit_sub_type, #request_date_allotment, #request_date_possession';
+        var employeeListRequestSeq = 0;
+        var requestDetailsSeq = 0;
+
         function setSelectValue($select, value, label) {
             if (value === undefined || value === null || value === '') return;
             var v = String(value);
@@ -241,13 +269,55 @@
             $select.trigger('change');
         }
 
+        function setPrefilledFieldsLocked(locked) {
+            prefilledFieldsLocked = !!locked;
+            $(lockedPrefillSelector)
+                .toggleClass('prefill-locked', prefilledFieldsLocked)
+                .attr('aria-readonly', prefilledFieldsLocked ? 'true' : 'false');
+        }
+
+        function blurLockedFocus() {
+            if (!prefilledFieldsLocked) return;
+            $(this).blur();
+        }
+
+        function syncReturningDateMin(allotmentDate) {
+            var minDate = (allotmentDate || '').trim();
+            var $returnDate = $('#request_returning_date');
+            if (minDate) {
+                $returnDate.attr('min', minDate);
+                var current = ($returnDate.val() || '').trim();
+                if (current && current < minDate) {
+                    $returnDate.val('');
+                }
+            } else {
+                $returnDate.removeAttr('min');
+            }
+        }
+
+        function syncNocClearButton() {
+            var hasFile = !!($('#request_noc_document')[0] && $('#request_noc_document')[0].files && $('#request_noc_document')[0].files.length);
+            $('#clear_request_noc_document').toggleClass('d-none', !hasFile);
+        }
+
+        $(document).on('focus', '#request_estate_name, #request_unit_name, #request_building_name, #request_house_no, #request_unit_sub_type, #request_date_allotment, #request_date_possession', blurLockedFocus);
+        $(document).on('change', '#request_noc_document', syncNocClearButton);
+        $(document).on('click', '#clear_request_noc_document', function() {
+            $('#request_noc_document').val('');
+            syncNocClearButton();
+        });
+
         // --- Employee Type change: load employee list (LBSNAA / Other), never hide Employee Name ---
         $('input[name="employee_type"]').on('change', function() {
+            setPrefilledFieldsLocked(false);
             var type = $(this).val();
             var isOther = (type === 'Other Employee');
             $('#request_employee_name').attr('name', isOther ? 'estate_other_req_pk' : 'employee_select_id');
             $('#request_employee_name').html('<option value="">--Loading--</option>');
+            var seq = ++employeeListRequestSeq;
             $.get(urlEmployees, { employee_type: type }, function(res) {
+                if (seq !== employeeListRequestSeq) return;
+                if ($('input[name="employee_type"]:checked').val() !== type) return;
                 var $sel = $('#request_employee_name');
                 $sel.html('<option value="">--Select--</option>');
                 if (res.status && res.data && res.data.length) {
@@ -267,6 +337,7 @@
 
         // --- Employee Name change: fetch full mapping and fill all fields (live behaviour) ---
         $('#request_employee_name').on('change', function() {
+            setPrefilledFieldsLocked(false);
             var id = $(this).val();
             var type = $('input[name="employee_type"]:checked').val();
             if (!id || !type) {
@@ -274,7 +345,11 @@
                 clearRequestDetailsFields();
                 return;
             }
+            var seq = ++requestDetailsSeq;
             $.get(urlRequestDetails, { employee_type: type, id: id }, function(res) {
+                if (seq !== requestDetailsSeq) return;
+                if ($('#request_employee_name').val() !== String(id)) return;
+                if ($('input[name="employee_type"]:checked').val() !== type) return;
                 if (!res.status || !res.data) {
                     $('#request_section_name').val('');
                     clearRequestDetailsFields();
@@ -284,6 +359,7 @@
                 $('#request_section_name').val(d.section || '');
                 $('#request_date_allotment').val(d.allotment_date || '');
                 $('#request_date_possession').val(d.possession_date_oth || '');
+                syncReturningDateMin(d.allotment_date || '');
                 if (!d.estate_campus_master_pk) {
                     $('#request_estate_name').val('');
                     $('#request_unit_name').html('<option value="">--Select Estate first--</option>');
@@ -336,6 +412,7 @@
                                 $h.val(String(d.estate_house_master_pk));
                                 $('#request_house_no_display').val(d.house_no || '');
                             }
+                            setPrefilledFieldsLocked(true);
                         });
                     });
                 });
@@ -343,16 +420,19 @@
         });
 
         function clearRequestDetailsFields() {
+            setPrefilledFieldsLocked(false);
             $('#request_estate_name').val('');
             $('#request_unit_name').html('<option value="">--Select Estate first--</option>');
             $('#request_building_name, #request_unit_sub_type, #request_house_no').html('<option value="">--Select--</option>');
             $('#request_house_no_display').val('');
             $('#request_date_allotment, #request_date_possession').val('');
+            syncReturningDateMin('');
         }
 
         // On load: Other is default, so select name is estate_other_req_pk
         $('#request_employee_name').attr('name', 'estate_other_req_pk');
         $('input[name="employee_type"]:checked').trigger('change');
+        syncNocClearButton();
 
         $('#request_estate_name').on('change', function() {
             var campusPk = $(this).val();
@@ -418,6 +498,13 @@
             if ($('input[name="employee_type"]:checked').val() === 'LBSNAA') {
                 e.preventDefault();
                 alert('For LBSNAA employees please use Request for Estate.');
+                return;
+            }
+            var allotmentDate = ($('#request_date_allotment').val() || '').trim();
+            var returningDate = ($('#request_returning_date').val() || '').trim();
+            if (allotmentDate && returningDate && returningDate < allotmentDate) {
+                e.preventDefault();
+                alert('Returning Date cannot be before Date Of Allotment.');
                 return;
             }
             if (this.checkValidity()) {

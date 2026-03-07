@@ -1,20 +1,20 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Add Possession Details - Sargam')
+@section('title', ($isEdit ?? false) ? 'Edit Possession Details - Sargam' : 'Add Possession Details - Sargam')
 
 @section('setup_content')
 <div class="container-fluid py-4">
-    <x-breadcrum title="Add Possession Details"></x-breadcrum>
+    <x-breadcrum :title="($isEdit ?? false) ? 'Edit Possession Details' : 'Add Possession Details'"></x-breadcrum>
     <x-estate-workflow-stepper current="possession-details" />
     <x-session_message />
 
     <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
         <div class="card-body p-4 p-lg-5">
-            <h2 class="h5 fw-semibold mb-1">Add Possession Details</h2>
+            <h2 class="h5 fw-semibold mb-1">{{ ($isEdit ?? false) ? 'Edit Possession Details' : 'Add Possession Details' }}</h2>
             <p class="text-muted small mb-4">Requester list contains only allotted users (from HAC Approved flow).</p>
             <hr class="my-4">
 
-            <form method="POST" action="{{ route('admin.estate.possession-details.store') }}" id="possessionDetailsForm" class="needs-validation" novalidate>
+            <form method="POST" action="{{ route('admin.estate.possession-details.store') }}" id="possessionDetailsForm" class="needs-validation" novalidate data-ajax-submit="1">
                 @csrf
 
                 <div class="row g-3 mb-3">
@@ -32,6 +32,7 @@
                                     data-allotment-date="{{ $r->allotment_date ?? '' }}"
                                     data-possession-date="{{ $r->possession_date ?? '' }}"
                                     data-electric-meter-reading="{{ $r->electric_meter_reading ?? '' }}"
+                                    data-electric-meter-reading-secondary="{{ $r->electric_meter_reading_2 ?? '' }}"
                                     data-campus-pk="{{ $r->estate_campus_master_pk ?? '' }}"
                                     data-unit-type-pk="{{ $r->estate_unit_type_master_pk ?? '' }}"
                                     data-block-pk="{{ $r->estate_block_master_pk ?? '' }}"
@@ -44,6 +45,7 @@
                             @endforeach
                         </select>
                         <div class="form-text">HAC-approved requester</div>
+                        <div class="text-danger small field-error" data-field="estate_home_request_details_pk" role="alert">@error('estate_home_request_details_pk'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="request_id_display" class="form-label">Request ID</label>
@@ -65,6 +67,7 @@
                                 <option value="{{ $c->pk }}" {{ (string) old('estate_campus_master_pk') === (string) $c->pk ? 'selected' : '' }}>{{ $c->campus_name }}</option>
                             @endforeach
                         </select>
+                        <div class="text-danger small field-error" data-field="estate_campus_master_pk" role="alert">@error('estate_campus_master_pk'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_type_master_pk" class="form-label">Unit Type <span class="text-danger">*</span></label>
@@ -72,6 +75,7 @@
                         <select class="form-select" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
                             <option value="">---select---</option>
                         </select>
+                        <div class="text-danger small field-error" data-field="estate_unit_type_master_pk" role="alert">@error('estate_unit_type_master_pk'){{ $message }}@enderror</div>
                     </div>
                 </div>
 
@@ -82,6 +86,7 @@
                         <select class="form-select" id="estate_block_master_pk" name="estate_block_master_pk" required>
                             <option value="">---select---</option>
                         </select>
+                        <div class="text-danger small field-error" data-field="estate_block_master_pk" role="alert">@error('estate_block_master_pk'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_sub_type_master_pk" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
@@ -89,6 +94,7 @@
                         <select class="form-select" id="estate_unit_sub_type_master_pk" name="estate_unit_sub_type_master_pk" required>
                             <option value="">---select---</option>
                         </select>
+                        <div class="text-danger small field-error" data-field="estate_unit_sub_type_master_pk" role="alert">@error('estate_unit_sub_type_master_pk'){{ $message }}@enderror</div>
                     </div>
                 </div>
 
@@ -99,48 +105,59 @@
                         <select class="form-select" id="estate_house_master_pk" name="estate_house_master_pk" required>
                             <option value="">---select---</option>
                         </select>
+                        <div class="text-danger small field-error" data-field="estate_house_master_pk" role="alert">@error('estate_house_master_pk'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="allotment_date" class="form-label">Allotment Date <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" id="allotment_date" name="allotment_date" value="{{ old('allotment_date') }}" required>
+                        <div class="text-danger small field-error" data-field="allotment_date" role="alert">@error('allotment_date'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="possession_date" class="form-label">Possession Date <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" id="possession_date" name="possession_date" value="{{ old('possession_date') }}" required>
+                        <div class="text-danger small field-error" data-field="possession_date" role="alert">@error('possession_date'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <input
-                                type="text"
+                                type="number"
                                 class="form-control"
                                 id="electric_meter_reading_primary"
                                 name="electric_meter_reading_primary"
-                                required
                                 inputmode="numeric"
-                                pattern="[0-9]{1,10}"
+                                min="0"
+                                step="1"
                                 maxlength="10"
-                                value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', 0)) }}"
-                                placeholder="Primary"
+                                value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', '')) }}"
+                                placeholder="Primary (from house meter)"
                                 oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
                             >
                             <span class="input-group-text">/</span>
                             <input
-                                type="text"
+                                type="number"
                                 class="form-control"
                                 id="electric_meter_reading_secondary"
                                 name="electric_meter_reading_secondary"
+                                required
                                 inputmode="numeric"
-                                pattern="[0-9]{1,10}"
+                                min="0"
+                                step="1"
                                 maxlength="10"
                                 value="{{ old('electric_meter_reading_secondary') }}"
-                                placeholder="Secondary"
+                                placeholder="Secondary (saved & shown in listing)"
                                 oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
                             >
                         </div>
-                        <input type="hidden" id="electric_meter_reading" name="electric_meter_reading" value="{{ old('electric_meter_reading', 0) }}">
-                        <div class="form-text">Electric Meter Reading (Primary / Secondary)</div>
+                        <input type="hidden" id="electric_meter_reading" name="electric_meter_reading" value="{{ old('electric_meter_reading', '') }}">
+                        <div class="form-text">Primary = prefilled from house meter; Secondary = user entry (saved in record & shown in listing).</div>
+                        <div class="text-danger small field-error" data-field="electric_meter_reading_primary" role="alert">@error('electric_meter_reading_primary'){{ $message }}@enderror</div>
+                        <div class="text-danger small field-error" data-field="electric_meter_reading_secondary" role="alert">@error('electric_meter_reading_secondary'){{ $message }}@enderror</div>
                     </div>
+                </div>
+
+                <div class="alert alert-warning py-2 mb-4" role="alert">
+                    <small><span class="text-danger">*</span> Required fields are mandatory</small>
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-end gap-2">
@@ -177,10 +194,16 @@ $(document).ready(function() {
     }
 
     function syncElectricMeterReading() {
-        const primary = $('#electric_meter_reading_primary').val();
         const secondary = $('#electric_meter_reading_secondary').val();
-        const valueToStore = (primary !== '' && primary !== null) ? primary : ((secondary !== '' && secondary !== null) ? secondary : '');
+        // estate_possession_details.electric_meter_reading should always mirror secondary input.
+        const valueToStore = (secondary !== '' && secondary !== null) ? secondary : '';
         $('#electric_meter_reading').val(valueToStore);
+    }
+
+    function sanitizeMeterInputs() {
+        $('#electric_meter_reading_primary, #electric_meter_reading_secondary').each(function() {
+            this.value = String(this.value || '').replace(/\D/g, '').slice(0, 10);
+        });
     }
 
     function selectedRequesterPrefill() {
@@ -194,6 +217,7 @@ $(document).ready(function() {
             allotmentDate: opt.attr('data-allotment-date') || '',
             possessionDate: opt.attr('data-possession-date') || '',
             electricMeterReading: opt.attr('data-electric-meter-reading') || '',
+            electricMeterReadingSecondary: opt.attr('data-electric-meter-reading-secondary') || '',
         };
     }
 
@@ -248,8 +272,10 @@ $(document).ready(function() {
         const prefill = selectedRequesterPrefill();
         if (prefill.allotmentDate) $('#allotment_date').val(prefill.allotmentDate);
         if (prefill.possessionDate) $('#possession_date').val(prefill.possessionDate);
-        if (prefill.electricMeterReading !== '') {
-            $('#electric_meter_reading_primary').val(prefill.electricMeterReading);
+        if (prefill.electricMeterReading !== '' || prefill.electricMeterReadingSecondary !== '') {
+            $('#electric_meter_reading_primary').val(prefill.electricMeterReadingSecondary || '');
+            $('#electric_meter_reading_secondary').val(prefill.electricMeterReading || '');
+        } else {
             $('#electric_meter_reading_secondary').val('');
         }
         syncElectricMeterReading();
@@ -270,8 +296,15 @@ $(document).ready(function() {
     }).trigger('change');
 
     $('#electric_meter_reading_primary, #electric_meter_reading_secondary').on('input change', function() {
+        sanitizeMeterInputs();
         syncElectricMeterReading();
     });
+    $('#electric_meter_reading_primary, #electric_meter_reading_secondary').on('keydown', function(e) {
+        if (['e', 'E', '+', '-'].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+    sanitizeMeterInputs();
     syncElectricMeterReading();
 
     $('#estate_campus_master_pk').change(function() {
@@ -357,6 +390,63 @@ $(document).ready(function() {
 
     $('#estate_house_master_pk').change(function() {
         syncLockedHiddenSelects();
+        var opt = $(this).find('option:selected');
+        var meterOne = opt.attr('data-meter-one') || '';
+        if (meterOne !== '') {
+            if (meterOne !== '') $('#electric_meter_reading_primary').val(meterOne);
+            syncElectricMeterReading();
+        }
+    });
+
+    // AJAX submit: show validation errors below fields only, no page refresh
+    $('#possessionDetailsForm').on('submit', function(e) {
+        if ($(this).data('ajax-submit') !== 1) return;
+        e.preventDefault();
+        var form = this;
+        var $form = $(form);
+        var $btn = $form.find('button[type="submit"]');
+        $form.find('.field-error').empty();
+        $form.find('.is-invalid').removeClass('is-invalid');
+        $btn.prop('disabled', true);
+        var formData = new FormData(form);
+        fetch($form.attr('action'), {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            redirect: 'manual',
+            credentials: 'same-origin'
+        }).then(function(res) {
+            if (res.status === 422) {
+                return res.json().then(function(data) {
+                    var errors = data.errors || {};
+                    Object.keys(errors).forEach(function(key) {
+                        var msg = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+                        var $err = $form.find('.field-error[data-field="' + key + '"]');
+                        if ($err.length) $err.text(msg);
+                        var $input = $form.find('[name="' + key + '"]');
+                        if ($input.length) $input.addClass('is-invalid');
+                    });
+                    $('html, body').animate({ scrollTop: $form.find('.field-error:not(:empty)').first().offset().top - 80 }, 200);
+                });
+            } else if (res.ok) {
+                return res.json().then(function(data) {
+                    if (data.redirect) window.location.href = data.redirect;
+                    else window.location.href = "{{ route('admin.estate.possession-details') }}";
+                }).catch(function() {
+                    window.location.href = "{{ route('admin.estate.possession-details') }}";
+                });
+            } else if (res.status === 302) {
+                var loc = res.headers.get('Location');
+                if (loc) window.location.href = loc;
+            }
+        }).catch(function() {
+            $form.off('submit').trigger('submit');
+        }).finally(function() {
+            $btn.prop('disabled', false);
+        });
     });
 
     function loadHouses() {
@@ -378,8 +468,11 @@ $(document).ready(function() {
             if (res.status && res.data) {
                 $.each(res.data, function(i, h) {
                     const sel = (preferred.housePk && String(preferred.housePk) === String(h.pk)) ? 'selected' : '';
-                    $('#estate_house_master_pk').append('<option value="' + h.pk + '" ' + sel + '>' + h.house_no + '</option>');
+                    const meterOne = (h.meter_one != null && h.meter_one !== '') ? String(h.meter_one).replace(/"/g, '&quot;') : '';
+                    const meterTwo = (h.meter_two != null && h.meter_two !== '') ? String(h.meter_two).replace(/"/g, '&quot;') : '';
+                    $('#estate_house_master_pk').append('<option value="' + h.pk + '" data-meter-one="' + meterOne + '" data-meter-two="' + meterTwo + '" ' + sel + '>' + (h.house_no || '') + '</option>');
                 });
+                $('#estate_house_master_pk').trigger('change');
             }
             syncLockedHiddenSelects();
         });

@@ -17,7 +17,9 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Update Meter No.</h2>
         <div>
-            <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-link text-decoration-none">Update Reading & Meter No.</a>
+            <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-primary">
+                Update Reading & Meter No.
+            </a>
         </div>
     </div>
 

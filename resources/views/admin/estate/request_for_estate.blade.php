@@ -14,11 +14,11 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
                 <div class="flex-grow-1">
                     <h1 class="h4 fw-bold text-dark mb-1">Request For Estate</h1>
-                    <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
+                    <p class="text-body-secondary small mb-0">This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete etc.</p>
                 </div>
                 <div class="flex-shrink-0 d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
-                    <a href="{{ route('admin.estate.change-request-hac-approved') }}" class="btn btn-outline-primary px-3" title="HAC Approved"><i class="bi bi-check2-square me-1"></i> HAC Approved</a>
+                    <!-- <a href="{{ route('admin.estate.put-in-hac') }}" class="btn btn-outline-primary px-3" title="Put In HAC"><i class="bi bi-building-check me-1"></i> Put In HAC</a>
+                    <a href="{{ route('admin.estate.change-request-hac-approved') }}" class="btn btn-outline-primary px-3" title="HAC Approved"><i class="bi bi-check2-square me-1"></i> HAC Approved</a> -->
                     <button type="button" class="btn btn-primary px-3" id="btn-open-add-request-estate" title="Add Estate Request"><i class="bi bi-plus-lg me-1"></i> Add Estate Request</button>
                 </div>
             </div>
@@ -56,9 +56,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body pt-2">
-                <div id="addEditRequestEstateFormErrors" class="alert alert-danger d-none" role="alert">
-                    <ul class="mb-0 ps-3"></ul>
-                </div>
+                <div id="addEditRequestEstateFormErrors" class="alert alert-danger d-none" role="alert"><span id="addEditRequestEstateFormErrorsText"></span></div>
                 <form id="formAddEditRequestEstate" method="POST" action="{{ route('admin.estate.request-for-estate.store') }}">
                     @csrf
                     <input type="hidden" name="id" id="request_estate_id" value="">
@@ -71,6 +69,7 @@
                         <div class="col-md-6">
                             <label for="modal_req_date" class="form-label">Request Date <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" id="modal_req_date" name="req_date" required readonly>
+                            <div class="text-danger small field-error" data-field="req_date" role="alert"></div>
                         </div>
                         <div class="col-md-4 d-none" id="modal_status_wrap">
                             <label for="modal_status" class="form-label">Status <span class="text-danger">*</span></label>
@@ -84,37 +83,39 @@
                             <label for="modal_employee_pk" class="form-label">Employee Name <span class="text-danger">*</span></label>
                             <select class="form-select" id="modal_employee_pk">
                                 <option value="">— Select employee —</option>
-                                <option value="__new__">— Add new (enter details below) —</option>
                             </select>
                             <input type="hidden" id="modal_emp_name" name="emp_name" value="">
-                            <div id="modal_new_emp_name_wrap" class="mt-2 d-none">
-                                <label for="modal_new_emp_name" class="form-label">Employee Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="modal_new_emp_name" placeholder="Enter full name" maxlength="50">
-                            </div>
+                            <div class="text-danger small field-error mt-1" data-field="emp_name" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label for="modal_employee_id" class="form-label">Employee ID <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="modal_employee_id" name="employee_id" required maxlength="50" readonly>
+                            <div class="text-danger small field-error" data-field="employee_id" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label for="modal_emp_designation" class="form-label">Designation <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="modal_emp_designation" name="emp_designation" required maxlength="50" readonly>
+                            <div class="text-danger small field-error" data-field="emp_designation" role="alert"></div>
                         </div>
                         <div class="col-md-6">
                             <label for="modal_pay_scale" class="form-label">Pay Scale <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="modal_pay_scale" name="pay_scale" required maxlength="50" readonly>
+                            <div class="text-danger small field-error" data-field="pay_scale" role="alert"></div>
                         </div>
                         <div class="col-md-4">
                             <label for="modal_doj_pay_scale" class="form-label">DOJ (Pay Scale) <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" id="modal_doj_pay_scale" name="doj_pay_scale" required readonly>
+                            <div class="text-danger small field-error" data-field="doj_pay_scale" role="alert"></div>
                         </div>
                         <div class="col-md-4">
                             <label for="modal_doj_academic" class="form-label">DOJ (Academy) <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" id="modal_doj_academic" name="doj_academic" required readonly>
+                            <div class="text-danger small field-error" data-field="doj_academic" role="alert"></div>
                         </div>
                         <div class="col-md-4">
                             <label for="modal_doj_service" class="form-label">DOJ (Service) <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" id="modal_doj_service" name="doj_service" required readonly>
+                            <div class="text-danger small field-error" data-field="doj_service" role="alert"></div>
                         </div>
                         <div class="col-md-4">
                             <label for="modal_eligibility_type_pk" class="form-label">Eligibility Type <span class="text-danger">*</span></label>
@@ -125,6 +126,7 @@
                                 @endforeach
                             </select>
                             <input type="hidden" id="modal_eligibility_type_pk_hidden" name="eligibility_type_pk" value="">
+                            <div class="text-danger small field-error" data-field="eligibility_type_pk" role="alert"></div>
                         </div>
                         <div class="col-md-12">
                             <label for="modal_remarks" class="form-label">Remarks</label>
@@ -260,7 +262,7 @@
             var url = '{{ route("admin.estate.request-for-estate.employees") }}';
             if (includePk) url += '?include_pk=' + includePk;
             var $sel = $('#modal_employee_pk');
-            $sel.find('option[value!=""][value!="__new__"]').remove();
+            $sel.find('option[value!=""]').remove();
             $.get(url, function(list) {
                 if (Array.isArray(list)) {
                     list.forEach(function(o) {
@@ -315,7 +317,8 @@
             $('#modal_status_wrap').addClass('d-none');
             $('#modal_status').removeAttr('required');
             clearEmployeeDerivedFields();
-            $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
+            $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
+            $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
             loadRequestEstateEmployees();
             $.get('{{ route("admin.estate.request-for-estate.next-req-id") }}', function(res) {
                 if (res.next_req_id) $('#modal_req_id').val(res.next_req_id);
@@ -345,7 +348,8 @@
             ensureEligibilityOptionAndSetVal(eligPk, eligLabel);
             $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
             $('#modal_remarks').val($btn.data('remarks') || '');
-            $('#addEditRequestEstateFormErrors').addClass('d-none').find('ul').empty();
+            $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
+            $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
             loadRequestEstateEmployees(rowPk, employeePk, function() {
                 if (addEditModal) addEditModal.show();
             });
@@ -356,18 +360,9 @@
             var $ro = $('#modal_employee_id, #modal_emp_designation, #modal_pay_scale, #modal_doj_pay_scale, #modal_doj_academic, #modal_doj_service');
             if (!pk) {
                 clearEmployeeDerivedFields();
-                $('#modal_new_emp_name_wrap').addClass('d-none');
                 $ro.prop('readonly', true);
                 return;
             }
-            if (pk === '__new__') {
-                clearEmployeeDerivedFields();
-                $('#modal_new_emp_name_wrap').removeClass('d-none');
-                $('#modal_new_emp_name').val('');
-                $ro.prop('readonly', false);
-                return;
-            }
-            $('#modal_new_emp_name_wrap').addClass('d-none');
             $ro.prop('readonly', true);
             $.get('{{ route("admin.estate.request-for-estate.employee-details", ["pk" => "__PK__"]) }}'.replace('__PK__', pk), function(data) {
                 fillFromEmployeeDetails(data);
@@ -376,25 +371,16 @@
             });
         });
 
-        $('#modal_new_emp_name').on('input blur', function() {
-            if ($('#modal_employee_pk').val() === '__new__') {
-                $('#modal_emp_name').val($(this).val().trim());
-            }
-        });
-
         $('#formAddEditRequestEstate').on('submit', function(e) {
             e.preventDefault();
             var selVal = $('#modal_employee_pk').val();
-            if (selVal === '__new__') {
-                $('#modal_emp_name').val($('#modal_new_emp_name').val().trim());
-                $('#request_employee_pk').val('0');
-            } else {
-                $('#request_employee_pk').val(selVal || '0');
-            }
+            $('#request_employee_pk').val(selVal || '0');
             var $form = $(this);
             var $errors = $('#addEditRequestEstateFormErrors');
             var $btn = $('#btnSubmitRequestEstate');
-            $errors.addClass('d-none').find('ul').empty();
+            $errors.addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
+            $form.find('.field-error').empty();
+            $form.find('.is-invalid').removeClass('is-invalid');
             $btn.prop('disabled', true);
             $.ajax({
                 url: $form.attr('action'),
@@ -413,13 +399,24 @@
                 },
                 error: function(xhr) {
                     if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
-                        var $ul = $errors.removeClass('d-none').find('ul');
-                        $.each(xhr.responseJSON.errors, function(_, msgs) {
-                            $.each(msgs, function(__, m) { $ul.append('<li>' + m + '</li>'); });
+                        var errs = xhr.responseJSON.errors;
+                        $.each(errs, function(key, msgs) {
+                            var msg = Array.isArray(msgs) ? msgs[0] : msgs;
+                            var $err = $form.find('.field-error[data-field="' + key + '"]');
+                            if ($err.length) $err.text(msg);
+                            if (key === 'emp_name') {
+                                $('#modal_employee_pk').addClass('is-invalid');
+                            } else if (key === 'eligibility_type_pk') {
+                                $('#modal_eligibility_type_pk').addClass('is-invalid');
+                            } else {
+                                $form.find('[name="' + key + '"]').addClass('is-invalid');
+                            }
                         });
+                        var $firstErr = $form.find('.field-error:not(:empty)').first();
+                        if ($firstErr.length) $firstErr[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     } else {
                         var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong. Please try again.';
-                        $errors.removeClass('d-none').find('ul').html('<li>' + msg + '</li>');
+                        $errors.removeClass('d-none').find('#addEditRequestEstateFormErrorsText').text(msg);
                     }
                 },
                 complete: function() { $btn.prop('disabled', false); }

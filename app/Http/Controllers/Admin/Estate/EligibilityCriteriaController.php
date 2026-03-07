@@ -24,7 +24,7 @@ class EligibilityCriteriaController extends Controller
             ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
-        return view('admin.estate.eligibility_criteria.form', compact('item', 'salaryGrades', 'unitTypes', 'unitSubTypes'));
+        return view('admin.estate.eligibility_criteria.form', compact('item', 'payScales', 'unitTypes', 'unitSubTypes'));
     }
 
     public function store(Request $request)
@@ -45,7 +45,7 @@ class EligibilityCriteriaController extends Controller
             ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
-        return view('admin.estate.eligibility_criteria.form', compact('item', 'salaryGrades', 'unitTypes', 'unitSubTypes'));
+        return view('admin.estate.eligibility_criteria.form', compact('item', 'payScales', 'unitTypes', 'unitSubTypes'));
     }
 
     public function update(Request $request, string $id)
