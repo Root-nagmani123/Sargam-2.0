@@ -119,11 +119,10 @@ $(document).ready(function() {
                 var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data.';
                 $('#houseStatusTable tbody').empty().append('<tr><td colspan="11" class="text-center text-danger">' + msg + '</td></tr>');
             }
-        },
-        responsive: true,
-        autoWidth: false,
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
-    });
+        });
+    }
+
+    loadHouseStatus();
 });
 </script>
 @endpush

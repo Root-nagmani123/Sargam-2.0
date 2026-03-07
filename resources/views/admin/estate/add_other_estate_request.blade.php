@@ -28,17 +28,6 @@
                 </div>
             @endif
 
-            @if($errors->any())
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <ul class="mb-0">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
             <form method="POST" action="{{ route('admin.estate.add-other-estate-request.store') }}">
                 @csrf
                 @if(isset($record) && $record)
@@ -48,10 +37,12 @@
                     <div class="col-md-6">
                         <label for="employee_name" class="form-label">Employee Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control other-estate-no-special" id="employee_name" name="employee_name" value="{{ old('employee_name', $prefill['employee_name'] ?? '') }}" required maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed.">
+                        <div class="text-danger small field-error" data-field="employee_name" role="alert">@error('employee_name'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-md-6">
                         <label for="father_name" class="form-label">Father Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control other-estate-no-special" id="father_name" name="father_name" value="{{ old('father_name', $prefill['father_name'] ?? '') }}" required maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed.">
+                        <div class="text-danger small field-error" data-field="father_name" role="alert">@error('father_name'){{ $message }}@enderror</div>
                     </div>
                 </div>
 
@@ -59,10 +50,12 @@
                     <div class="col-md-6">
                         <label for="section" class="form-label">Section <span class="text-danger">*</span></label>
                         <input type="text" class="form-control other-estate-no-special" id="section" name="section" value="{{ old('section', $prefill['section'] ?? '') }}" required maxlength="500" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed.">
+                        <div class="text-danger small field-error" data-field="section" role="alert">@error('section'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-md-6">
                         <label for="designation" class="form-label">Designation</label>
                         <input type="text" class="form-control other-estate-no-special" id="designation" name="designation" value="{{ old('designation', isset($record) ? ($record->designation ?? '') : ($prefill['designation'] ?? '')) }}" maxlength="500" placeholder="e.g. Section Officer" title="Only letters, numbers, spaces, hyphen, apostrophe and dot are allowed.">
+                        <div class="text-danger small field-error" data-field="designation" role="alert">@error('designation'){{ $message }}@enderror</div>
                     </div>
                 </div>
                 <div class="row mb-3">
@@ -70,6 +63,7 @@
                         <label for="doj_academy" class="form-label">DOJ in Academy <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" id="doj_academy" name="doj_academy" value="{{ old('doj_academy', $prefill['doj_academy'] ?? '') }}" required min="1950-01-01" max="{{ date('Y-m-d') }}" title="Date must be between 01-01-1950 and today.">
                         <small class="text-muted d-block mt-1">Date must be between 01-01-1950 and today.</small>
+                        <div class="text-danger small field-error" data-field="doj_academy" role="alert">@error('doj_academy'){{ $message }}@enderror</div>
                     </div>
                 </div>
 

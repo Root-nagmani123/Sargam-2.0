@@ -96,7 +96,10 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'epd.possession_date',
                 'epd.electric_meter_reading',
             ])
-            // Show all possession records (estate_change_id -1 = form-added, null = allot flow, or change-request id). Do not filter so staging/local both show full list.
+            // Yahan sirf woh records dikhayenge jahan possession complete ho chuka hai
+            // (electric_meter_reading > 0, jo Add Possession form me required hai).
+            ->whereNotNull('epd.electric_meter_reading')
+            ->where('epd.electric_meter_reading', '>', 0)
             ->orderBy('epd.pk', 'desc');
     }
 

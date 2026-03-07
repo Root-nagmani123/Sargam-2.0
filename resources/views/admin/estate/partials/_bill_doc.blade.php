@@ -1,4 +1,72 @@
-@php $bill = $bill ?? null; @endphp
+@php
+    $bill = $bill ?? null;
+
+    $toWordsBelowThousand = function (int $n): string {
+        $ones = [
+            0 => '', 1 => 'One', 2 => 'Two', 3 => 'Three', 4 => 'Four', 5 => 'Five', 6 => 'Six', 7 => 'Seven', 8 => 'Eight',
+            9 => 'Nine', 10 => 'Ten', 11 => 'Eleven', 12 => 'Twelve', 13 => 'Thirteen', 14 => 'Fourteen', 15 => 'Fifteen',
+            16 => 'Sixteen', 17 => 'Seventeen', 18 => 'Eighteen', 19 => 'Nineteen',
+        ];
+        $tens = [2 => 'Twenty', 3 => 'Thirty', 4 => 'Forty', 5 => 'Fifty', 6 => 'Sixty', 7 => 'Seventy', 8 => 'Eighty', 9 => 'Ninety'];
+
+        $parts = [];
+        if ($n >= 100) {
+            $parts[] = $ones[intdiv($n, 100)] . ' Hundred';
+            $n = $n % 100;
+        }
+        if ($n >= 20) {
+            $parts[] = $tens[intdiv($n, 10)] . (($n % 10) ? ' ' . $ones[$n % 10] : '');
+        } elseif ($n > 0) {
+            $parts[] = $ones[$n];
+        }
+        return trim(implode(' ', array_filter($parts)));
+    };
+
+    $toWordsIndian = function (int $n) use ($toWordsBelowThousand): string {
+        if ($n === 0) {
+            return 'Zero';
+        }
+
+        $parts = [];
+        $crore = intdiv($n, 10000000);
+        $n %= 10000000;
+        $lakh = intdiv($n, 100000);
+        $n %= 100000;
+        $thousand = intdiv($n, 1000);
+        $n %= 1000;
+        $rest = $n;
+
+        if ($crore > 0) {
+            $parts[] = $toWordsBelowThousand($crore) . ' Crore';
+        }
+        if ($lakh > 0) {
+            $parts[] = $toWordsBelowThousand($lakh) . ' Lakh';
+        }
+        if ($thousand > 0) {
+            $parts[] = $toWordsBelowThousand($thousand) . ' Thousand';
+        }
+        if ($rest > 0) {
+            $parts[] = $toWordsBelowThousand($rest);
+        }
+
+        return trim(implode(' ', $parts));
+    };
+
+    $grandTotal = (float) ($bill->grand_total ?? 0);
+    $rupees = (int) floor($grandTotal);
+    $paise = (int) round(($grandTotal - $rupees) * 100);
+    if ($paise === 100) {
+        $rupees += 1;
+        $paise = 0;
+    }
+
+    $rupeesWords = $toWordsIndian($rupees);
+    $amountInWords = 'Rupees ' . $rupeesWords;
+    if ($paise > 0) {
+        $amountInWords .= ' and ' . $toWordsIndian($paise) . ' Paise';
+    }
+    $amountInWords .= ' only';
+@endphp
 @if($bill)
 <div class="bill-doc">
     <div class="bill-header">
@@ -81,7 +149,7 @@
         <div class="bill-total-box">
             <div class="bill-total-label">Total Amount Payable</div>
             <div class="grand-total">₹ {{ number_format($bill->grand_total ?? 0, 2) }}</div>
-            <div class="bill-amount-words">Amount in words: Rupees ________________________________________________ only</div>
+            <div class="bill-amount-words">Amount in words: {{ $amountInWords }}</div>
             <div class="bill-pay-by">Please pay as per institutional procedure. Quote Bill No. {{ $bill->bill_no ?? '—' }} when paying.</div>
         </div>
     </div>
