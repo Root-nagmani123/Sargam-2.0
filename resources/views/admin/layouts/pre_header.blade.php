@@ -18,11 +18,11 @@
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <link rel="stylesheet" href="{{asset('css/custom.css')}}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
-<!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
-
 <!-- DataTables 1.13.8 + Bootstrap 5 (latest) -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" crossorigin="anonymous">
+<!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
+
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <!-- Choices.js: lightweight select with search (replaces Select2) -->
