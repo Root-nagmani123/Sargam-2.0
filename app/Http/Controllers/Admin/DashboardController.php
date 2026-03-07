@@ -28,14 +28,59 @@ function active_course(Request $request)
 
 function guest_faculty()
 {
-   $guest_faculty = DB::table('faculty_master')->where('faculty_type', 2)->where('active_inactive', 1)->get();
+   $guest_faculty = $this->getFacultyWithMetrics(2);
     return view('admin.dashboard.guest_faculty', compact('guest_faculty'));
     
 }
 function inhouse_faculty(){
-   $inhouse_faculty  = DB::table('faculty_master')->where('faculty_type', 1)->where('active_inactive', 1)->get();
+   $inhouse_faculty  = $this->getFacultyWithMetrics(1);
     return view('admin.dashboard.inhouse_faculty', compact('inhouse_faculty'));
     
+}
+
+private function getFacultyWithMetrics(int $facultyType)
+{
+    $faculties = DB::table('faculty_master')
+        ->where('faculty_type', $facultyType)
+        ->where('active_inactive', 1)
+        ->get();
+
+    $feedbackSummaryByFaculty = DB::table('topic_feedback as tf')
+        ->select(
+            'tf.faculty_pk',
+            DB::raw('COUNT(*) as total_feedback'),
+            DB::raw('ROUND(AVG(CAST(tf.content AS DECIMAL(10,2))) * 20, 2) as avg_content'),
+            DB::raw('ROUND(AVG(CAST(tf.presentation AS DECIMAL(10,2))) * 20, 2) as avg_presentation')
+        )
+        ->where('tf.is_submitted', 1)
+        ->groupBy('tf.faculty_pk')
+        ->get()
+        ->keyBy('faculty_pk');
+
+    return $faculties->map(function ($faculty) use ($feedbackSummaryByFaculty) {
+        $facultyPk = (int) ($faculty->pk ?? 0);
+        $summary = $feedbackSummaryByFaculty->get($facultyPk);
+
+        $faculty->session_count = $facultyPk > 0 ? $this->getSessionCountForFaculty($facultyPk) : 0;
+        $faculty->feedback_summary = [
+            'avg_content' => $summary ? (float) $summary->avg_content : 0,
+            'avg_presentation' => $summary ? (float) $summary->avg_presentation : 0,
+            'total_feedback' => $summary ? (int) $summary->total_feedback : 0,
+        ];
+
+        return $faculty;
+    });
+}
+
+private function getSessionCountForFaculty(int $facultyPk): int
+{
+    return CalendarEvent::query()
+        ->where('active_inactive', 1)
+        ->where(function ($query) use ($facultyPk) {
+            $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"' . $facultyPk . '"'])
+                ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
+        })
+        ->count();
 }
 
 function sessions(Request $request)
