@@ -1,37 +1,36 @@
- <aside class="side-mini-panel with-vertical sidebar-google-style" id="mainSidebar">
-     <div style="height: 100vh; display: flex; flex-direction: column;">
-         <!-- ---------------------------------- -->
-         <!-- Start Vertical Layout Sidebar -->
-         <!-- ---------------------------------- -->
-         <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column;">
-             <div style="flex: 1 1 auto; display: flex; flex-direction: column;">
-                 <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+<aside class="side-mini-panel with-vertical sidebar-google-style" id="mainSidebar">
+    <div class="vh-100 d-flex flex-column overflow-hidden">
+        <!-- ---------------------------------- -->
+        <!-- Start Vertical Layout Sidebar -->
+        <!-- ---------------------------------- -->
+        <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
+            <div class="flex-fill d-flex flex-column" style="min-height: 0;">
+                <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
                     <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
     <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
         data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
 
-        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded"
-            style="font-size: 24px;">
+        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
             menu
         </i>
 
     </a>
 </div>
-                     <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto;">
-                         <div class="simplebar-wrapper" style="margin: 0px;">
-                             <div class="simplebar-height-auto-observer-wrapper">
-                                 <div class="simplebar-height-auto-observer"></div>
-                             </div>
-                             <div class="simplebar-mask">
-                                 <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
-                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
-                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
-                                         <div class="simplebar-content" style="padding: 0px;">
+                    <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
+                        <div class="simplebar-wrapper" style="margin: 0px;">
+                            <div class="simplebar-height-auto-observer-wrapper">
+                                <div class="simplebar-height-auto-observer"></div>
+                            </div>
 
+                            <div class="simplebar-mask">
+                                <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                                    <div class="simplebar-content-wrapper" tabindex="0" role="region"
+                                        aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
+                                        <div class="simplebar-content" style="padding: 0px;">
                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                 id="mini-1">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3"
                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
                                                     data-bs-placement="right" data-bs-title="General">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
@@ -41,41 +40,44 @@
                                                 </a>
                                             </li>
 
-                                         </div>
-                                     </div>
-                                 </div>
-                             </div>
-                             <div class="simplebar-placeholder" style="width: 80px; min-width: 80px; height: 537px;"></div>
-                         </div>
-                         <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
-                             <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
-                         </div>
-                         <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
-                             <div class="simplebar-scrollbar"
-                                 style="height: 75px; display: block; transform: translate3d(0px, 0px, 0px);">
-                             </div>
-                         </div>
-                     </ul>
-                 </div>
-                 <div class="sidebarmenu">
-                     <!-- ---------------------------------- -->
-                     <!-- Dashboard -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.general />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                 </div>
-             </div>
-         </div>
-     </div>
- </aside>
+                            <div class="simplebar-placeholder" style="width: 80px; min-width: 80px; height: 537px;"></div>
+                        </div>
+                        <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
+                            <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
+                        </div>
+                        <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
+                            <div class="simplebar-scrollbar"
+                                style="height: 75px; display: block; transform: translate3d(0px, 0px, 0px);">
+                            </div>
+                        </div>
+                    </ul>
+
+                </div>
+                <div class="sidebarmenu">
+                    <!-- ---------------------------------- -->
+                    <!-- Dashboard -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.general />
+
+                </div>
+            </div>
+        </div>
+    </div>
+</aside>
 
 <style>
-/* Google-style sidebar - home */
+/* Google-style sidebar - home (matches setup) */
 #sidebar-home .sidebar-google-style.side-mini-panel {
     width: 90px;
 }
 #sidebar-home .sidebar-google-style .mini-nav {
-    background: #F0F0F0 !important;
+    background: #f0f0f0 !important;
+    border: 1px solid var(--bs-border-color-translucent);
     padding: 12px 0;
     border-radius: 10px;
 }
@@ -84,13 +86,12 @@
     margin: 0;
 }
 #sidebar-home .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
-    color: #555 !important;
+    color: var(--bs-secondary-color) !important;
 }
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item {
     list-style: none;
     display: flex !important;
     justify-content: center !important;
-    width: 100%;
 }
 #sidebar-home .sidebar-google-style .mini-nav ul.mini-nav-ul {
     padding-inline-start: 0 !important;
@@ -107,6 +108,7 @@
     height: auto !important;
     min-height: 56px;
     width: 100%;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 #sidebar-home .sidebar-google-style .sidebar-google-item {
     display: flex !important;
@@ -132,25 +134,37 @@
 }
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
     font-size: 24px !important;
-    color: #555 !important;
+    color: var(--bs-secondary-color) !important;
 }
 #sidebar-home .sidebar-google-style .sidebar-google-label {
     font-size: 11px;
-    color: #555 !important;
+    color: var(--bs-secondary-color) !important;
     font-weight: 400;
     text-align: center;
     line-height: 1.2;
 }
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
-    color: #333 !important;
+    color: var(--bs-emphasis-color) !important;
+}
+#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:focus-visible {
+    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
+    outline-offset: 2px;
 }
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
-    background: #E0E0E0 !important;
+    background: var(--bs-primary-bg-subtle) !important;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
+    transition: all 0.2s ease;
+    transform: scale(1.05);
+    margin: 4px 8px;
+    width: 100%;
+    height: 100%;
 }
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
-    color: #333 !important;
+    color: var(--bs-primary-text-emphasis) !important;
 }
 #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
     display: none !important;
