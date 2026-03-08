@@ -163,3 +163,107 @@
         @endif
     </div>
 </form>
+
+{{-- Cascade: Estate/Unit Type → Buildings, Building → Unit Sub Types, Unit Sub Type → Houses. For modal, parent must call initChangeRequestDetailsCascade(modalBody) after injecting HTML. --}}
+<script>
+(function() {
+    var blocksUrl = '{{ route("admin.estate.possession.blocks") }}';
+    var unitSubTypesUrl = '{{ route("admin.estate.possession.unit-sub-types") }}';
+    var vacantHousesUrl = '{{ route("admin.estate.change-request.vacant-houses") }}';
+
+    function runCascade(formRoot) {
+        if (!formRoot) return;
+        var $estate = formRoot.querySelector('select[name="estate_name"]');
+        var $unitType = formRoot.querySelector('select[name="unit_type"]');
+        var $building = formRoot.querySelector('select[name="building_name"]');
+        var $unitSub = formRoot.querySelector('select[name="unit_sub_type"]');
+        var $house = formRoot.querySelector('select[name="house_no"]');
+        if (!$estate || !$building || !$unitSub || !$house) return;
+
+        function getVal(el) { return el ? el.value : ''; }
+
+        function loadBlocks() {
+            var campusId = getVal($estate);
+            var unitTypeId = getVal($unitType);
+            $building.innerHTML = '<option value="">— Select —</option>';
+            $unitSub.innerHTML = '<option value="">— Select —</option>';
+            $house.innerHTML = '<option value="">— Select —</option>';
+            if (!campusId) return;
+            fetch(blocksUrl + '?campus_id=' + encodeURIComponent(campusId) + (unitTypeId ? '&unit_type_id=' + encodeURIComponent(unitTypeId) : ''))
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.data) res.data.forEach(function(b) {
+                        var opt = document.createElement('option');
+                        opt.value = b.pk;
+                        opt.textContent = b.block_name || b.pk;
+                        $building.appendChild(opt);
+                    });
+                });
+        }
+
+        function loadUnitSubTypes() {
+            var campusId = getVal($estate);
+            var blockId = getVal($building);
+            var unitTypeId = getVal($unitType);
+            $unitSub.innerHTML = '<option value="">— Select —</option>';
+            $house.innerHTML = '<option value="">— Select —</option>';
+            if (!campusId || !blockId) return;
+            var url = unitSubTypesUrl + '?campus_id=' + encodeURIComponent(campusId) + '&block_id=' + encodeURIComponent(blockId);
+            if (unitTypeId) url += '&unit_type_id=' + encodeURIComponent(unitTypeId);
+            fetch(url)
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.data) res.data.forEach(function(u) {
+                        var opt = document.createElement('option');
+                        opt.value = u.pk;
+                        opt.textContent = u.unit_sub_type || u.pk;
+                        $unitSub.appendChild(opt);
+                    });
+                });
+        }
+
+        function loadHouses() {
+            var campusId = getVal($estate);
+            var blockId = getVal($building);
+            var unitSubId = getVal($unitSub);
+            var unitTypeId = getVal($unitType);
+            $house.innerHTML = '<option value="">— Loading —</option>';
+            if (!blockId || !unitSubId) {
+                $house.innerHTML = '<option value="">— Select Building & Unit Sub Type first —</option>';
+                return;
+            }
+            var url = vacantHousesUrl + '?block_id=' + encodeURIComponent(blockId) + '&unit_sub_type_id=' + encodeURIComponent(unitSubId);
+            if (campusId) url += '&campus_id=' + encodeURIComponent(campusId);
+            if (unitTypeId) url += '&unit_type_id=' + encodeURIComponent(unitTypeId);
+            fetch(url)
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    $house.innerHTML = '<option value="">— Select House —</option>';
+                    if (res.data && res.data.length) res.data.forEach(function(h) {
+                        var opt = document.createElement('option');
+                        opt.value = h.house_no || h.pk;
+                        opt.textContent = h.house_no || h.pk;
+                        $house.appendChild(opt);
+                    });
+                });
+        }
+
+        $estate.addEventListener('change', loadBlocks);
+        $unitType.addEventListener('change', loadBlocks);
+        $building.addEventListener('change', loadUnitSubTypes);
+        $unitSub.addEventListener('change', loadHouses);
+    }
+
+    window.initChangeRequestDetailsCascade = function(root) {
+        root = root || document;
+        var form = root.querySelector('#formChangeRequestDetailsModal') || root.querySelector('#formChangeRequestDetails');
+        runCascade(form ? form.closest('form') || form : root);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { window.initChangeRequestDetailsCascade(); });
+    } else {
+        window.initChangeRequestDetailsCascade();
+    }
+})();
+</script>

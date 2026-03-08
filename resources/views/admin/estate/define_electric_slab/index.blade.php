@@ -13,7 +13,7 @@
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
                 <div>
                     <h1 class="h4 fw-bold text-dark mb-1">Define Electric Slab</h1>
-                    <p class="text-muted small mb-0">This page displays all electric slab settings in the system and provides options to manage records such as add, edit, delete, excel download, print etc.</p>
+                    <p class="text-muted small mb-0">This page displays all electric slab settings in the system and provides options to manage records such as add, edit, delete etc.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('admin.estate.define-electric-slab.create') }}" class="btn btn-success" title="Add">

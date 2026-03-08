@@ -20,7 +20,10 @@ class EligibilityCriteriaController extends Controller
     public function create()
     {
         $item = null;
-        $payScales = SalaryGrade::orderBy('salary_grade')->get()
+        $payScales = SalaryGrade::whereNotNull('salary_grade')
+            ->where('salary_grade', '!=', '')
+            ->orderBy('pk')
+            ->get()
             ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
@@ -41,7 +44,10 @@ class EligibilityCriteriaController extends Controller
     public function edit(string $id)
     {
         $item = EligibilityCriterion::findOrFail($id);
-        $payScales = SalaryGrade::orderBy('salary_grade')->get()
+        $payScales = SalaryGrade::whereNotNull('salary_grade')
+            ->where('salary_grade', '!=', '')
+            ->orderBy('pk')
+            ->get()
             ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');

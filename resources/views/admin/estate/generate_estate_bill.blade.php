@@ -26,7 +26,7 @@
             <form method="get" action="{{ route('admin.estate.generate-estate-bill') }}" class="row g-3 g-md-4 align-items-end">
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
                     <label for="bill_month" class="form-label fw-medium">Bill Month <span class="text-danger">*</span></label>
-                    <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" required aria-describedby="bill_month_help">
+                    <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ old('bill_month', $billMonth) }}" max="{{ date('Y-m') }}" required aria-describedby="bill_month_help">
                     <div id="bill_month_help" class="form-text small">Select the month for billing</div>
                 </div>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">

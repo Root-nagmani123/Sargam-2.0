@@ -66,8 +66,8 @@
             <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
                 <div class="modal-header bg-body-secondary bg-opacity-10 border-0 py-3 px-4">
                     <div>
-                        <h5 class="modal-title fw-semibold mb-0" id="requestHouseModalLabel">Add Request Details</h5>
-                        <p class="text-body-secondary small mb-0 mt-1">Please add Request Details</p>
+                        <h5 class="modal-title fw-semibold mb-0" id="requestHouseModalLabel">Add Return House Details</h5>
+                        <p class="text-body-secondary small mb-0 mt-1">Please add Return House Details</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>

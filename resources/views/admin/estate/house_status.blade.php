@@ -10,6 +10,7 @@
     <!-- Data Table Card -->
     <div class="card shadow-sm">
         <div class="card-body">
+            <p class="text-body-secondary small mb-3">House-wise status: Occupied (O) / Vacant or Under Renovation (V).</p>
             <div class="table-responsive">
                 <table class="table text-nowrap" id="houseStatusTable">
                     <thead>
@@ -24,7 +25,7 @@
                             <th>Alloted Date</th>
                             <th>Occupied Date</th>
                             <th>Vacated Date</th>
-                            <th>Status (O - Occupied / V - Vacated)</th>
+                            <th>Status (O - Occupied / V - Vacant or Under Renovation)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -113,6 +114,11 @@ $(document).ready(function() {
                     autoWidth: false,
                     dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
                 });
+                // Print button next to search (same row as DataTable filter)
+                var $filter = $('#houseStatusTable_wrapper .dataTables_filter');
+                if ($filter.length && !$('#btnPrintHouseStatus').length) {
+                    $filter.append('<label class="d-inline-flex align-items-center ms-2 mb-0"><button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" id="btnPrintHouseStatus" title="Print"><i class="bi bi-printer"></i></button></label>');
+                }
             },
             error: function(xhr) {
                 destroyDataTable();
@@ -123,6 +129,56 @@ $(document).ready(function() {
     }
 
     loadHouseStatus();
+
+    // Print: same pattern as other estate module DataTable print
+    function buildPrintableTableHtml(tableElement) {
+        var clone = tableElement.cloneNode(true);
+        return clone.outerHTML;
+    }
+
+    function openPrintWindow(tableHtml) {
+        var win = window.open('', '_blank', 'width=1200,height=900');
+        if (!win) {
+            alert('Please allow popups to print this list.');
+            return;
+        }
+        win.document.open();
+        win.document.write(
+            '<!doctype html>' +
+            '<html><head><title>House Status - Sargam</title>' +
+            '<style>' +
+            'body{font-family:Arial,sans-serif;padding:16px;color:#111827;}' +
+            'h2{margin:0 0 12px 0;font-size:20px;}' +
+            'table{width:100%;border-collapse:collapse;font-size:12px;}' +
+            'th,td{border:1px solid #d1d5db;padding:8px;vertical-align:top;text-align:left;}' +
+            'th{background:#f3f4f6;font-weight:600;}' +
+            '</style></head><body>' +
+            '<h2>House Status</h2>' +
+            tableHtml +
+            '</body></html>'
+        );
+        win.document.close();
+        win.onafterprint = function() { win.close(); };
+        setTimeout(function() { win.focus(); win.print(); }, 250);
+    }
+
+    $(document).on('click', '#btnPrintHouseStatus', function() {
+        var $table = $('#houseStatusTable');
+        if (!$table.length) {
+            alert('Table not found.');
+            return;
+        }
+        var tableEl = $table[0];
+        var dt = $table.DataTable();
+        var prevPageLen = dt.settings()[0]._iDisplayLength;
+        if (prevPageLen !== -1) {
+            dt.page.len(-1).draw(false);
+        }
+        openPrintWindow(buildPrintableTableHtml(tableEl));
+        if (prevPageLen !== -1) {
+            dt.page.len(prevPageLen).draw(false);
+        }
+    });
 });
 </script>
 @endpush

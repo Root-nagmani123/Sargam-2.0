@@ -151,10 +151,14 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Status <span class="text-danger">*</span></label>
                                     <input type="hidden" class="vacant_renovation_status" name="vacant_renovation_status[]" value="1">
-                                    <div class="d-flex gap-3 pt-2">
+                                    <div class="d-flex gap-3 pt-2 flex-wrap">
                                         <div class="form-check">
                                             <input class="form-check-input status-radio" type="radio" name="vacant_renovation_radio_0" value="1" checked>
                                             <label class="form-check-label">Vacant</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input status-radio" type="radio" name="vacant_renovation_radio_0" value="2">
+                                            <label class="form-check-label">Occupied</label>
                                         </div>
                                         <div class="form-check">
                                             <input class="form-check-input status-radio" type="radio" name="vacant_renovation_radio_0" value="0">
@@ -252,7 +256,7 @@ $(document).ready(function() {
             { data: 'water_charge', name: 'water_charge', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
             { data: 'electric_charge', name: 'electric_charge', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
             { data: 'licence_fee', name: 'licence_fee', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
-            { data: 'vacant_renovation_status', name: 'vacant_renovation_status', render: function(v) { return v == 1 ? 'Vacant' : 'Under Renovation'; } },
+            { data: 'vacant_renovation_status', name: 'vacant_renovation_status', render: function(v) { var s = parseInt(v, 10); if (s === 2) return 'Occupied'; if (s === 0) return 'Under Renovation'; return 'Vacant'; } },
             { data: 'pk', orderable: false, searchable: false, render: function(pk) {
                 return '<div class="d-flex flex-nowrap gap-1 justify-content-center">' +
                        '<button type="button" class="btn btn-sm btn-warning btn-edit-house" title="Edit" data-pk="'+pk+'"><i class="bi bi-pencil"></i></button>' +
@@ -311,6 +315,7 @@ $(document).ready(function() {
                 $('#houseRowsContainer .house-row').first().find('.licence_fee').val('0.00');
                 $('#houseRowsContainer .house-row').first().find('.vacant_renovation_status').val('1');
                 $('#houseRowsContainer .house-row').first().find('.status-radio[value="1"]').prop('checked', true);
+                $('#houseRowsContainer .house-row').first().find('.status-radio[value="0"], .status-radio[value="2"]').prop('checked', false);
                 $('#addHouseRowBtn, #removeHouseRowBtn').show();
                 table.ajax.reload(null, false);
                 showPageAlert('success', res.message || (editPk ? 'Estate house updated.' : 'Estate house(s) added successfully.'));
@@ -336,6 +341,7 @@ $(document).ready(function() {
         $('#houseRowsContainer .house-row').first().find('.vacant_renovation_status').val('1');
         $('#houseRowsContainer .house-row').first().find('.status-radio').attr('name', 'vacant_renovation_radio_0');
         $('#houseRowsContainer .house-row').first().find('.status-radio[value="1"]').prop('checked', true);
+        $('#houseRowsContainer .house-row').first().find('.status-radio[value="0"], .status-radio[value="2"]').prop('checked', false);
         updateGlobalRemoveButton();
     });
 
@@ -355,7 +361,7 @@ $(document).ready(function() {
         $clone.find('.vacant_renovation_status').val('1');
         $clone.find('.status-radio').attr('name', radioName);
         $clone.find('.status-radio[value="1"]').prop('checked', true);
-        $clone.find('.status-radio[value="0"]').prop('checked', false);
+        $clone.find('.status-radio[value="0"], .status-radio[value="2"]').prop('checked', false);
         $container.append($clone);
         houseRowIndex++;
         updateGlobalRemoveButton();
@@ -432,6 +438,7 @@ $(document).ready(function() {
             $row.find('.vacant_renovation_status').val(res.vacant_renovation_status);
             $row.find('.status-radio').attr('name', 'vacant_renovation_radio_0');
             $row.find('.status-radio[value="1"]').prop('checked', res.vacant_renovation_status == 1);
+            $row.find('.status-radio[value="2"]').prop('checked', res.vacant_renovation_status == 2);
             $row.find('.status-radio[value="0"]').prop('checked', res.vacant_renovation_status == 0);
             $('#addHouseRowBtn').hide();
             $('#removeHouseRowBtn').hide();
