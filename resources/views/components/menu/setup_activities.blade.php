@@ -274,7 +274,7 @@
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-house') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-house') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Request For House</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Return house of request</span>
                                     </a>
                                 </li>
                                 @endif
