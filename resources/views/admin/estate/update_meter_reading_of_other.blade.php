@@ -171,7 +171,7 @@ $(document).ready(function() {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
                 if (prefill && String(prefill.estate_campus_master_pk) === String(campusId)) {
-                    $('#building').val(prefill.estate_block_master_pk || '');
+                    $('#building').val(prefill.estate_block_master_pk || '').trigger('change');
                 }
             }
         });
@@ -187,6 +187,9 @@ $(document).ready(function() {
                 $.each(res.data, function(i, u) {
                     $('#unit_sub_type').append('<option value="'+u.pk+'">'+u.unit_sub_type+'</option>');
                 });
+                if (prefill && String(prefill.estate_campus_master_pk) === String(campusId) && String(prefill.estate_block_master_pk) === String(blockId) && prefill.estate_unit_sub_type_master_pk) {
+                    $('#unit_sub_type').val(prefill.estate_unit_sub_type_master_pk);
+                }
             }
         });
     });
@@ -320,10 +323,12 @@ $(document).ready(function() {
         // No DataTable pagination; submit normally.
     });
 
-    // Prefill form when coming from Estate Possession for Other with single selection
+    // Prefill form when coming from Estate Possession for Other with possession_pks
     if (prefill) {
+        if (prefill.bill_month) {
+            $('#bill_month').val(prefill.bill_month).trigger('change');
+        }
         $('#estate_name').val(prefill.estate_campus_master_pk || '').trigger('change');
-        $('#unit_sub_type').val(prefill.estate_unit_sub_type_master_pk || '');
     }
 });
 </script>

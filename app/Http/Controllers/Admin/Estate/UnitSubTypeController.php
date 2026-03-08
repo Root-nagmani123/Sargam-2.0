@@ -10,7 +10,7 @@ class UnitSubTypeController extends Controller
 {
     public function index()
     {
-        $items = UnitSubType::orderBy('unit_sub_type')->paginate(request('per_page', 10));
+        $items = UnitSubType::orderBy('pk', 'desc')->get();
         return view('admin.estate.define_unit_sub_type.index', compact('items'));
     }
 

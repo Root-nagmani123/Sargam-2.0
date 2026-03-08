@@ -3824,7 +3824,12 @@ class EstateController extends Controller
                 $possessionPks = implode(',', $ids);
                 $first = $possessions->first();
                 if ($first) {
+                    $possessionDate = $first->allotment_date ?? $first->possession_date_oth;
+                    $billMonthYm = $possessionDate
+                        ? \Carbon\Carbon::parse($possessionDate)->format('Y-m')
+                        : now()->format('Y-m');
                     $prefill = [
+                        'bill_month' => $billMonthYm,
                         'estate_campus_master_pk' => $first->estate_campus_master_pk,
                         'estate_block_master_pk' => $first->estate_block_master_pk,
                         'estate_unit_type_master_pk' => $first->estate_unit_type_master_pk,
