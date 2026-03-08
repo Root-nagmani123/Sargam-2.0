@@ -773,6 +773,7 @@ class EstateController extends Controller
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
             ->where('h.used_home_status', 0)
+            ->where('h.vacant_renovation_status', 1)
             ->select('h.pk', 'h.house_no', 'b.block_name')
             ->orderBy('b.block_name')
             ->orderBy('h.house_no');
@@ -1296,13 +1297,29 @@ class EstateController extends Controller
             ->orderBy('unit_type')
             ->get(['pk', 'unit_type']);
 
-        $buildings = DB::table('estate_block_master')
-            ->orderBy('block_name')
-            ->get(['pk', 'block_name']);
+        // Buildings: filter by selected campus (and unit type) so dropdown matches estate
+        $buildings = DB::table('estate_house_master as h')
+            ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
+            ->when($detail->estate_campus_master_pk, fn ($q) => $q->where('h.estate_campus_master_pk', $detail->estate_campus_master_pk))
+            ->when($detail->estate_unit_type_master_pk, fn ($q) => $q->where('h.estate_unit_master_pk', $detail->estate_unit_type_master_pk))
+            ->select('b.pk', 'b.block_name')
+            ->distinct()
+            ->orderBy('b.block_name')
+            ->get();
 
-        $unitSubTypes = DB::table('estate_unit_sub_type_master')
-            ->orderBy('unit_sub_type')
-            ->get(['pk', 'unit_sub_type']);
+        // Unit sub types: filter by selected campus + block (and unit type) so dropdown matches building
+        $unitSubTypes = collect();
+        if ($detail->estate_campus_master_pk && $detail->estate_block_master_pk) {
+            $unitSubTypes = DB::table('estate_house_master as h')
+                ->join('estate_unit_sub_type_master as u', 'h.estate_unit_sub_type_master_pk', '=', 'u.pk')
+                ->where('h.estate_campus_master_pk', $detail->estate_campus_master_pk)
+                ->where('h.estate_block_master_pk', $detail->estate_block_master_pk)
+                ->when($detail->estate_unit_type_master_pk, fn ($q) => $q->where('h.estate_unit_master_pk', $detail->estate_unit_type_master_pk))
+                ->select('u.pk', 'u.unit_sub_type')
+                ->distinct()
+                ->orderBy('u.unit_sub_type')
+                ->get();
+        }
 
         $occupiedHousePks = DB::table('estate_possession_details')
             ->where('return_home_status', 0)
@@ -1326,7 +1343,8 @@ class EstateController extends Controller
             ->when($detail->estate_unit_sub_type_master_pk, fn ($q) => $q->where('h.estate_unit_sub_type_master_pk', $detail->estate_unit_sub_type_master_pk))
             ->where(function ($q) use ($occupiedHousePks, $detail) {
                 $q->where(function ($nested) use ($occupiedHousePks) {
-                    $nested->where('h.used_home_status', 0);
+                    $nested->where('h.used_home_status', 0)
+                        ->where('h.vacant_renovation_status', 1);
                     if ($occupiedHousePks->isNotEmpty()) {
                         $nested->whereNotIn('h.pk', $occupiedHousePks->toArray());
                     }
@@ -1480,6 +1498,7 @@ class EstateController extends Controller
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->where('h.estate_unit_sub_type_master_pk', $eligibilityTypePk)
             ->where('h.used_home_status', 0)
+            ->where('h.vacant_renovation_status', 1)
             ->whereNotNull('h.house_no')
             ->where('h.house_no', '!=', '')
             ->where('h.house_no', '!=', '0')
@@ -1591,6 +1610,7 @@ class EstateController extends Controller
                     ->join('estate_house_master as f', 'd.estate_unit_sub_type_master_pk', '=', 'f.estate_unit_sub_type_master_pk')
                     ->whereIn('d.salary_grade_master_pk', $salaryGradePks->all())
                     ->where('f.used_home_status', 0)
+                    ->where('f.vacant_renovation_status', 1)
                     ->distinct()
                     ->pluck('f.pk')
                     ->map(fn ($v) => (int) $v)
@@ -1615,6 +1635,7 @@ class EstateController extends Controller
             INNER JOIN estate_house_master f ON e.pk = f.estate_unit_sub_type_master_pk
             WHERE a.{$empPkCol} = ?
             AND f.used_home_status = 0
+            AND f.vacant_renovation_status = 1
         ";
 
         $rows = DB::select($sql, [$employeePk]);
@@ -1692,7 +1713,8 @@ class EstateController extends Controller
             ->join('estate_eligibility_mapping as eem', 'eh.eligibility_type_pk', '=', 'eem.pk')
             ->leftJoin('estate_house_master as h', function ($join) {
                 $join->on('eem.estate_unit_sub_type_master_pk', '=', 'h.estate_unit_sub_type_master_pk')
-                    ->where('h.used_home_status', 0);
+                    ->where('h.used_home_status', 0)
+                    ->where('h.vacant_renovation_status', 1);
             })
             ->leftJoin('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
             ->leftJoin('estate_campus_master as a', 'h.estate_campus_master_pk', '=', 'a.pk')
@@ -1854,6 +1876,25 @@ class EstateController extends Controller
                 ->with('error', 'Employee could not be resolved for this request. Please ensure the request has employee_pk or a valid employee_id linked in employee_master.');
         }
 
+        // Align with Define House: only Vacant and not already used houses can be allotted
+        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
+        if ($houseRow) {
+            if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
+                $msg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
+            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+                $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
+        }
+
         // Selected house must be eligible for this employee (salary grade → estate_eligibility_mapping → unit sub type).
         $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
         if ($eligibleHousePks->isNotEmpty() && ! $eligibleHousePks->contains($estateHouseMasterPk)) {
@@ -1958,6 +1999,25 @@ class EstateController extends Controller
             }
             return redirect()->route('admin.estate.change-request-hac-approved')
                 ->with('error', 'Employee could not be resolved for this request. Please ensure the request has employee_pk or a valid employee_id linked in employee_master.');
+        }
+
+        // Align with Define House: only Vacant and not already used houses can be allotted
+        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
+        if ($houseRow) {
+            if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
+                $msg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
+            if ((int) ($houseRow->used_home_status ?? 0) !== 0) {
+                $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+            }
         }
 
         // Check if employee already has possession (estate_possession_details)
@@ -2276,6 +2336,25 @@ class EstateController extends Controller
                 ->back()
                 ->withInput()
                 ->with('error', 'Selected house not found. Please reselect the house and try again.');
+        }
+
+        // When allotting (not return-house): align with Define House - only Vacant and not already used
+        if ($request->get('redirect_to') !== 'return-house') {
+            $isSameAsExisting = $request->filled('id') && (int) (EstatePossessionOther::find($request->id)?->estate_house_master_pk ?? 0) === (int) $house->pk;
+            if (! $isSameAsExisting) {
+                if ((int) ($house->vacant_renovation_status ?? 1) !== 1) {
+                    return redirect()
+                        ->back()
+                        ->withInput()
+                        ->with('error', 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.');
+                }
+                if ((int) ($house->used_home_status ?? 0) !== 0) {
+                    return redirect()
+                        ->back()
+                        ->withInput()
+                        ->with('error', 'Selected house is already occupied. Please choose a vacant house from the list.');
+                }
+            }
         }
 
         // Derive unit type from selected house (estate_house_master.estate_unit_master_pk)
@@ -2730,7 +2809,7 @@ class EstateController extends Controller
             'licence_fee' => 'nullable|array',
             'licence_fee.*' => 'nullable|numeric|min:0',
             'vacant_renovation_status' => 'required|array',
-            'vacant_renovation_status.*' => 'required|in:0,1',
+            'vacant_renovation_status.*' => 'required|in:0,1,2',
         ]);
 
         $userId = Auth::id();
@@ -2827,7 +2906,31 @@ class EstateController extends Controller
             $query->offset($start)->limit($length);
         }
 
-        $rows = $query->get();
+        // Houses that are actually occupied (active possession) should show "Occupied" in the list
+        $occupiedDetails = DB::table('estate_possession_details')->whereNotNull('estate_house_master_pk');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+            $occupiedDetails->where('return_home_status', 0);
+        }
+        $occupiedHousePks = $occupiedDetails->pluck('estate_house_master_pk')
+            ->merge(
+                DB::table('estate_possession_other')
+                    ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0)
+                    ->pluck('estate_house_master_pk')
+            )
+            ->unique()
+            ->values()
+            ->flip()
+            ->all();
+
+        $rows = $query->get()->map(function ($row) use ($occupiedHousePks) {
+            $row = (object) (array) $row;
+            $pk = (int) ($row->pk ?? 0);
+            $storedStatus = (int) ($row->vacant_renovation_status ?? 1);
+            // If house has active possession, show Occupied in list; else use Define House status
+            $row->vacant_renovation_status = isset($occupiedHousePks[$pk]) ? 2 : $storedStatus;
+            return $row;
+        });
 
         return response()->json([
             'draw' => (int) $request->get('draw', 1),
@@ -2871,6 +2974,7 @@ class EstateController extends Controller
             return response()->json(['message' => 'House not found.'], 404);
         }
 
+        $row->vacant_renovation_status = (int) ($row->vacant_renovation_status ?? 1);
         return response()->json($row);
     }
 
@@ -2904,7 +3008,7 @@ class EstateController extends Controller
             'licence_fee' => 'nullable|array',
             'licence_fee.0' => 'nullable|numeric|min:0',
             'vacant_renovation_status' => 'required|array',
-            'vacant_renovation_status.0' => 'required|in:0,1',
+            'vacant_renovation_status.0' => 'required|in:0,1,2',
         ]);
 
         $house->estate_campus_master_pk = $validated['estate_campus_master_pk'];
@@ -3039,6 +3143,7 @@ class EstateController extends Controller
             ->where('estate_block_master_pk', $blockId)
             ->where('estate_unit_sub_type_master_pk', $unitSubTypeId)
             ->where('used_home_status', 0)
+            ->where('vacant_renovation_status', 1)
             ->where(function ($q) {
                 $q->whereNotNull('house_no')
                     ->where('house_no', '!=', '')
@@ -3382,6 +3487,19 @@ class EstateController extends Controller
         // (e.g. possession form pre-filled with current house; eligibility list only has vacant houses).
         $isSameAsExistingPossession = $existingPossession && (int) $existingPossession->estate_house_master_pk === (int) $house->pk;
         if (! $isSameAsExistingPossession) {
+            // Align with Define House: only Vacant and not already used houses can be allotted
+            if ((int) ($house->vacant_renovation_status ?? 1) !== 1) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.');
+            }
+            if ((int) ($house->used_home_status ?? 0) !== 0) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Selected house is already occupied. Please choose a vacant house from the list.');
+            }
             $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
             if ($eligibleHousePks->isNotEmpty() && ! $eligibleHousePks->contains((int) $house->pk)) {
                 return redirect()
@@ -3391,12 +3509,15 @@ class EstateController extends Controller
             }
         }
 
-        $occupiedHousePks = DB::table('estate_possession_details')
-            ->whereNotNull('estate_house_master_pk')
-            ->pluck('estate_house_master_pk')
+        $occupiedDetails = DB::table('estate_possession_details')->whereNotNull('estate_house_master_pk');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+            $occupiedDetails->where('return_home_status', 0);
+        }
+        $occupiedHousePks = $occupiedDetails->pluck('estate_house_master_pk')
             ->merge(
                 DB::table('estate_possession_other')
                     ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0)
                     ->pluck('estate_house_master_pk')
             )
             ->unique()
@@ -4771,6 +4892,10 @@ class EstateController extends Controller
             ->get(['pk', 'unit_sub_type']);
 
         $billMonth = $request->get('bill_month'); // e.g. 2025-09
+        $currentYm = date('Y-m');
+        if ($billMonth && $billMonth > $currentYm) {
+            $billMonth = $currentYm;
+        }
         $unitSubTypePk = $request->get('unit_sub_type_pk');
         $bills = collect();
 
@@ -4805,7 +4930,9 @@ class EstateController extends Controller
                     'ehrd.emp_name',
                     'ehrd.employee_id',
                     'ehrd.emp_designation',
-                    'eust.unit_sub_type'
+                    'eust.unit_sub_type',
+                    'ehm.water_charge as ehm_water_charge',
+                    'ehm.licence_fee as ehm_licence_fee'
                 );
 
             if (!empty($unitSubTypePk)) {
@@ -4819,6 +4946,15 @@ class EstateController extends Controller
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+                // Fallback: when reading has 0/null water or licence, use estate_house_master (Define House) values
+                $billWater = (float) ($b->water_charges ?? 0);
+                $billLicence = (float) ($b->licence_fees ?? 0);
+                if ($billWater <= 0 && isset($b->ehm_water_charge) && ($b->ehm_water_charge !== null && $b->ehm_water_charge !== '')) {
+                    $b->water_charges = (float) $b->ehm_water_charge;
+                }
+                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && ($b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '')) {
+                    $b->licence_fees = (float) $b->ehm_licence_fee;
+                }
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
         }
@@ -5133,7 +5269,9 @@ class EstateController extends Controller
                     'ehrd.emp_name',
                     'ehrd.employee_id',
                     'ehrd.emp_designation',
-                    'eust.unit_sub_type'
+                    'eust.unit_sub_type',
+                    'ehm.water_charge as ehm_water_charge',
+                    'ehm.licence_fee as ehm_licence_fee'
                 );
 
             if (!empty($unitSubTypePk)) {
@@ -5147,6 +5285,14 @@ class EstateController extends Controller
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+                $billWater = (float) ($b->water_charges ?? 0);
+                $billLicence = (float) ($b->licence_fees ?? 0);
+                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
+                    $b->water_charges = (float) $b->ehm_water_charge;
+                }
+                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
+                    $b->licence_fees = (float) $b->ehm_licence_fee;
+                }
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
         }
@@ -5193,7 +5339,9 @@ class EstateController extends Controller
                     'ehrd.emp_name',
                     'ehrd.employee_id',
                     'ehrd.emp_designation',
-                    'eust.unit_sub_type'
+                    'eust.unit_sub_type',
+                    'ehm.water_charge as ehm_water_charge',
+                    'ehm.licence_fee as ehm_licence_fee'
                 );
 
             if (!empty($unitSubTypePk)) {
@@ -5207,6 +5355,14 @@ class EstateController extends Controller
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+                $billWater = (float) ($b->water_charges ?? 0);
+                $billLicence = (float) ($b->licence_fees ?? 0);
+                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
+                    $b->water_charges = (float) $b->ehm_water_charge;
+                }
+                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
+                    $b->licence_fees = (float) $b->ehm_licence_fee;
+                }
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
         }
@@ -5609,6 +5765,11 @@ class EstateController extends Controller
         $monthNum = (count($parts) >= 2 && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
         if ($monthNum < 1 || $monthNum > 12) {
             return response()->json(['status' => true, 'data' => [], 'message' => 'Invalid bill month.']);
+        }
+        $selectedMonthStart = \Carbon\Carbon::createFromDate((int) $billYearStr, $monthNum, 1)->startOfMonth();
+        $currentMonthStart = \Carbon\Carbon::now()->startOfMonth();
+        if ($selectedMonthStart->gt($currentMonthStart)) {
+            return response()->json(['status' => true, 'data' => [], 'message' => 'Future bill month is not allowed.']);
         }
         $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
 
@@ -6039,7 +6200,7 @@ class EstateController extends Controller
      * Mobile Number, Alloted Date, Occupied Date, Vacated Date, Status (O/V).
      *
      * Mapping rules (current occupancy-centric):
-     * - If there is an active LBSNAA possession (estate_possession_details.return_home_status = 0, estate_change_id = -1),
+     * - If there is an active LBSNAA possession (return_home_status = 0, estate_change_id = -1 or null),
      *   show it as Occupied (O) with name/dates from possession_details + home_request_details.
      * - Else if there is an active Other possession (estate_possession_other.return_home_status = 0),
      *   show it as Occupied (O) with name/dates from possession_other + estate_other_req.
@@ -6049,13 +6210,14 @@ class EstateController extends Controller
     {
         $hasEmployeeMobile = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'mobile');
 
-        // Base house list
+        // Base house list (include vacant_renovation_status so report aligns with Define House)
         $houses = DB::table('estate_house_master as ehm')
             ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
             ->leftJoin('estate_unit_type_master as eut', 'ehm.estate_unit_master_pk', '=', 'eut.pk')
             ->select(
                 'ehm.pk as house_pk',
                 'ehm.house_no',
+                'ehm.vacant_renovation_status',
                 'eb.block_name',
                 'eut.unit_type'
             )
@@ -6069,15 +6231,19 @@ class EstateController extends Controller
         $otherActive = collect();
 
         if (! empty($housePks)) {
-            // Active LBSNAA possessions (return_home_status = 0, estate_change_id = -1)
-            $lbsnaaActive = DB::table('estate_possession_details as epd')
+            // Active LBSNAA possessions: return_home_status = 0 and (estate_change_id = -1 OR NULL — new allotments set null)
+            $lbsnaaQuery = DB::table('estate_possession_details as epd')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
                 ->whereIn('epd.estate_house_master_pk', $housePks)
-                ->where('epd.return_home_status', 0)
                 ->whereNotNull('epd.estate_house_master_pk')
-                ->where('epd.estate_change_id', -1)
-                ->select(
+                ->where(function ($q) {
+                    $q->where('epd.estate_change_id', -1)->orWhereNull('epd.estate_change_id');
+                });
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                $lbsnaaQuery->where('epd.return_home_status', 0);
+            }
+            $lbsnaaActive = $lbsnaaQuery->select(
                     'epd.estate_house_master_pk as house_pk',
                     'epd.allotment_date',
                     'epd.possession_date',
@@ -6131,6 +6297,11 @@ class EstateController extends Controller
             $allotmentDate = $pos->allotment_date ?? null;
             $occupiedDate = $pos->possession_date ?? null;
 
+            // For Vacant (V): show Define House status so report aligns with Define House (Vacant vs Under Renovation)
+            $vacantLabel = ($status === 'V' && isset($h->vacant_renovation_status))
+                ? ($h->vacant_renovation_status == 1 ? 'V (Vacant)' : ($h->vacant_renovation_status == 2 ? 'V (Occupied)' : 'V (Under Renovation)'))
+                : $status;
+
             $rows[] = [
                 'sno' => $sno,
                 'qtr_no' => $h->house_no ?? '—',
@@ -6142,7 +6313,7 @@ class EstateController extends Controller
                 'alloted_date' => $allotmentDate ? \Carbon\Carbon::parse($allotmentDate)->format('d/m/Y') : '',
                 'occupied_date' => $occupiedDate ? \Carbon\Carbon::parse($occupiedDate)->format('d/m/Y') : '',
                 'vacated_date' => '', // current implementation focuses on active occupancy; vacated date can be added later
-                'status' => $status,
+                'status' => $vacantLabel,
             ];
         }
 

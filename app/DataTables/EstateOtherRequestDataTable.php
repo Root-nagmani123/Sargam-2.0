@@ -54,7 +54,7 @@ class EstateOtherRequestDataTable extends DataTable
 
     public function query(EstateOtherRequest $model): QueryBuilder
     {
-        return $model->newQuery();
+        return $model->newQuery()->orderBy('pk', 'desc');
     }
 
     public function html(): HtmlBuilder
@@ -72,7 +72,7 @@ class EstateOtherRequestDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[0, 'asc']],
+                'order' => [[0, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',

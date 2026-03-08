@@ -19,7 +19,7 @@
         <div class="card-body p-4 p-lg-5">
             <h1 class="h4 fw-bold text-body mb-2">Request For House</h1>
             <p class="text-body-secondary small mb-4">
-                This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print, etc.
+                This page displays all list of request details added in the system, and provides options to manage records such as add, edit, delete, etc.
             </p>
 
             {{-- Main data table --}}
@@ -161,6 +161,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(function(html) {
             modalLoading.classList.add('d-none');
             modalBody.innerHTML = html;
+            [].forEach.call(modalBody.querySelectorAll('script'), function(script) {
+                var el = document.createElement('script');
+                el.textContent = script.textContent;
+                document.body.appendChild(el);
+                document.body.removeChild(el);
+            });
+            if (window.initChangeRequestDetailsCascade) window.initChangeRequestDetailsCascade(modalBody);
         })
         .catch(function() {
             modalLoading.classList.add('d-none');

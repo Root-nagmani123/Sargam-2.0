@@ -14,10 +14,7 @@
             <form id="billForOtherFilterForm" class="row g-3 align-items-end">
                 <div class="col-12 col-md-4">
                     <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" required>
-                        <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-                    </div>
+                    <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
                     <small class="text-muted d-block">Select Bill Month</small>
                 </div>
                 <div class="col-12 col-md-2 d-flex align-items-center">
