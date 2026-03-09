@@ -5,15 +5,15 @@
     <table class="table table-bordered table-hover align-middle mb-0" id="approvalTable">
         <thead class="table-primary">
             <tr>
-                <th style="width:50px;" class="text-center"><input type="checkbox" id="selectAll" aria-label="Select all"></th>
                 <th style="width:50px;" class="text-center">S.No.</th>
-                <th style="width:70px;" class="text-center">PHOTO</th>
+                
                 <th>EMPLOYEE NAME</th>
                 <th>DESIGNATION</th>
                 <th>FATHER NAME</th>
                 <th>ID CARD NO</th>
                 <th>ID TYPE</th>
                 <th>REQUEST TYPE</th>
+                <th style="width:70px;" class="text-center">PHOTO</th>
                 <th>DATE OF BIRTH</th>
                 <th>BLOOD GROUP</th>
                 <th>CONTACT NO</th>
@@ -28,8 +28,21 @@
         <tbody>
             @forelse($requests as $index => $req)
                 <tr>
-                    <td class="text-center"><input type="checkbox" class="row-check" value="{{ $req->id }}" aria-label="Select row"></td>
                     <td class="text-center fw-medium">{{ $requests->firstItem() + $index }}</td>
+                    
+                    <td>{{ $req->name ?? '--' }}</td>
+                    <td>{{ $req->designation ?? '--' }}</td>
+                    <td>{{ $req->father_name ?? '--' }}</td>
+                    <td>{{ $req->id_card_number ?? '--' }}</td>
+                    <td>{{ $req->card_type ?? '--' }}</td>
+                    
+                    <td>
+                        @if(isset($req->request_type) && $req->request_type === 'duplicate')
+                            <span class="badge bg-info">Duplicate</span>
+                        @else
+                            <span class="badge bg-secondary">Regular</span>
+                        @endif
+                    </td>
                     <td class="text-center">
                         @if($req->photo)
                             @php
@@ -46,54 +59,53 @@
                             <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No photo available">
                         @endif
                     </td>
-                    <td>{{ $req->name ?? '--' }}</td>
-                    <td>{{ $req->designation ?? '--' }}</td>
-                    <td>{{ $req->father_name ?? '--' }}</td>
-                    <td>{{ $req->id_card_number ?? '--' }}</td>
-                    <td>{{ $req->card_type ?? '--' }}</td>
-                    <td>
-                        @if(isset($req->request_type) && $req->request_type === 'duplicate')
-                            <span class="badge bg-info">Duplicate</span>
-                        @else
-                            <span class="badge bg-secondary">Regular</span>
-                        @endif
-                    </td>
                     <td>{{ $req->date_of_birth ? (\Carbon\Carbon::parse($req->date_of_birth)->format('d-m-Y')) : '--' }}</td>
                     <td>{{ $req->blood_group ?? '--' }}</td>
                     <td>{{ $req->mobile_number ?? $req->telephone_number ?? '--' }}</td>
                     <td>{{ $req->id_card_valid_from ?? '--' }}</td>
                     <td>{{ $req->id_card_valid_upto ?? '--' }}</td>
                     <td>
-                        @if(isset($req->is_view_only) && $req->is_view_only)
-                            {{-- Contractual requests at Approval 2 are view-only --}}
-                            <span class="badge bg-info">View Only</span>
-                            <br>
-                            <small class="text-muted">Approved at Level 1</small>
-                        @else
-                            <div class="d-flex gap-1 flex-wrap">
-                                @php
-                                    // Determine the encryption key based on request type
-                                    $encryptKey = $req->id;
-                                    if (isset($req->request_type) && $req->request_type === 'duplicate') {
-                                        // For duplicate contractual: c-dup-pk
-                                        // For duplicate permanent: p-dup-pk
-                                        if (is_string($encryptKey) && str_starts_with($encryptKey, 'c-')) {
-                                            $encryptKey = 'c-dup-' . substr($encryptKey, 2);
-                                        } else {
-                                            $encryptKey = 'p-dup-' . $encryptKey;
-                                        }
-                                    }
-                                @endphp
-                                <form action="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.approve1', encrypt($encryptKey)) : route('admin.security.employee_idcard_approval.approve2', encrypt($encryptKey)) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-link p-0 text-success text-decoration-none" title="Approve">Approve</button>
-                                </form>
-                                <span class="text-muted">|</span>
-                                <button type="button" class="btn btn-link p-0 text-danger text-decoration-none reject-btn" title="Reject"
-                                    data-name="{{ $req->name }}"
-                                    data-url="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.reject1', encrypt($encryptKey)) : route('admin.security.employee_idcard_approval.reject2', encrypt($encryptKey)) }}">Reject</button>
-                            </div>
-                        @endif
+                        @php
+                            // Determine the encryption key based on request type
+                            $encryptKey = $req->id;
+                            if (isset($req->request_type) && $req->request_type === 'duplicate') {
+                                // For duplicate contractual: c-dup-pk
+                                // For duplicate permanent: p-dup-pk
+                                if (is_string($encryptKey) && str_starts_with($encryptKey, 'c-')) {
+                                    $encryptKey = 'c-dup-' . substr($encryptKey, 2);
+                                } else {
+                                    $encryptKey = 'p-dup-' . $encryptKey;
+                                }
+                            }
+                            $encryptedId = encrypt($encryptKey);
+                        @endphp
+
+                        <div class="d-flex flex-column gap-1">
+                            <a href="{{ route('admin.security.employee_idcard_approval.show', $encryptedId) }}"
+                               class="btn btn-link p-0 text-primary text-decoration-none"
+                               title="View full request details">
+                                View Request
+                            </a>
+
+                            @if(isset($req->is_view_only) && $req->is_view_only)
+                                {{-- Contractual requests at Approval 2 are view-only --}}
+                                <span class="badge bg-info align-self-start">View Only</span>
+                                <small class="text-muted">Approved at Level 1</small>
+                            @else
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <form action="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.approve1', $encryptedId) : route('admin.security.employee_idcard_approval.approve2', $encryptedId) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-link p-0 text-success text-decoration-none" title="Approve">Approve</button>
+                                    </form>
+                                    <span class="text-muted">|</span>
+                                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none reject-btn" title="Reject"
+                                        data-name="{{ $req->name }}"
+                                        data-url="{{ $approvalStage === 1 ? route('admin.security.employee_idcard_approval.reject1', $encryptedId) : route('admin.security.employee_idcard_approval.reject2', $encryptedId) }}">
+                                        Reject
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
                     </td>
                     <td>{{ $req->created_at ? $req->created_at->format('d-m-Y') : '--' }}</td>
                     <td>{{ $req->requested_by ?? '--' }}</td>

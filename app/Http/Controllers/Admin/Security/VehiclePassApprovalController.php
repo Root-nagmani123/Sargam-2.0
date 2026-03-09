@@ -46,6 +46,7 @@ class VehiclePassApprovalController extends Controller
                 'status' => 'Pending',
                 'created_date' => $r->created_date,
                 'request_type' => 'regular',
+                'vehicle_pass_no' => $r->vehicle_req_id ?? '--',
             ];
         });
 
@@ -69,6 +70,7 @@ class VehiclePassApprovalController extends Controller
                 'status' => 'Pending',
                 'created_date' => $r->created_date,
                 'request_type' => 'duplicate',
+                'vehicle_pass_no' => $r->vehicle_req_id ?? '--',
             ];
         });
 

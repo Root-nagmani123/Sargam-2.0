@@ -13,50 +13,148 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Request #{{ $request->id }} - {{ $request->name }}</h4>
-                <div class="d-flex gap-2">
-                    <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary btn-sm">Full Details</a>
-                    <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="btn btn-secondary btn-sm">Back to Approval I</a>
-                    <a href="{{ route('admin.security.employee_idcard_approval.approval2') }}" class="btn btn-secondary btn-sm">Back to Approval II</a>
-                </div>
+               
             </div>
 
             <div class="row">
-                <div class="col-md-3">
-                    {{-- Photo Display --}}
+                <div class="col-md-6">
+                    {{-- Photo + Documents --}}
                     <div class="card shadow-sm border-0 mb-3">
-                        <div class="card-body text-center">
-                            <h6 class="card-title mb-3">Employee Photo</h6>
-                            @if($request->photo)
-                                @php
-                                    $photoPath = str_starts_with($request->photo, 'idcard/')
-                                        ? $request->photo
-                                        : 'idcard/photos/' . $request->photo;
-                                    $photoExists = \Storage::disk('public')->exists($photoPath);
-                                    $photoUrl = $photoExists ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
-                                @endphp
-                                <img src="{{ $photoUrl }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
-                                <div class="mt-2">
-                                    <a href="{{ $photoUrl }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:16px;">download</i>
-                                        Download
-                                    </a>
-                                </div>
-                            @else
-                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
-                                <p class="text-muted small mt-2">No photo available</p>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <h6 class="card-title mb-3">Employee Photo</h6>
+                                @if($request->photo)
+                                    @php
+                                        $photoPath = str_starts_with($request->photo, 'idcard/')
+                                            ? $request->photo
+                                            : 'idcard/photos/' . $request->photo;
+                                        $photoExists = \Storage::disk('public')->exists($photoPath);
+                                        $photoUrl = $photoExists ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
+                                    @endphp
+                                    <img src="{{ $photoUrl }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
+                                    <div class="mt-2">
+                                        <a href="{{ $photoUrl }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:16px;">download</i>
+                                            Download
+                                        </a>
+                                    </div>
+                                @else
+                                    <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
+                                    <p class="text-muted small mt-2">No photo available</p>
+                                @endif
+                            </div>
+
+                            @php
+                                $docLinks = [];
+                                // Joining letter / extension docs (regular permanent/contractual)
+                                if (!empty($request->joining_letter)) {
+                                    $docLinks[] = [
+                                        'label' => 'Joining Letter',
+                                        'path' => 'storage/' . ltrim($request->joining_letter, '/'),
+                                    ];
+                                }
+                                if (!empty($request->extension_document_path)) {
+                                    $docLinks[] = [
+                                        'label' => 'Extension Document',
+                                        'path' => 'storage/' . ltrim($request->extension_document_path, '/'),
+                                    ];
+                                }
+                                // Duplicate-specific docs (Card Lost / Damage / Service Extended / etc.)
+                                if (!empty($request->fir_receipt)) {
+                                    $docLinks[] = [
+                                        'label' => 'FIR Copy / Document Proof',
+                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->fir_receipt, '/'),
+                                    ];
+                                }
+                                if (!empty($request->payment_receipt)) {
+                                    $docLinks[] = [
+                                        'label' => 'Payment Receipt',
+                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->payment_receipt, '/'),
+                                    ];
+                                }
+                                if (!empty($request->service_ext)) {
+                                    $docLinks[] = [
+                                        'label' => 'Service Extension / Renewal Proof',
+                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->service_ext, '/'),
+                                    ];
+                                }
+                                if (!empty($request->id_proof_doc)) {
+                                    $docLinks[] = [
+                                        'label' => 'ID Proof (Aadhar / Other)',
+                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->id_proof_doc, '/'),
+                                    ];
+                                }
+                                if (!empty($request->documents)) {
+                                    $docLinks[] = [
+                                        'label' => 'Supporting Document',
+                                        'path' => 'storage/' . ltrim($request->documents, '/'),
+                                    ];
+                                }
+                                if (!empty($request->other_documents)) {
+                                    $docLinks[] = [
+                                        'label' => 'Other Document',
+                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->other_documents, '/'),
+                                    ];
+                                }
+                            @endphp
+
+                            @if(!empty($docLinks))
+                                <hr>
+                                <h6 class="card-title mb-2">Uploaded Documents</h6>
+                                <ul class="list-unstyled mb-0 small text-start">
+                                    @foreach($docLinks as $doc)
+                                        <li class="mb-1">
+                                            <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">attach_file</i>
+                                            <a href="{{ asset($doc['path']) }}" target="_blank">
+                                                {{ $doc['label'] }}
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
                             @endif
                         </div>
                     </div>
                 </div>
-                <div class="col-md-9">
-                    <div class="row">
-                        <div class="col-md-6">
+                <div class="col-md-6">
+                   
                             <table class="table table-bordered table-sm">
                                 <tr><th width="40%">Employee Name</th><td>{{ $request->name }}</td></tr>
+                                <tr><th>Father Name</th><td>{{ $request->father_name ?? '--' }}</td></tr>
                                 <tr><th>Designation</th><td>{{ $request->designation ?? '--' }}</td></tr>
-                                <tr><th>Card Type</th><td>{{ $request->card_type ?? '--' }}</td></tr>
+                                <tr><th>Employee Type</th><td>{{ $request->employee_type ?? ($request->card_type ?? '--') }}</td></tr>
+                                <tr><th>Card Type (ID Type)</th><td>{{ $request->card_type ?? '--' }}</td></tr>
+                                <tr><th>ID Card No</th><td>{{ $request->id_card_number ?? '--' }}</td></tr>
                                 <tr><th>Request For</th><td>{{ $request->request_for ?? '--' }}</td></tr>
+                                <tr><th>Request Type</th>
+                                    <td>
+                                        @if(isset($request->request_type) && $request->request_type === 'duplicate')
+                                            <span class="badge bg-info">Duplicate</span>
+                                        @else
+                                            <span class="badge bg-secondary">Regular</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr><th>Date of Birth</th>
+                                    <td>
+                                        @if(!empty($request->date_of_birth))
+                                            {{ \Carbon\Carbon::parse($request->date_of_birth)->format('d/m/Y') }}
+                                        @else
+                                            --
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr><th>Blood Group</th><td>{{ $request->blood_group ?? '--' }}</td></tr>
+                                <tr><th>Contact No</th><td>{{ $request->mobile_number ?? $request->telephone_number ?? '--' }}</td></tr>
+                                <tr><th>Valid From</th><td>{{ $request->id_card_valid_from ?? '--' }}</td></tr>
+                                <tr><th>Valid Upto</th><td>{{ $request->id_card_valid_upto ?? '--' }}</td></tr>
                                 <tr><th>Request Date</th><td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td></tr>
+                                <tr><th>Requested By</th><td>{{ $request->requested_by ?? '--' }}</td></tr>
+                                <tr><th>Requested Section</th><td>{{ $request->requested_section ?? '--' }}</td></tr>
+                                @if(!empty($request->card_reason))
+                                    <tr><th>Duplicate Reason</th><td>{{ $request->card_reason }}</td></tr>
+                                @elseif(!empty($request->duplication_reason))
+                                    <tr><th>Duplicate Reason</th><td>{{ $request->duplication_reason }}</td></tr>
+                                @endif
                                 <tr><th>Status</th>
                                     <td>
                                         @php
@@ -73,59 +171,11 @@
                                 </tr>
                             </table>
                         </div>
-                        <div class="col-md-6">
-                            <table class="table table-bordered table-sm">
-                                <tr><th width="40%">Approved By A1</th>
-                                    <td>
-                                        @if($request->approver1)
-                                            {{ $request->approver1->name }}
-                                            @if($request->approved_by_a1_at)
-                                                <br><small class="text-muted">{{ $request->approved_by_a1_at->format('d/m/Y H:i') }}</small>
-                                            @endif
-                                        @else
-                                            <span class="text-muted">--</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr><th>Approved By A2</th>
-                                    <td>
-                                        @if($request->approver2)
-                                            {{ $request->approver2->name }}
-                                            @if($request->approved_by_a2_at)
-                                                <br><small class="text-muted">{{ $request->approved_by_a2_at->format('d/m/Y H:i') }}</small>
-                                            @endif
-                                        @else
-                                            <span class="text-muted">--</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @if($request->rejection_reason)
-                                <tr><th>Rejection Reason</th><td class="text-danger">{{ $request->rejection_reason }}</td></tr>
-                                <tr><th>Rejected By</th><td>{{ $request->rejectedByUser?->name ?? '--' }}</td></tr>
-                                @endif
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                        
+                    
             </div>
 
-            @if($request->approved_by_a1 === null && $request->rejected_by === null && $request->status === 'Pending')
-                <div class="mt-3 d-flex gap-2">
-                    <form action="{{ route('admin.security.employee_idcard_approval.approve1', encrypt($request->id)) }}" method="POST" class="d-inline">
-                        @csrf
-                        <button type="submit" class="btn btn-success">Approve (Move to Approval II)</button>
-                    </form>
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Reject</button>
-                </div>
-            @elseif($request->approved_by_a1 !== null && $request->approved_by_a2 === null && $request->rejected_by === null && $request->status === 'Pending')
-                <div class="mt-3 d-flex gap-2">
-                    <form action="{{ route('admin.security.employee_idcard_approval.approve2', encrypt($request->id)) }}" method="POST" class="d-inline">
-                        @csrf
-                        <button type="submit" class="btn btn-success">Approve (Final)</button>
-                    </form>
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Reject</button>
-                </div>
-            @endif
+          
         </div>
     </div>
 </div>
