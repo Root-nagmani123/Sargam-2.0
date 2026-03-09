@@ -3,7 +3,7 @@
 @section('title', 'All Issues - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid issue-management-index">
     <x-breadcrum title="All Issues" />
     <div class="datatables">
         <div class="card">
@@ -99,7 +99,7 @@
                     <table class="table mb-0">
                         <thead>
                             <tr>
-                                <th class="ps-4">ID</th>
+                                <th>ID</th>
                                 <th>Date</th>
                                 <th>Category</th>
                                 <th>Description</th>
@@ -112,16 +112,16 @@
                         <tbody>
                             @forelse($issues as $issue)
                             <tr>
-                                <td class="ps-4 fw-medium text-body-secondary">#{{ $issue->pk }}</td>
-                                <td><span class="text-body-secondary">{{ $issue->created_date->format('d M Y') }}</span></td>
+                                <td>#{{ $issue->pk }}</td>
+                                <td>{{ $issue->created_date->format('d M Y') }}</td>
                                 <td>{{ $issue->category->issue_category ?? '—' }}</td>
-                                <td class="text-break" style="max-width: 220px;">{{ Str::limit($issue->description, 50) }}</td>
+                                <td>{{ Str::limit($issue->description, 50) }}</td>
                                 <td>
                                     @php
                                         $p = $issue->priority->priority ?? 'N/A';
                                         $priorityClass = $p == 'High' ? 'danger' : ($p == 'Medium' ? 'warning' : 'info');
                                     @endphp
-                                    <span class="badge badge-pill bg-{{ $priorityClass }} {{ $priorityClass == 'warning' ? 'text-dark' : '' }}">{{ $p }}</span>
+                                    <span class="badge rounded-1 bg-{{ $priorityClass }} {{ $priorityClass == 'warning' ? 'text-dark' : '' }}">{{ $p }}</span>
                                 </td>
                                
                                 <td>
@@ -129,12 +129,12 @@
                                         $s = (int) $issue->issue_status;
                                         $statusClass = $s == 2 ? 'success' : ($s == 1 ? 'info' : ($s == 6 ? 'warning' : 'secondary'));
                                     @endphp
-                                    <span class="badge badge-pill bg-{{ $statusClass }} {{ $statusClass == 'warning' ? 'text-dark' : '' }}">{{ $issue->status_label }}</span>
+                                    <span class="badge rounded-1 bg-{{ $statusClass }} {{ $statusClass == 'warning' ? 'text-dark' : '' }}">{{ $issue->status_label }}</span>
                                 </td>
                                 <td class="pe-4">
                                     <div class="d-flex justify-content-end gap-1">
-                                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-action btn-info btn-sm" title="View">
-                                            <iconify-icon icon="solar:eye-bold"></iconify-icon>
+                                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="text-primary" title="View">
+                                            <i class="material-icons material-symbols-rounded">visibility</i>
                                         </a>
                                         @if($issue->issue_logger == Auth::user()->user_id || $issue->created_by == Auth::user()->user_id)
                                         <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning btn-sm" title="Edit">
@@ -146,10 +146,10 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8" class="p-0">
-                                    <div class="empty-state">
-                                        <div class="empty-state-icon">
-                                            <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1"></iconify-icon>
+                                <td colspan="7" class="p-0 border-0">
+                                    <div class="text-center py-5 px-3">
+                                        <div class="rounded-circle bg-body-secondary bg-opacity-50 d-inline-flex p-4 mb-3">
+                                            <iconify-icon icon="solar:clipboard-list-bold-duotone" class="fs-1 text-body-secondary"></iconify-icon>
                                         </div>
                                         <h6 class="text-body-secondary mb-1">No issues</h6>
                                         <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
@@ -161,18 +161,6 @@
                         </tbody>
                     </table>
                 </div>
-
-                <!-- Pagination -->
-                @if($issues->hasPages())
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-4 py-3 border-top bg-light">
-                    <small class="text-body-secondary">
-                        Showing {{ $issues->firstItem() ?? 0 }} - {{ $issues->lastItem() ?? 0 }} of {{ $issues->total() }}
-                    </small>
-                    <nav aria-label="Issue pagination">
-                        {{ $issues->withQueryString()->links() }}
-                    </nav>
-                </div>
-                @endif
             </div>
         </div>
     </div>

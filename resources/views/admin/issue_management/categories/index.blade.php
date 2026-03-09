@@ -589,6 +589,41 @@
 
 @section('scripts')
 <script>
+(function() {
+    'use strict';
+    document.addEventListener('DOMContentLoaded', function() {
+        var $ = window.jQuery;
+        if (!$ || !$.fn.DataTable) return;
+        var $table = $('#categoriesTable');
+        if (!$table.length) return;
+        var hasDataRows = $table.find('tbody tr').filter(function() { return $(this).find('td[colspan]').length === 0; }).length > 0;
+        if (!hasDataRows) return;
+        if ($.fn.DataTable.isDataTable($table)) return;
+        $table.DataTable({
+            order: [[1, 'asc']],
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            columnDefs: [
+                { orderable: false, targets: [0, 4, 5] }
+            ],
+            language: {
+                search: 'Search categories:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
+                infoEmpty: 'No categories',
+                infoFiltered: '(filtered from _MAX_ total)',
+                zeroRecords: 'No matching categories found',
+                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            },
+            drawCallback: function() {
+                if (typeof window.adjustAllDataTables === 'function') {
+                    try { window.adjustAllDataTables(); } catch (e) {}
+                }
+            }
+        });
+    });
+})();
+
 function editCategory(id, name, description, status) {
     document.getElementById('edit_issue_category').value = name;
     document.getElementById('edit_description').value = description || '';

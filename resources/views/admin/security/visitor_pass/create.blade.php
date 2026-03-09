@@ -208,7 +208,7 @@
                             @error('upload_path')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Optional: Upload ID proof or authorization letter (PDF, JPG, PNG - Max 2MB)</small>
+                            <small class="form-text text-muted d-block">Allowed: PDF, JPG, PNG. Max size: 2 MB</small>
                         </div>
                     </div>
                 </div>
