@@ -22,6 +22,10 @@
                             Add Sub-Category
                         </button>
                     </div>
+                    <button type="button" class="btn btn-primary btn-modern shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addSubCategoryModal">
+                        <iconify-icon icon="solar:add-circle-bold" style="font-size: 1.25rem;"></iconify-icon>
+                        <span>Add Sub-Category</span>
+                    </button>
                 </div>
                 <div class="card-body p-4">
 
@@ -243,10 +247,10 @@ function editSubCategory(id, categoryId, name, status) {
     document.getElementById('edit_issue_category_fk').value = categoryId != null ? String(categoryId) : '';
     document.getElementById('edit_issue_sub_category').value = name;
     document.getElementById('edit_status').value = status;
-    
+
     const form = document.getElementById('editSubCategoryForm');
     form.action = "{{ url('admin/issue-sub-categories') }}/" + id;
-    
+
     const modal = new bootstrap.Modal(document.getElementById('editSubCategoryModal'));
     modal.show();
 }
