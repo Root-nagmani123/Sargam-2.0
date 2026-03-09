@@ -74,8 +74,9 @@ class EstateRequestForEstateDataTable extends DataTable
                 ];
                 $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
                 $currentAlot = trim((string) ($row->current_alot ?? ''));
-                $canRaiseChangeRequest = hasRole('Estate') || hasRole('Admin');
-                $raiseChangeUrl = ($canRaiseChangeRequest && $currentAlot !== '')
+                $hasChangeStatus = (int) ($row->change_status ?? 0) === 1;
+                $canRaiseChangeRequest = (hasRole('Estate') || hasRole('Admin')) && $currentAlot !== '' && ! $hasChangeStatus;
+                $raiseChangeUrl = $canRaiseChangeRequest
                     ? route('admin.estate.raise-change-request', ['id' => $row->pk])
                     : '';
                 $raiseChangeLink = $raiseChangeUrl !== ''
@@ -154,6 +155,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 'estate_home_request_details.current_alot',
                 'estate_home_request_details.eligibility_type_pk',
                 'estate_home_request_details.remarks',
+                'estate_home_request_details.change_status',
             ]);
 
         // Self-service: non-estate/admin/HAC-approval users should only see their own requests.

@@ -308,7 +308,11 @@ $(document).ready(function() {
             if (res.status && res.data) {
                 $.each(res.data, function(i, h) {
                     var sel = (initialSelections.house && initialSelections.house == h.pk) ? 'selected' : '';
-                    $('#estate_house_master_pk').append('<option value="'+h.pk+'" data-house-no="'+h.house_no+'" '+sel+'>'+h.house_no+'</option>');
+                    var meterOne = (h.meter_one != null && h.meter_one !== '') ? String(h.meter_one).replace(/"/g, '&quot;') : '';
+                    var meterTwo = (h.meter_two != null && h.meter_two !== '') ? String(h.meter_two).replace(/"/g, '&quot;') : '';
+                    $('#estate_house_master_pk').append(
+                        '<option value="'+h.pk+'" data-house-no="'+(h.house_no || '')+'" data-meter-one="'+meterOne+'" data-meter-two="'+meterTwo+'" '+sel+'>'+ (h.house_no || '') +'</option>'
+                    );
                 });
                 updateHouseNoDisplay();
                 isInitializing = false;
@@ -323,6 +327,19 @@ $(document).ready(function() {
     function updateHouseNoDisplay() {
         var opt = $('#estate_house_master_pk option:selected');
         $('#house_no').val(opt.data('house-no') || opt.text() || '');
+
+        // Auto-fill electric meter readings from selected house (if fields are empty)
+        var meterOne = opt.data('meter-one');
+        var meterTwo = opt.data('meter-two');
+        var $primary = $('#meter_reading_oth_primary');
+        var $secondary = $('#meter_reading_oth_secondary');
+
+        if ($primary.length && !$primary.val() && meterOne !== undefined && meterOne !== null && meterOne !== '') {
+            $primary.val(meterOne);
+        }
+        if ($secondary.length && !$secondary.val() && meterTwo !== undefined && meterTwo !== null && meterTwo !== '') {
+            $secondary.val(meterTwo);
+        }
     }
 
     // Load initial data if editing

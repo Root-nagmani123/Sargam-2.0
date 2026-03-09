@@ -966,6 +966,18 @@ class EstateController extends Controller
                 ->with('error', 'Change request is only allowed when the employee already has a house allotted (Current Allotment must be set).');
         }
 
+        // Prevent multiple *pending* change requests for the same house request.
+        // As long as there is a change request with change_ap_dis_status = 0 (pending),
+        // do not allow raising another one.
+        $hasPendingChange = DB::table('estate_change_home_req_details')
+            ->where('estate_home_req_details_pk', $id)
+            ->where('change_ap_dis_status', 0)
+            ->exists();
+        if ($hasPendingChange) {
+            return redirect()->route('admin.estate.request-details', ['id' => $id])
+                ->with('error', 'A change request is already pending for this house request. You cannot raise another one until it is decided.');
+        }
+
         $eligibilityMap = [61 => 'Type-I', 62 => 'Type-II', 63 => 'Type-III', 64 => 'Type-IV', 65 => 'Type-V', 66 => 'Type-VI', 69 => 'Type-IX', 70 => 'Type-X', 71 => 'Type-XI', 73 => 'Type-XIII'];
         $detail = (object) [
             'estate_home_req_details_pk' => $id,
@@ -1030,6 +1042,16 @@ class EstateController extends Controller
         if ($currentAlot === '') {
             return redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])
                 ->with('error', 'Change request is only allowed when the employee already has a house allotted.');
+        }
+
+        // Prevent duplicate *pending* change requests for the same house request.
+        $hasPendingChange = DB::table('estate_change_home_req_details')
+            ->where('estate_home_req_details_pk', $homeReqPk)
+            ->where('change_ap_dis_status', 0)
+            ->exists();
+        if ($hasPendingChange) {
+            return redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])
+                ->with('error', 'A change request is already pending for this house request. You cannot raise another one until it is decided.');
         }
 
         $changeReqId = $this->getNextChangeRequestId();
@@ -3076,6 +3098,13 @@ class EstateController extends Controller
 
     /**
      * API: Get houses for estate possession (by campus + block + unit_sub_type).
+     * Returns ONLY vacant houses (used_home_status=0, vacant_renovation_status=1) and
+     * excludes houses that are already in possession tables (estate_possession_details / estate_possession_other).
+     *
+     * Optional filters:
+     * - unit_type_id
+     * - employee_pk (to restrict to eligibility list, same as change request flow)
+     * - include_house_pk (to force-include a specific house, e.g. when editing existing possession)
      */
     public function getPossessionHouses(Request $request)
     {
@@ -3083,18 +3112,84 @@ class EstateController extends Controller
         $blockId = $request->get('block_id');
         $unitSubTypeId = $request->get('unit_sub_type_id');
         $unitTypeId = $request->get('unit_type_id');
-        if (!$campusId || !$blockId || !$unitSubTypeId) {
+        $employeePk = $request->get('employee_pk') ? (int) $request->get('employee_pk') : null;
+        $includeHousePk = $request->get('include_house_pk') ? (int) $request->get('include_house_pk') : null;
+
+        if (! $blockId || ! $unitSubTypeId) {
             return response()->json(['status' => true, 'data' => []]);
         }
 
-        $houses = DB::table('estate_house_master')
-            ->where('estate_campus_master_pk', $campusId)
+        // Houses currently occupied in either regular or "other" possession (and not yet returned)
+        $occupiedDetails = DB::table('estate_possession_details')
+            ->whereNotNull('estate_house_master_pk');
+        if (Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+            $occupiedDetails->where('return_home_status', 0);
+        }
+        $occupiedHousePks = $occupiedDetails->pluck('estate_house_master_pk')
+            ->merge(
+                DB::table('estate_possession_other')
+                    ->whereNotNull('estate_house_master_pk')
+                    ->where('return_home_status', 0)
+                    ->pluck('estate_house_master_pk')
+            )
+            ->unique()
+            ->values();
+
+        // If we are editing an existing possession, allow its house to appear even if currently occupied.
+        if ($includeHousePk) {
+            $occupiedHousePks = $occupiedHousePks
+                ->reject(fn ($pk) => (int) $pk === $includeHousePk)
+                ->values();
+        }
+
+        $query = DB::table('estate_house_master')
             ->where('estate_block_master_pk', $blockId)
             ->where('estate_unit_sub_type_master_pk', $unitSubTypeId)
+            ->where('used_home_status', 0)
+            ->where('vacant_renovation_status', 1)
+            ->where(function ($q) {
+                $q->whereNotNull('house_no')
+                    ->where('house_no', '!=', '')
+                    ->where('house_no', '!=', '0');
+            })
+            ->when($campusId, function ($q) use ($campusId) {
+                $q->where('estate_campus_master_pk', $campusId);
+            })
             ->when($unitTypeId, function ($q) use ($unitTypeId) {
                 $q->where('estate_unit_master_pk', $unitTypeId);
             })
-            ->select('pk', 'house_no')
+            ->whereNotIn('pk', $occupiedHousePks);
+
+        // If employee-based eligibility is provided, reuse the same logic as change-request vacant houses.
+        if ($employeePk) {
+            $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
+            if ($eligibleHousePks->isNotEmpty()) {
+                $query->whereIn('pk', $eligibleHousePks->toArray());
+            } elseif ($includeHousePk) {
+                // Fallback: show the specific included house even if not in eligibility list
+                $includeHouse = DB::table('estate_house_master')
+                    ->where('pk', $includeHousePk)
+                    ->where('estate_block_master_pk', $blockId)
+                    ->where('estate_unit_sub_type_master_pk', $unitSubTypeId)
+                    ->when($campusId, fn ($q) => $q->where('estate_campus_master_pk', $campusId))
+                    ->when($unitTypeId, fn ($q) => $q->where('estate_unit_master_pk', $unitTypeId))
+                    ->select('pk', 'house_no', 'meter_one', 'meter_two')
+                    ->first();
+                if ($includeHouse) {
+                    $houses = collect([(object) [
+                        'pk' => (int) $includeHouse->pk,
+                        'house_no' => $includeHouse->house_no ?? '',
+                        'meter_one' => $includeHouse->meter_one ?? null,
+                        'meter_two' => $includeHouse->meter_two ?? null,
+                    ]]);
+
+                    return response()->json(['status' => true, 'data' => $houses->values()->all()]);
+                }
+            }
+        }
+
+        $houses = $query
+            ->select('pk', 'house_no', 'meter_one', 'meter_two')
             ->orderBy('house_no')
             ->get();
 
@@ -4145,7 +4240,7 @@ class EstateController extends Controller
                 'last_reading_date' => $row->from_date ? \Carbon\Carbon::parse($row->from_date)->format('d/m/Y') : 'N/A',
             ];
             $pushed = false;
-            // Meter 1 - prefill new_meter_no / new_meter_reading from existing when present
+            // Meter 1 - prefill new_meter_no / new_meter_reading from saved reading when present, else from possession
             if ($hasMeterOne) {
                 $last1 = $row->last_month_elec_red;
                 $curr1 = $row->curr_month_elec_red;
@@ -4158,18 +4253,23 @@ class EstateController extends Controller
                     ? $row->last_month_elec_red
                     : ($epdPrimaryReading ?? $epdSecondaryReading ?? 'N/A');
 
+                // If a current-month reading already exists for this row, use it to prefill.
+                // Otherwise, fall back to the possession's electric_meter_reading (first-time entry).
+                $newMeterReading1 = ($curr1 !== null && $curr1 !== '' && (int) $curr1 > 0)
+                    ? (string) $curr1
+                    : $newMeterReadingFromPossession;
+
                 $rows->push(array_merge($base, [
                     'meter_slot' => 1,
                     'old_meter_no' => (string) $meterOne,
                     'electric_meter_reading' => $displayLast1,
                     'new_meter_no' => $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : '',
-                    // Business requirement: always prefill from estate_possession_details.electric_meter_reading.
-                    'new_meter_reading' => $newMeterReadingFromPossession,
+                    'new_meter_reading' => $newMeterReading1,
                     'unit' => $unit1,
                 ]));
                 $pushed = true;
             }
-            // Meter 2
+            // Meter 2 - same logic as Meter 1 for prefill
             if ($hasMeterTwo) {
                 $last2 = $row->last_month_elec_red2;
                 $curr2 = $row->curr_month_elec_red2;
@@ -4182,13 +4282,16 @@ class EstateController extends Controller
                     ? $row->last_month_elec_red2
                     : ($epdSecondaryReading ?? $epdPrimaryReading ?? 'N/A');
 
+                $newMeterReading2 = ($curr2 !== null && $curr2 !== '' && (int) $curr2 > 0)
+                    ? (string) $curr2
+                    : $newMeterReadingFromPossession;
+
                 $rows->push(array_merge($base, [
                     'meter_slot' => 2,
                     'old_meter_no' => (string) $meterTwo,
                     'electric_meter_reading' => $displayLast2,
                     'new_meter_no' => $row->emrd_meter_two !== null && $row->emrd_meter_two !== '' ? (string) $row->emrd_meter_two : '',
-                    // Business requirement: always prefill from estate_possession_details.electric_meter_reading.
-                    'new_meter_reading' => $newMeterReadingFromPossession,
+                    'new_meter_reading' => $newMeterReading2,
                     'unit' => $unit2,
                 ]));
                 $pushed = true;
