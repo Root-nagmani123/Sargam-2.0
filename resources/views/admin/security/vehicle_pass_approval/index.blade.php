@@ -30,11 +30,13 @@
                 <table class="table table-striped mb-0">
                     <thead>
                         <tr>
+                         <th>Employee Name</th>
                             <th>Vehicle Number</th>
-                            <th>Request Type</th>
-                            <th>Employee Name</th>
-                            <th>Employee ID</th>
                             <th>Vehicle Type</th>
+                            <th>Request Type</th>
+                            <th>Vehicle Pass No</th>
+                            <th>Employee ID</th>
+                            
                             <th>Applied On</th>
                             <th>Actions</th>
                         </tr>
@@ -42,7 +44,9 @@
                     <tbody>
                         @forelse($pendingApplications as $app)
                             <tr>
+                             <td>{{ $app->employee_name ?? '--' }}</td>
                                 <td><strong>{{ $app->vehicle_number ?? '--' }}</strong></td>
+                                 <td>{{ $app->vehicle_type ?? '--' }}</td>
                                 <td>
                                     @if(isset($app->request_type) && $app->request_type === 'duplicate')
                                         <span class="badge bg-warning">Duplicate</span>
@@ -50,9 +54,9 @@
                                         <span class="badge bg-info">Regular</span>
                                     @endif
                                 </td>
-                                <td>{{ $app->employee_name ?? '--' }}</td>
+                                <td>{{ $app->vehicle_pass_no ?? '--' }}</td>
                                 <td><code>{{ $app->employee_id ?? '--' }}</code></td>
-                                <td>{{ $app->vehicle_type ?? '--' }}</td>
+                               
                                 <td>{{ $app->created_date ? \Carbon\Carbon::parse($app->created_date)->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
