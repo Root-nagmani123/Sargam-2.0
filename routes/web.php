@@ -792,3 +792,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
 });
 
+Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
+    ->middleware('auth');
