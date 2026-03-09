@@ -111,7 +111,7 @@
                                     <td class="align-middle fw-medium row-sno">{{ $idx + 1 }}</td>
                                     <td class="align-middle">
                                         <input type="hidden" name="members[{{ $idx }}][id]" value="{{ $member->id }}">
-                                        <input type="text" name="members[{{ $idx }}][name]" class="form-control form-control-sm member-name" value="{{ old('members.'.$idx.'.name', $member->name ?? '') }}" placeholder="Name" required>
+                                        <input type="text" name="members[{{ $idx }}][name]" class="form-control  member-name" value="{{ old('members.'.$idx.'.name', $member->name ?? '') }}" placeholder="Name" required>
                                     </td>
                                     <td class="align-middle">
                                         <select name="members[{{ $idx }}][relation]" class="form-select form-select-sm">
@@ -122,13 +122,13 @@
                                         </select>
                                     </td>
                                     <td class="align-middle">
-                                        <input type="date" name="members[{{ $idx }}][dob]" class="form-control form-control-sm" value="{{ old('members.'.$idx.'.dob', $member->dob ? $member->dob->format('Y-m-d') : '') }}">
+                                        <input type="date" name="members[{{ $idx }}][dob]" class="form-control " value="{{ old('members.'.$idx.'.dob', $member->dob ? $member->dob->format('Y-m-d') : '') }}">
                                     </td>
                                     <td class="align-middle">
-                                        <input type="date" name="members[{{ $idx }}][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}" value="{{ old('members.'.$idx.'.valid_from', $member->valid_from ? $member->valid_from->format('Y-m-d') : '') }}">
+                                        <input type="date" name="members[{{ $idx }}][valid_from]" class="form-control  valid-from-field" min="{{ date('Y-m-d') }}" value="{{ old('members.'.$idx.'.valid_from', $member->valid_from ? $member->valid_from->format('Y-m-d') : '') }}">
                                     </td>
                                     <td class="align-middle">
-                                        <input type="date" name="members[{{ $idx }}][valid_to]" class="form-control form-control-sm" value="{{ old('members.'.$idx.'.valid_to', $member->valid_to ? $member->valid_to->format('Y-m-d') : '') }}">
+                                        <input type="date" name="members[{{ $idx }}][valid_to]" class="form-control " value="{{ old('members.'.$idx.'.valid_to', $member->valid_to ? $member->valid_to->format('Y-m-d') : '') }}">
                                     </td>
                                     <td class="align-middle">
                                         <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{ $idx }}">
@@ -170,7 +170,7 @@
                     <tr class="family-member-row" data-row-index="{{INDEX}}">
                         <td class="align-middle fw-medium row-sno">{{SNO}}</td>
                         <td class="align-middle">
-                            <input type="text" name="members[{{INDEX}}][name]" class="form-control form-control-sm member-name" placeholder="Name" required>
+                            <input type="text" name="members[{{INDEX}}][name]" class="form-control  member-name" placeholder="Name" required>
                         </td>
                         <td class="align-middle">
                             <select name="members[{{INDEX}}][relation]" class="form-select form-select-sm">
@@ -186,13 +186,13 @@
                             </select>
                         </td>
                         <td class="align-middle">
-                            <input type="date" name="members[{{INDEX}}][dob]" class="form-control form-control-sm">
+                            <input type="date" name="members[{{INDEX}}][dob]" class="form-control ">
                         </td>
                         <td class="align-middle">
-                            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}">
+                            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control  valid-from-field" min="{{ date('Y-m-d') }}">
                         </td>
                         <td class="align-middle">
-                            <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control form-control-sm">
+                            <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control ">
                         </td>
                         <td class="align-middle">
                             <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">
@@ -234,7 +234,7 @@
             <td class="align-middle fw-medium row-sno">{{SNO}}</td>
             <td class="align-middle">
                 <input type="hidden" name="members[{{INDEX}}][id]" value="">
-                <input type="text" name="members[{{INDEX}}][name]" class="form-control form-control-sm member-name" placeholder="Name" required>
+                <input type="text" name="members[{{INDEX}}][name]" class="form-control  member-name" placeholder="Name" required>
             </td>
             <td class="align-middle">
                 <select name="members[{{INDEX}}][relation]" class="form-select form-select-sm">
@@ -250,13 +250,13 @@
                 </select>
             </td>
             <td class="align-middle">
-                <input type="date" name="members[{{INDEX}}][dob]" class="form-control form-control-sm">
+                <input type="date" name="members[{{INDEX}}][dob]" class="form-control ">
             </td>
             <td class="align-middle">
-                <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control form-control-sm valid-from-field">
+                <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control  valid-from-field">
             </td>
             <td class="align-middle">
-                <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control form-control-sm">
+                <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control ">
             </td>
             <td class="align-middle">
                 <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">

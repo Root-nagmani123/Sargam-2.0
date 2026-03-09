@@ -361,7 +361,7 @@
                         <label for="date-filter" class="form-label mb-0 fw-semibold">
                             <i class="bi bi-calendar-event me-2"></i>Filter by Date:
                         </label>
-                        <input type="date" class="form-control form-control-sm mt-2" id="date-filter"
+                        <input type="date" class="form-control  mt-2" id="date-filter"
                             style="max-width: 200px;">
                     </div>
                     <div class="col-md-6 text-end">
@@ -499,7 +499,7 @@
                                                         {{-- Remarks --}}
                                                         <td style="min-width: 180px;">
                                                             @if ($feedback->Remark_checkbox == 1)
-                                                                <textarea class="form-control form-control-sm" name="remarks[{{ $loop->index }}]" rows="2"
+                                                                <textarea class="form-control " name="remarks[{{ $loop->index }}]" rows="2"
                                                                     placeholder="Enter remarks...">{{ old('remarks.' . $loop->index) }}</textarea>
                                                             @endif
                                                         </td>
