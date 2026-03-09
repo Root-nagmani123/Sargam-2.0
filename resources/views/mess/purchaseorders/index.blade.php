@@ -24,11 +24,11 @@
                     <div class="row g-2 align-items-end">
                         <div class="col-md-2">
                             <label class="form-label small mb-0">Date From</label>
-                            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ $filterDateFrom }}">
+                            <input type="date" name="date_from" class="form-control " value="{{ $filterDateFrom }}">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small mb-0">Date To</label>
-                            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ $filterDateTo }}">
+                            <input type="date" name="date_to" class="form-control " value="{{ $filterDateTo }}">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small mb-0">Vendor</label>
@@ -286,12 +286,12 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control form-control-sm po-unit" readonly placeholder="—"></td>
-                                            <td><input type="text" name="items[0][item_code_display]" class="form-control form-control-sm po-item-code" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control form-control-sm po-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][unit_price]" class="form-control form-control-sm po-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="number" name="items[0][tax_percent]" class="form-control form-control-sm po-tax" step="0.01" min="0" max="100" value="0" placeholder="0"></td>
-                                            <td><input type="text" name="items[0][total_display]" class="form-control form-control-sm po-line-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" name="items[0][unit]" class="form-control  po-unit" readonly placeholder="—"></td>
+                                            <td><input type="text" name="items[0][item_code_display]" class="form-control  po-item-code" readonly placeholder="—"></td>
+                                            <td><input type="number" name="items[0][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td><input type="number" name="items[0][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="number" name="items[0][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="0" placeholder="0"></td>
+                                            <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn btn-sm btn-outline-danger po-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -589,12 +589,12 @@
                     ${options}
                 </select>
             </td>
-            <td><input type="text" name="items[${index}][unit]" class="form-control form-control-sm po-unit" readonly placeholder="—" value="${unit}"></td>
-            <td><input type="text" class="form-control form-control-sm po-item-code" readonly placeholder="—" value="${code}"></td>
-            <td><input type="number" name="items[${index}][quantity]" class="form-control form-control-sm po-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
-            <td><input type="number" name="items[${index}][unit_price]" class="form-control form-control-sm po-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
-            <td><input type="number" name="items[${index}][tax_percent]" class="form-control form-control-sm po-tax" step="0.01" min="0" max="100" value="${tax}" placeholder="0"></td>
-            <td><input type="text" class="form-control form-control-sm po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
+            <td><input type="text" name="items[${index}][unit]" class="form-control  po-unit" readonly placeholder="—" value="${unit}"></td>
+            <td><input type="text" class="form-control  po-item-code" readonly placeholder="—" value="${code}"></td>
+            <td><input type="number" name="items[${index}][quantity]" class="form-control  po-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
+            <td><input type="number" name="items[${index}][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
+            <td><input type="number" name="items[${index}][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="${tax}" placeholder="0"></td>
+            <td><input type="text" class="form-control  po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
             <td><button type="button" class="btn btn-sm btn-outline-danger po-remove-row" title="Remove">×</button></td>
         </tr>`;
     }

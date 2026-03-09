@@ -49,11 +49,11 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm" value="{{ request('start_date') ?? date('Y-m-d') }}">
+                        <input type="date" name="start_date" id="filter_start_date" class="form-control " value="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                        <input type="date" name="end_date" id="filter_end_date" class="form-control " value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
                     <div class="col-md-2 d-flex align-items-end gap-2">
                         <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
@@ -393,16 +393,16 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>
+                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="number" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>
-                                            <td><input type="date" name="items[0][issue_date]" class="form-control form-control-sm dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control form-control-sm dr-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>
+                                            <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
+                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -1079,13 +1079,13 @@
             }).join('');
             return '<tr class="dr-item-row">' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
-                '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-                '<td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>' +
-                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control form-control-sm dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
-                '<td><input type="text" class="form-control form-control-sm dr-total bg-light" readonly placeholder="0.00"></td>' +
+                '<td><input type="text" name="items[' + index + '][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>' +
+                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
+                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
+                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
+                '<td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>' +
                 '<td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row" title="Remove">×</button></td>' +
                 '</tr>';
         }
@@ -1909,13 +1909,13 @@
             const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) : '';
             return '<tr class="edit-dr-item-row">' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
-                '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-                '<td><input type="text" class="form-control form-control-sm edit-dr-left bg-light" readonly value="' + left + '"></td>' +
-                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control form-control-sm edit-dr-issue-date" value="' + issueDate + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
-                '<td><input type="text" class="form-control form-control-sm edit-dr-total bg-light" readonly value="' + total + '"></td>' +
+                '<td><input type="text" name="items[' + index + '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
+                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
+                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left + '"></td>' +
+                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
+                '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total + '"></td>' +
                 '<td><button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row" title="Remove">×</button></td>' +
                 '</tr>';
         }
@@ -2096,8 +2096,8 @@
                         const issuedQty = parseFloat(qty) || 0;
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
-                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();

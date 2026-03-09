@@ -22,11 +22,11 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <input type="date" name="from_date" class="form-control form-control-sm" 
+                    <input type="date" name="from_date" class="form-control " 
                            value="{{ request('from_date') }}" placeholder="From Date">
                 </div>
                 <div class="col-md-3">
-                    <input type="date" name="to_date" class="form-control form-control-sm" 
+                    <input type="date" name="to_date" class="form-control " 
                            value="{{ request('to_date') }}" placeholder="To Date">
                 </div>
                 <div class="col-md-2">

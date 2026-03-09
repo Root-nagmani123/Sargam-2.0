@@ -120,15 +120,15 @@
                                         @endforeach
                                     </select>
                                 </td>
-                                <td><input type="text" name="items[0][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>
-                                <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                <td><input type="text" name="items[0][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>
+                                <td><input type="number" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
                                 <td>
-                                    <input type="number" name="items[0][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required>
+                                    <input type="number" name="items[0][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" required>
                                     <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                 </td>
-                                <td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0"></td>
-                                <td><input type="number" name="items[0][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" required></td>
-                                <td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00"></td>
+                                <td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0"></td>
+                                <td><input type="number" name="items[0][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" required></td>
+                                <td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00"></td>
                                 <td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" disabled title="Remove">×</button></td>
                             </tr>
                         </tbody>
@@ -186,12 +186,12 @@
         ).join('');
         return '<tr class="sv-item-row">' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
-            '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm sv-unit" readonly placeholder="—"></td>' +
-            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
-            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm sv-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-            '<td><input type="text" class="form-control form-control-sm sv-left bg-light" readonly placeholder="0"></td>' +
-            '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm sv-rate" step="0.01" min="0" placeholder="0" required></td>' +
-            '<td><input type="text" class="form-control form-control-sm sv-total bg-light" readonly placeholder="0.00"></td>' +
+            '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>' +
+            '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
+            '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+            '<td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0"></td>' +
+            '<td><input type="number" name="items[' + index + '][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" required></td>' +
+            '<td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00"></td>' +
             '<td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" title="Remove">×</button></td>' +
             '</tr>';
     }

@@ -230,7 +230,7 @@
     @if(!request('print_all') && isset($paginator) && $paginator->hasPages())
         <div class="d-flex align-items-center gap-2 mt-3 no-print pagination-custom">
             <span class="text-secondary">Page</span>
-            <input type="number" class="form-control form-control-sm pagination-page-input" id="paginationPageInput"
+            <input type="number" class="form-control  pagination-page-input" id="paginationPageInput"
                 value="{{ $paginator->currentPage() }}" min="1" max="{{ $paginator->lastPage() }}"
                 style="width: 60px; display: inline-block;">
             <span class="text-secondary">of {{ $paginator->lastPage() }}</span>

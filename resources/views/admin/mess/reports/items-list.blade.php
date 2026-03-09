@@ -23,7 +23,7 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <input type="text" name="search" class="form-control form-control-sm" 
+                    <input type="text" name="search" class="form-control " 
                            placeholder="Search by item name or code..." 
                            value="{{ request('search') }}">
                 </div>

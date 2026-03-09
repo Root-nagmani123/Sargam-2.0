@@ -17,15 +17,15 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">From Date</label>
-                        <input type="date" name="from_date" class="form-control form-control-sm" value="{{ $fromDate }}">
+                        <input type="date" name="from_date" class="form-control " value="{{ $fromDate }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">To Date</label>
-                        <input type="date" name="to_date" class="form-control form-control-sm" value="{{ $toDate }}">
+                        <input type="date" name="to_date" class="form-control " value="{{ $toDate }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Vendor Name</label>
-                        <select name="vendor_id" class="form-select form-select-sm choices-select" data-placeholder="All Vendors">
+                        <select name="vendor_id" class="form-select rounded-1 choices-select" data-placeholder="All Vendors">
                             <option value="">All Vendors</option>
                             @foreach($vendors as $vendor)
                                 <option value="{{ $vendor->id }}" {{ request('vendor_id') == $vendor->id ? 'selected' : '' }}>{{ $vendor->name }}</option>
@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold">Select Store Name</label>
-                        <select name="store_id" class="form-select form-select-sm choices-select" data-placeholder="All Stores">
+                        <select name="store_id" class="form-select rounded-1 choices-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ request('store_id') == $store->id ? 'selected' : '' }}>{{ $store->store_name }}</option>
@@ -44,17 +44,17 @@
                 </div>
                 <div class="mt-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                        <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
                             <span class="material-symbols-rounded" style="font-size: 1rem;">filter_list</span>
                             <span>Apply Filters</span>
                         </button>
-                        <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                        <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
                             <span class="material-symbols-rounded" style="font-size: 1rem;">refresh</span>
                             <span>Reset</span>
                         </a>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printStockPurchaseTable()" title="Print report or Save as PDF">
+                        <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" onclick="printStockPurchaseTable()" title="Print report or Save as PDF">
                             <span class="material-symbols-rounded" style="font-size: 1rem;">print</span>
                             <span>Print</span>
                         </button>
@@ -81,7 +81,7 @@
                             <a href="{{ $purchaseOrders->previousPageUrl() }}" class="btn btn-sm btn-outline-secondary" @if($purchaseOrders->onFirstPage()) disabled @endif aria-label="Previous">
                                 <span class="material-symbols-rounded" style="font-size: 18px;">chevron_left</span>
                             </a>
-                            <span class="px-2 small text-nowrap">Page <input type="number" min="1" max="{{ $purchaseOrders->lastPage() }}" value="{{ $purchaseOrders->currentPage() }}" data-max-page="{{ $purchaseOrders->lastPage() }}" class="form-control form-control-sm text-center page-input" style="width: 3rem;" onchange="(function(input){ var max=parseInt(input.dataset.maxPage,10)||1; var p=parseInt(input.value,10); if(!isNaN(p) && p>=1 && p<=max){ var q=new URLSearchParams(window.location.search); q.set('page',p); window.location='{{ url()->current() }}?'+q.toString(); }})(this)"> of {{ $purchaseOrders->lastPage() }}</span>
+                            <span class="px-2 small text-nowrap">Page <input type="number" min="1" max="{{ $purchaseOrders->lastPage() }}" value="{{ $purchaseOrders->currentPage() }}" data-max-page="{{ $purchaseOrders->lastPage() }}" class="form-control  text-center page-input" style="width: 3rem;" onchange="(function(input){ var max=parseInt(input.dataset.maxPage,10)||1; var p=parseInt(input.value,10); if(!isNaN(p) && p>=1 && p<=max){ var q=new URLSearchParams(window.location.search); q.set('page',p); window.location='{{ url()->current() }}?'+q.toString(); }})(this)"> of {{ $purchaseOrders->lastPage() }}</span>
                             <a href="{{ $purchaseOrders->nextPageUrl() }}" class="btn btn-sm btn-outline-secondary" @if(!$purchaseOrders->hasMorePages()) disabled @endif aria-label="Next">
                                 <span class="material-symbols-rounded" style="font-size: 18px;">chevron_right</span>
                             </a>

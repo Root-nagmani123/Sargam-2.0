@@ -50,7 +50,7 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control form-control-sm" 
+                    <input type="text" name="search" class="form-control " 
                            placeholder="Search by bill number or user name..." 
                            value="{{ request('search') }}">
                 </div>

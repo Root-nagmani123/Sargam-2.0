@@ -14,12 +14,12 @@
             <div class="row g-2">
                 <div class="col-md-3">
                     <label class="form-label">From Date</label>
-                    <input type="date" name="from_date" class="form-control form-control-sm" 
+                    <input type="date" name="from_date" class="form-control " 
                            value="{{ request('from_date') }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">To Date</label>
-                    <input type="date" name="to_date" class="form-control form-control-sm" 
+                    <input type="date" name="to_date" class="form-control " 
                            value="{{ request('to_date') }}">
                 </div>
                 <div class="col-md-2">

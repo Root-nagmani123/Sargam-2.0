@@ -38,7 +38,7 @@
         </div>
         <div class="col d-flex justify-content-end">
             <label class="col-form-label col-form-label-sm text-muted me-2">Search:</label>
-            <input type="search" class="form-control form-control-sm d-inline-block" id="storeAllocationSearch" placeholder="" style="max-width: 260px;">
+            <input type="search" class="form-control  d-inline-block" id="storeAllocationSearch" placeholder="" style="max-width: 260px;">
         </div>
     </div>
 
@@ -178,10 +178,10 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="number" name="items[0][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" required></td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><input type="number" name="items[0][quantity]" class="form-control  alloc-qty" step="0.01" min="0.01" placeholder="0" required></td>
+                                            <td><input type="text" name="items[0][unit]" class="form-control  alloc-unit" readonly placeholder="—"></td>
+                                            <td><input type="number" name="items[0][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
@@ -440,10 +440,10 @@
                     ${options}
                 </select>
             </td>
-            <td><input type="number" name="items[${index}][quantity]" class="form-control form-control-sm alloc-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
-            <td><input type="text" name="items[${index}][unit]" class="form-control form-control-sm alloc-unit" readonly placeholder="—" value="${unit}"></td>
-            <td><input type="number" name="items[${index}][unit_price]" class="form-control form-control-sm alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
-            <td><input type="text" class="form-control form-control-sm alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
+            <td><input type="number" name="items[${index}][quantity]" class="form-control  alloc-qty" step="0.01" min="0.01" placeholder="0" value="${qty}" required></td>
+            <td><input type="text" name="items[${index}][unit]" class="form-control  alloc-unit" readonly placeholder="—" value="${unit}"></td>
+            <td><input type="number" name="items[${index}][unit_price]" class="form-control  alloc-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
+            <td><input type="text" class="form-control  alloc-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
             <td><button type="button" class="btn btn-sm btn-outline-danger alloc-remove-row" title="Remove">×</button></td>
         </tr>`;
     }
