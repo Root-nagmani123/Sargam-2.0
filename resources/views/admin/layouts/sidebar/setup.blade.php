@@ -88,8 +88,8 @@
                                                         <i class="material-icons menu-icon material-symbols-rounded">shield</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Security</span>
-                                          
-                                             @if (!hasRole('Student-OT')) 
+</a>
+</li>
                                             <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
