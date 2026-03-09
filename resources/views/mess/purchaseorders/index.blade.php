@@ -95,7 +95,9 @@
                                     <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-primary bg-transparent border-0" title="Delete" style="display: none;"><i class="material-icons material-symbol-rounded">delete</i></button>
+                                        <button type="submit" class="text-primary bg-transparent border-0" title="Delete" style="display: none;">
+                                            <i class="material-symbols-rounded">delete</i>
+                                        </button>
                                     </form>
                                 </td>
                             </tr>

@@ -4,74 +4,89 @@
 <div class="container-fluid">
     <x-breadcrum title="Sub Store Master"></x-breadcrum>
     <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Sub Store Master</h4>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
-                    Add Sub Store
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header border-0 bg-body-tertiary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h4 class="mb-0 fw-semibold">Sub Store Master</h4>
+                    <p class="mb-0 text-muted small">Manage all mess sub stores in one place.</p>
+                </div>
+                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
+                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+                    <span>Add Sub Store</span>
                 </button>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
+            <div class="card-body">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
 
-            <div class="table-responsive">
-                <table id="subStoresTable" class="table  align-middle w-100">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Sub Store Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($subStores as $subStore)
+                <div class="table-responsive">
+                    <table id="subStoresTable" class="table text-nowrap align-middle mb-0 w-100">
+                        <thead>
                             <tr>
-                                <td>{{ $subStore->id }}</td>
-                                <td><div class="fw-semibold">{{ $subStore->sub_store_name }}</div></td>
-                                <td>
-                                    <span class="badge bg-{{ $subStore->status_badge_class }}">
-                                        {{ $subStore->status_label }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="text-primary btn-edit-substore bg-transparent border-0"
+                                <th style="width: 70px;" class="text-center">#</th>
+                                <th>Sub Store Name</th>
+                                <th style="width: 140px;">Status</th>
+                                <th style="width: 120px;" class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($subStores as $subStore)
+                                <tr>
+                                    <td class="text-center">{{ $subStore->id }}</td>
+                                    <td><div class="fw-semibold text-truncate">{{ $subStore->sub_store_name }}</div></td>
+                                    <td>
+                                        <span class="badge bg-{{ $subStore->status_badge_class }} px-3 py-2">
+                                            {{ $subStore->status_label }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-inline-flex gap-1 flex-wrap justify-content-center">
+                                            <button
+                                                type="button"
+                                                class=" text-primary d-inline-flex align-items-center justify-content-center bg-transparent border-0 btn-edit-substore"
                                                 data-id="{{ $subStore->id }}"
                                                 data-sub-store-name="{{ e($subStore->sub_store_name) }}"
                                                 data-status="{{ e($subStore->status ?? 'active') }}"
-                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}" class="d-inline"
-                                              onsubmit="return confirm('Are you sure you want to delete this sub store?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                                title="Edit"
+                                            >
+                                                <i class="material-symbols-rounded">edit</i>
+                                            </button>
+                                            <form
+                                                method="POST"
+                                                action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}"
+                                                class="d-inline"
+                                                onsubmit="return confirm('Are you sure you want to delete this sub store?');"
+                                            >
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-primary d-inline-flex align-items-center justify-content-center bg-transparent border-0" title="Delete" style="display: none;">
+                                                    <i class="material-symbols-rounded">delete</i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
         </div>
     </div>
 </div>
 
 {{-- Create Sub Store Modal --}}
 <div class="modal fade" id="createSubStoreModal" tabindex="-1" aria-labelledby="createSubStoreModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-3">
             <form method="POST" action="{{ route('admin.mess.sub-stores.store') }}">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-0 bg-body-tertiary">
                     <h5 class="modal-title fw-semibold" id="createSubStoreModalLabel">Add Sub Store</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -88,12 +103,12 @@
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
-                            <div class="text-muted small">Default is Active.</div>
+                            <div class="text-muted small mt-1">Default is Active.</div>
                             @error('status')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
+                <div class="modal-footer border-0 bg-body-tertiary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
@@ -104,12 +119,12 @@
 
 {{-- Edit Sub Store Modal --}}
 <div class="modal fade" id="editSubStoreModal" tabindex="-1" aria-labelledby="editSubStoreModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-3">
             <form id="editSubStoreForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-0 bg-body-tertiary">
                     <h5 class="modal-title fw-semibold" id="editSubStoreModalLabel">Edit Sub Store</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -128,7 +143,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
+                <div class="modal-footer border-0 bg-body-tertiary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </div>
@@ -156,6 +171,9 @@ document.addEventListener('DOMContentLoaded', function() {
 @endpush
 
 <style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
+.table thead th {
+    background-color: var(--bs-primary) !important;
+    color: #fff !important;
+}
 </style>
 @endsection

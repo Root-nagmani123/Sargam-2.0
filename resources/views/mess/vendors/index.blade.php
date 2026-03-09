@@ -58,7 +58,7 @@
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
                                             data-account-number="{{ e($vendor->account_number ?? '') }}" title="View"><i
-                                                class="material-icons material-symbol-rounded">visibility</i></button>
+                                                class="material-symbols-rounded">visibility</i></button>
                                         <button type="button"
                                             class="text-primary btn-edit-vendor bg-transparent border-0"
                                             data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
@@ -70,7 +70,7 @@
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
                                             data-account-number="{{ e($vendor->account_number ?? '') }}" title="Edit"><i
-                                                class="material-icons material-symbol-rounded">edit</i></button>
+                                                class="material-symbols-rounded">edit</i></button>
                                         <form method="POST"
                                             action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
                                             class="d-inline"

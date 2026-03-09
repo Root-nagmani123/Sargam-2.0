@@ -52,7 +52,7 @@
                                                 data-client-type="{{ e($clientType->client_type) }}"
                                                 data-client-name="{{ e($clientType->client_name) }}"
                                                 data-status="{{ e($clientType->status ?? 'active') }}"
-                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
+                                                title="Edit"><i class="material-symbols-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this client type?');">
                                             @csrf

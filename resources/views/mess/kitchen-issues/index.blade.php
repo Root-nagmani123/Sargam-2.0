@@ -66,10 +66,10 @@
     </div>
     <hr class="my-2">
         <div class="table-responsive sv-table-wrapper">
-        <table class="table align-middle mb-0" id="sellingVouchersTable">
+        <table class="table text-nowrap align-middle mb-0" id="sellingVouchersTable">
             <thead>
                 <tr>
-                    <th>Serial No.</th>
+                    <th>S. No.</th>
                     <th>Item Name</th>
                     <th>Item Quantity</th>
                     <th>Return Quantity</th>
@@ -112,12 +112,12 @@
                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
+                                <button type="button" class="btn btn-sm btn-info btn-view-sv text-primary bg-transparent border-0" data-voucher-id="{{ $voucher->pk }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv text-primary bg-transparent border-0" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
                                 </form>
                             </td>
                         </tr>
