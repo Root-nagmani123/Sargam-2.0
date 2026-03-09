@@ -192,7 +192,7 @@
                         <div class="d-flex align-items-center">
                             <label for="maxMarks{{ $group->id }}" class="visually-hidden">Max Marks</label>
                             <input type="number" id="maxMarks{{ $group->id }}"
-                                class="form-control form-control-sm max-marks-input"
+                                class="form-control  max-marks-input"
                                 data-id="{{ $group->id }}" value="{{ $group->max_marks ?? 10 }}"
                                 step="0.01" min="1" max="100" style="width: 90px;"
                                 aria-label="Enter Max Marks">

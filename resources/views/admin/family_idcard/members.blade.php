@@ -41,7 +41,7 @@
                         </ul>
                     </div>
                     <label class="mb-0 small text-muted">Search with in table:</label>
-                    <input type="search" class="form-control form-control-sm" id="membersTableSearch" placeholder="Search..." style="max-width:200px;">
+                    <input type="search" class="form-control " id="membersTableSearch" placeholder="Search..." style="max-width:200px;">
                 </div>
             </div>
 

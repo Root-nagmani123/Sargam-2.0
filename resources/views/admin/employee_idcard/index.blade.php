@@ -87,15 +87,15 @@
             <form method="GET" action="{{ route('admin.employee_idcard.index') }}" class="row g-3 align-items-end" id="idcardFilterForm">
                 <div class="col-12 col-md-3">
                     <label for="idcardSearch" class="form-label small text-muted mb-0">Search by Name</label>
-                    <input type="search" name="search" id="idcardSearch" class="form-control form-control-sm" placeholder="Employee name..." value="{{ old('search', $search ?? '') }}">
+                    <input type="search" name="search" id="idcardSearch" class="form-control " placeholder="Employee name..." value="{{ old('search', $search ?? '') }}">
                 </div>
                 <div class="col-12 col-md-2">
                     <label for="dateFrom" class="form-label small text-muted mb-0">Date From</label>
-                    <input type="date" name="date_from" id="dateFrom" class="form-control form-control-sm" value="{{ old('date_from', $dateFrom ?? '') }}">
+                    <input type="date" name="date_from" id="dateFrom" class="form-control " value="{{ old('date_from', $dateFrom ?? '') }}">
                 </div>
                 <div class="col-12 col-md-2">
                     <label for="dateTo" class="form-label small text-muted mb-0">Date To</label>
-                    <input type="date" name="date_to" id="dateTo" class="form-control form-control-sm" value="{{ old('date_to', $dateTo ?? '') }}">
+                    <input type="date" name="date_to" id="dateTo" class="form-control " value="{{ old('date_to', $dateTo ?? '') }}">
                 </div>
                 <div class="col-12 col-md-auto d-flex gap-2">
                     <button type="submit" class="btn btn-primary btn-sm">

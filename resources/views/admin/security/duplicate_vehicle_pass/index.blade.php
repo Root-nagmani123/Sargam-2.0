@@ -69,7 +69,7 @@
                     <form method="GET" class="d-flex gap-2 align-items-center">
                         <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
                         <label class="text-muted small mb-0">Search within table:</label>
-                        <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Search..." style="width:200px">
+                        <input type="text" name="search" value="{{ request('search') }}" class="form-control " placeholder="Search..." style="width:200px">
                         <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">search</i>
                             <span>Search</span>

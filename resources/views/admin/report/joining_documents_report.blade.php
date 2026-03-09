@@ -339,7 +339,7 @@
                                                     <form method="POST"
                                                         action="{{ route('admin.joining-documents.save-remark', $student->pk) }}">
                                                         @csrf
-                                                        <textarea name="remark" class="form-control form-control-sm text-center" rows="1"
+                                                        <textarea name="remark" class="form-control  text-center" rows="1"
                                                             style="width: 100%; min-height: 60px; resize: vertical;" onchange="this.form.submit()"
                                                             placeholder="Enter remarks">{{ $upload->remark ?? '' }}</textarea>
                                                     </form>

@@ -603,7 +603,7 @@ $(document).ready(function() {
         initComplete: function() {
             const wrapper = $('#inhouse_wrapper');
             wrapper.find('.dataTables_length select').addClass('form-select form-select-sm');
-            wrapper.find('.dataTables_filter input').addClass('form-control form-control-sm').attr('placeholder', 'Search faculty...');
+            wrapper.find('.dataTables_filter input').addClass('form-control ').attr('placeholder', 'Search faculty...');
             wrapper.find('.dataTables_info').addClass('small text-muted');
             wrapper.find('.dataTables_paginate').addClass('small');
         },

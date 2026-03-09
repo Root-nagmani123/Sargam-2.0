@@ -139,7 +139,7 @@
                             <tr class="family-member-row" data-row-index="0">
                                 <td class="align-middle fw-medium row-sno">1</td>
                                 <td class="align-middle">
-                                    <input type="text" name="members[0][name]" class="form-control form-control-sm member-name" placeholder="Name" required>
+                                    <input type="text" name="members[0][name]" class="form-control  member-name" placeholder="Name" required>
                                     @error('members.0.name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                 </td>
                                 <td class="align-middle">
@@ -151,13 +151,13 @@
                                     </select>
                                 </td>
                                 <td class="align-middle">
-                                    <input type="date" name="members[0][dob]" class="form-control form-control-sm" placeholder="DOB">
+                                    <input type="date" name="members[0][dob]" class="form-control " placeholder="DOB">
                                 </td>
                                 <td class="align-middle">
-                                    <input type="date" name="members[0][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}">
+                                    <input type="date" name="members[0][valid_from]" class="form-control  valid-from-field" min="{{ date('Y-m-d') }}">
                                 </td>
                                 <td class="align-middle">
-                                    <input type="date" name="members[0][valid_to]" class="form-control form-control-sm">
+                                    <input type="date" name="members[0][valid_to]" class="form-control ">
                                 </td>
                                 <td class="align-middle">
                                     <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="0">
@@ -200,7 +200,7 @@
     <tr class="family-member-row" data-row-index="{{INDEX}}">
         <td class="align-middle fw-medium row-sno">{{SNO}}</td>
         <td class="align-middle">
-            <input type="text" name="members[{{INDEX}}][name]" class="form-control form-control-sm member-name" placeholder="Name" required>
+            <input type="text" name="members[{{INDEX}}][name]" class="form-control  member-name" placeholder="Name" required>
         </td>
         <td class="align-middle">
             <select name="members[{{INDEX}}][relation]" class="form-select form-select-sm member-relation">
@@ -216,13 +216,13 @@
             </select>
         </td>
         <td class="align-middle">
-            <input type="date" name="members[{{INDEX}}][dob]" class="form-control form-control-sm">
+            <input type="date" name="members[{{INDEX}}][dob]" class="form-control ">
         </td>
         <td class="align-middle">
-            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control form-control-sm valid-from-field" min="{{ date('Y-m-d') }}">
+            <input type="date" name="members[{{INDEX}}][valid_from]" class="form-control  valid-from-field" min="{{ date('Y-m-d') }}">
         </td>
         <td class="align-middle">
-            <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control form-control-sm">
+            <input type="date" name="members[{{INDEX}}][valid_to]" class="form-control ">
         </td>
         <td class="align-middle">
             <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{INDEX}}">

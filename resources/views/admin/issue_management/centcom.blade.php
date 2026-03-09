@@ -39,7 +39,7 @@
                         <div class="row g-3">
                             <div class="col-12 col-md-6 col-lg-2">
                                 <label class="form-label small fw-medium">Search</label>
-                                <input type="text" name="search" class="form-control form-control-sm" placeholder="ID, description, category..." value="{{ request('search') }}">
+                                <input type="text" name="search" class="form-control " placeholder="ID, description, category..." value="{{ request('search') }}">
                             </div>
                             <div class="col-12 col-md-4 col-lg-2">
                                 <label class="form-label small fw-medium">Status</label>
@@ -74,11 +74,11 @@
                             </div>
                             <div class="col-12 col-md-4 col-lg-2">
                                 <label class="form-label small fw-medium">Date From</label>
-                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
+                                <input type="date" name="date_from" class="form-control " value="{{ request('date_from') }}">
                             </div>
                             <div class="col-12 col-md-4 col-lg-2">
                                 <label class="form-label small fw-medium">Date To</label>
-                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                                <input type="date" name="date_to" class="form-control " value="{{ request('date_to') }}">
                             </div>
                             <div class="col-12 col-lg-2 d-flex align-items-end gap-2">
                                 <button type="submit" class="btn btn-primary btn-sm">

@@ -26,7 +26,7 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by name, designation..." value="{{ request('search') }}">
+                    <input type="text" name="search" class="form-control " placeholder="Search by name, designation..." value="{{ request('search') }}">
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary btn-sm">Filter</button>

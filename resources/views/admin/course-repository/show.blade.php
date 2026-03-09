@@ -859,11 +859,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <tr class="attachment-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control form-control-sm"
+                                                        <input type="text" class="form-control "
                                                             name="attachment_titles[]" placeholder="e.g., Week-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control form-control-sm"
+                                                        <input type="file" class="form-control "
                                                             name="attachments[]" accept="*/*">
                                                     </td>
                                                     <td class="text-center">
@@ -1058,12 +1058,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <tr class="attachment-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control form-control-sm"
+                                                        <input type="text" class="form-control "
                                                             name="attachment_titles_other[]"
                                                             placeholder="e.g., Document-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control form-control-sm"
+                                                        <input type="file" class="form-control "
                                                             name="attachments_other[]" accept="*/*">
                                                     </td>
                                                     <td class="text-center">
@@ -3446,11 +3446,11 @@ document.addEventListener('click', function(e) {
         newRow.innerHTML = `
             <td class="row-number">${rowCount}</td>
             <td>
-                <input type="text" class="form-control form-control-sm" 
+                <input type="text" class="form-control " 
                     name="attachment_titles[]" placeholder="e.g., Week-${rowCount}">
             </td>
             <td>
-                <input type="file" class="form-control form-control-sm" 
+                <input type="file" class="form-control " 
                     name="attachments[]" accept="*/*">
             </td>
             <td class="text-center">
@@ -3486,11 +3486,11 @@ document.addEventListener('click', function(e) {
         newRow.innerHTML = `
             <td class="row-number">${rowCount}</td>
             <td>
-                <input type="text" class="form-control form-control-sm" 
+                <input type="text" class="form-control " 
                     name="attachment_titles_other[]" placeholder="e.g., Document-${rowCount}">
             </td>
             <td>
-                <input type="file" class="form-control form-control-sm" 
+                <input type="file" class="form-control " 
                     name="attachments_other[]" accept="*/*">
             </td>
             <td class="text-center">

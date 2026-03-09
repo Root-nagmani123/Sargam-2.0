@@ -38,7 +38,7 @@
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <form method="GET" class="d-flex gap-2 align-items-center">
                         <input type="hidden" name="per_page" value="{{ request('per_page',10) }}">
-                        <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Search with in table:" style="width:220px">
+                        <input type="text" name="search" value="{{ request('search') }}" class="form-control " placeholder="Search with in table:" style="width:220px">
                         <button class="btn btn-sm btn-primary">Search</button>
                     </form>
                     <a href="{{ route('admin.duplicate_idcard.create') }}" class="btn btn-sm btn-success">

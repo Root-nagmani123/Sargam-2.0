@@ -396,7 +396,7 @@
                                 <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date:
                             </label>
                             <input type="date" name="start_datetime" id="start_datetime"
-                                class="form-control form-control-sm w-auto text-white" required aria-required="true">
+                                class="form-control  w-auto text-white" required aria-required="true">
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                                 aria-label="Close"></button>
 
