@@ -9,76 +9,55 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
                         <ul class="sidebar-menu list-unstyled mb-0" id="sidebarnav">
-                            <!-- Security Management Section -->
-                            <!-- Vehicle Management -->
-                                <li class="sidebar-item mb-2">
-                                    <a class="sidebar-link d-flex justify-content-between align-items-center rounded-pill px-3 py-2 text-decoration-none"
-                                        data-bs-toggle="collapse" 
-                                        href="#vehicleManagementCollapse" 
-                                        role="button"
-                                        aria-expanded="false" 
-                                        aria-controls="vehicleManagementCollapse">
-                                        <span class="hide-menu small small-sm-normal text-nowrap fw-semibold">Vehicle Management</span>
-                                        <i class="material-icons menu-icon transition-transform" style="font-size: 18px;">keyboard_arrow_down</i>
-                                    </a>
-                                    <ul class="collapse list-unstyled ps-3 mt-2" id="vehicleManagementCollapse" data-bs-parent="#sidebarnav">
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_type.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Types</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass_config.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Pass Configuration</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">My Applications</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass.create') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Apply for Pass</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass_approval.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Pending Approvals</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass_approval.all') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">All Applications</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </li>
-
-                                <!-- Visitor/Gate Pass Management -->
-                                <li class="sidebar-item mb-2">
-                                    <a class="sidebar-link d-flex justify-content-between align-items-center rounded-pill px-3 py-2 text-decoration-none"
-                                        data-bs-toggle="collapse" 
-                                        href="#visitorPassCollapse" 
-                                        role="button"
-                                        aria-expanded="false" 
-                                        aria-controls="visitorPassCollapse">
-                                        <span class="hide-menu small small-sm-normal text-nowrap fw-semibold">Visitor Pass</span>
-                                        <i class="material-icons menu-icon transition-transform" style="font-size: 18px;">keyboard_arrow_down</i>
-                                    </a>
-                                    <ul class="collapse list-unstyled ps-3 mt-2" id="visitorPassCollapse" data-bs-parent="#sidebarnav">
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.visitor_pass.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">All Visitors</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.visitor_pass.create') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Register Visitor</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </li>
+                            <!-- ---------------------------------- -->
+                            <!-- Issue Management / CENTCOM -->
+                            <!-- ---------------------------------- -->
+                            <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.employee_idcard.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">ID Card List</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.employee_idcard.create') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Generate New ID Card</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.family_idcard.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
+                                    </a></li>
+                                    @if (hasRole('Admin'))
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.family_idcard_approval.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Family ID Card Approval</span>
+                                    </a></li>
+                                    @endif
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.duplicate_idcard.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Request Duplicate ID Card</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.vehicle_pass.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.duplicate_vehicle_pass.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Duplicate Vehicle Pass Request</span>
+                                    </a></li>
+                                    @if (hasRole('Admin'))
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.vehicle_pass_approval.index') }}">
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Approval</span>
+                                        </a></li>
+                                    @endif
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
+                                        href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval I</span>
+                                    </a></li>
+                                    @if (hasRole('Admin'))
+                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
+                                        href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval II</span>
+                                    </a></li>
+                                    @endif
                         </ul>
                     </div>
                 </div>

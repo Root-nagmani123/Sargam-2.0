@@ -44,8 +44,14 @@ use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\IssueManagement\{
     IssueManagementController,
     IssueCategoryController,
-    IssueSubCategoryController
+    IssueSubCategoryController,
+    IssueEscalationMatrixController,
+    IssuePriorityController,
 };
+use App\Http\Controllers\Admin\EmployeeIDCardRequestController;
+use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
+use App\Http\Controllers\Admin\FamilyIDCardRequestController;
+
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -298,67 +304,156 @@ Route::middleware(['auth'])->group(function () {
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
 
-    // ============================================
-    // Security Management Routes (Vehicle & Visitor Pass)
-    // ============================================
-    
-    // Vehicle Type Master Routes
-    Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
-    });
+// ============================================
+// Security Management Routes (Vehicle & Visitor Pass)
+// ============================================
+// Ye routes Route::middleware(['auth'])->group() ke andar chalne chahiye.
 
-    // Vehicle Pass Configuration Routes
-    Route::prefix('security/vehicle-pass-config')->name('admin.security.vehicle_pass_config.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassConfigController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::put('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
-    });
+// Vehicle Type Master Routes
+Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::post('/update/{id}', 'update')->name('update');
+    Route::delete('/delete/{id}', 'delete')->name('delete');
+    Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
+});
 
-    // Vehicle Pass Application Routes
-    Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-    });
+// Vehicle Pass Configuration Routes
+Route::prefix('security/vehicle-pass-config')->name('admin.security.vehicle_pass_config.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassConfigController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::put('/update/{id}', 'update')->name('update');
+    Route::delete('/delete/{id}', 'delete')->name('delete');
+    Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
+});
 
-    // Vehicle Pass Approval Routes
-    Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/all', 'allApplications')->name('all');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::post('/approve/{id}', 'approve')->name('approve');
-        Route::post('/reject/{id}', 'reject')->name('reject');
-    });
+// Vehicle Pass Application Routes
+Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/export', 'export')->name('export');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::post('/update/{id}', 'update')->name('update');
+    Route::delete('/delete/{id}', 'delete')->name('delete');
+});
 
-    // Visitor/Gate Pass Routes
-    Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/show/{id}', 'show')->name('show');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update/{id}', 'update')->name('update');
-        Route::delete('/delete/{id}', 'delete')->name('delete');
-        Route::post('/checkout/{id}', 'checkOut')->name('checkout');
-    });
+// Duplicate Vehicle Pass Application Routes
+Route::prefix('security/duplicate-vehicle-pass')->name('admin.security.duplicate_vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\DuplicateVehiclePassController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::put('/update/{id}', 'update')->name('update');
+    Route::delete('/delete/{id}', 'destroy')->name('delete');
+    Route::get('/api/vehicle-details', 'getVehicleDetails')->name('api.vehicle_details');
+});
 
-    // ============================================
-    // End Security Management Routes
-    // ============================================
+// Vehicle Pass Approval Routes
+Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/all', 'allApplications')->name('all');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::post('/approve/{id}', 'approve')->name('approve');
+    Route::post('/reject/{id}', 'reject')->name('reject');
+});
+
+// Employee ID Card Approval Routes (Approval I & II)
+Route::prefix('security/employee-idcard-approval')->name('admin.security.employee_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->group(function () {
+    Route::get('/approval1', 'approval1')->name('approval1');
+    Route::get('/approval2', 'approval2')->name('approval2');
+    Route::get('/all', 'all')->name('all');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/export', 'export')->name('export');
+    Route::post('/approve1/{id}', 'approve1')->name('approve1');
+    Route::post('/approve2/{id}', 'approve2')->name('approve2');
+    Route::post('/reject1/{id}', 'reject1')->name('reject1');
+    Route::post('/reject2/{id}', 'reject2')->name('reject2');
+});
+
+// Family ID Card Approval Routes
+Route::prefix('security/family-idcard-approval')->name('admin.security.family_idcard_approval.')->controller(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/all', 'all')->name('all');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::post('/approve/{id}', 'approve')->name('approve');
+    Route::post('/reject/{id}', 'reject')->name('reject');
+    Route::post('/approve-group/{id}', 'approveGroup')->name('approve_group');
+    Route::post('/reject-group/{id}', 'rejectGroup')->name('reject_group');
+});
+
+// Visitor/Gate Pass Routes
+Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::post('/update/{id}', 'update')->name('update');
+    Route::delete('/delete/{id}', 'delete')->name('delete');
+    Route::post('/checkout/{id}', 'checkOut')->name('checkout');
+});
+
+// ============================================
+// End Security Management Routes (prefix: security/)
+// ============================================
+
+// Employee ID Card Request Routes (admin/employee-idcard)
+Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/export', 'export')->name('export');
+    Route::get('/create', 'create')->name('create');
+    Route::get('/sub-types', 'subTypes')->name('subTypes');
+    Route::get('/me', 'me')->name('me');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/show/{id}', 'show')->name('show');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::put('/update/{id}', 'update')->name('update');
+    Route::patch('/amend-dup-ext/{id}', 'amendDuplicationExtension')->name('amendDuplicationExtension');
+    Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    Route::post('/restore/{id}', 'restore')->name('restore');
+    Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
+});
+
+// Duplicate ID Card Request Routes (admin/duplicate-idcard)
+Route::prefix('admin/duplicate-idcard')->name('admin.duplicate_idcard.')->controller(DuplicateIDCardRequestController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::get('/{id}/edit', 'edit')->name('edit');
+    Route::post('/store', 'store')->name('store');
+    Route::post('/{id}/update', 'update')->name('update');
+    Route::get('/lookup/by-card-number', 'lookupByCardNumber')->name('lookup');
+});
+
+// Family ID Card Request Routes (admin/family-idcard)
+Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/export', 'export')->name('export');
+    Route::get('/members/{id}', 'members')->name('members');
+    Route::post('/duplicate/{id}', 'duplicateRequest')->name('duplicate');
+    Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
+    Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
+    Route::put('/update/{familyIDCardRequest}', 'update')->name('update');
+    Route::post('/{id}/member', 'storeMember')->name('member.store');
+    Route::put('/{id}/member/{memberId}', 'updateMember')->name('member.update');
+    Route::delete('/{id}/member/{memberId}', 'destroyMember')->name('member.destroy');
+    Route::delete('/delete/{familyIDCardRequest}', 'destroy')->name('destroy');
+    Route::post('/restore/{id}', 'restore')->name('restore');
+    Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
+});
+
+// ============================================
+// End Security-related Admin Routes
+// ============================================
+
 
     // Attendance Routes
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
@@ -859,20 +954,32 @@ Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController
 // Issue Management Module Routes (CENTCOM)
 // ============================================
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-    
+
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+    Route::get('issue-management/export/excel', [IssueManagementController::class, 'exportExcel'])->name('issue-management.export.excel');
+    Route::get('issue-management/export/pdf', [IssueManagementController::class, 'exportPdf'])->name('issue-management.export.pdf');
     Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
     Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
     Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
+
+    // AJAX Routes (must come BEFORE parameterized routes like {id})
+    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
+    Route::get('issue-management/nodal-employees/{categoryId}', [IssueManagementController::class, 'getNodalEmployees'])->name('issue-management.nodal-employees');
+    Route::get('issue-management/buildings', [IssueManagementController::class, 'getBuildings'])->name('issue-management.buildings');
+    Route::get('issue-management/floors', [IssueManagementController::class, 'getFloors'])->name('issue-management.floors');
+    Route::get('issue-management/rooms', [IssueManagementController::class, 'getRooms'])->name('issue-management.rooms');
+
+    // Parameterized Routes (must come AFTER specific routes)
     Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
     Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
     Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
-    
+    Route::put('issue-management/{id}/status', [IssueManagementController::class, 'status_update'])->name('issue-management.status_update');
+
     // AJAX Routes
     Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
     Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
-    
+
     // Category Management
     Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
     Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
@@ -893,68 +1000,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
     Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
     Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+});
 
-    // Estate Management Routes
-    Route::prefix('estate')->name('estate.')->group(function () {
-        // Estate Request for Others
-        Route::get('request-for-others', function () {
-            return view('admin.estate.estate_request_for_others');
-        })->name('request-for-others');
-        
-        Route::get('add-other-estate-request', function () {
-            return view('admin.estate.add_other_estate_request');
-        })->name('add-other-estate-request');
-
-        // Estate Possession
-        Route::get('possession-for-others', function () {
-            return view('admin.estate.estate_possession_for_others');
-        })->name('possession-for-others');
-        
-        Route::get('possession-view', function () {
-            return view('admin.estate.estate_possession_view');
-        })->name('possession-view');
-
-        // Update Meter
-        Route::get('update-meter-reading', function () {
-            return view('admin.estate.update_meter_reading');
-        })->name('update-meter-reading');
-        
-        Route::get('update-meter-reading-of-other', function () {
-            return view('admin.estate.update_meter_reading_of_other');
-        })->name('update-meter-reading-of-other');
-        
-        Route::get('update-meter-no', function () {
-            return view('admin.estate.update_meter_no');
-        })->name('update-meter-no');
-
-        // Return House
-        Route::get('return-house', function () {
-            return view('admin.estate.return_house');
-        })->name('return-house');
-
-        // Define House
-        Route::get('define-house', function () {
-            return view('admin.estate.define_house');
-        })->name('define-house');
-
-        // Estate Reports
-        Route::prefix('reports')->name('reports.')->group(function () {
-            Route::get('pending-meter-reading', function () {
-                return view('admin.estate.pending_meter_reading');
-            })->name('pending-meter-reading');
-            
-            Route::get('house-status', function () {
-                return view('admin.estate.house_status');
-            })->name('house-status');
-            
-            Route::get('bill-report-grid', function () {
-                return view('admin.estate.estate_bill_report_grid');
-            })->name('bill-report-grid');
-            
-            Route::get('bill-report-print', function () {
-                return view('admin.estate.estate_bill_report_print');
-            })->name('bill-report-print');
-        });
-    });
-});Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
+Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index'])
     ->middleware('auth');
