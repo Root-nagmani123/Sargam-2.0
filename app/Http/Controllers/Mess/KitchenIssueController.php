@@ -1014,6 +1014,8 @@ class KitchenIssueController extends Controller
             }
         } else {
             // Main store: FIFO from purchase orders (oldest first by po_date = purchase date)
+            // IMPORTANT: Use unit price INCLUDING tax so that selling vouchers
+            // reflect the tax-applied purchase cost in their Rate / Total.
             $fifoRows = DB::table('mess_purchase_order_items as poi')
                 ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
                 ->where('po.store_id', $storeId)
@@ -1023,15 +1025,28 @@ class KitchenIssueController extends Controller
                 ->orderBy('po.po_date', 'asc')
                 ->orderBy('po.id')
                 ->orderBy('poi.id')
-                ->select('poi.item_subcategory_id', 'poi.quantity', 'poi.unit_price')
+                ->select(
+                    'poi.item_subcategory_id',
+                    'poi.quantity',
+                    'poi.unit_price',
+                    'poi.tax_percent'
+                )
                 ->get();
 
             $tiersByItem = [];
             foreach ($fifoRows as $r) {
                 $id = (int) ($r->item_subcategory_id ?? 0);
                 if ($id <= 0) continue;
-                if (!isset($tiersByItem[$id])) $tiersByItem[$id] = [];
-                $tiersByItem[$id][] = ['quantity' => (float) $r->quantity, 'unit_price' => (float) $r->unit_price];
+                if (!isset($tiersByItem[$id])) {
+                    $tiersByItem[$id] = [];
+                }
+                $unitPrice = (float) $r->unit_price;
+                $taxPercent = isset($r->tax_percent) ? (float) $r->tax_percent : 0.0;
+                $effectiveUnitPrice = $unitPrice * (1 + $taxPercent / 100);
+                $tiersByItem[$id][] = [
+                    'quantity' => (float) $r->quantity,
+                    'unit_price' => $effectiveUnitPrice,
+                ];
             }
 
             $purchasedItems = DB::table('mess_purchase_order_items as poi')
@@ -1041,7 +1056,8 @@ class KitchenIssueController extends Controller
                 ->select(
                     'poi.item_subcategory_id',
                     DB::raw('SUM(poi.quantity) as total_quantity'),
-                    DB::raw('SUM(poi.quantity * poi.unit_price) / NULLIF(SUM(poi.quantity), 0) as avg_unit_price')
+                    // Average unit price INCLUDING tax, matching FIFO tiers above
+                    DB::raw('SUM(poi.quantity * poi.unit_price * (1 + COALESCE(poi.tax_percent, 0) / 100)) / NULLIF(SUM(poi.quantity), 0) as avg_unit_price')
                 )
                 ->groupBy('poi.item_subcategory_id')
                 ->get()

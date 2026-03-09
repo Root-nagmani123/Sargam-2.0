@@ -232,6 +232,7 @@ class SellingVoucherDateRangeController extends Controller
 
             $issueDate = now()->toDateString();
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+            $clientName = trim((string) $request->client_name) ?: null;
 
             // One bill per person: reuse existing unpaid report for same buyer (same store + client)
             $report = SellingVoucherDateRangeReport::query()
@@ -239,11 +240,17 @@ class SellingVoucherDateRangeController extends Controller
                 ->where('store_type', $storeType)
                 ->where('client_type_slug', $request->client_type_slug)
                 ->where('status', '!=', SellingVoucherDateRangeReport::STATUS_APPROVED)
-                ->where(function ($q) use ($clientTypePk) {
+                ->where(function ($q) use ($clientTypePk, $clientName) {
                     if ($clientTypePk !== null) {
                         $q->where('client_type_pk', $clientTypePk);
                     } else {
                         $q->whereNull('client_type_pk');
+                    }
+
+                    if ($clientName !== null) {
+                        $q->where('client_name', $clientName);
+                    } else {
+                        $q->whereNull('client_name');
                     }
                 })
                 ->orderByDesc('id')
@@ -294,6 +301,7 @@ class SellingVoucherDateRangeController extends Controller
                 $qty = (float) ($row['quantity'] ?? 0);
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
+                $itemIssueDate = $row['issue_date'] ?? $issueDate;
                 $amount = $qty * $rate;
                 $grandTotal += $amount;
                 SellingVoucherDateRangeReportItem::create([
@@ -306,6 +314,7 @@ class SellingVoucherDateRangeController extends Controller
                     'rate' => $rate,
                     'amount' => $amount,
                     'unit' => $sub->unit_measurement ?? '',
+                    'issue_date' => $itemIssueDate,
                 ]);
             }
 
@@ -434,6 +443,7 @@ class SellingVoucherDateRangeController extends Controller
                     'return_quantity' => (float) ($item->return_quantity ?? 0),
                     'rate' => (float) $item->rate,
                     'amount' => (float) $item->amount,
+                    'issue_date' => $item->issue_date ? $item->issue_date->format('Y-m-d') : '',
                 ];
             })->values()->toArray();
             return response()->json(['voucher' => $voucher, 'items' => $items]);
@@ -522,7 +532,11 @@ class SellingVoucherDateRangeController extends Controller
                 }
             }
 
-            $issueDate = $request->issue_date;
+            // If header issue_date not sent from form, keep existing date
+            $issueDate = $request->issue_date
+                ?: ($report->issue_date
+                    ? $report->issue_date->format('Y-m-d')
+                    : ($report->date_from ? $report->date_from->format('Y-m-d') : now()->toDateString()));
             $report->update([
                 'date_from' => $issueDate,
                 'date_to' => $issueDate,
@@ -559,6 +573,7 @@ class SellingVoucherDateRangeController extends Controller
                 $qty = (float) ($row['quantity'] ?? 0);
                 $rate = (float) ($row['rate'] ?? 0);
                 $avail = (float) ($row['available_quantity'] ?? 0);
+                $itemIssueDate = $row['issue_date'] ?? $issueDate;
                 $amount = $qty * $rate;
                 $grandTotal += $amount;
                 SellingVoucherDateRangeReportItem::create([
@@ -571,6 +586,7 @@ class SellingVoucherDateRangeController extends Controller
                     'rate' => $rate,
                     'amount' => $amount,
                     'unit' => $sub->unit_measurement ?? '',
+                    'issue_date' => $itemIssueDate,
                 ]);
             }
 
@@ -782,6 +798,8 @@ class SellingVoucherDateRangeController extends Controller
             }
         } else {
             // Main store: FIFO from purchase orders (oldest first by po_date = purchase date)
+            // IMPORTANT: Use unit price INCLUDING tax so that date-range selling vouchers
+            // reflect the tax-applied purchase cost in their Rate / Total.
             $fifoRows = DB::table('mess_purchase_order_items as poi')
                 ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
                 ->where('po.store_id', $storeId)
@@ -791,15 +809,28 @@ class SellingVoucherDateRangeController extends Controller
                 ->orderBy('po.po_date', 'asc')
                 ->orderBy('po.id')
                 ->orderBy('poi.id')
-                ->select('poi.item_subcategory_id', 'poi.quantity', 'poi.unit_price')
+                ->select(
+                    'poi.item_subcategory_id',
+                    'poi.quantity',
+                    'poi.unit_price',
+                    'poi.tax_percent'
+                )
                 ->get();
 
             $tiersByItem = [];
             foreach ($fifoRows as $r) {
                 $id = (int) ($r->item_subcategory_id ?? 0);
                 if ($id <= 0) continue;
-                if (!isset($tiersByItem[$id])) $tiersByItem[$id] = [];
-                $tiersByItem[$id][] = ['quantity' => (float) $r->quantity, 'unit_price' => (float) $r->unit_price];
+                if (!isset($tiersByItem[$id])) {
+                    $tiersByItem[$id] = [];
+                }
+                $unitPrice = (float) $r->unit_price;
+                $taxPercent = isset($r->tax_percent) ? (float) $r->tax_percent : 0.0;
+                $effectiveUnitPrice = $unitPrice * (1 + $taxPercent / 100);
+                $tiersByItem[$id][] = [
+                    'quantity' => (float) $r->quantity,
+                    'unit_price' => $effectiveUnitPrice,
+                ];
             }
 
             $purchasedItems = DB::table('mess_purchase_order_items as poi')
@@ -809,7 +840,8 @@ class SellingVoucherDateRangeController extends Controller
                 ->select(
                     'poi.item_subcategory_id',
                     DB::raw('SUM(poi.quantity) as total_quantity'),
-                    DB::raw('SUM(poi.quantity * poi.unit_price) / NULLIF(SUM(poi.quantity), 0) as avg_unit_price')
+                    // Average unit price INCLUDING tax, matching FIFO tiers above
+                    DB::raw('SUM(poi.quantity * poi.unit_price * (1 + COALESCE(poi.tax_percent, 0) / 100)) / NULLIF(SUM(poi.quantity), 0) as avg_unit_price')
                 )
                 ->groupBy('poi.item_subcategory_id')
                 ->get()
