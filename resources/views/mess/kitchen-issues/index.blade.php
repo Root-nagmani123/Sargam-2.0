@@ -66,7 +66,7 @@
     </div>
     <hr class="my-2">
         <div class="table-responsive sv-table-wrapper">
-        <table class="table align-middle mb-0" id="sellingVouchersTable">
+        <table class="table text-nowrap align-middle mb-0" id="sellingVouchersTable">
             <thead>
                 <tr>
                     <th>Serial No.</th>
@@ -150,8 +150,7 @@
                     @endforelse
                 @empty
                     <tr>
-                        
-                        <td class="text-center py-4" colspan="12">No selling vouchers found.</td>
+                        <td class="text-center py-4" colspan="13">No selling vouchers found.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -163,10 +162,13 @@
     @include('components.mess-master-datatables', [
         'tableId' => 'sellingVouchersTable',
         'searchPlaceholder' => 'Search selling vouchers...',
-        'ordering' => false,
-        'actionColumnIndex' => 12,
+        'orderColumn' => 9,
+        'orderDir' => 'desc',
+        'actionColumnIndex' => [11, 12],
         'infoLabel' => 'selling vouchers',
-        'searchDelay' => 0
+        'searchDelay' => 300,
+        'pageLength' => 10,
+        'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]]
     ])
 </div>
 
