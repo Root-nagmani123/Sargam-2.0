@@ -16,7 +16,7 @@
                     <p class="text-muted small mb-0 opacity-75">Manage unit types in the system. Add, edit, or view unit type records.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.define-unit-type.create') }}" class="btn btn-primary rounded-1 px-3 d-inline-flex align-items-center gap-2">
+                    <a href="{{ route('admin.estate.define-unit-type.create') }}" class="btn btn-primary rounded-1 px-3 d-inline-flex align-items-center gap-2 unit-type-add-btn">
                         <i class="material-icons material-symbols-rounded">add</i> Add New
                     </a>
                 </div>
@@ -57,3 +57,58 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    var table = $('#unitTypeTable').DataTable({
+        order: [],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        columnDefs: [
+            {
+                targets: 0,
+                orderable: false,
+                searchable: false,
+                width: '80px',
+                render: function(data, type, row, meta) {
+                    return type === 'display'
+                        ? (meta.settings._iDisplayStart || 0) + meta.row + 1
+                        : data;
+                }
+            },
+            {
+                targets: 2,
+                orderable: false,
+                searchable: false
+            }
+        ],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            infoEmpty: "Showing 0 to 0 of 0 entries",
+            infoFiltered: "(filtered from _MAX_ total entries)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next",
+                previous: "Previous"
+            }
+        },
+        responsive: true,
+        autoWidth: false,
+        dom: '<\"row\"<\"col-sm-12 col-md-6\"l><\"col-sm-12 col-md-6\"f>>rt<\"row\"<\"col-sm-12 col-md-5\"i><\"col-sm-12 col-md-7\"p>>'
+    });
+
+    // Move "Add New" button next to the search box
+    var $wrapper = $('#unitTypeTable').closest('.dataTables_wrapper');
+    var $filter = $wrapper.find('.dataTables_filter');
+    var $addBtn = $('.unit-type-add-btn').detach().addClass('ms-2');
+    if ($filter.length && $addBtn.length) {
+        $filter.append($addBtn);
+        $filter.addClass('d-flex align-items-center gap-2');
+    }
+});
+</script>
+@endpush

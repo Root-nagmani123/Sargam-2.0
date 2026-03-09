@@ -300,6 +300,13 @@ $(document).ready(function() {
             return;
         }
 
+        const selectedCount = $('.row-check:checked').length;
+        if (selectedCount === 0) {
+            e.preventDefault();
+            alert('Please select at least one record by clicking the checkbox before saving.');
+            return;
+        }
+
         $('#reading_bill_month').val(billMonthVal);
         $('#reading_current_date').val(meterReadingDateVal);
         $('#reading_campus_id').val($('#estate_name').val() || '');

@@ -4,6 +4,7 @@ namespace App\DataTables;
 
 use App\Models\EstateHomeRequestDetails;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -94,7 +95,29 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'ehm.house_no',
                 'epd.allotment_date',
                 'epd.possession_date',
-                'epd.electric_meter_reading',
+                // Show latest saved meter reading for this possession (from estate_month_reading_details),
+                // falling back to the original possession electric_meter_reading when no month reading exists.
+                DB::raw("
+                    COALESCE(
+                        (
+                            SELECT em.curr_month_elec_red
+                            FROM estate_month_reading_details em
+                            WHERE em.estate_possession_details_pk = epd.pk
+                              AND em.curr_month_elec_red IS NOT NULL
+                              AND em.curr_month_elec_red <> ''
+                            ORDER BY
+                                CAST(em.bill_year AS UNSIGNED) DESC,
+                                FIELD(
+                                    em.bill_month,
+                                    'January','February','March','April','May','June',
+                                    'July','August','September','October','November','December'
+                                ) DESC,
+                                em.to_date DESC
+                            LIMIT 1
+                        ),
+                        epd.electric_meter_reading
+                    ) as electric_meter_reading
+                "),
             ])
             // Yahan sirf woh records dikhayenge jahan possession complete ho chuka hai
             // (electric_meter_reading > 0, jo Add Possession form me required hai).

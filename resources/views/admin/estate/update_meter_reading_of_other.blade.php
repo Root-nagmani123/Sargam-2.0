@@ -320,6 +320,12 @@ $(document).ready(function() {
     });
 
     $('#meterReadingSaveForm').on('submit', function(e) {
+        const selectedCount = $('.row-check:checked').length;
+        if (selectedCount === 0) {
+            e.preventDefault();
+            alert('Please select at least one record by clicking the checkbox before saving.');
+            return;
+        }
         // No DataTable pagination; submit normally.
     });
 

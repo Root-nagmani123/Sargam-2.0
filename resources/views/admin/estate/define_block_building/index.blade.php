@@ -16,12 +16,12 @@
                     <p class="text-muted small mb-0">This page displays all the Estate Block/Building added in the system and provides options such as add, edit, delete etc.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.define-block-building.create') }}" class="btn btn-primary"><i class="material-icons material-symbols-rounded">add</i> Add New</a>
+                    <a href="{{ route('admin.estate.define-block-building.create') }}" class="btn btn-primary block-building-add-btn"><i class="material-icons material-symbols-rounded">add</i> Add New</a>
                 </div>
             </div>
 
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table class="table align-middle mb-0 w-100" id="blockBuildingTable">
                     <thead>
                         <tr>
                             <th class="col">S.No.</th>
@@ -73,6 +73,57 @@ document.addEventListener('DOMContentLoaded', function() {
     function update() { btnDelete.disabled = document.querySelectorAll('.row-check:checked').length === 0; }
     if (selectAll) selectAll.addEventListener('change', function() { rowChecks.forEach(function(c) { c.checked = selectAll.checked; }); update(); });
     rowChecks.forEach(function(c) { c.addEventListener('change', update); });
+
+    if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+        var dt = jQuery('#blockBuildingTable').DataTable({
+            order: [],
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+            columnDefs: [
+                {
+                    targets: 0,
+                    orderable: false,
+                    searchable: false,
+                    width: '80px',
+                    render: function(data, type, row, meta) {
+                        return type === 'display'
+                            ? (meta.settings._iDisplayStart || 0) + meta.row + 1
+                            : data;
+                    }
+                },
+                {
+                    targets: 2,
+                    orderable: false,
+                    searchable: false
+                }
+            ],
+            language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty: "Showing 0 to 0 of 0 entries",
+                infoFiltered: "(filtered from _MAX_ total entries)",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next",
+                    previous: "Previous"
+                }
+            },
+            responsive: true,
+            autoWidth: false,
+            dom: '<\"row\"<\"col-sm-12 col-md-6\"l><\"col-sm-12 col-md-6\"f>>rt<\"row\"<\"col-sm-12 col-md-5\"i><\"col-sm-12 col-md-7\"p>>'
+        });
+
+        // Move "Add New" button next to the search box
+        var $wrapper = jQuery('#blockBuildingTable').closest('.dataTables_wrapper');
+        var $filter = $wrapper.find('.dataTables_filter');
+        var $addBtn = jQuery('.block-building-add-btn').detach().addClass('ms-2');
+        if ($filter.length && $addBtn.length) {
+            $filter.append($addBtn);
+            $filter.addClass('d-flex align-items-center gap-2');
+        }
+    }
 });
 </script>
 @endpush
