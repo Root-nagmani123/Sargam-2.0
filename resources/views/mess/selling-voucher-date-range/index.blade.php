@@ -2,6 +2,7 @@
 @section('title', 'Selling Voucher with Date Range')
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Selling Voucher with Date Range</h4>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addReportModal">ADD</button>
@@ -57,23 +58,25 @@
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle" id="sellingVoucherDateRangeTable">
-            <thead style="background-color: #af2910;">
+    <div class="card selling-voucher-card">
+        <div class="card-body">
+        <div class="table-responsive">
+        <table class="table text-nowrap align-middle" id="sellingVoucherDateRangeTable">
+            <thead>
                 <tr>
-                    <th style="color: #fff; width: 50px;">Serial No.</th>
-                    <th style="color: #fff;">Item Name</th>
-                    <th style="color: #fff;">Item Quantity</th>
-                    <th style="color: #fff;">Return Quantity</th>
-                    <th style="color: #fff;">Transfer From Store</th>
-                    <th style="color: #fff;">Client Type</th>
-                    <th style="color: #fff;">Client Name</th>
-                    <th style="color: #fff;">Name</th>
-                    <th style="color: #fff;">Payment Type</th>
-                    <th style="color: #fff;">Request Date</th>
-                    <th style="color: #fff;">Status</th>
-                    <th style="color: #fff;">Return Item</th>
-                    <th style="color: #fff; min-width: 120px;">Action</th>
+                    <th>Serial No.</th>
+                    <th>Item Name</th>
+                    <th>Item Quantity</th>
+                    <th>Return Quantity</th>
+                    <th>Transfer From Store</th>
+                    <th>Client Type</th>
+                    <th>Client Name</th>
+                    <th>Name</th>
+                    <th>Payment Type</th>
+                    <th>Request Date</th>
+                    <th>Status</th>
+                    <th>Return Item</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -150,13 +153,13 @@
                     @endforelse
                 @empty
                     <tr>
-                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-                        <td class="text-center py-4">No reports found.</td>
-                        <td></td><td></td><td></td><td></td><td></td>
+                        <td class="text-center py-4" colspan="12">No reports found.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+    </div>
+        </div>
     </div>
 
     @include('components.mess-master-datatables', [
@@ -174,6 +177,20 @@
 #addReportModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #addReportModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addReportModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
+
+/* Mobile: enable horizontal scroll for wide table */
+@media (max-width: 768px) {
+    .selling-voucher-card .card-body {
+        overflow-x: auto;
+    }
+    .selling-voucher-card .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+    #sellingVoucherDateRangeTable {
+        min-width: 1100px;
+    }
+}
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">

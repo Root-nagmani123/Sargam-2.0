@@ -1,30 +1,31 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher')
 @section('setup_content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Selling Voucher</h4>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">ADD Selling Voucher</button>
-    </div>
+<div class="container-fluid mess-selling-voucher-page">
+    <x-breadcrum title="Selling Voucher"></x-breadcrum>
+
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0">{{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0">{{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <div class="card mb-3">
+    {{-- Choices.js styles for enhanced selects --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+
+    <div class="card mb-3 sv-card">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
                 <div class="row g-2">
                     <div class="col-md-2">
                         <label class="form-label small">Status</label>
-                        <select name="status" class="form-select form-select-sm">
+                        <select name="status" class="form-select choices-select" data-placeholder="All Status">
                             <option value="">All</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                             <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
@@ -33,7 +34,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">Store</label>
-                        <select name="store" class="form-select form-select-sm">
+                        <select name="store" class="form-select choices-select" data-placeholder="All Stores">
                             <option value="">All</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -49,31 +50,38 @@
                         <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
                     <div class="col-md-2 d-flex align-items-end gap-1">
-                        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-secondary">Clear</a>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle" id="sellingVouchersTable">
-            <thead style="background-color: #af2910;">
+    <div class="card sv-card">
+        <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Selling Voucher</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">ADD Selling Voucher</button>
+    </div>
+    <hr class="my-2">
+        <div class="table-responsive sv-table-wrapper">
+        <table class="table align-middle mb-0" id="sellingVouchersTable">
+            <thead>
                 <tr>
-                    <th style="color: #fff; width: 50px;">Serial No.</th>
-                    <th style="color: #fff;">Item Name</th>
-                    <th style="color: #fff;">Item Quantity</th>
-                    <th style="color: #fff;">Return Quantity</th>
-                    <th style="color: #fff;">Transfer From Store</th>
-                    <th style="color: #fff;">Client Type</th>
-                    <th style="color: #fff;">Client Name</th>
-                    <th style="color: #fff;">Name</th>
-                    <th style="color: #fff;">Payment Type</th>
-                    <th style="color: #fff;">Request Date</th>
-                    <th style="color: #fff;">Status</th>
-                    <th style="color: #fff;">Return Item</th>
-                    <th style="color: #fff; min-width: 120px;">Action</th>
+                    <th>Serial No.</th>
+                    <th>Item Name</th>
+                    <th>Item Quantity</th>
+                    <th>Return Quantity</th>
+                    <th>Transfer From Store</th>
+                    <th>Client Type</th>
+                    <th>Client Name</th>
+                    <th>Name</th>
+                    <th>Payment Type</th>
+                    <th>Request Date</th>
+                    <th>Status</th>
+                    <th>Return Item</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -142,13 +150,14 @@
                     @endforelse
                 @empty
                     <tr>
-                        <td></td><td></td><td></td><td></td><td></td><td></td>
-                        <td class="text-center py-4">No selling vouchers found.</td>
-                        <td></td><td></td><td></td><td></td><td></td><td></td>
+                        
+                        <td class="text-center py-4" colspan="12">No selling vouchers found.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+    </div>
+        </div>
     </div>
 
     @include('components.mess-master-datatables', [
@@ -161,22 +170,68 @@
     ])
 </div>
 
+{{-- Choices.js for enhanced dropdowns (Add / Edit Selling Voucher) --}}
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.Choices === 'undefined') return;
+
+    function initChoicesIn(selector) {
+        document.querySelectorAll(selector + ' select.choices-select')
+            .forEach(function (el) {
+                if (el.dataset.choicesInitialized === 'true') return;
+
+                var placeholder = el.getAttribute('data-placeholder') || 'Select';
+
+                new Choices(el, {
+                    shouldSort: false,
+                    placeholder: true,
+                    placeholderValue: placeholder,
+                    searchPlaceholderValue: 'Search...',
+                    itemSelectText: '',
+                });
+
+                // Respect initial visibility (for selects that start with style="display:none")
+                // so that only the dependent dropdowns are shown.
+                if (typeof toggleChoicesSelectDisplay === 'function') {
+                    var shouldShow = (el.style.display !== 'none');
+                    toggleChoicesSelectDisplay(el, shouldShow);
+                }
+
+                el.dataset.choicesInitialized = 'true';
+            });
+    }
+
+    // Initial pass (modals are already in DOM)
+    initChoicesIn('#addSellingVoucherModal');
+    initChoicesIn('#editSellingVoucherModal');
+
+    // Safety: when either modal is shown again, ensure Choices is attached
+    document.addEventListener('shown.bs.modal', function (e) {
+        if (!e.target) return;
+        if (e.target.id === 'addSellingVoucherModal' || e.target.id === 'editSellingVoucherModal') {
+            initChoicesIn('#' + e.target.id);
+        }
+    });
+});
+</script>
+
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
 #addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
 </style>
-<div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
+<div class="modal fade selling-voucher-modal " id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
+        <div class="modal-content selling-voucher-modal-content">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom bg-light selling-voucher-modal-header">
                     <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body selling-voucher-modal-body">
                     @if($errors->any())
                         <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
                             <ul class="mb-0 small">
@@ -189,11 +244,11 @@
                     @endif
 
                     {{-- Voucher Details (same pattern as Order Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
+                    <div class="card mb-4 selling-voucher-modal-card">
+                        <div class="card-header bg-white py-2 selling-voucher-modal-card-header">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body selling-voucher-modal-card-body">
                             <div class="row g-3">
                                 <div class="col-md-12">
                                     <label class="form-label">Client Type <span class="text-danger">*</span></label>
@@ -208,7 +263,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select" required>
+                                    <select name="payment_type" class="form-select choices-select" data-placeholder="Select Payment Type" required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                                         <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
                                         <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
@@ -217,7 +272,7 @@
                                 </div>
                                 <div class="col-md-4" id="modalClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="modalClientNameSelect">
+                                    <select name="client_type_pk" class="form-select choices-select" data-placeholder="Select Client Name" id="modalClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
@@ -275,7 +330,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="store_id" class="form-select" required>
+                                    <select name="store_id" class="form-select choices-select" data-placeholder="Select Store" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store['id'] }}" {{ old('store_id') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -315,26 +370,26 @@
                     </div>
 
                     {{-- Item Details (same pattern as Purchase Order Item Details) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card mb-4 sv-card">
+                        <div class="card-header bg-white sv-card-header d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="modalAddItemRow">
                                 + Add Item
                             </button>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered mb-0" id="svItemsTable">
-                                    <thead style="background-color: #af2910;">
+                            <div class="table-responsive sv-table-wrapper">
+                                <table class="table table-bordered table-striped align-middle mb-0" id="svItemsTable">
+                                    <thead class="table-header-brand">
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Left Qty</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Amount</th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="modalItemsBody">
@@ -380,11 +435,7 @@
 </div>
 
 {{-- Edit Selling Voucher Modal --}}
-<style>
-#editSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#editSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#editSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
-</style>
+
 <div class="modal fade" id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -396,8 +447,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
+                    <div class="card mb-4 sv-card">
+                        <div class="card-header bg-white sv-card-header py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
                         <div class="card-body">
@@ -415,7 +466,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select edit-payment-type" required>
+                                    <select name="payment_type" class="form-select edit-payment-type choices-select" data-placeholder="Select Payment Type" required>
                                         <option value="1">Credit</option>
                                         <option value="0">Cash</option>
                                         <option value="2">Online</option>
@@ -423,7 +474,7 @@
                                 </div>
                                 <div class="col-md-4" id="editModalClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="editClientNameSelect">
+                                    <select name="client_type_pk" class="form-select choices-select" data-placeholder="Select Client Name" id="editClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                             @foreach($list as $c)
@@ -431,13 +482,13 @@
                                             @endforeach
                                         @endforeach
                                     </select>
-                                    <select id="editModalOtCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editModalOtCourseSelect" class="form-select choices-select" data-placeholder="Select Course" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editModalCourseSelect" class="form-select choices-select" data-placeholder="Select Course" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
@@ -447,25 +498,25 @@
                                 <div class="col-md-4" id="editModalNameFieldWrap">
                                     <label class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" name="client_name" class="form-control edit-client-name" id="editModalClientNameInput" placeholder="Client / section / role name" required>
-                                    <select id="editModalFacultySelect" class="form-select" style="display:none;">
+                                    <select id="editModalFacultySelect" class="form-select choices-select" data-placeholder="Select Faculty" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
                                             <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalAcademyStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editModalAcademyStaffSelect" class="form-select choices-select" data-placeholder="Select Academy Staff" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
                                             <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalMessStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editModalMessStaffSelect" class="form-select choices-select" data-placeholder="Select Mess Staff" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
                                             <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editModalCourseNameSelect" class="form-select" style="display:none;">
+                                    <select id="editModalCourseNameSelect" class="form-select choices-select" data-placeholder="Select Course" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                             <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
@@ -478,7 +529,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="store_id" class="form-select edit-store" required>
+                                    <select name="store_id" class="form-select edit-store choices-select" data-placeholder="Select Store" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                             <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
@@ -501,8 +552,8 @@
                         </div>
                     </div>
                     {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
+                    <div class="card mb-4 border-primary sv-card">
+                        <div class="card-header bg-light sv-card-header py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
                         </div>
                         <div class="card-body">
@@ -522,24 +573,24 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card mb-4 sv-card">
+                        <div class="card-header bg-white sv-card-header d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="editModalAddItemRow">+ Add Item</button>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                            <div class="table-responsive sv-table-wrapper">
+                                <table class="table table-bordered table-striped align-middle mb-0">
+                                    <thead class="table-header-brand">
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Left Qty</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Amount</th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editModalItemsBody"></tbody>
@@ -564,31 +615,7 @@
 </div>
 
 {{-- View Selling Voucher Modal - ensure all text is visible (high contrast) --}}
-<style>
-#viewSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
-#viewSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; background: #fff; color: #212529; }
-#viewSellingVoucherModal .modal-header { background: #f8f9fa !important; color: #212529 !important; }
-#viewSellingVoucherModal .modal-header * { color: #212529 !important; }
-#viewSellingVoucherModal .modal-title { color: #212529 !important; }
-#viewSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); background: #fff; color: #212529 !important; }
-#viewSellingVoucherModal .modal-body *, #viewSellingVoucherModal .modal-body p, #viewSellingVoucherModal .modal-body span { color: inherit; }
-#viewSellingVoucherModal .card { background: #fff; color: #212529; }
-#viewSellingVoucherModal .card-header { background: #fff !important; color: #212529 !important; border-color: #dee2e6; }
-#viewSellingVoucherModal .card-header h6 { color: #0d6efd !important; }
-#viewSellingVoucherModal .card-body { background: #fff !important; color: #212529 !important; }
-#viewSellingVoucherModal .card-body table th { color: #495057 !important; font-weight: 600; }
-#viewSellingVoucherModal .card-body table td { color: #212529 !important; }
-#viewSellingVoucherModal .card-body .table-borderless th { background: transparent !important; }
-#viewSellingVoucherModal .card-body .table-borderless td { background: transparent !important; }
-#viewSellingVoucherModal #viewItemsCard .table thead th { color: #fff !important; background: #af2910 !important; border-color: #af2910; }
-#viewSellingVoucherModal #viewItemsCard .table tbody td { color: #212529 !important; background: #fff !important; }
-#viewSellingVoucherModal #viewModalGrandTotal { color: #212529 !important; }
-#viewSellingVoucherModal .text-muted { color: #495057 !important; }
-#viewSellingVoucherModal .card-footer { background: #f8f9fa !important; color: #212529 !important; }
-#viewSellingVoucherModal .card-footer strong { color: #212529 !important; }
-#viewSellingVoucherModal .badge { color: #212529 !important; }
-#viewSellingVoucherModal .modal-footer { background: #fff; border-color: #dee2e6; }
-</style>
+
 <div class="modal fade" id="viewSellingVoucherModal" tabindex="-1" aria-labelledby="viewSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -597,8 +624,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="card mb-4">
-                    <div class="card-header bg-white py-2">
+                <div class="card mb-4 sv-card">
+                    <div class="card-header bg-white sv-card-header py-2">
                         <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                     </div>
                     <div class="card-body" style="color: #212529;">
@@ -625,21 +652,21 @@
                         <p class="mb-0 mt-2" style="color: #212529;"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
-                <div class="card mb-4" id="viewItemsCard">
-                    <div class="card-header bg-white py-2">
+                <div class="card mb-4 sv-card" id="viewItemsCard">
+                    <div class="card-header bg-white sv-card-header py-2">
                         <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-bordered mb-0">
-                                <thead style="background-color: #af2910;">
+                        <div class="table-responsive sv-table-wrapper">
+                            <table class="table table-bordered table-striped align-middle mb-0">
+                                <thead class="table-header-brand">
                                     <tr>
-                                        <th style="color: #fff !important; border-color: #af2910;">Item Name</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Unit</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Issue Qty</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Return Qty</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Rate</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Total</th>
+                                        <th>Item Name</th>
+                                        <th>Unit</th>
+                                        <th>Issue Qty</th>
+                                        <th>Return Qty</th>
+                                        <th>Rate</th>
+                                        <th>Total</th>
                                     </tr>
                                 </thead>
                                 <tbody id="viewModalItemsBody"></tbody>
@@ -681,20 +708,20 @@
                         <label class="form-label fw-semibold">Transfer From Store</label>
                         <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
                     </div>
-                    <div class="card">
-                        <div class="card-header bg-white py-2">
+                    <div class="card sv-card">
+                        <div class="card-header bg-white sv-card-header py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                            <div class="table-responsive sv-table-wrapper">
+                                <table class="table table-bordered table-striped align-middle mb-0">
+                                    <thead class="table-header-brand">
                                         <tr>
-                                            <th style="color: #fff;">Item Name</th>
-                                            <th style="color: #fff;">Issued Quantity</th>
-                                            <th style="color: #fff;">Item Unit</th>
-                                            <th style="color: #fff;">Return Quantity</th>
-                                            <th style="color: #fff;">Return Date</th>
+                                            <th>Item Name</th>
+                                            <th>Issued Quantity</th>
+                                            <th>Item Unit</th>
+                                            <th>Return Quantity</th>
+                                            <th>Return Date</th>
                                         </tr>
                                     </thead>
                                     <tbody id="returnItemModalBody"></tbody>
@@ -1078,6 +1105,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const creditOnly = ['employee', 'ot', 'course'];
+
+    function toggleChoicesSelectDisplay(selectEl, show) {
+        if (!selectEl) return;
+        const container = selectEl.closest('.choices') || selectEl;
+        container.style.display = show ? 'block' : 'none';
+    }
+
     function updateModalNameField() {
         const clientTypeRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
         const clientNameSelect = document.getElementById('modalClientNameSelect');
@@ -1104,32 +1138,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isOt) {
             nameInput.style.display = 'none';
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'block'; }
-            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { toggleChoicesSelectDisplay(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
+            toggleChoicesSelectDisplay(otStudentSelect, true);
+            if (courseSelect) { toggleChoicesSelectDisplay(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            if (courseNameSelect) { toggleChoicesSelectDisplay(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
             // Course: Name field is manual text input (like Section), not dropdown
             nameInput.style.display = 'block';
             nameInput.placeholder = 'Course name';
             nameInput.setAttribute('required', 'required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { courseSelect.style.display = 'block'; }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { toggleChoicesSelectDisplay(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { toggleChoicesSelectDisplay(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            if (courseSelect) { toggleChoicesSelectDisplay(courseSelect, true); }
+            if (courseNameSelect) { toggleChoicesSelectDisplay(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (!sel) return;
                 const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
+                toggleChoicesSelectDisplay(sel, show);
                 sel.removeAttribute('required');
                 if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
             });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+            if (otStudentSelect) { toggleChoicesSelectDisplay(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            if (courseSelect) { toggleChoicesSelectDisplay(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            if (courseNameSelect) { toggleChoicesSelectDisplay(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
@@ -1156,25 +1190,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const courseNameSelect = document.getElementById('modalCourseNameSelect');
             const nameInput = document.getElementById('modalClientNameInput');
             if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (clientSelect) { toggleChoicesSelectDisplay(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { toggleChoicesSelectDisplay(otCourseSelect, true); otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { toggleChoicesSelectDisplay(otStudentSelect, true); otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
+                if (courseSelect) { toggleChoicesSelectDisplay(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
+                if (courseNameSelect) { toggleChoicesSelectDisplay(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'block'; courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (clientSelect) { toggleChoicesSelectDisplay(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { toggleChoicesSelectDisplay(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { toggleChoicesSelectDisplay(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                if (courseSelect) { toggleChoicesSelectDisplay(courseSelect, true); courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
+                if (courseNameSelect) { toggleChoicesSelectDisplay(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.value = ''; nameInput.placeholder = 'Course name'; nameInput.setAttribute('required', 'required'); }
             } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (clientSelect) { toggleChoicesSelectDisplay(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
+                if (otCourseSelect) { toggleChoicesSelectDisplay(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { toggleChoicesSelectDisplay(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                if (courseSelect) { toggleChoicesSelectDisplay(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                if (courseNameSelect) { toggleChoicesSelectDisplay(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (clientSelect) {
                     clientSelect.querySelectorAll('option').forEach(function(opt) {
                         if (opt.value === '') { opt.hidden = false; return; }
