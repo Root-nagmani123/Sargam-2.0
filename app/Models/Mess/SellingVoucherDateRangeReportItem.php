@@ -16,6 +16,7 @@ class SellingVoucherDateRangeReportItem extends Model
         'item_subcategory_id',
         'item_name',
         'unit',
+        'issue_date',
         'available_quantity',
         'quantity',
         'return_quantity',
@@ -29,6 +30,7 @@ class SellingVoucherDateRangeReportItem extends Model
         'quantity' => 'decimal:2',
         'return_quantity' => 'decimal:2',
         'return_date' => 'date',
+        'issue_date' => 'date',
         'rate' => 'decimal:2',
         'amount' => 'decimal:2',
     ];
