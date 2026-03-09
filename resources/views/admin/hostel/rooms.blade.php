@@ -46,19 +46,21 @@
                 </div>
             </form>
 
-            <div class="table-responsive rounded-4 overflow-hidden border">
-                <table class="table table-hover align-middle mb-0 table-striped-columns table-borderless">
-                    <thead class="table-light">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th class="text-uppercase small fw-semibold ps-4 opacity-75">Building</th>
-                            <th class="text-uppercase small fw-semibold opacity-75">Floor</th>
-                            <th class="text-uppercase small fw-semibold opacity-75">Room</th>
+                            <th>#</th>
+                            <th>Building</th>
+                            <th>Floor</th>
+                            <th>Room</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($rooms ?? [] as $r)
                         <tr>
-                            <td class="ps-4">
+                            <td>{{ $loop->iteration }}</td>
+                            <td>
                                 <span class="d-inline-flex align-items-center gap-2">
                                     <i class="bi bi-building text-body-tertiary"></i>
                                     {{ $r->building_name ?? '—' }}

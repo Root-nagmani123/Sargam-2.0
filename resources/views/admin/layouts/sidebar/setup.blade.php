@@ -108,6 +108,15 @@
                                                 </a>
                                             </li>
                                             @endif
+                                            <li class="mini-nav-item {{ request()->is('admin/hostel*') ? 'selected' : '' }}" id="mini-11">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">hotel</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Hostel Management</span>
+                                                </a>
+                                            </li>
 
                                         </div>
                                     </div>
@@ -165,6 +174,10 @@
                     <!-- ---------------------------------- -->
                     <x-menu.setup_security_management />
 
+                    <!-- Hostel Management -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_hostel_management />
+                    <!-- ---------------------------------- -->
                 </div>
             </div>
         </div>
