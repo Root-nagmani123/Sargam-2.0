@@ -99,14 +99,14 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-control form-control-sm"
+                        <input type="text" name="date_from" id="date_from" class="form-control "
                                value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-control form-control-sm"
+                        <input type="text" name="date_to" id="date_to" class="form-control "
                                value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
@@ -122,19 +122,19 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Buyer Name</label>
-                        <input type="text" name="buyer_name" class="form-control form-control-sm"
+                        <label class="form-label fw-semibold">Buyer Name</label>
+                        <input type="text" name="buyer_name" class="form-control "
                                value="{{ $buyerName ?? request('buyer_name') }}" placeholder="Filter by buyer name...">
                     </div>
                     <div class="col-md-2 d-flex gap-1">
-                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                        <button type="submit" class="btn btn-primary  flex-grow-1">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list</i>
                             Apply
                         </button>
                         @php
                             $clearFilterParams = [];
                         @endphp
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary btn-sm">Clear filters</a>
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary ">Clear filters</a>
                     </div>
                 </div>
             </form>
@@ -151,11 +151,11 @@
                 <input type="hidden" name="buyer_name" value="{{ $buyerName ?? request('buyer_name') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'buyer_name', 'search'])) }}" class="btn btn-outline-secondary  d-inline-flex align-items-center gap-1" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Print" onclick="printProcessMessBillsMainTable()">
+                        <button type="button" class="btn btn-outline-primary  d-inline-flex align-items-center gap-1" title="Print" onclick="printProcessMessBillsMainTable()">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">print</i>
                             <span>Print</span>
                         </button>
@@ -164,8 +164,8 @@
             </form>
 
             <div class="table-responsive">
-                    <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
-                        <thead>
+                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
+                    <thead>
                         <tr>
                             <th class="text-nowrap py-2">S.No.</th>
                             <th class="text-nowrap py-2">Buyer Name</th>
@@ -212,8 +212,8 @@
                                 </td>
                                 <td class="text-center no-print">
                                     <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $receiptId) }}" target="_blank"
-                                       class="btn btn-sm btn-outline-primary" title="Print receipt">
-                                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
+                                       class="btn  btn-outline-primary text-primary bg-transparent border-0" title="Print receipt">
+                                        <i class="material-symbols-rounded">receipt</i>
                                     </a>
                                 </td>
                             </tr>
@@ -291,20 +291,20 @@
                             </select>
                             <div class="payment-detail-bank-wrap">
                                 <label class="payment-detail-label">Bank Name</label>
-                                <input type="text" name="bank_name" id="payNowBankName" class="payment-detail-input form-control form-control-sm" placeholder="Bank Name" autocomplete="off">
+                                <input type="text" name="bank_name" id="payNowBankName" class="payment-detail-input form-control " placeholder="Bank Name" autocomplete="off">
                             </div>
                         </div>
                         <div class="payment-detail-row payment-detail-cheque-row" id="payNowChequeRow">
                             <label class="payment-detail-label">Cheque Number</label>
-                            <input type="text" name="cheque_number" id="payNowChequeNumber" class="payment-detail-input form-control form-control-sm" placeholder="Cheque Number" autocomplete="off">
+                            <input type="text" name="cheque_number" id="payNowChequeNumber" class="payment-detail-input form-control " placeholder="Cheque Number" autocomplete="off">
                             <label class="payment-detail-label">Cheque Date</label>
-                            <input type="text" name="cheque_date" id="payNowChequeDate" class="payment-detail-input form-control form-control-sm" value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
+                            <input type="text" name="cheque_date" id="payNowChequeDate" class="payment-detail-input form-control " value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
                         <div class="payment-detail-row">
                             <label class="payment-detail-label">Amount</label>
-                            <input type="number" name="amount" id="payNowAmount" class="payment-detail-input form-control form-control-sm" step="0.01" min="0" required placeholder="0.00">
+                            <input type="number" name="amount" id="payNowAmount" class="payment-detail-input form-control " step="0.01" min="0" required placeholder="0.00">
                             <label class="payment-detail-label">Payment Date</label>
-                            <input type="text" name="payment_date" id="payNowPaymentDate" class="payment-detail-input form-control form-control-sm" value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
+                            <input type="text" name="payment_date" id="payNowPaymentDate" class="payment-detail-input form-control " value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
                     </div>
                 </form>
@@ -477,12 +477,12 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Date From <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control form-control-sm"
+                            <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Date To <span class="text-danger">*</span></label>
-                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control form-control-sm"
+                            <input type="text" name="modal_date_to" id="modal_date_to" class="form-control "
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
                         <div class="col-md-2">
@@ -497,12 +497,12 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Buyer Name</label>
-                            <input type="text" name="modal_buyer_name" id="modal_buyer_name" class="form-control form-control-sm"
+                            <input type="text" name="modal_buyer_name" id="modal_buyer_name" class="form-control "
                                    placeholder="Filter by buyer name...">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Invoice Date</label>
-                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control form-control-sm"
+                            <input type="text" name="modal_invoice_date" id="modal_invoice_date" class="form-control "
                                    value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
                         </div>
                         <div class="col-md-2">
@@ -516,11 +516,11 @@
                     </div>
                     <div class="row g-2 mb-4">
                         <div class="col-md-12 d-flex flex-wrap gap-2 align-items-center">
-                            <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1" id="modalLoadBillsBtn">
+                            <button type="button" class="btn btn-primary  d-inline-flex align-items-center gap-1" id="modalLoadBillsBtn">
                                 <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
                                 <span>Load Bills</span>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="modalClearFiltersBtn">
+                            <button type="button" class="btn btn-outline-secondary  d-inline-flex align-items-center gap-1" id="modalClearFiltersBtn">
                                 <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list_off</i>
                                 <span>Clear Filters</span>
                             </button>
@@ -531,8 +531,8 @@
                 {{-- Bulk actions (shown when rows selected) --}}
                 <div class="d-none align-items-center gap-2 mb-3 p-2 rounded-3 bg-light border border-dashed" id="modalBulkActionsBar">
                     <span class="small fw-semibold" id="modalSelectedCount">0 selected</span>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="modalBulkInvoiceBtn">Generate Invoice (selected)</button>
-                    <button type="button" class="btn btn-sm btn-outline-success" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
+                    <button type="button" class="btn  btn-outline-primary" id="modalBulkInvoiceBtn">Generate Invoice (selected)</button>
+                    <button type="button" class="btn  btn-outline-success" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
@@ -551,9 +551,9 @@
                             <span class="input-group-text bg-transparent border-end-0">
                                 <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
                             </span>
-                            <input type="text" id="modalSearch" class="form-control form-control-sm border-start-0" placeholder="Search bills...">
+                            <input type="text" id="modalSearch" class="form-control  border-start-0" placeholder="Search bills...">
                         </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printProcessMessBillsTable()" title="Print bills list">
+                        <button type="button" class="btn btn-outline-primary  d-inline-flex align-items-center gap-1" onclick="printProcessMessBillsTable()" title="Print bills list">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">print</i>
                             <span>Print</span>
                         </button>
@@ -746,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<button type="button" class="btn btn-outline-primary generate-invoice-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Generate Invoice">Invoice</button>' +
                     '<button type="button" class="btn btn-outline-success generate-payment-btn" data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="Mark as Paid">Payment</button>' +
                     '</div></td>' +
-                    '<td class="text-center"><a href="' + printUrl + '" target="_blank" class="btn btn-sm btn-outline-secondary" title="Print receipt"><i class="material-symbols-rounded" style="font-size:1.1rem;">receipt</i></a></td>' +
+                    '<td class="text-center"><a href="' + printUrl + '" target="_blank" class="btn  btn-outline-secondary" title="Print receipt"><i class="material-symbols-rounded" style="font-size:1.1rem;">receipt</i></a></td>' +
                     '</tr>';
             }).join('');
         }

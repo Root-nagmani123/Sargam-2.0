@@ -28,9 +28,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var $table = $('#{{ $tableId }}');
     if (!$table.length || $.fn.DataTable.isDataTable($table)) return;
 
-    var order = @json($ordering ? (is_array($orderColumn) ? $orderColumn : [[$orderColumn, $orderDir]]) : []);
-    var columnDefs = @json($columnDefs);
-    var lengthMenu = @json($lengthMenu);
+    var order = {!! json_encode($ordering ? (is_array($orderColumn) ? $orderColumn : [[$orderColumn, $orderDir]]) : []) !!};
+    var columnDefs = {!! json_encode($columnDefs) !!};
+    var lengthMenu = {!! json_encode($lengthMenu) !!};
 
     $table.DataTable({
         ordering: {{ $ordering ? 'true' : 'false' }},
