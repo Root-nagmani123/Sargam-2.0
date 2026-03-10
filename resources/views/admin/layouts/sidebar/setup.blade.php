@@ -36,8 +36,13 @@
                                                 </a>
                                             </li>
 
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))
-                                            <li class="mini-nav-item {{ request()->is('timetable*') ? 'selected' : '' }}" id="setup-mini-5">
+                                            @if(
+                                                hasRole('Admin')
+                                                || hasRole('Training-Induction')
+                                                || hasRole('Training-MCTP')
+                                                || hasRole('IST')
+                                            )
+                                            <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
@@ -75,7 +80,12 @@
                                                     <span class="mini-nav-title sidebar-google-label">FC Forms</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item {{ request()->is('mess*') ? 'selected' : '' }}" id="setup-mini-9">
+                                            @endif
+
+                                            @endif
+
+                                            @if(canSeeLowStockAlert())
+                                            <li class="mini-nav-item" id="setup-mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">

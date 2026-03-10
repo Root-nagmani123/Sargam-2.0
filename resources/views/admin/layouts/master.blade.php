@@ -538,7 +538,7 @@
 
             @include('admin.layouts.sidebar')
             <div class="body-wrapper">
-                @if(session('low_stock_alert') && is_array(session('low_stock_alert')) && count(session('low_stock_alert')) > 0)
+                @if(canSeeLowStockAlert() && session('low_stock_alert') && is_array(session('low_stock_alert')) && count(session('low_stock_alert')) > 0)
                     <div class="low-stock-alert-overlay" id="lowStockAlertOverlay" role="dialog" aria-modal="true" aria-labelledby="lowStockAlertTitle">
                         <div class="low-stock-alert-box">
                             <div class="low-stock-alert-header d-flex justify-content-between align-items-center">
