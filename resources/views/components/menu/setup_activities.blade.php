@@ -176,30 +176,11 @@
                             @php
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
                                 $canSeeAllEstate = $isEstateAdmin || $showUserManagement;
+                                // HAC menus (Put In HAC / HAC Approved) visible to HAC Person + Estate/Admin (and similar admin roles).
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
                                 $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles;
-                                // Permanent LBSNAA employee (payroll = 0) gets access to "Other" estate flows as well,
-                                // even if they are not Estate/Admin.
-                                $isPermanentEstateEmployee = false;
-                                $user = Auth::user();
-                                if ($user && $estateSelfServiceRoles && \Illuminate\Support\Facades\Schema::hasTable('employee_master')) {
-                                    $empIdCandidates = array_values(array_filter([
-                                        $user->user_id ?? null,
-                                        $user->pk ?? null,
-                                    ], fn ($v) => $v !== null && $v !== ''));
-                                    if (!empty($empIdCandidates)) {
-                                        $empQuery = \Illuminate\Support\Facades\DB::table('employee_master');
-                                        $empQuery->whereIn('pk', $empIdCandidates);
-                                        if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
-                                            $empQuery->orWhereIn('pk_old', $empIdCandidates);
-                                        }
-                                        $empRow = $empQuery->select('payroll')->first();
-                                        if ($empRow && (int) ($empRow->payroll ?? 0) === 0) {
-                                            $isPermanentEstateEmployee = true;
-                                        }
-                                    }
-                                }
-                                $canSeeOtherEstate = $canSeeAllEstate || $isPermanentEstateEmployee;
+                                // "Other" estate operations (for other employees, Return House, Define House, etc.) are restricted strictly to Admin / Estate / Super Admin / Training / IST.
+                                $canManageOthersEstate = $canSeeAllEstate;
                             @endphp
                             {{-- ESTATE MANAGEMENT --}}
                             <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -255,7 +236,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if($canSeeOtherEstate)
+                                @if($canManageOthersEstate)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-others') }}">
@@ -289,7 +270,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if($canSeeOtherEstate)
+                                @if($canManageOthersEstate)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill-for-other') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.generate-estate-bill-for-other') }}">

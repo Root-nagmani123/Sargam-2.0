@@ -72,6 +72,10 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    @php
+                        // Only Admin / Estate / Super Admin can work with "Other Employee" in Return House.
+                        $canManageOtherEmployees = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                    @endphp
                     <form id="requestHouseForm" method="POST" action="{{ route('admin.estate.possession-view.store') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
                         @csrf
                         <input type="hidden" name="redirect_to" value="return-house">
@@ -80,13 +84,15 @@
                             <label class="form-label fw-medium">Employee Type <span class="text-danger">*</span></label>
                             <div class="d-flex flex-wrap gap-2 pt-1">
                                 <label class="form-check form-check-inline form-check-label-border m-0">
-                                    <input class="form-check-input" type="radio" name="employee_type" id="empTypeLbsnaa" value="LBSNAA">
+                                    <input class="form-check-input" type="radio" name="employee_type" id="empTypeLbsnaa" value="LBSNAA" {{ $canManageOtherEmployees ? '' : 'checked' }}>
                                     <span class="form-check-label-text">LBSNAA</span>
                                 </label>
+                                @if($canManageOtherEmployees)
                                 <label class="form-check form-check-inline form-check-label-border m-0">
                                     <input class="form-check-input" type="radio" name="employee_type" id="empTypeOther" value="Other Employee" checked>
                                     <span class="form-check-label-text">Other Employee</span>
                                 </label>
+                                @endif
                             </div>
                         </div>
 
@@ -95,9 +101,11 @@
                                 <label for="request_employee_name" class="form-label fw-medium">Employee Name <span class="text-danger">*</span></label>
                                 <select class="form-select" id="request_employee_name" name="estate_other_req_pk" required>
                                     <option value="">--Select Employee Type then Name--</option>
-                                    @foreach($requesters ?? [] as $r)
-                                        <option value="{{ $r->pk }}" data-type="Other Employee" data-request-no="{{ $r->request_no_oth }}" data-section="{{ $r->section ?? '' }}">{{ $r->emp_name }} ({{ $r->request_no_oth }})</option>
-                                    @endforeach
+                                    @if($canManageOtherEmployees)
+                                        @foreach($requesters ?? [] as $r)
+                                            <option value="{{ $r->pk }}" data-type="Other Employee" data-request-no="{{ $r->request_no_oth }}" data-section="{{ $r->section ?? '' }}">{{ $r->emp_name }} ({{ $r->request_no_oth }})</option>
+                                        @endforeach
+                                    @endif
                                 </select>
                                 <div class="form-text">Select Name - all fields will auto-fill from mapping</div>
                             </div>
