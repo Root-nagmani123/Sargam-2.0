@@ -2965,24 +2965,19 @@ class EstateController extends Controller
     }
 
     /**
-     * API: Get blocks for Define House form (all blocks; optional campus filter for existing houses).
+     * API: Get blocks for Define House form.
+     *
+     * For Define House, the user is defining houses and should be able to see
+     * **all** blocks in the dropdown, not just those that already have houses
+     * mapped for a particular campus. Therefore this endpoint always returns
+     * the full list of blocks without restricting by campus or existing
+     * mappings.
      */
     public function getDefineHouseBlocks(Request $request)
     {
-        $campusId = $request->get('campus_id');
-        if ($campusId) {
-            $blocks = DB::table('estate_house_master as h')
-                ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
-                ->where('h.estate_campus_master_pk', $campusId)
-                ->select('b.pk', 'b.block_name')
-                ->distinct()
-                ->orderBy('b.block_name')
-                ->get();
-        } else {
-            $blocks = DB::table('estate_block_master')
-                ->orderBy('block_name')
-                ->get(['pk', 'block_name']);
-        }
+        $blocks = DB::table('estate_block_master')
+            ->orderBy('block_name')
+            ->get(['pk', 'block_name']);
 
         return response()->json(['status' => true, 'data' => $blocks]);
     }
