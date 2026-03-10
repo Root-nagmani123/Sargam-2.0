@@ -74,7 +74,19 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="13" class="text-center text-body-secondary py-4">No request records found.</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-center text-body-secondary py-4">No request records found.</td>
                         </tr>
                         @endforelse
                     </tbody>

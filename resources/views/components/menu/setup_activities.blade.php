@@ -15,7 +15,30 @@
                             @php
                                 $showUserManagement = hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
                                 $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
-                                $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('HAC Person') || $estateSelfServiceRoles;
+                                // Check if current self-service user is a permanent LBSNAA employee (payroll = 0)
+                                $isPermanentEstateEmployee = false;
+                                $user = Auth::user();
+                                if ($user && $estateSelfServiceRoles && \Illuminate\Support\Facades\Schema::hasTable('employee_master')) {
+                                    $empIdCandidates = array_values(array_filter([
+                                        $user->user_id ?? null,
+                                        $user->pk ?? null,
+                                    ], fn ($v) => $v !== null && $v !== ''));
+                                    if (!empty($empIdCandidates)) {
+                                        $empQuery = \Illuminate\Support\Facades\DB::table('employee_master');
+                                        $empQuery->whereIn('pk', $empIdCandidates);
+                                        if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
+                                            $empQuery->orWhereIn('pk_old', $empIdCandidates);
+                                        }
+                                        $empRow = $empQuery->select('payroll')->first();
+                                        if ($empRow && (int) ($empRow->payroll ?? 0) === 0) {
+                                            $isPermanentEstateEmployee = true;
+                                        }
+                                    }
+                                }
+                                // Estate section visible only for:
+                                // - Admin / Estate / HAC / Training / IST, OR
+                                // - Self-service roles that are permanent employees (payroll = 0)
+                                $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('HAC Person') || ($estateSelfServiceRoles && $isPermanentEstateEmployee);
                                 $isEstateAdmin = hasRole('Estate');
                                 $isHACPerson = hasRole('HAC Person');
                             @endphp
@@ -155,6 +178,28 @@
                                 $canSeeAllEstate = $isEstateAdmin || $showUserManagement;
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
                                 $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles;
+                                // Permanent LBSNAA employee (payroll = 0) gets access to "Other" estate flows as well,
+                                // even if they are not Estate/Admin.
+                                $isPermanentEstateEmployee = false;
+                                $user = Auth::user();
+                                if ($user && $estateSelfServiceRoles && \Illuminate\Support\Facades\Schema::hasTable('employee_master')) {
+                                    $empIdCandidates = array_values(array_filter([
+                                        $user->user_id ?? null,
+                                        $user->pk ?? null,
+                                    ], fn ($v) => $v !== null && $v !== ''));
+                                    if (!empty($empIdCandidates)) {
+                                        $empQuery = \Illuminate\Support\Facades\DB::table('employee_master');
+                                        $empQuery->whereIn('pk', $empIdCandidates);
+                                        if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
+                                            $empQuery->orWhereIn('pk_old', $empIdCandidates);
+                                        }
+                                        $empRow = $empQuery->select('payroll')->first();
+                                        if ($empRow && (int) ($empRow->payroll ?? 0) === 0) {
+                                            $isPermanentEstateEmployee = true;
+                                        }
+                                    }
+                                }
+                                $canSeeOtherEstate = $canSeeAllEstate || $isPermanentEstateEmployee;
                             @endphp
                             {{-- ESTATE MANAGEMENT --}}
                             <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -210,7 +255,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if($canSeeAllEstate)
+                                @if($canSeeOtherEstate)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.request-for-others') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.request-for-others') }}">
@@ -244,7 +289,7 @@
                                     </a>
                                 </li>
                                 @endif
-                                @if($canSeeAllEstate)
+                                @if($canSeeOtherEstate)
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.generate-estate-bill-for-other') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.generate-estate-bill-for-other') }}">

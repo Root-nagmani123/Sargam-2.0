@@ -618,6 +618,9 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
         function resetAllotDropdowns() {
             $('#allot_estate_campus, #allot_unit_type, #allot_building, #allot_unit_sub_type, #allot_estate_house_master_pk')
                 .html('<option value="">---select---</option>').val('').prop('disabled', false);
+            // House list should not be prefilled; force user to select filters first.
+            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
+            $('#allotNoHouses').removeClass('d-none');
         }
 
         function isAllotFormValid() {
@@ -639,7 +642,8 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             var unitTypeId = $('#allot_unit_type').val();
             $('#allot_building').html('<option value="">---select---</option>');
             $('#allot_unit_sub_type').html('<option value="">---select---</option>');
-            $('#allot_estate_house_master_pk').html('<option value="">---select---</option>');
+            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
+            $('#allotNoHouses').removeClass('d-none');
             if (!campusId) return;
             $.get(blocksUrlAllot, { campus_id: campusId, unit_type_id: unitTypeId || '' }, function(res) {
                 if (res.status && res.data) {
@@ -655,7 +659,8 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             var blockId = $('#allot_building').val();
             var unitTypeId = $('#allot_unit_type').val();
             $('#allot_unit_sub_type').html('<option value="">---select---</option>');
-            $('#allot_estate_house_master_pk').html('<option value="">---select---</option>');
+            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
+            $('#allotNoHouses').removeClass('d-none');
             if (!campusId || !blockId) return;
             $.get(unitSubTypesUrlAllot, { campus_id: campusId, block_id: blockId, unit_type_id: unitTypeId || '' }, function(res) {
                 if (res.status && res.data) {
@@ -671,7 +676,7 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
             var blockId = $('#allot_building').val();
             var unitSubId = $('#allot_unit_sub_type').val();
             var unitTypeId = $('#allot_unit_type').val();
-            $('#allot_estate_house_master_pk').html('<option value="">---select---</option>');
+            $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
             if (!campusId || !blockId || !unitSubId) return;
             var params = {
                 campus_id: campusId,
@@ -722,14 +727,9 @@ if (cardBody && wrapper) cardBody.insertBefore(alert, wrapper);
                         $('#allot_estate_campus').append('<option value="' + c.pk + '">' + (c.campus_name || c.pk) + '</option>');
                     });
                     $('#allot_unit_type, #allot_building, #allot_unit_sub_type').html('<option value="">---select---</option>');
-                    // Pre-fill House No. from vacant_houses (already filtered by eligibility + occupied) so user can allot without cascade
-                    var vacantList = data.vacant_houses || [];
+                    // Do not prefill house list; it must be filtered via dropdown cascade.
                     $('#allot_estate_house_master_pk').html('<option value="">— Select House —</option>');
-                    vacantList.forEach(function(h) {
-                        var label = (h.block_name ? h.block_name + ' - ' : '') + (h.house_no || h.pk);
-                        $('#allot_estate_house_master_pk').append('<option value="' + h.pk + '">' + label + '</option>');
-                    });
-                    $('#allotNoHouses').toggleClass('d-none', vacantList.length > 0);
+                    $('#allotNoHouses').removeClass('d-none');
                     updateAllotSubmitButton();
                 })
                 .catch(function() {

@@ -89,83 +89,55 @@ $(document).ready(function() {
         return '₹ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
-    function loadBillReportGrid() {
+    function initOrReloadBillReportGrid() {
         var billMonth = $('#bill_month').val();
-        if (!billMonth) {
-            return;
+        if (!billMonth) return;
+
+        if (!billReportDt) {
+            billReportDt = $('#estateBillReportTable').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                ajax: {
+                    url: dataUrl,
+                    data: function (d) {
+                        d.bill_month = billMonth;
+                    }
+                },
+                columns: [
+                    { data: 'sno', orderable: false, searchable: false },
+                    { data: 'employee_type' },
+                    { data: 'name' },
+                    { data: 'section' },
+                    { data: 'building_name' },
+                    { data: 'house_no' },
+                    { data: 'from_date', searchable: false },
+                    { data: 'to_date', searchable: false },
+                    { data: 'meter_no', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
+                    { data: 'prev_reading', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
+                    { data: 'curr_reading', searchable: false, render: function(v){ return (v || '—').toString().replace(/\n/g,'<br>'); } },
+                    { data: 'unit_consumed', searchable: false },
+                    { data: 'total_charge', searchable: false, render: function(v){ return formatMoney(v); } },
+                    { data: 'licence_fee', searchable: false, render: function(v){ return formatMoney(v); } },
+                    { data: 'water_charges', searchable: false, render: function(v){ return formatMoney(v); } },
+                    { data: 'grand_total', searchable: false, render: function(v){ return formatMoney(v); } },
+                ],
+                order: [[4, 'asc'], [5, 'asc']],
+                responsive: false,
+                autoWidth: false,
+                scrollX: true,
+                dom: '<"row flex-nowrap align-items-center py-2"<"col-12 col-sm-6 col-md-6 mb-2 mb-md-0"l><"col-12 col-sm-6 col-md-6"f>>rt<"row align-items-center py-2"<"col-12 col-sm-5 col-md-5"i><"col-12 col-sm-7 col-md-7"p>>'
+            });
+        } else {
+            billReportDt.ajax.reload(null, true);
         }
-        $.ajax({
-            url: dataUrl,
-            type: 'GET',
-            data: { bill_month: billMonth },
-            dataType: 'json',
-            success: function(res) {
-                var data = (res && res.data) ? res.data : [];
-                if (billReportDt) {
-                    billReportDt.destroy();
-                    billReportDt = null;
-                }
-                var tbody = $('#estateBillReportTable tbody');
-                tbody.empty();
-                if (data.length === 0) {
-                    tbody.append('<tr id="noDataRow"><td colspan="16" class="text-center text-muted py-4">No notified bills for the selected month.</td></tr>');
-                } else {
-                    data.forEach(function(row) {
-                        tbody.append(
-                            '<tr>' +
-                            '<td>' + (row.sno || '') + '</td>' +
-                            '<td>' + (row.employee_type || '—') + '</td>' +
-                            '<td>' + (row.name || '—') + '</td>' +
-                            '<td>' + (row.section || '—') + '</td>' +
-                            '<td>' + (row.building_name || '—') + '</td>' +
-                            '<td>' + (row.house_no || '—') + '</td>' +
-                            '<td>' + (row.from_date || '—') + '</td>' +
-                            '<td>' + (row.to_date || '—') + '</td>' +
-                            '<td>' + (String(row.meter_no || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (String(row.prev_reading || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (String(row.curr_reading || '').replace(/\n/g, '<br>') || '—') + '</td>' +
-                            '<td>' + (row.unit_consumed ?? '—') + '</td>' +
-                            '<td>' + formatMoney(row.total_charge) + '</td>' +
-                            '<td>' + formatMoney(row.licence_fee) + '</td>' +
-                            '<td>' + formatMoney(row.water_charges) + '</td>' +
-                            '<td class="fw-semibold">' + formatMoney(row.grand_total) + '</td>' +
-                            '</tr>'
-                        );
-                    });
-                }
-                billReportDt = $('#estateBillReportTable').DataTable({
-                    order: [[1, 'asc']],
-                    pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                    language: {
-                        search: "Search:",
-                        lengthMenu: "Show _MENU_ entries",
-                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                        infoEmpty: "Showing 0 to 0 of 0 entries",
-                        infoFiltered: "(filtered from _MAX_ total entries)",
-                        paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
-                    },
-                    responsive: false,
-                    autoWidth: false,
-                    scrollX: true,
-                    dom: '<"row flex-nowrap align-items-center py-2"<"col-12 col-sm-6 col-md-6 mb-2 mb-md-0"l><"col-12 col-sm-6 col-md-6"f>>rt<"row align-items-center py-2"<"col-12 col-sm-5 col-md-5"i><"col-12 col-sm-7 col-md-7"p>>'
-                });
-            },
-            error: function() {
-                if (billReportDt) {
-                    billReportDt.destroy();
-                    billReportDt = null;
-                }
-                $('#estateBillReportTable tbody').empty().append(
-                    '<tr id="noDataRow"><td colspan="16" class="text-center text-danger py-4">Failed to load data. Please try again.</td></tr>'
-                );
-            }
-        });
     }
 
     $('#billReportGridFilterForm').on('submit', function(e) {
         e.preventDefault();
-        loadBillReportGrid();
+        initOrReloadBillReportGrid();
     });
 });
 </script>

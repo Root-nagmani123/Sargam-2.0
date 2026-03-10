@@ -18,7 +18,7 @@
         <h2 class="mb-0">Define House</h2>
         <div>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEstateHouseModal">
-                <i class="bi bi-plus-circle me-2"></i>Add Estate House
+                <i class="bi bi-plus-circle me-2"></i>Add Define House
             </button>
         </div>
     </div>
@@ -61,16 +61,17 @@
     </div>
 </div>
 
-<!-- Add Estate House Modal -->
+<!-- Add Define House Modal -->
 <div class="modal fade" id="addEstateHouseModal" tabindex="-1" aria-labelledby="addEstateHouseModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addEstateHouseModalLabel">Add Estate House</h5>
+                <h5 class="modal-title" id="addEstateHouseModalLabel">Add Define House</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small mb-3">Please Add Estate House</p>
+                <p class="text-muted small mb-3">Please Add Define House</p>
+                <div id="defineHouseModalAlerts"></div>
                 <form id="addEstateHouseForm">
                     @csrf
                     <input type="hidden" id="edit_house_pk" name="edit_house_pk" value="">
@@ -135,12 +136,12 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Meter No. 1</label>
-                                    <input type="text" class="form-control meter_one" name="meter_one[]" placeholder="Enter Meter No. 1">
+                                    <input type="text" class="form-control meter_one" name="meter_one[]" placeholder="Enter Meter No. 1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                                     <small class="text-muted">Enter Meter No. 1</small>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Meter No. 2</label>
-                                    <input type="text" class="form-control meter_two" name="meter_two[]" placeholder="Enter Meter No. 2">
+                                    <input type="text" class="form-control meter_two" name="meter_two[]" placeholder="Enter Meter No. 2" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                                     <small class="text-muted">Enter Meter No. 2</small>
                                 </div>
                                 <div class="col-md-6">
@@ -201,7 +202,8 @@ $(document).ready(function() {
     const dataUrl = "{{ route('admin.estate.define-house.data') }}";
     const editUrlBase = "{{ route('admin.estate.define-house.show', ['id' => '__ID__']) }}".replace('__ID__', '');
     const updateUrlBase = "{{ route('admin.estate.define-house.update', ['id' => '__ID__']) }}".replace('__ID__', '');
-    const deleteUrlBase = "{{ route('admin.estate.define-house.destroy', ['id' => '__ID__']) }}".replace('__ID__', '');
+    // Delete disabled for Define House (safety)
+    const deleteUrlBase = "";
 
     function escapeHtml(str) {
         return String(str || '')
@@ -222,6 +224,30 @@ $(document).ready(function() {
         $('#defineHouseAlerts').html(html);
         $('html, body').animate({ scrollTop: 0 }, 150);
     }
+
+    function showModalAlert(type, message) {
+        var icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+        var html = '<div class="alert alert-' + type + ' alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert">' +
+            '<i class="bi ' + icon + ' me-2 flex-shrink-0" aria-hidden="true"></i>' +
+            '<span class="flex-grow-1">' + escapeHtml(message) + '</span>' +
+            '<button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="Close"></button>' +
+        '</div>';
+        $('#defineHouseModalAlerts').html(html);
+        // keep focus inside modal
+        var $modalBody = $('#addEstateHouseModal .modal-body');
+        if ($modalBody.length) {
+            $modalBody.animate({ scrollTop: 0 }, 150);
+        }
+    }
+
+    // Meter inputs: allow digits only (type/paste/drag-drop)
+    $(document).on('input', '.meter_one, .meter_two', function() {
+        var val = String($(this).val() || '');
+        var cleaned = val.replace(/\D/g, '');
+        if (val !== cleaned) {
+            $(this).val(cleaned);
+        }
+    });
 
     // Load buildings when estate (campus) changes
     $('#estate_campus_master_pk').on('change', function() {
@@ -260,7 +286,7 @@ $(document).ready(function() {
             { data: 'pk', orderable: false, searchable: false, render: function(pk) {
                 return '<div class="d-flex flex-nowrap gap-1 justify-content-center">' +
                        '<button type="button" class="btn btn-sm btn-warning btn-edit-house" title="Edit" data-pk="'+pk+'"><i class="bi bi-pencil"></i></button>' +
-                       '<button type="button" class="btn btn-sm btn-danger btn-delete-house" title="Delete" data-pk="'+pk+'"><i class="bi bi-trash"></i></button></div>';
+                       '</div>';
             }}
         ],
         order: [[0, 'asc']],
@@ -282,6 +308,7 @@ $(document).ready(function() {
     $('#saveEstateHouseBtn').on('click', function() {
         syncStatusHidden();
         reindexHouseRowNames();
+        $('#defineHouseModalAlerts').html('');
         var $form = $('#addEstateHouseForm');
         var editPk = $('#edit_house_pk').val();
         var $rows = $('#houseRowsContainer .house-row');
@@ -321,8 +348,26 @@ $(document).ready(function() {
                 showPageAlert('success', res.message || (editPk ? 'Estate house updated.' : 'Estate house(s) added successfully.'));
             }
         }).fail(function(xhr) {
-            var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : (xhr.responseJSON && xhr.responseJSON.errors ? JSON.stringify(xhr.responseJSON.errors) : 'Failed to save.');
-            showPageAlert('danger', msg);
+            var msg = 'Failed to save.';
+            if (xhr.responseJSON) {
+                if (xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                } else if (xhr.responseJSON.errors) {
+                    // pick first validation error
+                    try {
+                        var firstKey = Object.keys(xhr.responseJSON.errors)[0];
+                        if (firstKey && xhr.responseJSON.errors[firstKey] && xhr.responseJSON.errors[firstKey][0]) {
+                            msg = xhr.responseJSON.errors[firstKey][0];
+                        } else {
+                            msg = JSON.stringify(xhr.responseJSON.errors);
+                        }
+                    } catch (e) {
+                        msg = 'Validation failed.';
+                    }
+                }
+            }
+            // Show inside modal so user sees it in context
+            showModalAlert('danger', msg);
         }).always(function() {
             btn.prop('disabled', false);
         });
@@ -330,8 +375,9 @@ $(document).ready(function() {
 
     // Reset form when modal is closed
     $('#addEstateHouseModal').on('hidden.bs.modal', function() {
+        $('#defineHouseModalAlerts').html('');
         $('#edit_house_pk').val('');
-        $('#addEstateHouseModalLabel').text('Add Estate House');
+        $('#addEstateHouseModalLabel').text('Add Define House');
         $('#addHouseRowBtn, #removeHouseRowBtn').show();
         $('#addEstateHouseForm')[0].reset();
         $('#water_charge, #electric_charge').val('0.00');
@@ -446,32 +492,12 @@ $(document).ready(function() {
         }).fail(function() { showPageAlert('danger', 'Could not load house.'); });
     });
 
-    // Delete Estate House
-    $(document).on('click', '.btn-delete-house', function() {
-        var pk = $(this).data('pk');
-        if (!confirm('Are you sure you want to delete this estate house?')) return;
-        var url = (deleteUrlBase.slice(-1) === '/' ? deleteUrlBase : deleteUrlBase + '/') + pk;
-        $.ajax({
-            url: url,
-            type: 'DELETE',
-            headers: { 'X-CSRF-TOKEN': $('input[name="_token"]').val() || $('meta[name="csrf-token"]').attr('content'), 'Accept': 'application/json' }
-        }).done(function(res) {
-            if (res.success) {
-                table.ajax.reload(null, false);
-                showPageAlert('success', res.message || 'Estate house deleted.');
-            } else {
-                showPageAlert('danger', res.message || 'Delete failed.');
-            }
-        }).fail(function(xhr) {
-            var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Delete failed.';
-            showPageAlert('danger', msg);
-        });
-    });
+    // Delete disabled for Define House (intentionally removed)
 
     // When opening Add modal (not edit), reset title and show + -
     $('#addEstateHouseModal').on('show.bs.modal', function(e) {
         if ($('#edit_house_pk').val() === '') {
-            $('#addEstateHouseModalLabel').text('Add Estate House');
+            $('#addEstateHouseModalLabel').text('Add Define House');
             $('#addHouseRowBtn').show();
             $('#removeHouseRowBtn').show();
         }

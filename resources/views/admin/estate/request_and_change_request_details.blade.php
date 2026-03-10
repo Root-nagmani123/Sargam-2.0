@@ -72,10 +72,10 @@
                     <label class="form-label fw-semibold small text-uppercase text-body-secondary">Status of Request</label>
                     <p class="mb-0 fw-medium">{{ $requestForHouse->status }}</p>
                 </div>
-                <div class="col-md-6 col-lg-4">
+                <!-- <div class="col-md-6 col-lg-4">
                     <label class="form-label fw-semibold small text-uppercase text-body-secondary">App Status</label>
                     <p class="mb-0 fw-medium">{{ $requestForHouse->app_status }}</p>
-                </div>
+                </div> -->
                 <div class="col-md-6 col-lg-4">
                     <label class="form-label fw-semibold small text-uppercase text-body-secondary">HAC Status</label>
                     <p class="mb-0 fw-medium">{{ $requestForHouse->hac_status }}</p>

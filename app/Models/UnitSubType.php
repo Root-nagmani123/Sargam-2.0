@@ -12,7 +12,11 @@ class UnitSubType extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['unit_sub_type'];
+    protected $fillable = ['pk', 'unit_sub_type'];
+
+    public $incrementing = false;
+
+    protected $keyType = 'int';
 
     /** Name for display (unit_sub_type is the column in DB). */
     public function getNameAttribute(): string
