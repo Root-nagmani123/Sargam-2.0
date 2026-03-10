@@ -42,7 +42,12 @@
                                                 </a>
                                             </li>
 
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
+                                            @if(
+                                                hasRole('Admin')
+                                                || hasRole('Training-Induction')
+                                                || hasRole('Training-MCTP')
+                                                || hasRole('IST')
+                                            )
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -100,6 +105,11 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            @endif
+
+                                            @endif
+
+                                            @if(canSeeLowStockAlert())
                                             <li class="mini-nav-item" id="setup-mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -114,8 +124,6 @@
                                                     </div>
                                                 </a>
                                             </li>
-                                            @endif
-
                                             @endif
 
                                         </div>
