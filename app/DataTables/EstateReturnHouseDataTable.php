@@ -18,6 +18,11 @@ class EstateReturnHouseDataTable extends DataTable
         $meta = $this->returnHouseMetaByPk();
 
         return DataTables::of($query)
+            // Use a no-op filter callback to disable Yajra's default
+            // global search. Actual search is handled inside query().
+            ->filter(function ($query) {
+                // Intentionally left blank.
+            })
             ->addIndexColumn()
             ->editColumn('upload_document', function ($row) use ($meta) {
                 $scope = (string) ($row->scope ?? '');
@@ -51,6 +56,11 @@ class EstateReturnHouseDataTable extends DataTable
     public function query(): QueryBuilder
     {
         $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+        $request = $this->request();
+        $searchValue = '';
+        if ($request && is_array($request->get('search'))) {
+            $searchValue = strtolower((string) ($request->get('search')['value'] ?? ''));
+        }
 
         // LBSNAA returned houses (estate_possession_details)
         $lbsnaa = DB::table('estate_possession_details as epd')
@@ -70,6 +80,35 @@ class EstateReturnHouseDataTable extends DataTable
             ->where('epd.estate_change_id', -1)
             ->when(Schema::hasColumn('estate_possession_details', 'return_home_status'), function ($q) {
                 $q->where('epd.return_home_status', 1);
+            })
+            // Manual global search on underlying columns (cannot use aliases in WHERE).
+            ->when($searchValue !== '', function ($q) use ($searchValue) {
+                $like = '%' . $searchValue . '%';
+                $q->where(function ($sub) use ($like) {
+                    $sub
+                        // name (ehrd.emp_name)
+                        ->orWhereRaw('LOWER(ehrd.emp_name) LIKE ?', [$like])
+                        // estate_name (ec.campus_name)
+                        ->orWhereRaw('LOWER(ec.campus_name) LIKE ?', [$like])
+                        // unit_name (eut.unit_type)
+                        ->orWhereRaw('LOWER(eut.unit_type) LIKE ?', [$like])
+                        // building_name (eb.block_name)
+                        ->orWhereRaw('LOWER(eb.block_name) LIKE ?', [$like])
+                        // house_no (ehm.house_no)
+                        ->orWhereRaw('LOWER(ehm.house_no) LIKE ?', [$like])
+                        // unit_sub_type (eust.unit_sub_type)
+                        ->orWhereRaw('LOWER(eust.unit_sub_type) LIKE ?', [$like])
+                        // allotment_date (epd.allotment_date)
+                        ->orWhereRaw('LOWER(CAST(epd.allotment_date AS CHAR)) LIKE ?', [$like])
+                        // possession_date_oth (epd.possession_date)
+                        ->orWhereRaw('LOWER(CAST(epd.possession_date AS CHAR)) LIKE ?', [$like])
+                        // returning_date (epd.current_meter_reading_date)
+                        ->orWhereRaw('LOWER(CAST(epd.current_meter_reading_date AS CHAR)) LIKE ?', [$like])
+                        // remarks (epd.remarks) if exists
+                        ->when(Schema::hasColumn('estate_possession_details', 'remarks'), function ($inner) use ($like) {
+                            $inner->orWhereRaw('LOWER(epd.remarks) LIKE ?', [$like]);
+                        });
+                });
             })
             ->selectRaw("
                 epd.pk as pk,
@@ -99,6 +138,47 @@ class EstateReturnHouseDataTable extends DataTable
             ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
             ->where('epo.return_home_status', 1)
+            // Manual global search for "Other Employee" branch.
+            ->when($searchValue !== '', function ($q) use ($searchValue) {
+                $like = '%' . $searchValue . '%';
+                $q->where(function ($sub) use ($like) {
+                    $sub
+                        // name (eor.emp_name)
+                        ->orWhereRaw('LOWER(eor.emp_name) LIKE ?', [$like])
+                        // section_name (eor.section)
+                        ->orWhereRaw('LOWER(eor.section) LIKE ?', [$like])
+                        // estate_name (ec.campus_name)
+                        ->orWhereRaw('LOWER(ec.campus_name) LIKE ?', [$like])
+                        // unit_name (eut.unit_type)
+                        ->orWhereRaw('LOWER(eut.unit_type) LIKE ?', [$like])
+                        // building_name (eb.block_name)
+                        ->orWhereRaw('LOWER(eb.block_name) LIKE ?', [$like])
+                        // house_no (COALESCE(NULLIF(TRIM(epo.house_no),''), ehm.house_no))
+                        ->orWhereRaw("LOWER(COALESCE(NULLIF(TRIM(epo.house_no), ''), ehm.house_no)) LIKE ?", [$like])
+                        // unit_sub_type (eust.unit_sub_type)
+                        ->orWhereRaw('LOWER(eust.unit_sub_type) LIKE ?', [$like])
+                        // allotment_date (epo.allotment_date)
+                        ->orWhereRaw('LOWER(CAST(epo.allotment_date AS CHAR)) LIKE ?', [$like])
+                        // possession_date_oth (epo.possession_date_oth)
+                        ->orWhereRaw('LOWER(CAST(epo.possession_date_oth AS CHAR)) LIKE ?', [$like])
+                        // returning_date (epo.current_meter_reading_date)
+                        ->orWhereRaw('LOWER(CAST(epo.current_meter_reading_date AS CHAR)) LIKE ?', [$like])
+                        // upload_document (various columns)
+                        ->when(Schema::hasColumn('estate_possession_other', 'upload_document') || Schema::hasColumn('estate_possession_other', 'noc_document'), function ($inner) use ($like) {
+                            if (Schema::hasColumn('estate_possession_other', 'upload_document') && Schema::hasColumn('estate_possession_other', 'noc_document')) {
+                                $inner->orWhereRaw('LOWER(COALESCE(epo.upload_document, epo.noc_document)) LIKE ?', [$like]);
+                            } elseif (Schema::hasColumn('estate_possession_other', 'upload_document')) {
+                                $inner->orWhereRaw('LOWER(epo.upload_document) LIKE ?', [$like]);
+                            } elseif (Schema::hasColumn('estate_possession_other', 'noc_document')) {
+                                $inner->orWhereRaw('LOWER(epo.noc_document) LIKE ?', [$like]);
+                            }
+                        })
+                        // remarks (epo.remarks) if exists
+                        ->when(Schema::hasColumn('estate_possession_other', 'remarks'), function ($inner) use ($like) {
+                            $inner->orWhereRaw('LOWER(epo.remarks) LIKE ?', [$like]);
+                        });
+                });
+            })
             ->selectRaw("
                 epo.pk as pk,
                 CONCAT('O-', epo.pk) as row_id,

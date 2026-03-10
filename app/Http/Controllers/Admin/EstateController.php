@@ -4238,35 +4238,32 @@ class EstateController extends Controller
     {
         $type = $request->get('employee_type', 'Other Employee');
         if ($type === 'LBSNAA') {
-            $empPkCol = $this->estateEmployeePkColumn();
-            $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
-            $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
+            // LBSNAA: use the same "allotted" source as Request For Estate listing,
+            // but only for active (not-yet-returned) possessions and without pending change requests.
+            $nameSelect = "COALESCE(NULLIF(TRIM(ehrd.emp_name), ''), NULLIF(TRIM(ehrd.employee_id), ''), CONCAT('Request #', ehrd.req_id))";
 
-            $empIdJoinColumn = $hasEmpId
-                ? 'em.emp_id'
-                : ($hasEmployeeId ? 'em.employee_id' : null);
-
-            $nameSelect = "COALESCE(NULLIF(TRIM(ehrd.emp_name), ''), NULLIF(TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.last_name, ''))), ''), NULLIF(TRIM(ehrd.employee_id), ''), CONCAT('Request #', ehrd.pk))";
-
-            $query = DB::table('estate_possession_details as epd')
-                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-                ->leftJoin('employee_master as em', function ($join) use ($empPkCol, $empIdJoinColumn) {
-                    $join->on('em.' . $empPkCol, '=', 'ehrd.employee_pk');
-                    if ($empIdJoinColumn) {
-                        $join->orOn(DB::raw($empIdJoinColumn), '=', 'ehrd.employee_id');
-                    }
-                })
-                // Active possessions only: treat NULL or 0 as "not yet returned" for backward compatibility.
+            $query = DB::table('estate_home_request_details as ehrd')
+                ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('ehrd.status', 1) // Allotted in Request For Estate
+                ->whereNotNull('ehrd.current_alot')
+                ->whereRaw("TRIM(COALESCE(ehrd.current_alot, '')) != ''")
+                ->whereNotNull('epd.estate_house_master_pk')
+                // Active possessions only: treat NULL or 0 as "not yet returned"
                 ->when(\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status'), function ($q) {
                     $q->where(function ($sub) {
                         $sub->whereNull('epd.return_home_status')
                             ->orWhere('epd.return_home_status', 0);
                     });
                 })
-                ->whereNotNull('epd.estate_house_master_pk')
-                ->where('epd.estate_change_id', -1);
+                // Exclude home requests that already have a *pending* change request
+                ->whereNotExists(function ($sub) {
+                    $sub->from('estate_change_home_req_details as ch')
+                        ->whereColumn('ch.estate_home_req_details_pk', 'ehrd.pk')
+                        ->where('ch.change_ap_dis_status', 0);
+                });
 
-            // LBSNAA: non-admin (permanent employee) sees only their own name; Admin/Estate/Training/IST see all.
+            // LBSNAA: non-admin (permanent employee) sees only their own name;
+            // Estate/Admin/Training/IST see full list (same as Request For Estate behavior).
             $user = Auth::user();
             if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
@@ -4331,7 +4328,6 @@ class EstateController extends Controller
                 ->where('ehrd.pk', $id)
                 ->where('epd.return_home_status', 0)
                 ->whereNotNull('epd.estate_house_master_pk')
-                ->where('epd.estate_change_id', -1)
                 ->select(
                     'ec.pk as estate_campus_master_pk',
                     'ec.campus_name',
