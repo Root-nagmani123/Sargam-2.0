@@ -49,10 +49,10 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-primary text-white" style="background:#0d6efd;">
+                <table class="table text-nowrap align-middle">
+                    <thead>
                         <tr>
-                            <th style="width:60px">S. No.</th>
+                            <th>S. No.</th>
                             <th>Employee Name</th>
                             <th>Designation</th>
                             <th>Department</th>
@@ -68,7 +68,7 @@
                             <th>Valid To</th>
                             <th>Status</th>
                             <th>Request Date</th>
-                            <th class="text-center" style="width:120px;">Actions</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -108,12 +108,10 @@
                                 <td>{{ $r->valid_to ? \Carbon\Carbon::parse($r->valid_to)->format('d-m-Y') : '--' }}</td>
                                 <td>{{ $r->status_label }}</td>
                                 <td>{{ $r->request_date ? \Carbon\Carbon::parse($r->request_date)->format('d-m-Y') : '--' }}</td>
-                                <td class="text-center">
-                                    <div class="d-flex gap-1 justify-content-center flex-wrap">
-                                        <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn btn-sm btn-outline-primary" title="Edit">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
-                                        </a>
-                                    </div>
+                                <td>
+                                    <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
+                                    </a>
                                 </td>
                             </tr>
                         @empty
