@@ -495,6 +495,7 @@ class SellingVoucherDateRangeController extends Controller
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
             'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+            'remove_bill' => 'nullable|string|in:0,1',
         ], [
             'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
@@ -561,6 +562,11 @@ class SellingVoucherDateRangeController extends Controller
                 }
                 $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
                 $report->update(['bill_path' => $path]);
+            } elseif ($request->filled('remove_bill') && $request->remove_bill === '1') {
+                if ($report->bill_path && Storage::disk('public')->exists($report->bill_path)) {
+                    Storage::disk('public')->delete($report->bill_path);
+                }
+                $report->update(['bill_path' => null]);
             }
 
             $report->items()->delete();

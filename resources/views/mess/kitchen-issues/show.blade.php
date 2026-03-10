@@ -29,7 +29,7 @@
                     <table class="table table-borderless table-sm">
                         <tr><th width="40%">Client Type:</th><td>{{ $kitchenIssue->clientTypeCategory ? ucfirst($kitchenIssue->clientTypeCategory->client_type ?? '') : '-' }}</td></tr>
                         <tr><th>Client Name:</th><td>{{ $kitchenIssue->client_name ?? '-' }}</td></tr>
-                        <tr><th>Payment Type:</th><td>{{ $kitchenIssue->payment_type == 1 ? 'Credit' : ($kitchenIssue->payment_type == 0 ? 'Cash' : ($kitchenIssue->payment_type == 2 ? 'Online' : '-')) }}</td></tr>
+                        <tr><th>Payment Type:</th><td>{{ $kitchenIssue->payment_type == 1 ? 'Credit' : ($kitchenIssue->payment_type == 0 ? 'Cash' : ($kitchenIssue->payment_type == 2 ? 'UPI' : '-')) }}</td></tr>
                         <tr><th>Status:</th><td>
                             @if($kitchenIssue->status == 0)<span class="badge bg-warning">Pending</span>
                             @elseif($kitchenIssue->status == 2)<span class="badge bg-success">Approved</span>

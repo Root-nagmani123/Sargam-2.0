@@ -98,7 +98,7 @@
                             <td>{{ $voucher->client_type_label ?? '—' }}</td>
                             <td>{{ $voucher->display_client_name }}</td>
                             <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'Online' : '—')) }}</td>
+                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
                             <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
                             <td>
                                 @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
@@ -220,9 +220,9 @@
                                     <select name="payment_type" class="form-select" required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                                         <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
-                                        <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
+                                        <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>UPI</option>
                                     </select>
-                                    <small class="text-muted" id="modalPaymentTypeHint">Employee / OT / Course: Credit only</small>
+                                    <small class="text-muted" id="modalPaymentTypeHint">Cash / UPI / Credit</small>
                                 </div>
                                 <div class="col-md-4" id="modalClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
@@ -316,7 +316,11 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="addSvBillFileInput">
+                                    <div id="addSvBillFileChosenWrap" class="d-flex align-items-center gap-2 mt-1 d-none">
+                                        <span id="addSvBillFileChosenName" class="text-muted small"></span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="addSvBillFileRemove">Remove</button>
+                                    </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
@@ -427,7 +431,7 @@
                                     <select name="payment_type" class="form-select edit-payment-type" required>
                                         <option value="1">Credit</option>
                                         <option value="0">Cash</option>
-                                        <option value="2">Online</option>
+                                        <option value="2">UPI</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4" id="editModalClientNameWrap">
@@ -518,12 +522,14 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
+                                    <input type="hidden" name="remove_bill" id="editRemoveBillFlag" value="0">
                                     <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
                                         <span id="editBillCurrentFileName" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2 me-1" style="cursor: pointer;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
                                         </label>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" id="editSvBillFileRemove">Remove</button>
                                     </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                     <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
@@ -1086,7 +1092,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const creditOnly = ['employee', 'ot', 'course'];
     function updateModalNameField() {
         const clientTypeRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
         const clientNameSelect = document.getElementById('modalClientNameSelect');
@@ -1144,18 +1149,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     document.querySelectorAll('#addSellingVoucherModal .client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
-            const paymentSelect = document.querySelector('#addSellingVoucherModal select[name="payment_type"]');
-            const hint = document.getElementById('modalPaymentTypeHint');
-            if (creditOnly.indexOf(this.value) !== -1) {
-                if (paymentSelect) paymentSelect.value = '1';
-                paymentSelect && paymentSelect.querySelectorAll('option').forEach(function(opt) {
-                    opt.disabled = (opt.value !== '' && opt.value !== '1');
-                });
-                if (hint) hint.textContent = 'Credit only for this client type';
-            } else {
-                paymentSelect && paymentSelect.querySelectorAll('option').forEach(function(opt) { opt.disabled = false; });
-                if (hint) hint.textContent = 'Cash / Online / Credit';
-            }
             const isOt = (this.value || '').toLowerCase() === 'ot';
             const isCourse = (this.value || '').toLowerCase() === 'course';
             const clientSelect = document.getElementById('modalClientNameSelect');
@@ -1751,6 +1744,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     var editSvBillFileInputEl = document.getElementById('editSvBillFileInput');
                     if (editSvBillFileInputEl) editSvBillFileInputEl.value = '';
+                    var editRemoveBillFlagEl = document.getElementById('editRemoveBillFlag');
+                    if (editRemoveBillFlagEl) editRemoveBillFlagEl.value = '0';
                     var editBillLinkEl = document.getElementById('editCurrentBillLink');
                     if (editBillLinkEl) {
                         if (v.bill_url) {
@@ -1822,12 +1817,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Add modal: show selected bill file name and Remove button
+    var addSvBillFileInputEl = document.getElementById('addSvBillFileInput');
+    if (addSvBillFileInputEl) {
+        addSvBillFileInputEl.addEventListener('change', function() {
+            var wrap = document.getElementById('addSvBillFileChosenWrap');
+            var nameEl = document.getElementById('addSvBillFileChosenName');
+            if (wrap && nameEl) {
+                if (this.files && this.files[0]) {
+                    nameEl.textContent = this.files[0].name;
+                    wrap.classList.remove('d-none');
+                } else {
+                    nameEl.textContent = '';
+                    wrap.classList.add('d-none');
+                }
+            }
+        });
+    }
+    var addSvBillFileRemoveEl = document.getElementById('addSvBillFileRemove');
+    if (addSvBillFileRemoveEl) {
+        addSvBillFileRemoveEl.addEventListener('click', function() {
+            var input = document.getElementById('addSvBillFileInput');
+            var wrap = document.getElementById('addSvBillFileChosenWrap');
+            var nameEl = document.getElementById('addSvBillFileChosenName');
+            if (input) input.value = '';
+            if (nameEl) nameEl.textContent = '';
+            if (wrap) wrap.classList.add('d-none');
+        });
+    }
+
     // Edit modal: show selected file name when user picks a new bill (same as Selling Voucher with Date Range)
     var editSvBillFileInputEl = document.getElementById('editSvBillFileInput');
     if (editSvBillFileInputEl) {
         editSvBillFileInputEl.addEventListener('change', function() {
             var pathEl = document.getElementById('editBillCurrentFileName');
+            var removeFlag = document.getElementById('editRemoveBillFlag');
             if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+            if (removeFlag) removeFlag.value = '0';
+        });
+    }
+    var editSvBillFileRemoveEl = document.getElementById('editSvBillFileRemove');
+    if (editSvBillFileRemoveEl) {
+        editSvBillFileRemoveEl.addEventListener('click', function() {
+            var input = document.getElementById('editSvBillFileInput');
+            var pathEl = document.getElementById('editBillCurrentFileName');
+            var removeFlag = document.getElementById('editRemoveBillFlag');
+            if (input) input.value = '';
+            if (pathEl) pathEl.textContent = 'No file chosen';
+            if (removeFlag) removeFlag.value = '1';
         });
     }
 

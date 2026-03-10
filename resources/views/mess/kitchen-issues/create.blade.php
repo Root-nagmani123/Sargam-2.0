@@ -49,9 +49,9 @@
                         <select name="payment_type" class="form-select" required>
                             <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                             <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
-                            <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
+                            <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>UPI</option>
                         </select>
-                        <small class="text-muted" id="paymentTypeHint">Employee / OT / Course: Credit only</small>
+                        <small class="text-muted" id="paymentTypeHint">Cash / UPI / Credit</small>
                     </div>
                     <div class="col-md-4" id="clientNameWrap">
                         <label class="form-label">Client Name <span class="text-danger">*</span></label>
@@ -264,23 +264,9 @@
         }
     });
 
-    // Client type: restrict payment for Employee/OT/Course to Credit only
-    const creditOnly = ['employee', 'ot', 'course'];
+    // Client type: filter client name dropdown by type
     document.querySelectorAll('.client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
-            const paymentSelect = document.querySelector('select[name="payment_type"]');
-            const hint = document.getElementById('paymentTypeHint');
-            if (creditOnly.indexOf(this.value) !== -1) {
-                paymentSelect.value = '1';
-                paymentSelect.querySelectorAll('option').forEach(function(opt) {
-                    opt.disabled = (opt.value !== '' && opt.value !== '1');
-                });
-                if (hint) hint.textContent = 'Credit only for this client type';
-            } else {
-                paymentSelect.querySelectorAll('option').forEach(function(opt) { opt.disabled = false; });
-                if (hint) hint.textContent = 'Cash / Online / Credit';
-            }
-            // Filter client name dropdown by type
             const clientSelect = document.getElementById('clientNameSelect');
             if (clientSelect) {
                 clientSelect.querySelectorAll('option').forEach(function(opt) {

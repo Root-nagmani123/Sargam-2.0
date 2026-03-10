@@ -278,6 +278,7 @@ class KitchenIssueController extends Controller
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
             'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+            'remove_bill' => 'nullable|string|in:0,1',
         ], [
             'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
@@ -625,6 +626,7 @@ class KitchenIssueController extends Controller
             'items.*.rate' => 'required|numeric|min:0',
             'items.*.available_quantity' => 'nullable|numeric|min:0',
             'bill_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:5120',
+            'remove_bill' => 'nullable|string|in:0,1',
         ], [
             'bill_file.mimes' => 'Bill must be PDF or image (jpg, jpeg, png, webp).',
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
@@ -682,6 +684,11 @@ class KitchenIssueController extends Controller
                 }
                 $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
                 $kitchenIssue->update(['bill_path' => $path]);
+            } elseif ($request->filled('remove_bill') && $request->remove_bill === '1') {
+                if ($kitchenIssue->bill_path && Storage::disk('public')->exists($kitchenIssue->bill_path)) {
+                    Storage::disk('public')->delete($kitchenIssue->bill_path);
+                }
+                $kitchenIssue->update(['bill_path' => null]);
             }
 
             $kitchenIssue->items()->delete();
