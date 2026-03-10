@@ -137,11 +137,42 @@ class LoginController extends Controller
 
         $redirect = redirect()->intended($this->redirectTo)
             ->cookie(cookie()->make('fresh_login', 'true', 0));
-        // Low stock alert: Admin, Mess Staff role, or any employee in Officers Mess department (same as mess staff dropdown)
+
+        // When the user can see low stock information, create a notification instead of showing a popup.
         if (canSeeLowStockAlert()) {
             $lowStockAlert = \App\Http\Controllers\Mess\ReportController::getLowStockAlertItems();
-            $redirect->with('low_stock_alert', $lowStockAlert);
+
+            if (is_array($lowStockAlert) && count($lowStockAlert) > 0) {
+                // Build a concise message summarising low stock items
+                $itemsSummary = collect($lowStockAlert)
+                    ->take(5)
+                    ->map(function ($row) {
+                        $name = $row['item_name'] ?? '—';
+                        $remaining = isset($row['remaining_quantity']) ? number_format($row['remaining_quantity'], 2) : '0';
+                        $unit = $row['unit'] ?? 'Unit';
+                        $alert = isset($row['alert_quantity']) ? number_format($row['alert_quantity'], 2) : '0';
+                        return "{$name} ({$remaining} {$unit} / Min {$alert} {$unit})";
+                    })
+                    ->implode('; ');
+
+                if (count($lowStockAlert) > 5) {
+                    $itemsSummary .= '; and more items are below minimum stock.';
+                }
+
+                $message = 'The following mess items are at or below their minimum stock level: ' . $itemsSummary;
+
+                // Create a notification for the logged-in user pointing to the Low Stock Report.
+                notification()->create(
+                    $user->user_id,
+                    'mess_stock',
+                    'LowStock',
+                    0,
+                    'Low stock alert',
+                    $message
+                );
+            }
         }
+
         return $redirect;
 
     } catch (\Throwable $e) {

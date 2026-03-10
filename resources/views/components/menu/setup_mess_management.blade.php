@@ -166,6 +166,12 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link {{ request()->routeIs('admin.mess.reports.low-stock') ? 'active' : '' }}"
+                   href="{{ route('admin.mess.reports.low-stock') }}">
+                    <span class="hide-menu small text-nowrap">Low Stock Report</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link {{ request()->routeIs('admin.mess.reports.purchase-sale-quantity') ? 'active' : '' }}" href="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
                     <span class="hide-menu small text-nowrap">Item Report</span>
                 </a>

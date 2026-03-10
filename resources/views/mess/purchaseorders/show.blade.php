@@ -44,12 +44,14 @@
                             <dt class="col-sm-5 text-body-secondary fw-normal">Payment Mode</dt>
                             <dd class="col-sm-7 mb-0">{{ $purchaseOrder->payment_code ?? 'N/A' }}</dd>
 
-                            <dt class="col-sm-5 text-body-secondary fw-normal">Contact Number</dt>
-                            <dd class="col-sm-7 mb-0">{{ $purchaseOrder->contact_number ?? 'N/A' }}</dd>
+                            @if($purchaseOrder->bill_no)
+                                <dt class="col-sm-5 text-body-secondary fw-normal">Bill No</dt>
+                                <dd class="col-sm-7 mb-0">{{ $purchaseOrder->bill_no }}</dd>
+                            @endif
 
-                            @if($purchaseOrder->delivery_address)
-                                <dt class="col-sm-5 text-body-secondary fw-normal">Delivery Address</dt>
-                                <dd class="col-sm-7 mb-0">{{ $purchaseOrder->delivery_address }}</dd>
+                            @if($purchaseOrder->challan_no)
+                                <dt class="col-sm-5 text-body-secondary fw-normal">Challan No</dt>
+                                <dd class="col-sm-7 mb-0">{{ $purchaseOrder->challan_no }}</dd>
                             @endif
                         </dl>
                     </div>

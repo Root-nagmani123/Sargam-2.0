@@ -222,16 +222,12 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" id="createContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" value="{{ old('contact_number') }}" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
-                                    @error('contact_number')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
+                                    <label class="form-label">Bill No</label>
+                                    <input type="text" name="bill_no" class="form-control" maxlength="100" placeholder="Bill number (optional)">
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
-                                    <textarea name="delivery_address" class="form-control" rows="2" placeholder="Delivery address"></textarea>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan No</label>
+                                    <input type="text" name="challan_no" class="form-control" maxlength="100" placeholder="Challan number (optional)">
                                 </div>
                             </div>
                         </div>
@@ -246,7 +242,10 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <div class="input-group">
+                                        <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
+                                        <button type="button" class="btn btn-outline-secondary" id="createBillClearBtn">Remove</button>
+                                    </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
@@ -369,16 +368,12 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" id="editContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
-                                    @error('contact_number')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
+                                    <label class="form-label">Bill No</label>
+                                    <input type="text" name="bill_no" id="editBillNo" class="form-control" maxlength="100" placeholder="Bill number (optional)">
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
-                                    <textarea name="delivery_address" id="editDeliveryAddress" class="form-control" rows="2"></textarea>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan No</label>
+                                    <input type="text" name="challan_no" id="editChallanNo" class="form-control" maxlength="100" placeholder="Challan number (optional)">
                                 </div>
                             </div>
                         </div>
@@ -392,12 +387,15 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
-                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
+                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white gap-2" style="min-height: 38px;">
                                         <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
                                         <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
                                         </label>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" id="editBillClearBtn">
+                                            Remove
+                                        </button>
                                     </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                     <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
@@ -491,20 +489,20 @@
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
                                 <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Contact Number</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewContactNumber">&mdash;</p>
+                                    <label class="form-label text-body-secondary small mb-1">Bill No</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewBillNo">&mdash;</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Challan No</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewChallanNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
                                 <div class="border rounded-3 p-3 h-100 bg-light-subtle">
                                     <label class="form-label text-body-secondary small mb-1">Status</label>
                                     <p class="mb-0"><span class="badge" id="viewStatus">&mdash;</span></p>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="border rounded-3 p-3 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Delivery Address</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewDeliveryAddress">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12">
@@ -568,6 +566,7 @@
     let editItemRowIndex = 0;
     let currentVendorId = null;
     let editCurrentVendorId = null;
+    let hasInitialCreateErrors = {{ $errors->any() ? 'true' : 'false' }};
 
     function getItemRowHtml(index, editItem, isEditModal) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
@@ -782,8 +781,8 @@
                     document.getElementById('viewStoreName').textContent = po.store_name || '—';
                     document.getElementById('viewVendorName').textContent = po.vendor_name || '—';
                     document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
-                    document.getElementById('viewContactNumber').textContent = po.contact_number || '—';
-                    document.getElementById('viewDeliveryAddress').textContent = po.delivery_address || '—';
+                    document.getElementById('viewBillNo').textContent = po.bill_no || '—';
+                    document.getElementById('viewChallanNo').textContent = po.challan_no || '—';
                     const billLink = document.getElementById('viewBillLink');
                     const billNone = document.getElementById('viewBillNone');
                     if (po.bill_url) {
@@ -877,8 +876,8 @@
                     document.getElementById('editStoreId').value = po.store_id || '';
                     document.getElementById('editVendorId').value = po.vendor_id || '';
                     document.getElementById('editPaymentCode').value = po.payment_code || '';
-                    document.getElementById('editContactNumber').value = po.contact_number || '';
-                    document.getElementById('editDeliveryAddress').value = po.delivery_address || '';
+                    document.getElementById('editBillNo').value = po.bill_no || '';
+                    document.getElementById('editChallanNo').value = po.challan_no || '';
                     var editBillPathEl = document.getElementById('editCurrentBillPath');
                     if (editBillPathEl) {
                         editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po.bill_path) : 'No file chosen';
@@ -943,11 +942,28 @@
         updateEditRemoveButtons();
     });
 
+    var createBillFileInputEl = document.getElementById('createBillFileInput');
+    var createBillClearBtnEl = document.getElementById('createBillClearBtn');
+    if (createBillClearBtnEl && createBillFileInputEl) {
+        createBillClearBtnEl.addEventListener('click', function () {
+            createBillFileInputEl.value = '';
+        });
+    }
+
     var editBillFileInputEl = document.getElementById('editBillFileInput');
     if (editBillFileInputEl) {
         editBillFileInputEl.addEventListener('change', function() {
             var pathEl = document.getElementById('editCurrentBillPath');
             if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+        });
+    }
+
+    var editBillClearBtnEl = document.getElementById('editBillClearBtn');
+    if (editBillClearBtnEl && editBillFileInputEl) {
+        editBillClearBtnEl.addEventListener('click', function () {
+            editBillFileInputEl.value = '';
+            var pathEl = document.getElementById('editCurrentBillPath');
+            if (pathEl) pathEl.textContent = 'No file chosen';
         });
     }
 
@@ -1079,18 +1095,40 @@
     });
     @endif
 
-    // Reset create modal when opened
+    // Reset create modal when opened (except first open after validation errors)
     if (createPOModal) {
         createPOModal.addEventListener('show.bs.modal', function() {
+            if (hasInitialCreateErrors) {
+                // Preserve previously entered values on first open after validation error
+                hasInitialCreateErrors = false;
+                return;
+            }
+
             // Reset vendor selection
             currentVendorId = null;
             filteredItems = itemSubcategories;
-            
-            // Reset form
+
+            // Reset form fields to their initial values
             const form = document.getElementById('createPOForm');
             if (form) {
                 const vendorSelect = form.querySelector('select[name="vendor_id"]');
                 if (vendorSelect) vendorSelect.value = '';
+                form.reset();
+            }
+
+            // Clear selected bill file (if any)
+            if (createBillFileInputEl) {
+                createBillFileInputEl.value = '';
+            }
+
+            // Reset items table to a single fresh row
+            const tbody = document.getElementById('poItemsBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, false));
+                itemRowIndex = 1;
+                updateGrandTotal();
+                updateRemoveButtons();
             }
         });
     }

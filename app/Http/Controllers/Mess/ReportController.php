@@ -970,6 +970,7 @@ class ReportController extends Controller
             }
             if ($remainingQty <= $alertQty) {
                 $out[] = [
+                    'item_id' => $item->id,
                     'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
                     'unit' => $item->unit_measurement ?? 'Unit',
                     'remaining_quantity' => $remainingQty,
@@ -978,6 +979,36 @@ class ReportController extends Controller
             }
         }
         return $out;
+    }
+
+    /**
+     * Low Stock Report
+     * Lists items where remaining_quantity <= alert_quantity using the same logic as the login alert.
+     */
+    public function lowStockReport(Request $request)
+    {
+        $tillDate = $request->filled('till_date')
+            ? $request->till_date
+            : now()->format('Y-m-d');
+
+        $storeId = $request->filled('store_id') ? $request->store_id : null;
+
+        $items = self::getLowStockAlertItems($tillDate, $storeId);
+        $stores = Store::where('status', 'active')->get();
+
+        $selectedStoreName = null;
+        if ($storeId) {
+            $selectedStore = Store::find($storeId);
+            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
+        }
+
+        return view('admin.mess.reports.low-stock', compact(
+            'items',
+            'stores',
+            'tillDate',
+            'storeId',
+            'selectedStoreName'
+        ));
     }
 
     /**
