@@ -62,26 +62,7 @@
     </div>
 </div>
 
-<!-- Delete confirmation modal -->
-<div class="modal fade" id="deletePossessionModal" tabindex="-1" aria-labelledby="deletePossessionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-3 shadow border-0">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold" id="deletePossessionModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <p class="mb-0">Are you sure you want to delete this possession record? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary rounded-2" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger rounded-2 d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
-                    <i class="bi bi-trash"></i> Delete
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Delete modal removed: possession delete disabled on UI -->
 @endsection
 
 @push('styles')
@@ -193,7 +174,6 @@
     {!! $dataTable->scripts() !!}
     <script>
     $(document).ready(function() {
-        let deleteUrl = '';
         var table = $('#estatePossessionTable').DataTable();
 
         // Column visibility toggle (build menu from table columns, skip checkbox and actions)
@@ -343,38 +323,6 @@
             window.location = baseUrl + '?possession_pks=' + ids[0];
         });
 
-        $(document).on('click', '.btn-delete-possession', function(e) {
-            e.preventDefault();
-            deleteUrl = $(this).data('url');
-            $('#deletePossessionModal').modal('show');
-        });
-
-        $('#confirmDeleteBtn').on('click', function() {
-            if (!deleteUrl) return;
-            $.ajax({
-                url: deleteUrl,
-                type: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
-                success: function(response) {
-                    $('#deletePossessionModal').modal('hide');
-                    if (response.success) {
-                        $('#estatePossessionTable').DataTable().ajax.reload(null, false);
-                        var alert = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2 flex-shrink-0"></i><span class="flex-grow-1">' + response.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                        $('#possessionCardBody').find('.alert-success').remove();
-                        $('#possessionCardBody').prepend(alert);
-                        setTimeout(function() { $('.alert-success').fadeOut(); }, 3000);
-                    }
-                },
-                error: function(xhr) {
-                    $('#deletePossessionModal').modal('hide');
-                    var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to delete.';
-                    var alert = '<div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i><span class="flex-grow-1">' + msg + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                    $('#possessionCardBody').find('.alert-danger').remove();
-                    $('#possessionCardBody').prepend(alert);
-                }
-            });
-            deleteUrl = '';
-        });
     });
     </script>
 @endpush

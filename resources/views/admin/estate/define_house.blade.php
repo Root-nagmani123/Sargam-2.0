@@ -47,6 +47,7 @@
                             <th>Building Name</th>
                             <th>Unit Sub Type</th>
                             <th>House No.</th>
+                            <th>Meter No. 1</th>
                             <th>Water Charge</th>
                             <th>Electric Charge</th>
                             <th>Licence Fee</th>
@@ -135,7 +136,7 @@
                                     <small class="text-muted">Enter House No.</small>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Meter No. 1</label>
+                                    <label class="form-label">Meter No. 1 <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control meter_one" name="meter_one[]" placeholder="Enter Meter No. 1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                                     <small class="text-muted">Enter Meter No. 1</small>
                                 </div>
@@ -279,6 +280,7 @@ $(document).ready(function() {
             { data: 'building_name', name: 'building_name' },
             { data: 'unit_sub_type', name: 'unit_sub_type' },
             { data: 'house_no', name: 'house_no' },
+            { data: 'meter_one', name: 'meter_one' },
             { data: 'water_charge', name: 'water_charge', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
             { data: 'electric_charge', name: 'electric_charge', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
             { data: 'licence_fee', name: 'licence_fee', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
@@ -313,12 +315,20 @@ $(document).ready(function() {
         var editPk = $('#edit_house_pk').val();
         var $rows = $('#houseRowsContainer .house-row');
         var valid = true;
+        var meterValid = true;
         $rows.each(function() {
             if (!$(this).find('.house_no').val().trim()) valid = false;
+            var meterVal = $(this).find('.meter_one').val().trim();
+            if (!meterVal) {
+                meterValid = false;
+            } else if (!/^[0-9]+$/.test(meterVal)) {
+                meterValid = false;
+            }
         });
-        if (!valid || !$form[0].checkValidity()) {
+        if (!valid || !meterValid || !$form[0].checkValidity()) {
             $form[0].reportValidity();
-            if (!valid) showPageAlert('danger', 'Please enter House No. for all rows.');
+            if (!valid) showModalAlert('danger', 'Please enter House No. for all rows.');
+            else if (!meterValid) showModalAlert('danger', 'Please enter numeric Meter No. 1 for all rows.');
             return;
         }
         var btn = $(this);

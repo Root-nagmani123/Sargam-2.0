@@ -68,16 +68,10 @@ class EstatePossessionOtherDataTable extends DataTable
             ->orderColumn('allotment_date', fn ($query, $order) => $query->orderBy('estate_possession_other.allotment_date', $order))
             ->orderColumn('possession_date_oth', fn ($query, $order) => $query->orderBy('estate_possession_other.possession_date_oth', $order))
             ->addColumn('actions', function ($row) {
-                $viewUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
-                $deleteUrl = route('admin.estate.possession-delete', ['id' => $row->pk]);
-
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
                     <a href="' . $editUrl . '" class="text-primary" title="Edit">
                         <i class="material-symbols-rounded">edit</i>
-                    </a>
-                    <a href="javascript:void(0);" class="text-primary btn-delete-possession" data-url="' . $deleteUrl . '" data-id="' . $row->pk . '" title="Delete">
-                        <i class="material-symbols-rounded">delete</i>
                     </a>
                 </div>';
             })

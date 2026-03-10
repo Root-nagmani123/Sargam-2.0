@@ -3009,8 +3009,9 @@ class EstateController extends Controller
             'remarks' => 'nullable|string|max:200',
             'house_no' => 'required|array',
             'house_no.*' => 'required|string|max:20',
-            'meter_one' => 'nullable|array',
-            'meter_one.*' => 'nullable|string|max:30',
+            // Meter No. 1 must be filled and numeric for every row.
+            'meter_one' => 'required|array',
+            'meter_one.*' => 'required|string|max:30|regex:/^[0-9]+$/',
             'meter_two' => 'nullable|array',
             'meter_two.*' => 'nullable|string|max:30',
             'licence_fee' => 'nullable|array',
@@ -3030,9 +3031,22 @@ class EstateController extends Controller
             return redirect()->back()->withInput()->withErrors(['house_no' => 'At least one house entry is required.']);
         }
 
-        // Prevent duplicate house definition (same campus + block + house_no).
+        // Normalise house numbers for uniqueness:
+        // - trim spaces
+        // - collapse multiple hyphens ("HS--01" -> "HS-01")
+        // - upper-case for case-insensitive compare
+        $normalizeHouse = function ($v) {
+            $v = trim((string) $v);
+            if ($v === '') {
+                return '';
+            }
+            $v = preg_replace('/-+/', '-', $v);
+            return strtoupper($v);
+        };
+
+        // Prevent duplicate house definition in the same request (after normalisation).
         $houseNosNormalized = collect($houseNos)
-            ->map(fn ($v) => trim((string) $v))
+            ->map($normalizeHouse)
             ->filter(fn ($v) => $v !== '')
             ->values()
             ->all();
@@ -3046,16 +3060,31 @@ class EstateController extends Controller
             return redirect()->back()->withInput()->withErrors(['house_no' => $msg]);
         }
 
-        $existing = DB::table('estate_house_master')
+        // Prevent duplicate house definition against DB (same campus + block + normalised house_no).
+        $existingHouseNos = DB::table('estate_house_master')
             ->where('estate_campus_master_pk', (int) $validated['estate_campus_master_pk'])
             ->where('estate_block_master_pk', (int) $validated['estate_block_master_pk'])
-            ->whereIn('house_no', $houseNosNormalized)
             ->pluck('house_no')
             ->map(fn ($v) => (string) $v)
             ->all();
 
-        if (! empty($existing)) {
-            $msg = 'House already defined: ' . implode(', ', array_unique($existing));
+        $existingNormalized = collect($existingHouseNos)
+            ->mapWithKeys(function ($v) use ($normalizeHouse) {
+                $n = $normalizeHouse($v);
+                return $n !== '' ? [$n => $v] : [];
+            })
+            ->all();
+
+        $conflictingHouseNos = [];
+        foreach ($houseNos as $raw) {
+            $n = $normalizeHouse($raw);
+            if ($n !== '' && array_key_exists($n, $existingNormalized)) {
+                $conflictingHouseNos[] = $raw;
+            }
+        }
+
+        if (! empty($conflictingHouseNos)) {
+            $msg = 'House already defined: ' . implode(', ', array_unique($conflictingHouseNos));
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
@@ -3066,6 +3095,38 @@ class EstateController extends Controller
         $meterTwos = array_pad($validated['meter_two'] ?? [], $count, '');
         $licenceFees = array_pad($validated['licence_fee'] ?? [], $count, 0);
         $statuses = array_pad($validated['vacant_renovation_status'] ?? [], $count, 1);
+
+        // Enforce Meter No. 1 uniqueness (after numeric normalisation).
+        $normalizedMeterOnes = collect($meterOnes)
+            ->map(fn ($v) => (int) preg_replace('/\D/', '', $v ?? ''))
+            ->filter(fn ($v) => $v > 0)
+            ->values()
+            ->all();
+
+        $dupeMetersInRequest = collect($normalizedMeterOnes)->duplicates()->values()->all();
+        if (! empty($dupeMetersInRequest)) {
+            $msg = 'Duplicate Meter No. 1 in the form: ' . implode(', ', array_unique($dupeMetersInRequest));
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->withInput()->withErrors(['meter_one' => $msg]);
+        }
+
+        if (! empty($normalizedMeterOnes)) {
+            $existingMeters = DB::table('estate_house_master')
+                ->whereIn('meter_one', $normalizedMeterOnes)
+                ->where('meter_one', '>', 0)
+                ->pluck('meter_one')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+            if (! empty($existingMeters)) {
+                $msg = 'Meter No. 1 already used: ' . implode(', ', array_unique($existingMeters));
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->back()->withInput()->withErrors(['meter_one' => $msg]);
+            }
+        }
 
         $waterCharge = (float) ($validated['water_charge'] ?? 0);
         $electricCharge = (float) ($validated['electric_charge'] ?? 0);
@@ -3127,6 +3188,7 @@ class EstateController extends Controller
                 'b.block_name as building_name',
                 'ust.unit_sub_type',
                 'h.house_no',
+                'h.meter_one',
                 'h.water_charge',
                 'h.electric_charge',
                 'h.licence_fee',
@@ -3257,8 +3319,9 @@ class EstateController extends Controller
             'remarks' => 'nullable|string|max:200',
             'house_no' => 'required|array',
             'house_no.0' => 'required|string|max:20',
-            'meter_one' => 'nullable|array',
-            'meter_one.0' => 'nullable|string|max:30',
+            // Meter No. 1 must be filled and numeric on edit as well.
+            'meter_one' => 'required|array',
+            'meter_one.0' => 'required|string|max:30|regex:/^[0-9]+$/',
             'meter_two' => 'nullable|array',
             'meter_two.0' => 'nullable|string|max:30',
             'licence_fee' => 'nullable|array',
@@ -3267,12 +3330,22 @@ class EstateController extends Controller
             'vacant_renovation_status.0' => 'required|in:0,1,2',
         ]);
 
-        $houseNo = trim((string) ($validated['house_no'][0] ?? ''));
-        // Prevent duplicate on update (same campus + block + house_no, excluding current pk).
+        // Normalise house no for duplicate detection (same rules as storeDefineHouse)
+        $rawHouseNo = (string) ($validated['house_no'][0] ?? '');
+        $normalizeHouse = function ($v) {
+            $v = trim((string) $v);
+            if ($v === '') {
+                return '';
+            }
+            $v = preg_replace('/-+/', '-', $v);
+            return strtoupper($v);
+        };
+        $houseNo = trim($rawHouseNo);
+        // Prevent duplicate on update (same campus + block + normalised house_no, excluding current pk).
         $existsOther = DB::table('estate_house_master')
             ->where('estate_campus_master_pk', (int) $validated['estate_campus_master_pk'])
             ->where('estate_block_master_pk', (int) $validated['estate_block_master_pk'])
-            ->where('house_no', $houseNo)
+            ->whereRaw('UPPER(REPLACE(REGEXP_REPLACE(house_no, "-+", "-"), " ", "")) = ?', [strtoupper(preg_replace('/-+/', '-', $houseNo))])
             ->where('pk', '!=', (int) $house->pk)
             ->exists();
         if ($existsOther) {
@@ -3281,6 +3354,28 @@ class EstateController extends Controller
                 return response()->json(['success' => false, 'message' => $msg], 422);
             }
             return redirect()->back()->withInput()->withErrors(['house_no.0' => $msg]);
+        }
+
+        // Enforce Meter No. 1 uniqueness on update (after numeric normalisation), excluding current house.
+        $newMeterOneRaw = ($validated['meter_one'] ?? [])[0] ?? '';
+        $newMeterOne = (int) preg_replace('/\D/', '', $newMeterOneRaw);
+        if ($newMeterOne <= 0) {
+            $msg = 'Meter No. 1 is required and must be a positive number.';
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->withInput()->withErrors(['meter_one.0' => $msg]);
+        }
+        $existsMeter = DB::table('estate_house_master')
+            ->where('meter_one', $newMeterOne)
+            ->where('pk', '!=', (int) $house->pk)
+            ->exists();
+        if ($existsMeter) {
+            $msg = 'Meter No. 1 already used: ' . $newMeterOne;
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->withInput()->withErrors(['meter_one.0' => $msg]);
         }
 
         $hasUnitTypeOnHouse = \Illuminate\Support\Facades\Schema::hasColumn('estate_house_master', 'estate_unit_master_pk');
@@ -3294,7 +3389,7 @@ class EstateController extends Controller
         $house->water_charge = (float) ($validated['water_charge'] ?? 0);
         $house->electric_charge = (float) ($validated['electric_charge'] ?? 0);
         $house->licence_fee = (float) (($validated['licence_fee'] ?? [])[0] ?? 0);
-        $house->meter_one = (int) preg_replace('/\D/', '', ($validated['meter_one'] ?? [])[0] ?? '') ?: 0;
+        $house->meter_one = $newMeterOne;
         $house->meter_two = (int) preg_replace('/\D/', '', ($validated['meter_two'] ?? [])[0] ?? '') ?: 0;
         $house->vacant_renovation_status = (int) (($validated['vacant_renovation_status'] ?? [])[0] ?? 1);
         $house->remarks = $validated['remarks'] ?? '';
@@ -4828,7 +4923,15 @@ class EstateController extends Controller
             }
         });
 
-        $validated = $validator->validate();
+        if ($validator->fails()) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors($validator)
+                ->with('error', 'Please fill New Meter Reading correctly for all selected rows.');
+        }
+
+        $validated = $validator->validated();
 
         $readings = array_values($validated['readings']);
         $readingBillMonth = $validated['reading_bill_month'] ?? null;
@@ -4863,6 +4966,12 @@ class EstateController extends Controller
             $newMeterNoRaw = isset($item['new_meter_no']) ? trim((string) $item['new_meter_no']) : '';
             // Enforce numeric-only meter no at save time (defensive).
             $newMeterNo = preg_replace('/\D/', '', $newMeterNoRaw ?? '');
+
+            // Only process rows explicitly selected by user.
+            $isSelected = isset($item['selected']) && (string) $item['selected'] === '1';
+            if (! $isSelected) {
+                continue;
+            }
 
             if ($meterSlot === 2) {
                 $update['curr_month_elec_red2'] = $readingNum;
