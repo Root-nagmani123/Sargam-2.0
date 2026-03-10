@@ -500,7 +500,7 @@
 
 </head>
 
-<body data-sidebartype="full">
+<body data-sidebartype="full" data-estate-module="{{ request()->routeIs('admin.estate.*') ? '1' : '0' }}">
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
     <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
         <div class="sargam-loader-particles">

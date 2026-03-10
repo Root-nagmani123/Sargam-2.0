@@ -37,6 +37,10 @@
   <script>
     // Global DataTables defaults + auto-init + Bootstrap 5 presentation
     (function() {
+      function isEstateModulePage() {
+        return !!(document.body && document.body.getAttribute('data-estate-module') === '1');
+      }
+
       function styleDataTableUi(settings) {
         var wrapper = settings && settings.nTableWrapper ? settings.nTableWrapper : null;
         if (!wrapper) return;
@@ -49,14 +53,37 @@
         $wrapper.find('.dataTables_filter label, .dt-search label')
           .addClass('d-inline-flex align-items-center gap-2 mb-0');
 
-        $wrapper.find('.dataTables_length select, .dt-length select')
-          .addClass('form-select form-select-sm')
-          .attr('aria-label', 'Rows per page');
+        if (isEstateModulePage()) {
+          $wrapper.find('.dataTables_filter label, .dt-search label').each(function() {
+            $(this).contents().filter(function() {
+              return this.nodeType === 3;
+            }).remove();
+          });
+        }
+
+        var $lengthSelect = $wrapper.find('.dataTables_length select, .dt-length select');
+        if (isEstateModulePage()) {
+          $lengthSelect
+            .removeClass('form-select form-select-sm')
+            .attr('aria-label', 'Rows per page')
+            .each(function() {
+              this.style.removeProperty('width');
+            });
+        } else {
+          $lengthSelect
+            .addClass('form-select form-select-sm')
+            .attr('aria-label', 'Rows per page');
+        }
 
         $wrapper.find('.dataTables_filter input, .dt-search input')
           .addClass('form-control form-control-sm')
           .attr('placeholder', 'Search records...')
           .attr('aria-label', 'Search records');
+
+        if (isEstateModulePage()) {
+          $wrapper.find('.dataTables_filter input, .dt-search input')
+            .css('margin-left', 0);
+        }
 
         $wrapper.find('.dataTables_info, .dt-info').addClass('text-muted small');
         $wrapper.find('.dataTables_paginate .pagination, .dt-paging .pagination')

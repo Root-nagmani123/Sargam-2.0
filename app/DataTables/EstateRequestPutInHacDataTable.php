@@ -109,11 +109,13 @@ class EstateRequestPutInHacDataTable extends DataTable
                 'ordering' => true,
                 'searching' => true,
                 'lengthChange' => true,
+                'pagingType' => 'simple_numbers',
                 'pageLength' => 10,
                 'order' => [[1, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
-                    'search' => 'Search within table:',
+                    'search' => '',
+                    'searchPlaceholder' => 'Search records...',
                     'lengthMenu' => 'Show _MENU_ entries',
                     'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
                     'infoEmpty' => 'Showing 0 to 0 of 0 entries',
@@ -125,7 +127,16 @@ class EstateRequestPutInHacDataTable extends DataTable
                         'previous' => 'Previous',
                     ],
                 ],
-                'dom' => '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>',
+                'dom' =>
+                    '<"row g-2 align-items-center mb-3"' .
+                        '<"col-12 col-md-6 d-flex align-items-center"l>' .
+                        '<"col-12 col-md-6 d-flex justify-content-md-end"f>' .
+                    '>' .
+                    'rt' .
+                    '<"row g-2 align-items-center mt-3"' .
+                        '<"col-12 col-md-5"i>' .
+                        '<"col-12 col-md-7 d-flex justify-content-md-end"p>' .
+                    '>',
             ]);
     }
 

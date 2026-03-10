@@ -16,8 +16,10 @@
     .estate-bill-print.bill-page { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: #fff; }
     .no-print { display: none !important; }
     .bill-doc { break-inside: avoid; page-break-inside: avoid; }
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4; margin: 10mm; }
     body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Slightly scale down for single-page fit */
+    html, body { zoom: 0.9; }
     .bill-doc { box-shadow: none !important; }
 }
 /* --- Bill document frame --- */
@@ -155,7 +157,7 @@
     font-size: 9pt; font-weight: 700; text-align: center; color: #1e3a5f; letter-spacing: 0.02em;
 }
 .bill-footer .sign-sub { font-size: 8pt; margin-top: 2px; color: #718096; }
-</style>
+ </style>
 <div class="container-fluid">
     <!-- Breadcrumb (hidden when printing) -->
     <div class="no-print">
@@ -382,3 +384,22 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.Choices) {
+        var commonConfig = {
+            searchEnabled: true,
+            removeItemButton: false,
+            shouldSort: false,
+            itemSelectText: '',
+        };
+        new Choices('#month', Object.assign({}, commonConfig, { placeholderValue: 'Select Month' }));
+        new Choices('#year', Object.assign({}, commonConfig, { placeholderValue: 'Select Year' }));
+        new Choices('#employee_type_pk', Object.assign({}, commonConfig, { placeholderValue: 'Select Employee Type' }));
+        new Choices('#employee_pk', Object.assign({}, commonConfig, { placeholderValue: 'Select Employee' }));
+    }
+});
+</script>
+@endpush

@@ -41,6 +41,7 @@
 @endsection
 
 @push('scripts')
+@include('admin.estate.partials.lbsnaa_print_layout')
 <script>
 $(document).ready(function() {
     var dataTableInstance = null;
@@ -142,21 +143,11 @@ $(document).ready(function() {
             alert('Please allow popups to print this list.');
             return;
         }
+        var docHtml = (window.LBSNAAPrint && window.LBSNAAPrint.getDocumentHtml)
+            ? window.LBSNAAPrint.getDocumentHtml('House Status', tableHtml)
+            : '<!doctype html><html><head><title>House Status</title></head><body><h2>House Status</h2>' + tableHtml + '</body></html>';
         win.document.open();
-        win.document.write(
-            '<!doctype html>' +
-            '<html><head><title>House Status - Sargam</title>' +
-            '<style>' +
-            'body{font-family:Arial,sans-serif;padding:16px;color:#111827;}' +
-            'h2{margin:0 0 12px 0;font-size:20px;}' +
-            'table{width:100%;border-collapse:collapse;font-size:12px;}' +
-            'th,td{border:1px solid #d1d5db;padding:8px;vertical-align:top;text-align:left;}' +
-            'th{background:#f3f4f6;font-weight:600;}' +
-            '</style></head><body>' +
-            '<h2>House Status</h2>' +
-            tableHtml +
-            '</body></html>'
-        );
+        win.document.write(docHtml);
         win.document.close();
         win.onafterprint = function() { win.close(); };
         setTimeout(function() { win.focus(); win.print(); }, 250);

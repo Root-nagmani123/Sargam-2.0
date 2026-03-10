@@ -171,6 +171,7 @@
 @endpush
 
 @push('scripts')
+    @include('admin.estate.partials.lbsnaa_print_layout')
     {!! $dataTable->scripts() !!}
     <script>
     $(document).ready(function() {
@@ -238,37 +239,17 @@
             var title = 'Estate Possession for Other';
             var win = window.open('', '_blank');
             if (!win) {
-                // Popup blocked: fallback to normal print.
                 window.print();
                 return;
             }
-
+            var docHtml = (window.LBSNAAPrint && window.LBSNAAPrint.getDocumentHtml)
+                ? window.LBSNAAPrint.getDocumentHtml(title, tableHtml)
+                : '<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title></head><body><h2>' + title + '</h2>' + tableHtml + '</body></html>';
             win.document.open();
-            win.document.write(
-                '<!doctype html><html><head><meta charset="utf-8">' +
-                '<title>' + title + '</title>' +
-                '<style>' +
-                '@page{size:A4 landscape;margin:8mm;}' +
-                'body{font-family:Arial, sans-serif;font-size:11px;color:#111;}' +
-                'h2{margin:0 0 8px 0;font-size:14px;}' +
-                'table{width:100%;border-collapse:collapse;}' +
-                'th,td{border:1px solid #333;padding:4px 6px;vertical-align:top;word-break:break-word;white-space:normal;}' +
-                'thead{display:table-header-group;}' +
-                'tr{page-break-inside:avoid;}' +
-                '</style></head><body>' +
-                '<h2>' + title + '</h2>' +
-                tableHtml +
-                '</body></html>'
-            );
+            win.document.write(docHtml);
             win.document.close();
-
-            // Give browser time to layout before printing.
-            setTimeout(function() {
-                win.focus();
-                win.print();
-                // Closing helps avoid leaving extra tabs.
-                win.close();
-            }, 250);
+            win.onafterprint = function() { win.close(); };
+            setTimeout(function() { win.focus(); win.print(); }, 250);
         }
 
         $('#btnPrint').on('click', function() {

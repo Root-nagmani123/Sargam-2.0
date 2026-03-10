@@ -5,7 +5,6 @@
 @section('setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Change Requests (HAC Approved)"></x-breadcrum>
-    <x-estate-workflow-stepper current="hac-approved" />
     <x-session_message />
 
     <div class="card">
@@ -316,6 +315,15 @@
     }
     #estateHacApprovedTable_wrapper table.dataTable {
         min-width: 1200px;
+    }
+    /* Align HAC action column neatly */
+    #estateHacApprovedTable_wrapper th:last-child,
+    #estateHacApprovedTable_wrapper td:last-child {
+        text-align: center;
+        white-space: nowrap;
+    }
+    #estateHacApprovedTable_wrapper td:last-child .btn {
+        margin-inline: 0.125rem;
     }
     /* Pagination: btn-like buttons */
     #estateHacApprovedTable_wrapper .dataTables_paginate .paginate_button {

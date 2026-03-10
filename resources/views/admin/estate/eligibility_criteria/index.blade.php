@@ -23,7 +23,7 @@
 
             <div class="table-responsive">
                 {!! $dataTable->table([
-                    'class' => 'table table-bordered table-striped table-hover align-middle mb-0',
+                    'class' => 'table text-nowrap align-middle mb-0',
                     'aria-describedby' => 'eligibility-criteria-caption'
                 ]) !!}
             </div>
@@ -34,6 +34,7 @@
 @endsection
 
 @push('scripts')
+    @include('admin.estate.partials.lbsnaa_print_layout')
     {!! $dataTable->scripts(attributes: ['type' => 'module']) !!}
     <script>
         (function() {
@@ -56,34 +57,14 @@
                     alert('Please allow popups to print this list.');
                     return;
                 }
-
+                var docHtml = (window.LBSNAAPrint && window.LBSNAAPrint.getDocumentHtml)
+                    ? window.LBSNAAPrint.getDocumentHtml('Eligibility - Criteria', tableHtml)
+                    : '<!doctype html><html><head><title>Eligibility - Criteria</title></head><body><h2>Eligibility - Criteria</h2>' + tableHtml + '</body></html>';
                 win.document.open();
-                win.document.write(
-                    '<!doctype html>' +
-                    '<html><head><title>Eligibility - Criteria</title>' +
-                    '<style>' +
-                    'body{font-family:Arial,sans-serif;padding:16px;color:#111827;}' +
-                    'h2{margin:0 0 12px 0;font-size:20px;}' +
-                    'table{width:100%;border-collapse:collapse;font-size:12px;}' +
-                    'th,td{border:1px solid #d1d5db;padding:8px;vertical-align:top;text-align:left;}' +
-                    'th{background:#f3f4f6;font-weight:600;}' +
-                    '</style></head><body>' +
-                    '<h2>Eligibility - Criteria</h2>' +
-                    tableHtml +
-                    '</body></html>'
-                );
+                win.document.write(docHtml);
                 win.document.close();
-
-                // Close popup after print dialog closes (print or cancel),
-                // so user stays on the listing page.
-                win.onafterprint = function() {
-                    win.close();
-                };
-
-                setTimeout(function() {
-                    win.focus();
-                    win.print();
-                }, 250);
+                win.onafterprint = function() { win.close(); };
+                setTimeout(function() { win.focus(); win.print(); }, 250);
             }
 
             document.addEventListener('click', function(e) {
@@ -98,7 +79,42 @@
                     return;
                 }
 
-                openPrintWindow(buildPrintableTableHtml(table));
+                var dt = window.jQuery && $.fn && $.fn.dataTable && $.fn.DataTable
+                    ? $('#eligibilityCriteriaTable').DataTable()
+                    : null;
+
+                // If DataTable is not available for some reason, fall back to current page only.
+                if (!dt) {
+                    openPrintWindow(buildPrintableTableHtml(table));
+                    return;
+                }
+
+                var originalLen = dt.page.len();
+                var originalPage = dt.page();
+
+                var restore = function() {
+                    dt.page.len(originalLen);
+                    dt.page(originalPage);
+                    dt.draw(false);
+                };
+
+                var restored = false;
+                var safeRestore = function() {
+                    if (restored) return;
+                    restored = true;
+                    restore();
+                };
+
+                dt.one('draw', function() {
+                    setTimeout(function() {
+                        var refreshedTable = document.getElementById('eligibilityCriteriaTable');
+                        openPrintWindow(buildPrintableTableHtml(refreshedTable));
+                        setTimeout(safeRestore, 800);
+                    }, 150);
+                });
+
+                // Load all rows for printing (DataTables "All")
+                dt.page.len(-1).draw();
             });
         })();
     </script>

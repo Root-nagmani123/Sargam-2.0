@@ -177,6 +177,18 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Enhance Requester dropdown with Choices.js (searchable, non-destructive for dependent logic)
+    if (window.Choices) {
+        new Choices('#estate_home_request_details_pk', {
+            searchEnabled: true,
+            removeItemButton: false,
+            shouldSort: false,
+            placeholder: true,
+            placeholderValue: 'Select Requester Name',
+            itemSelectText: '',
+        });
+    }
+
     const blocksUrl = "{{ route('admin.estate.possession.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.possession.unit-sub-types') }}";
     const housesUrl = "{{ route('admin.estate.change-request.vacant-houses') }}";

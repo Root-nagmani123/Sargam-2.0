@@ -15,10 +15,16 @@
                     <h1 class="h4 fw-semibold mb-1">Estate Request for Others</h1>
                     <p class="text-muted small mb-0">View and manage estate requests submitted on behalf of others.</p>
                 </div>
-                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 flex-shrink-0" id="btn-open-add-other-request">
-                    <i class="en material-symbols-rounded" style="font-size: 1.25rem;">add</i>
-                    <span>Add Other Estate</span>
-                </button>
+                <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+                    <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="btn-print-estate-request-others">
+                        <i class="bi bi-printer"></i>
+                        <span class="d-none d-md-inline">Print List</span>
+                    </button>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" id="btn-open-add-other-request">
+                        <i class="en material-symbols-rounded" style="font-size: 1.25rem;">add</i>
+                        <span>Add Other Estate</span>
+                    </button>
+                </div>
             </div>
 
             @if(session('success'))
@@ -121,6 +127,7 @@
 @endpush
 
 @push('scripts')
+    @include('admin.estate.partials.lbsnaa_print_layout')
     {!! $dataTable->scripts() !!}
     <script>
     $(document).ready(function() {
@@ -271,6 +278,77 @@
                 }
             });
             deleteOtherRequestUrl = '';
+        });
+
+        // Print: ensure header + all pages are printed
+        function buildPrintableTableHtml(tableElement) {
+            var clone = tableElement.cloneNode(true);
+            // Drop action column (last) from print output
+            Array.from(clone.querySelectorAll('tr')).forEach(function(tr) {
+                if (tr.lastElementChild) {
+                    tr.removeChild(tr.lastElementChild);
+                }
+            });
+            return clone.outerHTML;
+        }
+
+        function openPrintWindow(tableHtml) {
+            var win = window.open('', '_blank', 'width=1200,height=900');
+            if (!win) {
+                alert('Please allow popups to print this list.');
+                return;
+            }
+            var docHtml = (window.LBSNAAPrint && window.LBSNAAPrint.getDocumentHtml)
+                ? window.LBSNAAPrint.getDocumentHtml('Estate Request for Others', tableHtml)
+                : '<!doctype html><html><head><title>Estate Request for Others</title></head><body><h2>Estate Request for Others</h2>' + tableHtml + '</body></html>';
+            win.document.open();
+            win.document.write(docHtml);
+            win.document.close();
+            win.onafterprint = function() { win.close(); };
+            setTimeout(function() { win.focus(); win.print(); }, 250);
+        }
+
+        $('#btn-print-estate-request-others').on('click', function() {
+            var tableEl = document.getElementById('estateRequestTable');
+            if (!tableEl) {
+                alert('Table not found.');
+                return;
+            }
+
+            var dt = window.jQuery && $.fn && $.fn.dataTable && $.fn.DataTable
+                ? $('#estateRequestTable').DataTable()
+                : null;
+
+            if (!dt) {
+                openPrintWindow(buildPrintableTableHtml(tableEl));
+                return;
+            }
+
+            var originalLen = dt.page.len();
+            var originalPage = dt.page();
+
+            var restore = function() {
+                dt.page.len(originalLen);
+                dt.page(originalPage);
+                dt.draw(false);
+            };
+
+            var restored = false;
+            var safeRestore = function() {
+                if (restored) return;
+                restored = true;
+                restore();
+            };
+
+            dt.one('draw', function() {
+                setTimeout(function() {
+                    var refreshedEl = document.getElementById('estateRequestTable');
+                    openPrintWindow(buildPrintableTableHtml(refreshedEl));
+                    setTimeout(safeRestore, 800);
+                }, 150);
+            });
+
+            dt.page.len(-1).draw();
         });
     });
     </script>

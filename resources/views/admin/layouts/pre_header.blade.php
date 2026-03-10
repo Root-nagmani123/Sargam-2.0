@@ -46,6 +46,50 @@
   'opsz' 24
 }
 
+/* Estate module: avoid DataTables length dropdown arrow/text overlap */
+body[data-estate-module="1"] .dataTables_length select,
+body[data-estate-module="1"] .dt-length select {
+  width: 5.5rem !important;
+  min-width: 5.5rem !important;
+  padding: 0.25rem 2.25rem 0.25rem 0.65rem !important;
+  line-height: 1.25;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-position: right 0.6rem center !important;
+  background-size: 0.9rem !important;
+}
+
+/* Estate module: keep DataTables search clean and non-overlapping */
+body[data-estate-module="1"] .dataTables_filter label,
+body[data-estate-module="1"] .dt-search label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  width: auto;
+  max-width: none;
+}
+
+body[data-estate-module="1"] .dataTables_filter input,
+body[data-estate-module="1"] .dt-search input,
+body[data-estate-module="1"] .dataTables_filter input[type="search"],
+body[data-estate-module="1"] .dt-search input[type="search"] {
+  min-width: 16rem;
+  padding: 0.375rem 0.75rem !important;
+  line-height: 1.25;
+  background-image: none !important;
+}
+
+@media (max-width: 767.98px) {
+  body[data-estate-module="1"] .dataTables_filter input,
+  body[data-estate-module="1"] .dt-search input,
+  body[data-estate-module="1"] .dataTables_filter input[type="search"],
+  body[data-estate-module="1"] .dt-search input[type="search"] {
+    min-width: 11rem;
+  }
+}
+
 /* Color themes (Blue_Theme, Aqua_Theme, etc.) work in both light and dark mode */
 /* No overrides - Bootstrap and styles.css handle both modes */
 </style>
