@@ -2333,11 +2333,19 @@ class EstateController extends Controller
             ->orderBy('campus_name')
             ->get(['pk', 'campus_name']);
 
-        // Unit types per campus: via estate_house_master and estate_unit_sub_type_master
-        $unitTypesByCampus = DB::table('estate_campus_master as a')
+        // Unit types per campus: via estate_house_master and estate_unit_sub_type_master (with schema fallback)
+        $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+        $unitTypesByCampusQ = DB::table('estate_campus_master as a')
             ->join('estate_house_master as b', 'a.pk', '=', 'b.estate_campus_master_pk')
-            ->join('estate_unit_sub_type_master as eust', 'b.estate_unit_sub_type_master_pk', '=', 'eust.pk')
-            ->join('estate_unit_type_master as c', 'eust.estate_unit_type_master_pk', '=', 'c.pk')
+            ->join('estate_unit_sub_type_master as eust', 'b.estate_unit_sub_type_master_pk', '=', 'eust.pk');
+
+        if ($hasUnitTypeOnSubType) {
+            $unitTypesByCampusQ->join('estate_unit_type_master as c', 'eust.estate_unit_type_master_pk', '=', 'c.pk');
+        } else {
+            $unitTypesByCampusQ->join('estate_unit_type_master as c', 'b.estate_unit_master_pk', '=', 'c.pk');
+        }
+
+        $unitTypesByCampus = $unitTypesByCampusQ
             ->select('a.pk as campus_pk', 'c.pk as unit_type_pk', 'c.unit_type')
             ->distinct()
             ->orderBy('a.pk')
