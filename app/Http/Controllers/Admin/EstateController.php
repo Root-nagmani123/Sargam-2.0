@@ -2881,6 +2881,7 @@ class EstateController extends Controller
      */
     private function applyElectricChargeToMonthReading(int $emrdPk, array &$update): void
     {
+        $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
         $row = DB::table('estate_month_reading_details as emrd')
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
@@ -2891,7 +2892,7 @@ class EstateController extends Controller
                 'emrd.curr_month_elec_red',
                 'emrd.last_month_elec_red2',
                 'emrd.curr_month_elec_red2',
-                'eust.estate_unit_type_master_pk as unit_type_pk'
+                DB::raw(($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk' : 'ehm.estate_unit_master_pk') . ' as unit_type_pk')
             )
             ->first();
         if (! $row) {
@@ -4782,13 +4783,23 @@ class EstateController extends Controller
                 ->keyBy('pk');
 
             foreach ($readings as $idx => $item) {
-                if (!array_key_exists('curr_month_elec_red', $item)) {
+                $currVal = $item['curr_month_elec_red'] ?? null;
+                $isSelected = isset($item['selected']) && (string) $item['selected'] === '1';
+
+                // If row is selected for update, new meter reading is mandatory.
+                if ($isSelected && ($currVal === null || $currVal === '')) {
+                    $v->errors()->add(
+                        "readings.$idx.curr_month_elec_red",
+                        'Please fill the New Meter Reading for selected rows.'
+                    );
                     continue;
                 }
-                $currVal = $item['curr_month_elec_red'];
+
+                // If not provided (and not selected), skip further validation.
                 if ($currVal === null || $currVal === '') {
-                    continue; // empty = no change
+                    continue;
                 }
+
                 $pk = isset($item['pk']) ? (int) $item['pk'] : 0;
                 $row = $rows->get($pk);
                 if (! $row) {

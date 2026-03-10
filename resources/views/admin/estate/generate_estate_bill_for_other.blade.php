@@ -108,6 +108,9 @@ $(document).ready(function() {
 
         $('#noDataRow').remove();
         $('#billForOtherTable tbody').html('<tr><td colspan="15" class="text-center">Loading...</td></tr>');
+        // Reset all selection checkboxes when (re)loading data.
+        $('#billForOtherCheckAll').prop('checked', false);
+        $('#check_all_bills').prop('checked', false);
 
         $.ajax({
             url: dataUrl,
@@ -150,23 +153,26 @@ $(document).ready(function() {
                     });
                 }
 
-                dataTableInstance = $('#billForOtherTable').DataTable({
-                    order: [[1, 'asc']],
-                    pageLength: 10,
-                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                    language: {
-                        search: "Search:",
-                        lengthMenu: "Show _MENU_ entries",
-                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                        infoEmpty: "Showing 0 to 0 of 0 entries",
-                        infoFiltered: "(filtered from _MAX_ total entries)",
-                        paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
-                    },
-                    responsive: false,
-                    autoWidth: false,
-                    scrollX: true,
-                    dom: '<"row flex-nowrap align-items-center py-2"<"col-12 col-sm-6 col-md-6 mb-2 mb-md-0"l><"col-12 col-sm-6 col-md-6"f>>rt<"row align-items-center py-2"<"col-12 col-sm-5 col-md-5"i><"col-12 col-sm-7 col-md-7"p>>'
-                });
+                // Do not initialise DataTables when there is only the colspan row, it causes incorrect column count warnings.
+                if (data.length > 0) {
+                    dataTableInstance = $('#billForOtherTable').DataTable({
+                        order: [[1, 'asc']],
+                        pageLength: 10,
+                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                        language: {
+                            search: "Search:",
+                            lengthMenu: "Show _MENU_ entries",
+                            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                            infoEmpty: "Showing 0 to 0 of 0 entries",
+                            infoFiltered: "(filtered from _MAX_ total entries)",
+                            paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
+                        },
+                        responsive: false,
+                        autoWidth: false,
+                        scrollX: true,
+                        dom: '<"row flex-nowrap align-items-center py-2"<"col-12 col-sm-6 col-md-6 mb-2 mb-md-0"l><"col-12 col-sm-6 col-md-6"f>>rt<"row align-items-center py-2"<"col-12 col-sm-5 col-md-5"i><"col-12 col-sm-7 col-md-7"p>>'
+                    });
+                }
             },
             error: function() {
                 if (dataTableInstance && $.fn.DataTable.isDataTable('#billForOtherTable')) {
@@ -176,6 +182,8 @@ $(document).ready(function() {
                 $('#billForOtherTable tbody').empty().append(
                     '<tr id="noDataRow"><td colspan="15" class="text-center text-danger py-4">Failed to load data. Please try again.</td></tr>'
                 );
+                $('#billForOtherCheckAll').prop('checked', false);
+                $('#check_all_bills').prop('checked', false);
             }
         });
     }
