@@ -91,7 +91,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                 "),
             ]);
 
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->from('estate_home_request_details as ehrd')
             ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
@@ -126,8 +126,25 @@ class EstatePossessionDetailsDataTable extends DataTable
             // Yahan sirf woh records dikhayenge jahan possession complete ho chuka hai
             // (electric_meter_reading > 0, jo Add Possession form me required hai).
             ->whereNotNull('epd.electric_meter_reading')
-            ->where('epd.electric_meter_reading', '>', 0)
-            ->orderBy('epd.pk', 'desc');
+            ->where('epd.electric_meter_reading', '>', 0);
+
+        // RBAC: Only Admin / Estate / Super Admin / Training-* / IST can see full list.
+        // All other roles (including Staff / HAC Person etc.) should only see their own possessions.
+        if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if ($user) {
+                $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+                if (!empty($employeeIds)) {
+                    $query->whereIn('ehrd.employee_pk', $employeeIds);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        return $query->orderBy('epd.pk', 'desc');
     }
 
     public function html(): HtmlBuilder

@@ -24,7 +24,7 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="estate_name" class="form-label">Estate Name <span class="text-danger">*</span></label>
+                        <label for="estate_name" class="form-label">Estate Name</label>
                         <select class="form-select" id="estate_name" name="estate_name">
                             <option value="">Select</option>
                             @foreach($campuses ?? [] as $c)
@@ -36,7 +36,7 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="building" class="form-label">Building <span class="text-danger">*</span></label>
+                        <label for="building" class="form-label">Building</label>
                         <select class="form-select" id="building" name="building">
                             <option value="">Select</option>
                         </select>
@@ -45,7 +45,7 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
+                        <label for="unit_name" class="form-label">Unit Name</label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
                             <option value="">Select</option>
                             @foreach($unitTypes ?? [] as $ut)
@@ -57,7 +57,7 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="unit_sub_type" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
+                        <label for="unit_sub_type" class="form-label">Unit Sub Type</label>
                         <select class="form-select" id="unit_sub_type" name="unit_sub_type">
                             <option value="">Select</option>
                             @foreach($unitSubTypes ?? [] as $ust)
@@ -69,7 +69,7 @@
                         </small>
                     </div>
                     <div class="col-md-4">
-                        <label for="meter_reading_date" class="form-label">Meter Update Date <span class="text-danger">*</span></label>
+                        <label for="meter_reading_date" class="form-label">Meter Update Date</label>
                         <input type="date" class="form-control" id="meter_reading_date" name="meter_reading_date" placeholder="Select date" value="{{ isset($prefill['meter_reading_date']) ? $prefill['meter_reading_date'] : '' }}">
                         <small class="text-muted">
                             <i class="bi bi-info-circle"></i> Select date
