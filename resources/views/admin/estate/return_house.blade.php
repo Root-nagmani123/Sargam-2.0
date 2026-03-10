@@ -402,18 +402,20 @@
                             $ust.append('<option value="' + String(u.pk) + '">' + (u.unit_sub_type || '') + '</option>');
                         });
                         if (unitSubTypeId) $ust.val(String(unitSubTypeId));
-                        $.get(urlHouses, { campus_id: campusId, block_id: blockId, unit_sub_type_id: unitSubTypeId, unit_type_id: unitTypeId }, function(resH) {
-                            var $h = $('#request_house_no');
-                            $h.html('<option value="">--Select--</option>');
-                            if (resH.status && resH.data) resH.data.forEach(function(h) {
-                                $h.append('<option value="' + String(h.pk) + '" data-house-no="' + (h.house_no || '') + '">' + (h.house_no || h.pk) + '</option>');
-                            });
-                            if (d.estate_house_master_pk) {
-                                $h.val(String(d.estate_house_master_pk));
-                                $('#request_house_no_display').val(d.house_no || '');
-                            }
-                            setPrefilledFieldsLocked(true);
-                        });
+
+                        // Directly prefill house dropdown from mapping (occupied house to be returned).
+                        var $h = $('#request_house_no');
+                        $h.html('<option value="">--Select--</option>');
+                        if (d.estate_house_master_pk) {
+                            $h.append(
+                                '<option value="' + String(d.estate_house_master_pk) + '" data-house-no="' + (d.house_no || '') + '">' +
+                                (d.house_no || d.estate_house_master_pk) +
+                                '</option>'
+                            );
+                            $h.val(String(d.estate_house_master_pk));
+                            $('#request_house_no_display').val(d.house_no || '');
+                        }
+                        setPrefilledFieldsLocked(true);
                     });
                 });
             });
@@ -495,11 +497,6 @@
         });
 
         $('#requestHouseForm').on('submit', function(e) {
-            if ($('input[name="employee_type"]:checked').val() === 'LBSNAA') {
-                e.preventDefault();
-                alert('For LBSNAA employees please use Request for Estate.');
-                return;
-            }
             var allotmentDate = ($('#request_date_allotment').val() || '').trim();
             var returningDate = ($('#request_returning_date').val() || '').trim();
             if (allotmentDate && returningDate && returningDate < allotmentDate) {

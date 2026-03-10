@@ -400,6 +400,7 @@
                 error: function(xhr) {
                     if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
                         var errs = xhr.responseJSON.errors;
+                        var globalMsg = xhr.responseJSON.message || '';
                         $.each(errs, function(key, msgs) {
                             var msg = Array.isArray(msgs) ? msgs[0] : msgs;
                             var $err = $form.find('.field-error[data-field="' + key + '"]');
@@ -408,12 +409,20 @@
                                 $('#modal_employee_pk').addClass('is-invalid');
                             } else if (key === 'eligibility_type_pk') {
                                 $('#modal_eligibility_type_pk').addClass('is-invalid');
+                            } else if (key === 'employee_pk') {
+                                // Business rule errors like "already have an active request" surface as employee_pk.
+                                // Show them in the top alert so user can see clearly.
+                                $errors.removeClass('d-none').find('#addEditRequestEstateFormErrorsText').text(msg || globalMsg);
                             } else {
                                 $form.find('[name="' + key + '"]').addClass('is-invalid');
                             }
                         });
                         var $firstErr = $form.find('.field-error:not(:empty)').first();
-                        if ($firstErr.length) $firstErr[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        if ($firstErr.length) {
+                            $firstErr[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        } else if (!$errors.hasClass('d-none')) {
+                            $errors[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
                     } else {
                         var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong. Please try again.';
                         $errors.removeClass('d-none').find('#addEditRequestEstateFormErrorsText').text(msg);

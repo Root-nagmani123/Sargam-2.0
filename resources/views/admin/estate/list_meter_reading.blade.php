@@ -22,10 +22,15 @@
             <form id="listMeterReadingFilterForm" class="row g-3">
                 <div class="col-12 col-md-4">
                     <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" required>
-                        <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
-                    </div>
+                    <input
+                        type="month"
+                        class="form-control"
+                        id="bill_month"
+                        name="bill_month"
+                        value="{{ date('Y-m') }}"
+                        max="{{ date('Y-m') }}"
+                        required
+                    >
                     <small class="text-muted d-block">Select Bill Month</small>
                 </div>
                 <div class="col-12 col-md-4">
@@ -83,87 +88,76 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var dataTableInstance = null;
-    var tableEl = document.getElementById('listMeterReadingTable');
-    var tbody = tableEl ? tableEl.querySelector('tbody') : null;
     var lastLoadedParams = null;
 
-    function destroyDataTable() {
-        if (dataTableInstance && typeof $ !== 'undefined' && $.fn.DataTable && $.fn.DataTable.isDataTable('#listMeterReadingTable')) {
-            dataTableInstance.destroy();
-            dataTableInstance = null;
-        }
-    }
-
-    function loadData() {
+    function initOrReload() {
         var billMonth = document.getElementById('bill_month').value;
         var blockId = document.getElementById('block_id').value;
         if (!billMonth) {
             alert('Please select Bill Month.');
             return;
         }
-
         lastLoadedParams = { bill_month: billMonth, block_id: blockId };
 
-        destroyDataTable();
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4">Loading...</td></tr>';
+        if (typeof $ === 'undefined' || !$.fn.DataTable) {
+            alert('DataTable library not loaded.');
+            return;
         }
 
-        var url = '{{ route("admin.estate.list-meter-reading.data") }}';
-        var params = new URLSearchParams({ bill_month: billMonth, block_id: blockId });
-
-        fetch(url + '?' + params.toString())
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (!tbody) return;
-                tbody.innerHTML = '';
-                if (res.status && res.data && res.data.length > 0) {
-                    res.data.forEach(function(row) {
-                        var tr = document.createElement('tr');
-                        tr.innerHTML =
-                            '<td>' + (row.sno || '') + '</td>' +
-                            '<td>' + (row.name || 'N/A') + '</td>' +
-                            '<td>' + (row.employee_type || 'N/A') + '</td>' +
-                            '<td>' + (row.section || 'N/A') + '</td>' +
-                            '<td>' + (row.unit_type || 'N/A') + '</td>' +
-                            '<td>' + (row.unit_sub_type || 'N/A') + '</td>' +
-                            '<td>' + (row.building_name || 'N/A') + '</td>' +
-                            '<td>' + (row.house_no || 'N/A') + '</td>' +
-                            '<td>' + (row.meter1_reading || 'N/A') + '</td>' +
-                            '<td>' + (row.meter2_reading || 'N/A') + '</td>' +
-                            '<td class="text-center"><a href="' + (row.edit_url || '#') + '" class="btn btn-sm btn-outline-success" title="Edit"><i class="bi bi-pencil-square"></i></a></td>';
-                        tbody.appendChild(tr);
-                    });
-                    if (typeof $ !== 'undefined' && $.fn.DataTable) {
-                        dataTableInstance = $('#listMeterReadingTable').DataTable({
-                            order: [[0, 'asc']],
-                            pageLength: 10,
-                            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                            language: {
-                                search: 'Search within table:',
-                                lengthMenu: 'Show _MENU_ entries',
-                                info: 'Showing _START_ to _END_ of _TOTAL_ entries',
-                                infoEmpty: 'Showing 0 to 0 of 0 entries',
-                                infoFiltered: '(filtered from _MAX_ total entries)',
-                                paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
-                            },
-                            responsive: true,
-                            autoWidth: false,
-                            dom: '<"row flex-wrap align-items-center gap-2 mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
-                        });
+        if (!dataTableInstance) {
+            dataTableInstance = $('#listMeterReadingTable').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                ajax: {
+                    url: '{{ route("admin.estate.list-meter-reading.data") }}',
+                    data: function (d) {
+                        d.bill_month = billMonth;
+                        d.block_id = blockId;
                     }
-                } else {
-                    tbody.innerHTML = '<tr id="noDataRow"><td colspan="11" class="text-center text-muted py-4">No meter reading records found for the selected filters.</td></tr>';
-                }
-            })
-            .catch(function() {
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-4">Failed to load data.</td></tr>';
-                }
+                },
+                columns: [
+                    { data: 'sno', name: 'sno', orderable: false, searchable: false },
+                    { data: 'name', name: 'name' },
+                    { data: 'employee_type', name: 'employee_type' },
+                    { data: 'section', name: 'section' },
+                    { data: 'unit_type', name: 'unit_type' },
+                    { data: 'unit_sub_type', name: 'unit_sub_type' },
+                    { data: 'building_name', name: 'building_name' },
+                    { data: 'house_no', name: 'house_no' },
+                    { data: 'meter1_reading', name: 'meter1_reading' },
+                    { data: 'meter2_reading', name: 'meter2_reading' },
+                    {
+                        data: 'edit_url',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function (data) {
+                            var url = data || '#';
+                            return '<a href="' + url + '" class="btn btn-sm btn-outline-success" title="Edit"><i class="bi bi-pencil-square"></i></a>';
+                        }
+                    }
+                ],
+                language: {
+                    search: 'Search within table:',
+                    lengthMenu: 'Show _MENU_ entries',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                    infoEmpty: 'Showing 0 to 0 of 0 entries',
+                    infoFiltered: '(filtered from _MAX_ total entries)',
+                    paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+                },
+                responsive: true,
+                autoWidth: false,
+                dom: '<"row flex-wrap align-items-center gap-2 mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>'
             });
+        } else {
+            dataTableInstance.ajax.reload(null, true);
+        }
     }
 
-    document.getElementById('btnShow').addEventListener('click', loadData);
+    document.getElementById('btnShow').addEventListener('click', initOrReload);
 
     // When user navigates back from edit/update screen, browsers may restore this page from bfcache.
     // In that case the table shows stale DOM. Refresh automatically to reflect saved readings.
@@ -171,10 +165,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var navEntry = (performance && performance.getEntriesByType) ? performance.getEntriesByType('navigation')[0] : null;
         var isBackForward = (navEntry && navEntry.type === 'back_forward') || event.persisted;
         if (!isBackForward) return;
-
-        // Refresh only if user had loaded data once (so we don't fetch on a first visit).
-        if (lastLoadedParams && lastLoadedParams.bill_month) {
-            loadData();
+        if (lastLoadedParams && lastLoadedParams.bill_month && dataTableInstance) {
+            dataTableInstance.ajax.reload(null, false);
         }
     });
 });

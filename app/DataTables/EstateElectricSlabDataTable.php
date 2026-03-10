@@ -41,7 +41,9 @@ class EstateElectricSlabDataTable extends DataTable
                     <form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this electric slab?\');">
                         <input type="hidden" name="_token" value="' . e($token) . '">
                         <input type="hidden" name="_method" value="DELETE">
-                        <a href="javascript:void(0)" class="text-primary" title="Delete"> <i class="material-icons material-symbols-rounded">delete</i></a>
+                        <button type="submit" class="btn btn-link p-0 m-0 text-primary" title="Delete" style="text-decoration:none">
+                            <i class="material-icons material-symbols-rounded">delete</i>
+                        </button>
                        
                     </form>
                 </div>';

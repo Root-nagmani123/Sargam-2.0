@@ -73,14 +73,44 @@ class EstatePossessionDetailsDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
+        // Avoid correlated subquery per row for latest meter reading (performance on large datasets).
+        // MySQL 8 window functions: pick latest reading per possession_details_pk.
+        $latestReadingSub = DB::table('estate_month_reading_details as em')
+            ->select([
+                'em.estate_possession_details_pk',
+                'em.curr_month_elec_red',
+                DB::raw("
+                    ROW_NUMBER() OVER (
+                        PARTITION BY em.estate_possession_details_pk
+                        ORDER BY
+                            CAST(em.bill_year AS UNSIGNED) DESC,
+                            FIELD(
+                                em.bill_month,
+                                'January','February','March','April','May','June',
+                                'July','August','September','October','November','December'
+                            ) DESC,
+                            em.to_date DESC,
+                            em.pk DESC
+                    ) as rn
+                "),
+            ]);
+
         return $model->newQuery()
             ->from('estate_home_request_details as ehrd')
             ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
             ->leftJoin('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
             ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
-            ->leftJoin('estate_unit_type_master as eut', 'ehm.estate_unit_master_pk', '=', 'eut.pk')
             ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk'), function ($q) {
+                $q->leftJoin('estate_unit_type_master as eut', 'eust.estate_unit_type_master_pk', '=', 'eut.pk');
+            }, function ($q) {
+                $q->leftJoin('estate_unit_type_master as eut', 'ehm.estate_unit_master_pk', '=', 'eut.pk');
+            })
+            ->leftJoinSub($latestReadingSub, 'lr', function ($join) {
+                $join->on('lr.estate_possession_details_pk', '=', 'epd.pk')
+                    ->where('lr.rn', '=', 1);
+            })
             ->select([
                 'epd.pk as pk',
                 'ehrd.pk as estate_home_request_details_pk',
@@ -95,29 +125,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'ehm.house_no',
                 'epd.allotment_date',
                 'epd.possession_date',
-                // Show latest saved meter reading for this possession (from estate_month_reading_details),
-                // falling back to the original possession electric_meter_reading when no month reading exists.
-                DB::raw("
-                    COALESCE(
-                        (
-                            SELECT em.curr_month_elec_red
-                            FROM estate_month_reading_details em
-                            WHERE em.estate_possession_details_pk = epd.pk
-                              AND em.curr_month_elec_red IS NOT NULL
-                              AND em.curr_month_elec_red <> ''
-                            ORDER BY
-                                CAST(em.bill_year AS UNSIGNED) DESC,
-                                FIELD(
-                                    em.bill_month,
-                                    'January','February','March','April','May','June',
-                                    'July','August','September','October','November','December'
-                                ) DESC,
-                                em.to_date DESC
-                            LIMIT 1
-                        ),
-                        epd.electric_meter_reading
-                    ) as electric_meter_reading
-                "),
+                DB::raw("COALESCE(NULLIF(lr.curr_month_elec_red, ''), epd.electric_meter_reading) as electric_meter_reading"),
             ])
             // Yahan sirf woh records dikhayenge jahan possession complete ho chuka hai
             // (electric_meter_reading > 0, jo Add Possession form me required hai).

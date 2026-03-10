@@ -2,90 +2,129 @@
 
 namespace App\DataTables;
 
-use App\Models\EstatePossessionOther;
-use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Yajra\DataTables\EloquentDataTable;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
+use Yajra\DataTables\Facades\DataTables;
 
 class EstateReturnHouseDataTable extends DataTable
 {
-    public function dataTable(QueryBuilder $query): EloquentDataTable
+    public function dataTable(QueryBuilder $query)
     {
-        return (new EloquentDataTable($query))
+        $meta = $this->returnHouseMetaByPk();
+
+        return DataTables::of($query)
             ->addIndexColumn()
-            ->editColumn('name', fn($row) => $row->estateOtherRequest->emp_name ?? 'N/A')
-            ->editColumn('employee_type', fn() => 'Other Employee')
-            ->editColumn('section_name', fn($row) => $row->estateOtherRequest->section ?? 'N/A')
-            ->editColumn('estate_name', fn($row) => $row->campus_name ?? '—')
-            ->editColumn('unit_name', fn($row) => $row->unit_type_name ?? '—')
-            ->editColumn('building_name', fn($row) => $row->block_name ?? '—')
-            ->editColumn('house_no', fn($row) => $row->house_no ?? $row->house_no_display ?? '—')
-            ->editColumn('unit_sub_type', fn($row) => $row->unit_sub_type_name ?? '—')
-            ->editColumn('allotment_date', fn($row) => $row->allotment_date ? $row->allotment_date->format('d-m-Y') : '—')
-            ->editColumn('possession_date_oth', fn($row) => $row->possession_date_oth ? $row->possession_date_oth->format('d-m-Y') : '—')
-            ->editColumn('returning_date', fn($row) => $row->current_meter_reading_date ? $row->current_meter_reading_date->format('d-m-Y') : '—')
-            ->editColumn('upload_document', function ($row) {
-                $path = $row->upload_document ?? $row->noc_document ?? null;
+            ->editColumn('upload_document', function ($row) use ($meta) {
+                $scope = (string) ($row->scope ?? '');
+                $pk = (string) ($row->pk ?? '');
+                $key = $scope !== '' ? ($scope . ':' . $pk) : $pk;
+
+                $path = $row->upload_document ?? null;
                 if (!$path) {
-                    $path = $this->returnHouseMetaByPk()[(string) $row->pk]['upload_document'] ?? null;
+                    $path = $meta[$key]['upload_document'] ?? ($meta[$pk]['upload_document'] ?? null);
                 }
-                if (!$path) {
-                    return '—';
-                }
-                $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+                if (!$path) return '—';
+
+                $url = Storage::disk('public')->url($path);
                 return '<a href="' . e($url) . '" target="_blank" rel="noopener">View</a>';
             })
-            ->editColumn('remarks', function ($row) {
-                $remarks = $row->remarks;
+            ->editColumn('remarks', function ($row) use ($meta) {
+                $scope = (string) ($row->scope ?? '');
+                $pk = (string) ($row->pk ?? '');
+                $key = $scope !== '' ? ($scope . ':' . $pk) : $pk;
+
+                $remarks = $row->remarks ?? null;
                 if (!$remarks) {
-                    $remarks = $this->returnHouseMetaByPk()[(string) $row->pk]['remarks'] ?? null;
+                    $remarks = $meta[$key]['remarks'] ?? ($meta[$pk]['remarks'] ?? null);
                 }
                 return $remarks ?: '—';
             })
-            ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
-                if (!empty($searchValue)) {
-                    $query->where(function ($q) use ($searchValue) {
-                        $q->whereHas('estateOtherRequest', function ($sq) use ($searchValue) {
-                            $sq->where('emp_name', 'like', "%{$searchValue}%")
-                                ->orWhere('request_no_oth', 'like', "%{$searchValue}%")
-                                ->orWhere('section', 'like', "%{$searchValue}%");
-                        })
-                            ->orWhere('ehm.house_no', 'like', "%{$searchValue}%")
-                            ->orWhere('estate_possession_other.house_no', 'like', "%{$searchValue}%")
-                            ->orWhere('ec.campus_name', 'like', "%{$searchValue}%")
-                            ->orWhere('eb.block_name', 'like', "%{$searchValue}%")
-                            ->orWhere('eut.unit_type', 'like', "%{$searchValue}%")
-                            ->orWhere('eust.unit_sub_type', 'like', "%{$searchValue}%");
-                    });
-                }
-            }, true)
             ->rawColumns(['upload_document'])
-            ->setRowId('pk');
+            ->setRowId('row_id');
     }
 
-    public function query(EstatePossessionOther $model): QueryBuilder
+    public function query(): QueryBuilder
     {
-        return $model->newQuery()
-            ->with(['estateOtherRequest'])
-            ->select([
-                'estate_possession_other.*',
-                'ec.campus_name',
-                'eb.block_name',
-                'eut.unit_type as unit_type_name',
-                'eust.unit_sub_type as unit_sub_type_name',
-                'ehm.house_no as house_no_display',
-            ])
-            ->leftJoin('estate_campus_master as ec', 'estate_possession_other.estate_campus_master_pk', '=', 'ec.pk')
-            ->leftJoin('estate_block_master as eb', 'estate_possession_other.estate_block_master_pk', '=', 'eb.pk')
-            ->leftJoin('estate_unit_type_master as eut', 'estate_possession_other.estate_unit_type_master_pk', '=', 'eut.pk')
-            ->leftJoin('estate_unit_sub_type_master as eust', 'estate_possession_other.estate_unit_sub_type_master_pk', '=', 'eust.pk')
-            ->leftJoin('estate_house_master as ehm', 'estate_possession_other.estate_house_master_pk', '=', 'ehm.pk')
-            ->where('estate_possession_other.return_home_status', 1)
-            ->orderBy('estate_possession_other.pk', 'desc');
+        $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+
+        // LBSNAA returned houses (estate_possession_details)
+        $lbsnaa = DB::table('estate_possession_details as epd')
+            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
+            ->leftJoin('estate_campus_master as ec', 'ehm.estate_campus_master_pk', '=', 'ec.pk')
+            ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
+            ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+            ->leftJoin('estate_unit_type_master as eut', function ($join) use ($hasUnitTypeOnSubType) {
+                if ($hasUnitTypeOnSubType) {
+                    $join->on('eust.estate_unit_type_master_pk', '=', 'eut.pk');
+                } else {
+                    $join->on('ehm.estate_unit_master_pk', '=', 'eut.pk');
+                }
+            })
+            ->whereNotNull('epd.estate_house_master_pk')
+            ->where('epd.estate_change_id', -1)
+            ->when(Schema::hasColumn('estate_possession_details', 'return_home_status'), function ($q) {
+                $q->where('epd.return_home_status', 1);
+            })
+            ->selectRaw("
+                epd.pk as pk,
+                CONCAT('L-', epd.pk) as row_id,
+                'L' as scope,
+                'LBSNAA' as employee_type,
+                ehrd.emp_name as name,
+                NULL as section_name,
+                ec.campus_name as estate_name,
+                eut.unit_type as unit_name,
+                eb.block_name as building_name,
+                ehm.house_no as house_no,
+                eust.unit_sub_type as unit_sub_type,
+                epd.allotment_date as allotment_date,
+                epd.possession_date as possession_date_oth,
+                epd.current_meter_reading_date as returning_date,
+                NULL as upload_document,
+                " . (Schema::hasColumn('estate_possession_details', 'remarks') ? 'epd.remarks' : 'NULL') . " as remarks
+            ");
+
+        // Other Employee returned houses (estate_possession_other)
+        $other = DB::table('estate_possession_other as epo')
+            ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
+            ->leftJoin('estate_campus_master as ec', 'epo.estate_campus_master_pk', '=', 'ec.pk')
+            ->leftJoin('estate_block_master as eb', 'epo.estate_block_master_pk', '=', 'eb.pk')
+            ->leftJoin('estate_unit_type_master as eut', 'epo.estate_unit_type_master_pk', '=', 'eut.pk')
+            ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+            ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
+            ->where('epo.return_home_status', 1)
+            ->selectRaw("
+                epo.pk as pk,
+                CONCAT('O-', epo.pk) as row_id,
+                'O' as scope,
+                'Other Employee' as employee_type,
+                eor.emp_name as name,
+                eor.section as section_name,
+                ec.campus_name as estate_name,
+                eut.unit_type as unit_name,
+                eb.block_name as building_name,
+                COALESCE(NULLIF(TRIM(epo.house_no),''), ehm.house_no) as house_no,
+                eust.unit_sub_type as unit_sub_type,
+                epo.allotment_date as allotment_date,
+                epo.possession_date_oth as possession_date_oth,
+                epo.current_meter_reading_date as returning_date,
+                " . (Schema::hasColumn('estate_possession_other', 'upload_document')
+                    ? (Schema::hasColumn('estate_possession_other', 'noc_document')
+                        ? 'COALESCE(epo.upload_document, epo.noc_document)'
+                        : 'epo.upload_document')
+                    : (Schema::hasColumn('estate_possession_other', 'noc_document')
+                        ? 'epo.noc_document'
+                        : 'NULL')) . " as upload_document,
+                " . (Schema::hasColumn('estate_possession_other', 'remarks') ? 'epo.remarks' : 'NULL') . " as remarks
+            ");
+
+        return $lbsnaa->unionAll($other);
     }
 
     public function html(): HtmlBuilder
@@ -102,7 +141,7 @@ class EstateReturnHouseDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[0, 'asc']],
+                'order' => [[0, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',
@@ -126,19 +165,19 @@ class EstateReturnHouseDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('name')->title('Name')->orderable(false)->searchable(false),
-            Column::make('employee_type')->title('Employee Type')->orderable(false)->searchable(false),
-            Column::make('section_name')->title('Section')->orderable(false)->searchable(false),
-            Column::make('estate_name')->title('Estate Name')->orderable(false)->searchable(false),
-            Column::make('house_no')->title('House No.')->orderable(false)->searchable(false),
-            Column::make('unit_name')->title('Unit Name')->orderable(false)->searchable(false),
-            Column::make('building_name')->title('Building Name')->orderable(false)->searchable(false),
-            Column::make('unit_sub_type')->title('Unit Subtype')->orderable(false)->searchable(false),
-            Column::make('allotment_date')->title('Date of Allotment')->orderable(false)->searchable(false),
-            Column::make('possession_date_oth')->title('Date of Possession')->orderable(false)->searchable(false),
-            Column::make('returning_date')->title('Returning Date')->orderable(false)->searchable(false),
-            Column::make('upload_document')->title('Upload Document')->orderable(false)->searchable(false),
-            Column::make('remarks')->title('Remarks')->orderable(false)->searchable(false),
+            Column::make('name')->title('Name'),
+            Column::make('employee_type')->title('Employee Type'),
+            Column::make('section_name')->title('Section'),
+            Column::make('estate_name')->title('Estate Name'),
+            Column::make('house_no')->title('House No.'),
+            Column::make('unit_name')->title('Unit Name'),
+            Column::make('building_name')->title('Building Name'),
+            Column::make('unit_sub_type')->title('Unit Subtype'),
+            Column::make('allotment_date')->title('Date of Allotment'),
+            Column::make('possession_date_oth')->title('Date of Possession'),
+            Column::make('returning_date')->title('Returning Date'),
+            Column::make('upload_document')->title('Upload Document'),
+            Column::make('remarks')->title('Remarks'),
         ];
     }
 

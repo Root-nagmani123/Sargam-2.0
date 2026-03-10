@@ -60,11 +60,10 @@
 <script>
 $(document).ready(function() {
     $('#updateMeterNoTable').DataTable({
+        processing: true,
+        serverSide: true,
         ajax: {
             url: "{{ route('admin.estate.update-meter-no.list') }}",
-            dataSrc: function(json) {
-                return (json.status && json.data) ? json.data : [];
-            }
         },
         columns: [
             { data: 'sn', title: 'S.No.' },
@@ -83,9 +82,10 @@ $(document).ready(function() {
             { data: 'old_meter2_reading', title: 'Old Meter2 Reading', defaultContent: '—' },
             { data: 'new_meter2_reading', title: 'New Meter2 Reading', defaultContent: '—' }
         ],
-        order: [[0, 'asc']],
+        // Latest updates first
+        order: [[0, 'desc']],
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
             search: "Search:",
             lengthMenu: "Show _MENU_ entries",
