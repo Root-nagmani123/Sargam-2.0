@@ -78,6 +78,28 @@ function hasRole($role)
 
     return in_array($role, $roles);
 }
+
+/**
+ * Whether the current user can see the low stock alert (Admin, Mess Staff role, or employee in Officers Mess department).
+ */
+function canSeeLowStockAlert()
+{
+    $user = Auth::user();
+    if (!$user) return false;
+
+    if (hasRole('Admin')) return true;
+    if (hasRole('Mess Staff') || hasRole('mess staff')) return true;
+
+    // Mess staff dropdown list = employees in Officers Mess department; show alert to them when they login
+    if (isset($user->user_category) && $user->user_category === 'E' && !empty($user->user_id)) {
+        $officersMess = \App\Models\DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        if ($officersMess && \App\Models\EmployeeMaster::where('pk', $user->user_id)->where('department_master_pk', $officersMess->pk)->exists()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function get_Role_by_course()
 {
     $user = Auth::user();

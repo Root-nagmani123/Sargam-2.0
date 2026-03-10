@@ -135,10 +135,14 @@ class LoginController extends Controller
 
         Session::put('user_roles', $roles);
 
-        $lowStockAlert = \App\Http\Controllers\Mess\ReportController::getLowStockAlertItems();
-        return redirect()->intended($this->redirectTo)
-            ->with('low_stock_alert', $lowStockAlert)
+        $redirect = redirect()->intended($this->redirectTo)
             ->cookie(cookie()->make('fresh_login', 'true', 0));
+        // Low stock alert: Admin, Mess Staff role, or any employee in Officers Mess department (same as mess staff dropdown)
+        if (canSeeLowStockAlert()) {
+            $lowStockAlert = \App\Http\Controllers\Mess\ReportController::getLowStockAlertItems();
+            $redirect->with('low_stock_alert', $lowStockAlert);
+        }
+        return $redirect;
 
     } catch (\Throwable $e) {
         // 🔴 ONLY UNEXPECTED ERRORS COME HERE
