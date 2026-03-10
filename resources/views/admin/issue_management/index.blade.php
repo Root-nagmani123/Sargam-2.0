@@ -11,7 +11,7 @@
                 <div class="d-flex align-items-center gap-2">
                     <h1 class="h4 fw-semibold mb-1">Issue Management - All Issues</h1>
                 </div>
-                <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm d-flex align-items-center gap-2 shadow-sm">
+                <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary  d-flex align-items-center gap-2 shadow-sm">
                     <i class="material-icons material-symbols-rounded">add</i>
                     Add New Issue
                 </a>
@@ -21,16 +21,16 @@
                 <!-- Filters -->
                 <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4">
                     <div class="row">
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <label class="form-label small fw-medium text-body-secondary">Show</label>
-                            <select name="raised_by" class="form-select form-select-sm">
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Show</label>
+                            <select name="raised_by" class="form-select ">
                                 <option value="all" {{ request('raised_by', 'all') == 'all' ? 'selected' : '' }}>All issues (raised by me or others)</option>
                                 <option value="self" {{ request('raised_by') == 'self' ? 'selected' : '' }}>Raised by me only</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <label class="form-label small fw-medium text-body-secondary">Status</label>
-                            <select name="status" class="form-select form-select-sm">
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select ">
                                 <option value="">All Status</option>
                                 <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Reported</option>
                                 <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>In Progress</option>
@@ -39,9 +39,9 @@
                                 <option value="6" {{ request('status') == '6' ? 'selected' : '' }}>Reopened</option>
                             </select>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <label class="form-label small fw-medium text-body-secondary">Category</label>
-                            <select name="category" class="form-select form-select-sm">
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select ">
                                 <option value="">All Categories</option>
                                 @foreach($categories as $category)
                                     <option value="{{ $category->pk }}" {{ request('category') == $category->pk ? 'selected' : '' }}>
@@ -50,9 +50,9 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <label class="form-label small fw-medium text-body-secondary">Priority</label>
-                            <select name="priority" class="form-select form-select-sm">
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Priority</label>
+                            <select name="priority" class="form-select ">
                                 <option value="">All Priorities</option>
                                 @foreach($priorities as $priority)
                                     <option value="{{ $priority->pk }}" {{ request('priority') == $priority->pk ? 'selected' : '' }}>
@@ -61,17 +61,17 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <label class="form-label small fw-medium text-body-secondary">Date From</label>
+                        <div class="col-12 col-md-6 col-lg-3 mb-2">
+                            <label class="form-label">Date From</label>
                             <input type="date" name="date_from" class="form-control " value="{{ request('date_from') }}">
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <label class="form-label small fw-medium text-body-secondary">Date To</label>
+                        <div class="col-12 col-md-6 col-lg-3 mb-2   ">
+                            <label class="form-label">Date To</label>
                             <input type="date" name="date_to" class="form-control " value="{{ request('date_to') }}">
                         </div>
-                        <div class="col-12 col-lg-4 d-flex align-items-end gap-2 flex-wrap">
-                            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                            <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear filters">Clear Filters</a>
+                        <div class="col-12 col-lg-4 d-flex align-items-end gap-2 flex-wrap mb-2">
+                            <button type="submit" class="btn btn-primary ">Apply</button>
+                            <a href="{{ route('admin.issue-management.index') }}" class="btn btn-outline-secondary " title="Clear filters">Clear Filters</a>
                             @php
                                 $exportParams = array_filter([
                                     'search' => request('search'),
@@ -83,10 +83,10 @@
                                     'raised_by' => request('raised_by'),
                                 ]);
                             @endphp
-                            <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Export to Excel">
+                            <a href="{{ route('admin.issue-management.export.excel', $exportParams) }}" class="btn btn-success  d-flex align-items-center gap-1" title="Export to Excel">
                                 <span class="d-none d-md-inline">Excel</span>
                             </a>
-                            <a href="{{ route('admin.issue-management.export.pdf', $exportParams) }}" class="btn btn-danger btn-sm d-flex align-items-center gap-1" title="Export to PDF">
+                            <a href="{{ route('admin.issue-management.export.pdf', $exportParams) }}" class="btn btn-danger  d-flex align-items-center gap-1" title="Export to PDF">
                                 <span class="d-none d-md-inline">PDF</span>
                             </a>
                         </div>
@@ -96,7 +96,7 @@
                 <!-- Issues DataTable -->
               <!-- Issues Table -->
               <div class="table-responsive">
-                    <table class="table mb-0">
+                    <table class="table mb-0" id="issueManagementTable">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -113,8 +113,8 @@
                             @forelse($issues as $issue)
                             <tr>
                                 <td>#{{ $issue->pk }}</td>
-                                <td>{{ $issue->created_date->format('d M Y') }}</td>
-                                <td>{{ $issue->category->issue_category ?? '—' }}</td>
+                                <td data-order="{{ $issue->created_date->format('Y-m-d H:i:s') }}">{{ $issue->created_date->format('d M Y') }}</td>
+                                <td>{{ $issue->category->issue_category ?? '-' }}</td>
                                 <td>{{ Str::limit($issue->description, 50) }}</td>
                                 <td>
                                     @php
@@ -137,7 +137,7 @@
                                             <i class="material-icons material-symbols-rounded">visibility</i>
                                         </a>
                                         @if($issue->issue_logger == Auth::user()->user_id || $issue->created_by == Auth::user()->user_id)
-                                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning btn-sm" title="Edit">
+                                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning " title="Edit">
                                             <iconify-icon icon="solar:pen-bold"></iconify-icon>
                                         </a>
                                         @endif
@@ -153,7 +153,7 @@
                                         </div>
                                         <h6 class="text-body-secondary mb-1">No issues</h6>
                                         <p class="small text-body-secondary mb-0">Try adjusting your filters or log a new issue.</p>
-                                        <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary btn-sm mt-3">Log New Issue</a>
+                                        <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary  mt-3">Log New Issue</a>
                                     </div>
                                 </td>
                             </tr>
@@ -166,3 +166,22 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function () {
+    const tableId = '#issueManagementTable';
+
+    if (!$.fn.DataTable.isDataTable(tableId)) {
+        $(tableId).DataTable({
+            pageLength: 10,
+            lengthMenu: [[10, 20, 50, 100, -1], [10, 20, 50, 100, 'All']],
+            order: [[1, 'desc']],
+            columnDefs: [
+                { orderable: false, searchable: false, targets: 6 }
+            ]
+        });
+    }
+});
+</script>
+@endpush
