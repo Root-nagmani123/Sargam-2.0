@@ -26,7 +26,7 @@
             </h2>
         </div>
         <div class="card-body p-4">
-            <p class="text-body-secondary small mb-4">Original house request details from <code>estate_home_request_details</code>.</p>
+            <p class="text-body-secondary small mb-4">Original house request details.</p>
             <div class="row g-3">
                 <div class="col-md-6 col-lg-4">
                     <label class="form-label fw-semibold small text-uppercase text-body-secondary">Request ID</label>
@@ -124,7 +124,7 @@
             @if($changeRequestDetails->isEmpty())
                 <p class="text-body-secondary mb-0">No change request has been raised for this house request. Change request is applicable only when the employee already has a house allotted (<code>current_alot</code> is set). Use <strong>Raise Change Request</strong> above when the employee has a current allotment.</p>
             @else
-                <p class="text-body-secondary small mb-4">Change request(s) linked to this house request from <code>estate_change_home_req_details</code>.</p>
+                <p class="text-body-secondary small mb-4">Change request(s) linked to this house request from.</p>
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover align-middle mb-0">
                         <thead class="table-light">

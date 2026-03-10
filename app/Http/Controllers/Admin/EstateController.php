@@ -461,6 +461,8 @@ class EstateController extends Controller
         // Rejected = main status=2, or status=0 with app_status=2 or hac_status=2 (so they can request again).
         $hasAppStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_home_request_details', 'app_status');
         $hasHacStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_home_request_details', 'hac_status');
+
+        // 1) Base "active request" rule from request table: Allotted, or Pending and not rejected.
         $activeQuery = EstateHomeRequestDetails::where('employee_pk', '>', 0)
             ->where(function ($q) use ($hasAppStatus, $hasHacStatus) {
                 $q->where('status', 1); // Allotted → always exclude
@@ -479,6 +481,33 @@ class EstateController extends Controller
                     $q->orWhere('status', 0); // No app/hac columns: exclude all Pending
                 }
             });
+
+        // 2) For Allotted requests (current_alot not empty), treat them as "active"
+        //    only while there is an active possession (return_home_status = 0 or NULL).
+        //    Once house is returned, employee should be allowed to request again, so
+        //    such requests must drop out of the active set.
+        if (\Illuminate\Support\Facades\Schema::hasTable('estate_possession_details')) {
+            $activeQuery->where(function ($outer) {
+                $outer
+                    // (a) Pending requests (no current_alot) are always active until explicitly rejected.
+                    ->whereNull('estate_home_request_details.current_alot')
+                    // (b) Allotted requests (current_alot present) are active only while possession is not returned.
+                    ->orWhere(function ($inner) {
+                        $inner->whereNotNull('estate_home_request_details.current_alot')
+                            ->whereExists(function ($sub) {
+                                $sub->from('estate_possession_details as epd')
+                                    ->whereColumn('epd.estate_home_request_details', 'estate_home_request_details.pk')
+                                    ->whereNotNull('epd.estate_house_master_pk');
+                                if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                                    $sub->where(function ($q) {
+                                        $q->whereNull('epd.return_home_status')
+                                            ->orWhere('epd.return_home_status', 0);
+                                    });
+                                }
+                            });
+                    });
+            });
+        }
         $activeEmployeePks = $activeQuery
             ->pluck('employee_pk')
             ->filter()
@@ -2431,6 +2460,18 @@ class EstateController extends Controller
                 $this->refreshHouseUsedStatusFromPossession($housePk);
             }
 
+            // Clear current allotment / mark request as Returned so that:
+            // - Employee becomes available again in the Add Estate Request employee dropdown.
+            // - Listing still shows the record with status = Returned for audit/history.
+            $homeReqUpdate = ['current_alot' => null];
+            if (Schema::hasColumn('estate_home_request_details', 'status')) {
+                // 3 = Returned (new explicit status for "house returned").
+                $homeReqUpdate['status'] = 3;
+            }
+            if (! empty($homeReqUpdate)) {
+                EstateHomeRequestDetails::where('pk', $homeReqPk)->update($homeReqUpdate);
+            }
+
             return redirect()->route('admin.estate.return-house')->with('success', 'House marked as returned successfully.');
         }
 
@@ -4244,7 +4285,9 @@ class EstateController extends Controller
 
             $query = DB::table('estate_home_request_details as ehrd')
                 ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
-                ->where('ehrd.status', 1) // Allotted in Request For Estate
+                // Consider both Pending (0) and Allotted (1) requests as long as they have an active possession.
+                // This handles legacy cases where possession exists but status was never flipped to 1.
+                ->whereIn('ehrd.status', [0, 1])
                 ->whereNotNull('ehrd.current_alot')
                 ->whereRaw("TRIM(COALESCE(ehrd.current_alot, '')) != ''")
                 ->whereNotNull('epd.estate_house_master_pk')
@@ -4642,6 +4685,21 @@ class EstateController extends Controller
             $query->addSelect('epd.electric_meter_reading_2 as epd_electric_meter_reading_2');
         } else {
             $query->addSelect(\Illuminate\Support\Facades\DB::raw('NULL as epd_electric_meter_reading_2'));
+        }
+
+        // RBAC: Non-admin/estate/super-admin/training/IST users should only see/update their own meter readings.
+        if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if ($user) {
+                $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+                if (!empty($employeeIds)) {
+                    $query->whereIn('ehrd.employee_pk', $employeeIds);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         if ($billMonth) {
@@ -5141,8 +5199,22 @@ class EstateController extends Controller
             })
             ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
-            ->whereNotNull('epd.estate_house_master_pk')
-            ;
+            ->whereNotNull('epd.estate_house_master_pk');
+
+        // RBAC: Non-admin/estate/super-admin/training/IST users should only see/update their own meter records.
+        if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if ($user) {
+                $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+                if (!empty($employeeIds)) {
+                    $baseQuery->whereIn('ehrd.employee_pk', $employeeIds);
+                } else {
+                    $baseQuery->whereRaw('1 = 0');
+                }
+            } else {
+                $baseQuery->whereRaw('1 = 0');
+            }
+        }
 
         if ($isDataTables) {
             $query = clone $baseQuery;
@@ -5660,6 +5732,21 @@ class EstateController extends Controller
                     'ehm.water_charge as ehm_water_charge',
                     'ehm.licence_fee as ehm_licence_fee'
                 );
+
+            // RBAC: Non-admin/estate/super-admin/training/IST users should only see/generate their own bills.
+            if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+                $user = \Illuminate\Support\Facades\Auth::user();
+                if ($user) {
+                    $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+                    if (!empty($employeeIds)) {
+                        $query->whereIn('ehrd.employee_pk', $employeeIds);
+                    } else {
+                        $query->whereRaw('1 = 0');
+                    }
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            }
 
             if (!empty($unitSubTypePk)) {
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
@@ -6234,11 +6321,22 @@ class EstateController extends Controller
                     ->orWhere('emrd.bill_month', $billMonthNumPadded);
             })
             ->where('emrd.bill_year', $billYearStr)
-            ->where(function ($q) {
-                $q->whereNull('epd.return_home_status')
-                    ->orWhere('epd.return_home_status', 0);
-            })
             ->whereNotNull('epd.estate_house_master_pk');
+
+        // RBAC: Non-admin/estate/super-admin/training/IST users should only see their own meter readings in List Meter Reading.
+        if (! (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            if ($user) {
+                $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+                if (!empty($employeeIds)) {
+                    $baseQuery->whereIn('ehrd.employee_pk', $employeeIds);
+                } else {
+                    $baseQuery->whereRaw('1 = 0');
+                }
+            } else {
+                $baseQuery->whereRaw('1 = 0');
+            }
+        }
 
         if ($blockId && $blockId !== 'all' && $blockId !== '') {
             $baseQuery->where('ehm.estate_block_master_pk', $blockId);

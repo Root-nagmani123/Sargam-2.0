@@ -32,6 +32,7 @@
                         <option value="0">Pending</option>
                         <option value="1">Allotted</option>
                         <option value="2">Rejected</option>
+                        <option value="3">Returned</option>
                     </select>
                 </div>
                 <div class="col-auto mt-2 mt-md-0">

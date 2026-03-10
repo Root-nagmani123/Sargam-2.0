@@ -62,6 +62,13 @@ class EstateReturnHouseDataTable extends DataTable
             $searchValue = strtolower((string) ($request->get('search')['value'] ?? ''));
         }
 
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isPrivileged = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+        $employeeIds = [];
+        if (! $isPrivileged && $user) {
+            $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null) ?: [];
+        }
+
         // LBSNAA returned houses (estate_possession_details)
         $lbsnaa = DB::table('estate_possession_details as epd')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -77,9 +84,17 @@ class EstateReturnHouseDataTable extends DataTable
                 }
             })
             ->whereNotNull('epd.estate_house_master_pk')
-            ->where('epd.estate_change_id', -1)
             ->when(Schema::hasColumn('estate_possession_details', 'return_home_status'), function ($q) {
                 $q->where('epd.return_home_status', 1);
+            })
+            // RBAC: non-privileged users see only their own LBSNAA records.
+            // Use BOTH request.employee_pk and possession.emploee_master_pk to handle legacy/migrated rows
+            // where employee_pk on request may be null/0 but possession is linked correctly.
+            ->when(!$isPrivileged && !empty($employeeIds), function ($q) use ($employeeIds) {
+                $q->where(function ($sub) use ($employeeIds) {
+                    $sub->whereIn('ehrd.employee_pk', $employeeIds)
+                        ->orWhereIn('epd.emploee_master_pk', $employeeIds);
+                });
             })
             // Manual global search on underlying columns (cannot use aliases in WHERE).
             ->when($searchValue !== '', function ($q) use ($searchValue) {
@@ -138,6 +153,10 @@ class EstateReturnHouseDataTable extends DataTable
             ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
             ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
             ->where('epo.return_home_status', 1)
+            // RBAC: non-privileged users should not see "Other Employee" section at all
+            ->when(!$isPrivileged, function ($q) {
+                $q->whereRaw('1 = 0');
+            })
             // Manual global search for "Other Employee" branch.
             ->when($searchValue !== '', function ($q) use ($searchValue) {
                 $like = '%' . $searchValue . '%';

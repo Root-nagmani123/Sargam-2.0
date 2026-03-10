@@ -64,9 +64,24 @@ class EstateRequestForEstateDataTable extends DataTable
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
             ->editColumn('status', function ($row) {
+                // Prefer actual possession flags from estate_possession_details to decide "Returned".
+                $hasActive = (int) ($row->has_active_possession ?? 0) === 1;
+                $hasReturned = (int) ($row->has_any_returned ?? 0) === 1;
+                if (! $hasActive && $hasReturned) {
+                    return '<span class="badge bg-info">Returned</span>';
+                }
+
                 $s = (int) ($row->status ?? 0);
-                $labels = [0 => 'Pending', 1 => 'Allotted', 2 => 'Rejected'];
-                $classes = [0 => 'warning', 1 => 'success', 2 => 'danger'];
+                // If system has a current allotment recorded but status is still Pending (0),
+                // treat it as Allotted in UI. This fixes legacy/migrated rows like Nishant Joshi,
+                // where possession exists (and house no. is set) but status was never updated.
+                $hasCurrentAllotment = trim((string) ($row->current_alot ?? '')) !== '';
+                if ($s === 0 && $hasCurrentAllotment) {
+                    $s = 1;
+                }
+                // 0 = Pending, 1 = Allotted, 2 = Rejected, 3 = Returned (explicit flag, if used)
+                $labels = [0 => 'Pending', 1 => 'Allotted', 2 => 'Rejected', 3 => 'Returned'];
+                $classes = [0 => 'warning', 1 => 'success', 2 => 'danger', 3 => 'info'];
                 $label = $labels[$s] ?? 'Unknown';
                 $class = $classes[$s] ?? 'secondary';
                 return '<span class="badge bg-' . $class . '">' . e($label) . '</span>';
@@ -188,6 +203,21 @@ class EstateRequestForEstateDataTable extends DataTable
                 'estate_home_request_details.eligibility_type_pk',
                 'estate_home_request_details.remarks',
                 'estate_home_request_details.change_status',
+                // Derived flags from estate_possession_details:
+                // has_active_possession: at least one possession row with house and not returned.
+                DB::raw("CASE WHEN EXISTS (
+                    SELECT 1 FROM estate_possession_details epd
+                    WHERE epd.estate_home_request_details = estate_home_request_details.pk
+                      AND epd.estate_house_master_pk IS NOT NULL
+                      AND (epd.return_home_status IS NULL OR epd.return_home_status = 0)
+                ) THEN 1 ELSE 0 END AS has_active_possession"),
+                // has_any_returned: at least one possession row with house and return_home_status = 1.
+                DB::raw("CASE WHEN EXISTS (
+                    SELECT 1 FROM estate_possession_details epd2
+                    WHERE epd2.estate_home_request_details = estate_home_request_details.pk
+                      AND epd2.estate_house_master_pk IS NOT NULL
+                      AND epd2.return_home_status = 1
+                ) THEN 1 ELSE 0 END AS has_any_returned"),
             ]);
 
         // Self-service: non-estate/admin/HAC-approval users should only see their own requests.
@@ -203,12 +233,15 @@ class EstateRequestForEstateDataTable extends DataTable
             }
         }
 
-        // Status filter: All (empty), Pending (0), Allotted (1), Rejected (2)
+        // Status filter: All (empty), Pending (0), Allotted (1), Rejected (2), Returned (3)
         $statusFilter = request('status_filter');
         if ($statusFilter !== null && $statusFilter !== '') {
             $statusVal = (int) $statusFilter;
             if (in_array($statusVal, [0, 1, 2], true)) {
                 $query->where('estate_home_request_details.status', $statusVal);
+            } elseif ($statusVal === 3) {
+                // Returned: no active possession, but at least one returned possession row.
+                $query->havingRaw('has_any_returned = 1 AND has_active_possession = 0');
             }
         }
 
