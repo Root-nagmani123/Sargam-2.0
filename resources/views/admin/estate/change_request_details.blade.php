@@ -59,10 +59,10 @@
             @endif
 
             @if(optional($detail)->change_ap_dis_status === 1)
-                <div class="alert alert-success mb-4">This change request is already <strong>approved</strong>. You cannot edit it. Use &quot;Create new change request&quot; above to request another change.</div>
+                <div class="alert alert-success mb-4">This change request is already <strong>approved</strong>. Use &quot;Create new change request&quot; above to request another change.</div>
             @endif
             @if(optional($detail)->change_ap_dis_status === 2)
-                <div class="alert alert-warning mb-4">This change request is already <strong>disapproved</strong>. You cannot edit it. Use &quot;Create new change request&quot; above to request another change.</div>
+                <div class="alert alert-warning mb-4">This change request is already <strong>disapproved</strong>. Use &quot;Create new change request&quot; above to request another change.</div>
             @endif
 
             @include('admin.estate._change_request_details_form', [
