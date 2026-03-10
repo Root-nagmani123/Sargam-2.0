@@ -2,7 +2,7 @@
 @props(['requests', 'approvalStage' => 1])
 
 <div class="table-responsive">
-    <table class="table table-bordered table-hover align-middle mb-0" id="approvalTable">
+    <table class="table text-nowrap align-middle mb-0" id="approvalTable">
         <thead class="table-primary">
             <tr>
                 <th style="width:50px;" class="text-center">S.No.</th>

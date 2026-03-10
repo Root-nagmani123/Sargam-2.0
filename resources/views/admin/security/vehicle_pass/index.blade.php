@@ -26,7 +26,7 @@
         </ul>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <div class="dropdown">
-                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm" type="button" id="vehiclePassExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-1 shadow-sm" type="button" id="vehiclePassExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">download</i>
                     Export
                 </button>
@@ -92,7 +92,7 @@
                     </li>
                 </ul>
             </div>
-            <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+            <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary px-4 py-2 rounded-1 shadow-sm">
                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:20px;">add</i>
                 Generate New Vehicle Pass
             </a>
@@ -183,7 +183,7 @@
                                             <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">directions_car</i>
                                             <p class="mb-1">No active vehicle pass requests found.</p>
                                             <small>Click "Generate New Vehicle Pass" to create one.</small>
-                                            <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary btn-sm mt-2 rounded-pill px-3">
+                                            <a href="{{ route('admin.security.vehicle_pass.create') }}" class="btn btn-primary  mt-2 rounded-1 px-3">
                                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">add</i>
                                                 Generate New Vehicle Pass
                                             </a>
