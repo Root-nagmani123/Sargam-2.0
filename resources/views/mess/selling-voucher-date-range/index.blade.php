@@ -1063,12 +1063,15 @@
 
                 const o = select.options[select.selectedIndex];
                 const unitInp = row.querySelector('.edit-dr-unit');
+                const rateInp = row.querySelector('.edit-dr-rate');
                 const availInp = row.querySelector('.edit-dr-avail');
                 if (unitInp) unitInp.value = (o && o.dataset.unit) ? o.dataset.unit : '—';
+                if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
                 if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
                 updateEditRowLeft(row);
                 updateEditRowTotal(row);
             });
+            refreshEditAllAvailable();
             updateEditGrandTotal();
         }
 
@@ -1892,7 +1895,8 @@
             const issueDate = item.issue_date || '';
             const total = (qty && rate) ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : '';
             const left = (avail !== '' && qty !== '') ? Math.max(0, parseFloat(avail) - parseFloat(qty)).toFixed(2) : '';
-            return '<tr class="edit-dr-item-row">' +
+            const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
+            return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
                 '<td><input type="text" name="items[' + index + '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
                 '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
@@ -1910,6 +1914,51 @@
             const qty = parseFloat(row.querySelector('.edit-dr-qty').value) || 0;
             const leftInp = row.querySelector('.edit-dr-left');
             if (leftInp) leftInp.value = Math.max(0, avail - qty).toFixed(2);
+        }
+
+        /**
+         * Recalculate Available Qty and Left Qty for all rows in the Edit modal (Selling Voucher with Date Range).
+         * Effective base per item = current stock + sum of original qtys (from this voucher) for that item.
+         * Then each row gets available = base - already used in previous rows (same logic as Add mode).
+         */
+        function refreshEditAllAvailable() {
+            const rows = document.querySelectorAll('#editModalItemsBody .edit-dr-item-row');
+            if (!rows.length) return;
+
+            const effectiveBaseByItem = {};
+            rows.forEach(function(row) {
+                const select = row.querySelector('.edit-dr-item-select');
+                const itemId = select ? select.value : '';
+                if (!itemId) return;
+                const originalQty = parseFloat(row.getAttribute('data-original-qty')) || 0;
+                if (!effectiveBaseByItem.hasOwnProperty(itemId)) {
+                    effectiveBaseByItem[itemId] = getBaseAvailableForItem(itemId);
+                }
+                effectiveBaseByItem[itemId] += originalQty;
+            });
+
+            const usedByItem = {};
+            rows.forEach(function(row) {
+                const select = row.querySelector('.edit-dr-item-select');
+                const itemId = select ? select.value : '';
+                const availInp = row.querySelector('.edit-dr-avail');
+                const leftInp = row.querySelector('.edit-dr-left');
+                if (!itemId || !availInp) return;
+
+                const effectiveBase = effectiveBaseByItem[itemId] != null ? effectiveBaseByItem[itemId] : getBaseAvailableForItem(itemId);
+                const alreadyUsed = usedByItem[itemId] || 0;
+                const availableForRow = Math.max(0, effectiveBase - alreadyUsed);
+
+                availInp.value = availableForRow.toFixed(2);
+
+                const qty = parseFloat(row.querySelector('.edit-dr-qty').value) || 0;
+                if (leftInp) {
+                    leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
+                }
+
+                usedByItem[itemId] = alreadyUsed + qty;
+                enforceQtyWithinAvailable(row, '.edit-dr-avail', '.edit-dr-qty');
+            });
         }
 
         function updateEditRowTotal(row) {
@@ -1945,11 +1994,12 @@
             if (initAvailInp && opt && opt.dataset.available) {
                 initAvailInp.value = opt.dataset.available;
             }
+            refreshEditAllAvailable();
             newTr.querySelector('.edit-dr-avail').addEventListener('input', function() {
                 updateEditRowLeft(newTr);
             });
             newTr.querySelector('.edit-dr-qty').addEventListener('input', function() {
-                enforceQtyWithinAvailable(newTr, '.edit-dr-avail', '.edit-dr-qty');
+                refreshEditAllAvailable();
                 updateEditRowTotal(newTr);
                 updateEditGrandTotal();
             });
@@ -1960,15 +2010,19 @@
             newTr.querySelector('.edit-dr-item-select').addEventListener('change', function() {
                 const o = this.options[this.selectedIndex];
                 newTr.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit : '—';
+                const rateInp = newTr.querySelector('.edit-dr-rate');
+                if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
                 const availInp = newTr.querySelector('.edit-dr-avail');
                 if (availInp && o && o.dataset.available) {
                     availInp.value = o.dataset.available;
                 }
+                refreshEditAllAvailable();
                 updateEditRowTotal(newTr);
                 updateEditGrandTotal();
             });
             newTr.querySelector('.edit-dr-remove-row').addEventListener('click', function() {
                 newTr.remove();
+                refreshEditAllAvailable();
                 updateEditGrandTotal();
             });
         });
@@ -1978,6 +2032,7 @@
                 const row = e.target.closest('tr');
                 if (row) {
                     row.remove();
+                    refreshEditAllAvailable();
                     updateEditGrandTotal();
                 }
             }
@@ -2174,6 +2229,7 @@
                     updateEditRowLeft(row);
                 });
                 row.querySelector('.edit-dr-qty').addEventListener('input', function() {
+                    refreshEditAllAvailable();
                     updateEditRowTotal(row);
                     updateEditGrandTotal();
                 });
@@ -2184,16 +2240,21 @@
                 row.querySelector('.edit-dr-item-select').addEventListener('change', function() {
                     const o = this.options[this.selectedIndex];
                     row.querySelector('.edit-dr-unit').value = (o && o.dataset.unit) ? o.dataset.unit : '—';
+                    const rateInp = row.querySelector('.edit-dr-rate');
+                    if (rateInp && o && o.dataset.rate) rateInp.value = o.dataset.rate;
                     const availInp = row.querySelector('.edit-dr-avail');
                     if (availInp && o && o.dataset.available) availInp.value = o.dataset.available;
+                    refreshEditAllAvailable();
                     updateEditRowTotal(row);
                     updateEditGrandTotal();
                 });
                 row.querySelector('.edit-dr-remove-row').addEventListener('click', function() {
                     row.remove();
+                    refreshEditAllAvailable();
                     updateEditGrandTotal();
                 });
             });
+            refreshEditAllAvailable();
             updateEditGrandTotal();
         }
 
@@ -2413,9 +2474,50 @@
             });
         }
 
-        // Reset add modal when opened
+        // Reset add modal when closed (so next open starts fresh)
         const addReportModal = document.getElementById('addReportModal');
         if (addReportModal) {
+            addReportModal.addEventListener('hidden.bs.modal', function() {
+                const form = document.getElementById('addReportForm');
+                if (form) {
+                    form.reset();
+                    form.classList.remove('was-validated');
+                    form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+                }
+                const storeSel = addReportModal.querySelector('select[name="inve_store_master_pk"]');
+                if (storeSel) storeSel.value = '';
+                const issueDateInp = addReportModal.querySelector('input[name="issue_date"]');
+                if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+                const paymentSel = addReportModal.querySelector('select[name="payment_type"]');
+                if (paymentSel) paymentSel.value = '1';
+                const empRadio = addReportModal.querySelector('.dr-client-type-radio[value="employee"]');
+                if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+                const clientPkSel = addReportModal.querySelector('#drClientNameSelect');
+                if (clientPkSel) clientPkSel.value = '';
+                const clientNameInp = document.getElementById('drClientNameInput');
+                if (clientNameInp) clientNameInp.value = '';
+                addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) { if (s.value !== undefined) s.value = ''; });
+                const billInput = document.getElementById('addDrBillFileInput');
+                if (billInput) billInput.value = '';
+                const billWrap = document.getElementById('addDrBillFileChosenWrap');
+                const billName = document.getElementById('addDrBillFileChosenName');
+                if (billWrap) billWrap.classList.add('d-none');
+                if (billName) billName.textContent = '';
+                const tbody = document.getElementById('addModalItemsBody');
+                if (tbody) {
+                    tbody.innerHTML = getAddRowHtml(0);
+                    addRowIndex = 1;
+                    tbody.querySelectorAll('.dr-remove-row').forEach(function(btn) { btn.disabled = (tbody.querySelectorAll('.dr-item-row').length <= 1); });
+                    if (tbody.querySelector('.dr-item-row')) {
+                        tbody.querySelector('.dr-item-select').addEventListener('change', function() { updateAddRowUnit(tbody.querySelector('.dr-item-row')); });
+                        tbody.querySelector('.dr-qty').addEventListener('input', function() { refreshAllAvailable(); updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
+                        tbody.querySelector('.dr-rate').addEventListener('input', function() { updateAddRowTotal(tbody.querySelector('.dr-item-row')); updateAddGrandTotal(); });
+                    }
+                }
+                const grandTotalEl = document.getElementById('addModalGrandTotal');
+                if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+            });
+
             addReportModal.addEventListener('show.bs.modal', function() {
                 const storeSelect = addReportModal.querySelector('select[name="inve_store_master_pk"]');
                 const preSelectedStore = storeSelect ? storeSelect.value : null;

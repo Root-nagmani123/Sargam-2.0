@@ -794,12 +794,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const qtyEl = row.querySelector('.sv-qty');
         if (!availEl || !qtyEl) return;
 
-        const avail = parseFloat(availEl.value) || 0;
+        let avail = parseFloat(availEl.value) || 0;
         const qtyRaw = qtyEl.value;
         const qty = parseFloat(qtyRaw);
 
+        // In edit modal: effective available = current stock + this row's original issue qty
+        // (so saving without changes does not fail when current stock already reflects the voucher)
+        const isEditRow = row.closest('#editModalItemsBody') !== null;
+        const originalQty = isEditRow ? (parseFloat(row.getAttribute('data-original-qty')) || 0) : 0;
+        const effectiveAvail = isEditRow ? (avail + originalQty) : avail;
+
         // Keep browser constraint in sync
-        qtyEl.max = String(avail);
+        qtyEl.max = String(effectiveAvail);
 
         // If empty, don't force an error yet
         if (qtyRaw === '' || Number.isNaN(qty)) {
@@ -808,7 +814,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (qty > avail) {
+        if (qty > effectiveAvail) {
             qtyEl.setCustomValidity('Issue Qty cannot exceed Available Qty.');
             qtyEl.classList.add('is-invalid');
         } else {
@@ -932,7 +938,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
-        refreshAllAvailable();
+        if (row.closest('#editModalItemsBody')) {
+            refreshEditAllAvailable();
+        } else {
+            refreshAllAvailable();
+        }
         enforceQtyWithinAvailable(row);
     }
 
@@ -1407,7 +1417,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const total = item ? item.amount : '';
         const unit = item ? (item.unit || '') : '';
         const left = item && (avail - qty) >= 0 ? (avail - qty) : 0;
-        return '<tr class="sv-item-row edit-sv-item-row">' +
+        const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
+        return '<tr class="sv-item-row edit-sv-item-row"' + originalQtyAttr + '>' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
@@ -1434,6 +1445,51 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.forEach(row => {
             const btn = row.querySelector('.sv-remove-row');
             if (btn) btn.disabled = rows.length <= 1;
+        });
+    }
+
+    /**
+     * Recalculate Available Qty and Left Qty for all rows in the Edit modal.
+     * Effective base per item = current stock + sum of original qtys (from this voucher) for that item.
+     * Then each row gets available = base - already used in previous rows (same logic as Add mode).
+     */
+    function refreshEditAllAvailable() {
+        const rows = document.querySelectorAll('#editModalItemsBody .sv-item-row');
+        if (!rows.length) return;
+
+        const effectiveBaseByItem = {};
+        rows.forEach(function(row) {
+            const select = row.querySelector('.sv-item-select');
+            const itemId = select ? select.value : '';
+            if (!itemId) return;
+            const originalQty = parseFloat(row.getAttribute('data-original-qty')) || 0;
+            if (!effectiveBaseByItem.hasOwnProperty(itemId)) {
+                effectiveBaseByItem[itemId] = getBaseAvailableForItem(itemId);
+            }
+            effectiveBaseByItem[itemId] += originalQty;
+        });
+
+        const usedByItem = {};
+        rows.forEach(function(row) {
+            const select = row.querySelector('.sv-item-select');
+            const itemId = select ? select.value : '';
+            const availInp = row.querySelector('.sv-avail');
+            const leftInp = row.querySelector('.sv-left');
+            if (!itemId || !availInp) return;
+
+            const effectiveBase = effectiveBaseByItem[itemId] != null ? effectiveBaseByItem[itemId] : getBaseAvailableForItem(itemId);
+            const alreadyUsed = usedByItem[itemId] || 0;
+            const availableForRow = Math.max(0, effectiveBase - alreadyUsed);
+
+            availInp.value = availableForRow.toFixed(2);
+
+            const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
+            if (leftInp) {
+                leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
+            }
+
+            usedByItem[itemId] = alreadyUsed + qty;
+            enforceQtyWithinAvailable(row);
         });
     }
 
@@ -1482,6 +1538,7 @@ document.addEventListener('DOMContentLoaded', function() {
             editRowIndex = items.length;
         }
         updateEditRemoveButtons();
+        refreshEditAllAvailable();
         updateEditGrandTotal();
     }
 
@@ -1812,6 +1869,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
                 editRowIndex++;
                 updateEditRemoveButtons();
+                refreshEditAllAvailable();
                 updateEditGrandTotal();
             }
         });
@@ -1880,7 +1938,11 @@ document.addEventListener('DOMContentLoaded', function() {
         editModalItemsBody.addEventListener('input', function(e) {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateEditGrandTotal(); }
+                if (row) {
+                    refreshEditAllAvailable();
+                    calcRow(row);
+                    updateEditGrandTotal();
+                }
             }
         });
         
@@ -1889,6 +1951,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const row = e.target.closest('.sv-item-row');
                 if (row && document.querySelectorAll('#editModalItemsBody .sv-item-row').length > 1) {
                     row.remove();
+                    refreshEditAllAvailable();
                     updateEditGrandTotal();
                     updateEditRemoveButtons();
                 }
@@ -1913,9 +1976,45 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Reset add selling voucher modal when opened
+    // Reset add selling voucher modal when closed (so next open starts fresh)
     const addSellingVoucherModal = document.getElementById('addSellingVoucherModal');
     if (addSellingVoucherModal) {
+        addSellingVoucherModal.addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('sellingVoucherModalForm');
+            if (form) {
+                form.reset();
+                form.classList.remove('was-validated');
+                form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+            }
+            const storeSel = addSellingVoucherModal.querySelector('select[name="store_id"]');
+            if (storeSel) storeSel.value = '';
+            const issueDateInp = addSellingVoucherModal.querySelector('input[name="issue_date"]');
+            if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+            const paymentSel = addSellingVoucherModal.querySelector('select[name="payment_type"]');
+            if (paymentSel) paymentSel.value = '1';
+            const empRadio = addSellingVoucherModal.querySelector('.client-type-radio[value="employee"]');
+            if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+            const clientPkSel = addSellingVoucherModal.querySelector('#modalClientNameSelect');
+            if (clientPkSel) clientPkSel.value = '';
+            const clientNameInp = document.getElementById('modalClientNameInput');
+            if (clientNameInp) clientNameInp.value = '';
+            addSellingVoucherModal.querySelectorAll('#modalClientNameWrap select, #modalNameFieldWrap select').forEach(function(s) { if (s.value !== undefined) s.value = ''; });
+            const billInput = document.getElementById('addSvBillFileInput');
+            if (billInput) billInput.value = '';
+            const billWrap = document.getElementById('addSvBillFileChosenWrap');
+            const billName = document.getElementById('addSvBillFileChosenName');
+            if (billWrap) billWrap.classList.add('d-none');
+            if (billName) billName.textContent = '';
+            const tbody = document.getElementById('modalItemsBody');
+            if (tbody) {
+                tbody.innerHTML = getRowHtml(0);
+                rowIndex = 1;
+                updateRemoveButtons();
+            }
+            const grandTotalEl = document.getElementById('modalGrandTotal');
+            if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+        });
+
         addSellingVoucherModal.addEventListener('show.bs.modal', function() {
             const storeSelect = addSellingVoucherModal.querySelector('select[name="store_id"]');
             const preSelectedStore = storeSelect ? storeSelect.value : null;

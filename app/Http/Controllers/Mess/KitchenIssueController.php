@@ -654,6 +654,16 @@ class KitchenIssueController extends Controller
                 }
             }
 
+            // When updating: effective available = current stock + this voucher's existing issue qty per item
+            // (so saving without changes does not fail)
+            $existingQtyByItem = [];
+            foreach ($kitchenIssue->items as $existingItem) {
+                $itemId = (int) ($existingItem->item_subcategory_id ?? 0);
+                if ($itemId > 0) {
+                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + (float) ($existingItem->quantity ?? 0);
+                }
+            }
+
             // Map client_type_slug to numeric value
             $clientTypeMap = [
                 'employee' => KitchenIssueMaster::CLIENT_EMPLOYEE,
@@ -691,13 +701,15 @@ class KitchenIssueController extends Controller
                 $kitchenIssue->update(['bill_path' => null]);
             }
 
-            $kitchenIssue->items()->delete();
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
 
             // Validate requested qty vs available (aggregated across duplicate rows)
+            // On update: use effective available = current stock + this voucher's existing qty per item
             $qtyErrors = [];
             foreach ($requestedByItem as $itemId => $totalQty) {
-                $avail = (float) ($availableMap[$itemId] ?? 0);
+                $currentStock = (float) ($availableMap[$itemId] ?? 0);
+                $existingInVoucher = (float) ($existingQtyByItem[$itemId] ?? 0);
+                $avail = $currentStock + $existingInVoucher;
                 if ($totalQty > $avail) {
                     $sub = $subcategories->get($itemId);
                     $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
@@ -709,6 +721,8 @@ class KitchenIssueController extends Controller
                     'items' => implode(' ', $qtyErrors),
                 ]);
             }
+
+            $kitchenIssue->items()->delete();
 
             foreach ($request->items as $row) {
                 $sub = $subcategories->get($row['item_subcategory_id']);

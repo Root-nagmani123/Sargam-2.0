@@ -520,9 +520,22 @@ class SellingVoucherDateRangeController extends Controller
                 $qty = (float) ($row['quantity'] ?? 0);
                 if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
             }
+
+            // When updating: effective available = current stock + this voucher's existing issue qty per item
+            // (so saving without changes or adding different items does not fail)
+            $existingQtyByItem = [];
+            foreach ($report->items as $existingItem) {
+                $itemId = (int) ($existingItem->item_subcategory_id ?? 0);
+                if ($itemId > 0) {
+                    $existingQtyByItem[$itemId] = ($existingQtyByItem[$itemId] ?? 0) + (float) ($existingItem->quantity ?? 0);
+                }
+            }
+
             $subcategoriesForMsg = ItemSubcategory::whereIn('id', array_keys($requestedByItem))->get()->keyBy('id');
             foreach ($requestedByItem as $itemId => $totalQty) {
-                $avail = (float) ($availableMap[$itemId] ?? 0);
+                $currentStock = (float) ($availableMap[$itemId] ?? 0);
+                $existingInVoucher = (float) ($existingQtyByItem[$itemId] ?? 0);
+                $avail = $currentStock + $existingInVoucher;
                 if ($totalQty > $avail) {
                     $sub = $subcategoriesForMsg->get($itemId);
                     $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
