@@ -112,44 +112,4 @@
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
-    <script>
-    $(document).ready(function() {
-        let deleteUrl = '';
-
-        $(document).on('click', '.btn-delete-possession-details', function(e) {
-            e.preventDefault();
-            deleteUrl = $(this).data('url');
-            $('#deletePossessionDetailsModal').modal('show');
-        });
-
-        $('#confirmDeletePossessionDetailsBtn').on('click', function() {
-            if (!deleteUrl) return;
-
-            $.ajax({
-                url: deleteUrl,
-                type: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
-                success: function(response) {
-                    $('#deletePossessionDetailsModal').modal('hide');
-                    if (response.success) {
-                        $('#estatePossessionDetailsTable').DataTable().ajax.reload(null, false);
-                        var alert = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2 flex-shrink-0"></i><span class="flex-grow-1">' + response.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                        $('#possessionDetailsCardBody').find('.alert-success').remove();
-                        $('#possessionDetailsCardBody').prepend(alert);
-                        setTimeout(function() { $('.alert-success').fadeOut(); }, 3000);
-                    }
-                },
-                error: function(xhr) {
-                    $('#deletePossessionDetailsModal').modal('hide');
-                    var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to delete.';
-                    var alert = '<div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i><span class="flex-grow-1">' + msg + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-                    $('#possessionDetailsCardBody').find('.alert-danger').remove();
-                    $('#possessionDetailsCardBody').prepend(alert);
-                }
-            });
-
-            deleteUrl = '';
-        });
-    });
-    </script>
 @endpush

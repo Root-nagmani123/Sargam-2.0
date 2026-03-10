@@ -64,7 +64,7 @@
     </div>
 
     {{-- Change Unit Sub Type for House Details --}}
-    <div class="mb-4">
+    <!-- <div class="mb-4">
         <h2 class="h6 fw-bold text-body mb-1">Change Unit Sub Type for House Details <span class="text-danger">*</span></h2>
         <p class="text-body-secondary small mb-3">Change Unit Sub Type for House Details</p>
         <div class="table-responsive">
@@ -161,7 +161,7 @@
                 <i class="bi bi-x-lg me-2"></i>Cancel
             </a>
         @endif
-    </div>
+    </div> -->
 </form>
 
 {{-- Cascade: Estate/Unit Type → Buildings, Building → Unit Sub Types, Unit Sub Type → Houses. For modal, parent must call initChangeRequestDetailsCascade(modalBody) after injecting HTML. --}}

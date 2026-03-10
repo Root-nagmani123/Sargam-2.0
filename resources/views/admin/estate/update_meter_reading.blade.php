@@ -94,6 +94,16 @@
                 <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
                 <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
                 <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0 small">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <div class="table-responsive mt-4">
                     <table class="table table-bordered table-hover" id="updateMeterReadingTable">
                         <thead class="table-primary">
@@ -265,9 +275,15 @@ $(document).ready(function() {
                     : '';
                 const meterSlot = row.meter_slot || 1;
                 const rowKey = row.pk + '_' + meterSlot;
-                window.meterReadingRowData[rowKey] = { pk: row.pk, meter_slot: meterSlot, new_meter_no: newMeterNo, curr_month_elec_red: newMeterReading };
+                window.meterReadingRowData[rowKey] = {
+                    pk: row.pk,
+                    meter_slot: meterSlot,
+                    new_meter_no: newMeterNo,
+                    curr_month_elec_red: newMeterReading,
+                    original_curr_month_elec_red: newMeterReading
+                };
                 const tr = '<tr data-last-reading="'+ lastReadingVal +'" data-existing-curr="'+ newMeterReading +'" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
-                    '<td><input type="checkbox" class="form-check-input row-check"></td>' +
+                    '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
                     '<td>'+ (row.old_meter_no || 'N/A') +'</td>' +
@@ -325,7 +341,15 @@ $(document).ready(function() {
     function syncRowDataFromInputs($row) {
         var key = getRowKey($row);
         if (!key || !window.meterReadingRowData) return;
-        if (!window.meterReadingRowData[key]) window.meterReadingRowData[key] = { pk: $row.data('pk'), meter_slot: $row.data('meter-slot'), new_meter_no: '', curr_month_elec_red: '' };
+        if (!window.meterReadingRowData[key]) {
+            window.meterReadingRowData[key] = {
+                pk: $row.data('pk'),
+                meter_slot: $row.data('meter-slot'),
+                new_meter_no: '',
+                curr_month_elec_red: '',
+                original_curr_month_elec_red: ''
+            };
+        }
         window.meterReadingRowData[key].new_meter_no = $row.find('.new-meter-no').val() || '';
         window.meterReadingRowData[key].curr_month_elec_red = $row.find('.new-meter-reading').val() || '';
     }
@@ -341,6 +365,18 @@ $(document).ready(function() {
 
         let currVal = $(this).val();
         let currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
+
+        // If user tries to clear the field, restore the previous value (so it never stays blank).
+        const key = getRowKey($row);
+        let original = null;
+        if (key && window.meterReadingRowData && window.meterReadingRowData[key]) {
+            original = window.meterReadingRowData[key].original_curr_month_elec_red || null;
+        }
+        if ((currVal === '' || currReading === null) && original !== null && original !== '') {
+            currVal = String(original);
+            currReading = parseFloat(original);
+            $(this).val(currVal);
+        }
 
         // Block user from entering value less than last month / existing current.
         let minAllowed = lastReading;

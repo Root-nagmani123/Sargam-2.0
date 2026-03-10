@@ -24,7 +24,7 @@
             </div>
 
             <div id="request-for-estate-card-body">
-            <div class="row align-items-center mb-3">
+            <div class="row align-items-end mb-3">
                 <div class="col-12 col-md-4 col-lg-3">
                     <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
                     <select id="estateStatusFilter" class="form-select form-select-sm">
@@ -33,6 +33,11 @@
                         <option value="1">Allotted</option>
                         <option value="2">Rejected</option>
                     </select>
+                </div>
+                <div class="col-auto mt-2 mt-md-0">
+                    <button type="button" id="estateStatusClear" class="btn btn-outline-secondary btn-sm">
+                        Clear
+                    </button>
                 </div>
             </div>
             <div class="table-responsive request-for-estate-table-wrap">
@@ -250,6 +255,10 @@
                 data.status_filter = (val !== undefined && val !== null) ? val : '';
             });
             $('#estateStatusFilter').on('change', function() {
+                $requestForEstateTable.DataTable().ajax.reload(null, false);
+            });
+            $('#estateStatusClear').on('click', function() {
+                $('#estateStatusFilter').val('');
                 $requestForEstateTable.DataTable().ajax.reload(null, false);
             });
         }

@@ -38,14 +38,10 @@ class EstatePossessionDetailsDataTable extends DataTable
                 $editUrl = route('admin.estate.possession-details.create', [
                     'requester_id' => $row->estate_home_request_details_pk,
                 ]);
-                $deleteUrl = route('admin.estate.possession-details.delete', ['id' => $row->pk]);
 
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
                     <a href="' . e($editUrl) . '" class="text-primary" title="Edit">
                         <i class="material-symbols-rounded">edit</i>
-                    </a>
-                    <a href="javascript:void(0);" class="text-primary btn-delete-possession-details" data-url="' . e($deleteUrl) . '" data-id="' . (int) $row->pk . '" title="Delete">
-                        <i class="material-symbols-rounded">delete</i>
                     </a>
                 </div>';
             })
@@ -195,3 +191,4 @@ class EstatePossessionDetailsDataTable extends DataTable
         return 'EstatePossessionDetails_' . date('YmdHis');
     }
 }
+
