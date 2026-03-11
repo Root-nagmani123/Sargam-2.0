@@ -3,6 +3,12 @@
 @section('setup_content')
 <div class="container-fluid py-3 py-md-4 {{ request('print_all') ? 'print-all-mode' : '' }}">
     <x-breadcrum title="Sale Voucher Report"></x-breadcrum>
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
     @if(!request('print_all'))
     <!-- Header Section -->
     <div class="card mb-4 border-0 shadow-sm rounded-3 no-print">
@@ -139,7 +145,13 @@
     @endphp
 
     @if($sectionsToShow->isEmpty())
-        <div class="alert alert-info">No selling vouchers found for the selected filters.</div>
+        <div class="alert {{ isset($filtersApplied) && $filtersApplied ? 'alert-info' : 'alert-warning' }} mb-0">
+            @if(isset($filtersApplied) && $filtersApplied)
+                No selling vouchers found for the selected filters.
+            @else
+                <strong>Apply filters to view report.</strong> Select date range and/or client type / buyer name, then click <strong>Apply Filters</strong> to see data.
+            @endif
+        </div>
     @else
     @foreach($sectionsToShow as $groupedSections)
     @php $isPrintPage = request('print_all'); @endphp
