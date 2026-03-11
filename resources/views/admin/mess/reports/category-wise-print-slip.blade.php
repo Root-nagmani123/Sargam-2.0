@@ -63,7 +63,7 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-2">
+                    <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
                         <select name="buyer_name" id="clientTypePkBuyer" class="form-select form-select-sm">
                             <option value="">All Buyers</option>
@@ -119,6 +119,10 @@
                     <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                         Export Excel
+                    </a>
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                        Download PDF
                     </a>
                 </div>
             </form>
