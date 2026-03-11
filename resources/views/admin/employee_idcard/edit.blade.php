@@ -245,10 +245,19 @@
                     <!-- Upload Photo (both); Joining Letter only for Permanent -->
                     <div class="col-md-6">
                         <label class="form-label">Upload Photo</label>
-                        @if($request->photo)
+                        @php
+                            $editPhotoPath = $request->photo;
+                            $editPhotoExists = $editPhotoPath && \Storage::disk('public')->exists($editPhotoPath);
+                        @endphp
+                        @if($editPhotoExists)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" rel="noopener">View / Download</a>
+                                <a href="{{ asset('storage/' . $editPhotoPath) }}" target="_blank" rel="noopener">View / Download</a>
+                            </div>
+                        @elseif($editPhotoPath)
+                            <div class="alert alert-warning py-2 px-3 mb-2 small">
+                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">info</i>
+                                No file available in storage
                             </div>
                         @endif
                         <div class="idcard-upload-zone" id="photoUploadArea">
@@ -266,10 +275,19 @@
                     @if(!$isContractual)
                     <div class="col-md-6">
                         <label class="form-label">Upload Joining Letter</label>
-                        @if($request->joining_letter ?? null)
+                        @php
+                            $editJoinPath = $request->joining_letter ?? null;
+                            $editJoinExists = $editJoinPath && \Storage::disk('public')->exists($editJoinPath);
+                        @endphp
+                        @if($editJoinExists)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                <a href="{{ asset('storage/' . $request->joining_letter) }}" target="_blank" rel="noopener">View / Download</a>
+                                <a href="{{ asset('storage/' . $editJoinPath) }}" target="_blank" rel="noopener">View / Download</a>
+                            </div>
+                        @elseif($editJoinPath)
+                            <div class="alert alert-warning py-2 px-3 mb-2 small">
+                                <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">info</i>
+                                No file available in storage
                             </div>
                         @endif
                         <div class="idcard-upload-zone" id="joiningLetterUploadArea">

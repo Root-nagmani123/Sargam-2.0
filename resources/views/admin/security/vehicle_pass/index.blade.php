@@ -147,10 +147,16 @@
                                         <td class="align-middle">{{ $pass->vehicleType->vehicle_type ?? '--' }}</td>
                                         <td class="align-middle">{{ $pass->vehicle_no ?? '--' }}</td>
                                         <td class="align-middle">
-                                            @if($pass->doc_upload)
-                                                <a href="{{ asset('storage/' . $pass->doc_upload) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
+                                            @php
+                                                $docPath = $pass->doc_upload;
+                                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                                            @endphp
+                                            @if($docExists)
+                                                <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:22px;">picture_as_pdf</i>
                                                 </a>
+                                            @elseif($docPath)
+                                                <span class="text-warning small">No file available in storage</span>
                                             @else
                                                 <span class="text-muted">--</span>
                                             @endif
@@ -228,10 +234,16 @@
                                         <td class="align-middle">{{ $pass->vehicleType->vehicle_type ?? '--' }}</td>
                                         <td class="align-middle">{{ $pass->vehicle_no ?? '--' }}</td>
                                         <td class="align-middle">
-                                            @if($pass->doc_upload)
-                                                <a href="{{ asset('storage/' . $pass->doc_upload) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
+                                            @php
+                                                $docPath = $pass->doc_upload;
+                                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                                            @endphp
+                                            @if($docExists)
+                                                <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:22px;">picture_as_pdf</i>
                                                 </a>
+                                            @elseif($docPath)
+                                                <span class="text-warning small">No file available in storage</span>
                                             @else
                                                 <span class="text-muted">--</span>
                                             @endif

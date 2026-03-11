@@ -136,11 +136,14 @@
                                         <td>
                                             @php
                                                 $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
-                                                $photoUrl = $photoExists ? asset('storage/' . $request->photo) : asset('images/dummypic.jpeg');
                                             @endphp
-                                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
-                                                <img src="{{ $photoUrl }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
-                                            </a>
+                                            @if($photoExists)
+                                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
+                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
+                                                </a>
+                                            @else
+                                                <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
+                                            @endif
                                         </td>
                                         <td>{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}</td>
                                         <td>{{ $request->name }}</td>
