@@ -1,16 +1,16 @@
 @extends('admin.layouts.master')
 @section('title', 'Selling Voucher with Date Range')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-2">
     <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 flex-wrap gap-3">
         <div>
-            <h4 class="mb-0 fw-semibold">Selling Voucher with Date Range</h4>
-            <p class="mb-0 text-muted small">Review and manage selling vouchers across a selected date range.</p>
+            <h4 class="mb-1 fw-semibold">Selling Voucher with Date Range</h4>
+            <p class="mb-0 text-secondary small">Review and manage selling vouchers across a selected date range.</p>
         </div>
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addReportModal">
+        <button type="button" class="btn btn-primary shadow-sm d-inline-flex align-items-center gap-2 px-3" data-bs-toggle="modal" data-bs-target="#addReportModal">
             <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
-            <span>Add</span>
+            <span>Add Voucher</span>
         </button>
     </div>
 
@@ -25,12 +25,12 @@
     </div>
     @endif
 
-    <div class="card mb-3 border-0 shadow-sm">
-        <div class="card-body">
+    <div class="card mb-4 border-0 shadow-sm selling-voucher-filter">
+        <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}">
-                <div class="row g-2">
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Status</label>
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
                         <select name="status" class="form-select form-select-sm">
                             <option value="">All</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
@@ -38,8 +38,8 @@
                             <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Approved</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Store</label>
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Store</label>
                         <select name="store" class="form-select form-select-sm">
                             <option value="">All</option>
                             @foreach($stores as $store)
@@ -47,20 +47,20 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control " value="{{ request('start_date') ?? date('Y-m-d') }}">
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Start Date</label>
+                        <input type="date" name="start_date" id="filter_start_date" class="form-control form-control-sm" value="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control " value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
+                    <div class="col-12 col-sm-6 col-lg-4 col-xl-2">
+                        <label class="form-label small fw-semibold text-uppercase mb-1">End Date</label>
+                        <input type="date" name="end_date" id="filter_end_date" class="form-control form-control-sm" value="{{ request('end_date') }}" min="{{ request('start_date') ?? date('Y-m-d') }}">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                    <div class="col-12 col-lg-8 col-xl-4 d-flex align-items-end gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 px-3">
                             <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
                             <span>Filter</span>
                         </button>
-                        <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                        <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-3">
                             <i class="material-symbols-rounded" style="font-size: 1rem;">refresh</i>
                             <span>Clear</span>
                         </a>
@@ -70,11 +70,11 @@
         </div>
     </div>
 
-    <div class="card selling-voucher-card">
-        <div class="card-body">
+    <div class="card selling-voucher-card border-0 shadow-sm">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table text-nowrap align-middle mb-0" id="sellingVoucherDateRangeTable">
-                    <thead>
+                <table class="table table-striped table-hover text-nowrap align-middle mb-0 voucher-table" id="sellingVoucherDateRangeTable">
+                    <thead class="table-light">
                         <tr>
                             <th class="text-nowrap">S. No.</th>
                             <th class="text-nowrap">Item Name</th>
@@ -107,27 +107,36 @@
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
                             <td>
-                                @if($report->status == 0)<span class="badge bg-warning">Pending</span>
-                                @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
-                                @elseif($report->status == 4)<span class="badge bg-primary">Completed</span>
-                                @else<span class="badge bg-success">Final</span>@endif
+                                @if($report->status == 0)<span class="badge rounded-pill text-bg-warning">Pending</span>
+                                @elseif($report->status == 2)<span class="badge rounded-pill text-bg-success">Approved</span>
+                                @elseif($report->status == 4)<span class="badge rounded-pill text-bg-primary">Completed</span>
+                                @else<span class="badge rounded-pill text-bg-secondary">Final</span>@endif
                             </td>
                             <td>
                                 @if(($item->return_quantity ?? 0) > 0)
-                                <span class="badge bg-info">Returned</span>
+                                <span class="badge rounded-pill text-bg-info">Returned</span>
                                 @endif
                                 @if($loop->first)
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-report" data-report-id="{{ $report->id }}" title="Return">Return</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
+                                    <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
+                                    <span>Return</span>
+                                </button>
                                 @endif
                             </td>
                             <td>
                                 @if($loop->first)
-                                <button type="button" class="btn btn-sm btn-info btn-view-report text-primary bg-transparent border-0" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-report text-primary bg-transparent border-0" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
-                                <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');" style="display: none;">
+                                <div class="d-inline-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View">
+                                        <i class="material-symbols-rounded">visibility</i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif>
+                                        <i class="material-symbols-rounded">edit</i>
+                                    </button>
+                                </div>
+                                <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline d-none" onsubmit="return confirm('Are you sure you want to delete this report?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger text-primary bg-transparent border-0" title="Delete" style="display: none;"><i class="material-symbols-rounded">delete</i></button>
+                                    <button type="submit" class="btn btn-sm btn-danger d-none" title="Delete"><i class="material-symbols-rounded">delete</i></button>
                                 </form>
                                 @endif
                             </td>
@@ -145,27 +154,35 @@
                             <td>{{ $report->payment_type == 1 ? 'Credit' : ($report->payment_type == 0 ? 'Cash' : ($report->payment_type == 2 ? 'UPI' : '—')) }}</td>
                             <td>{{ $report->date_from ? $report->date_from->format('d/m/Y') : '—' }}</td>
                             <td>
-                                @if($report->status == 0)<span class="badge bg-warning">Pending</span>
-                                @elseif($report->status == 2)<span class="badge bg-success">Approved</span>
-                                @else<span class="badge bg-success">Final</span>@endif
+                                @if($report->status == 0)<span class="badge rounded-pill text-bg-warning">Pending</span>
+                                @elseif($report->status == 2)<span class="badge rounded-pill text-bg-success">Approved</span>
+                                @else<span class="badge rounded-pill text-bg-secondary">Final</span>@endif
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report" data-report-id="{{ $report->id }}" title="Return">Return</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1" data-report-id="{{ $report->id }}" title="Return">
+                                    <i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i>
+                                    <span>Return</span>
+                                </button>
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-report" data-report-id="{{ $report->id }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-report" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif>Edit</button>
+                                <div class="d-inline-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="View"><i class="material-symbols-rounded">visibility</i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn" data-report-id="{{ $report->id }}" title="{{ $report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($report->status == \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED) disabled @endif><i class="material-symbols-rounded">edit</i></button>
+                                </div>
                                 <form action="{{ route('admin.mess.selling-voucher-date-range.destroy', $report->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this report?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn" title="Delete"><i class="material-symbols-rounded">delete</i></button>
                                 </form>
                             </td>
                         </tr>
                         @endforelse
                         @empty
                         <tr>
-                            <td class="text-center py-4" colspan="12">No reports found.</td>
+                            <td class="text-center py-5 text-secondary" colspan="13">
+                                <i class="material-symbols-rounded align-middle me-1">inbox</i>
+                                <span class="align-middle">No reports found.</span>
+                            </td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -186,24 +203,108 @@
 
 {{-- Add Report Modal --}}
 <style>
+    .voucher-table thead th {
+        font-size: .76rem;
+        font-weight: 700;
+        letter-spacing: .02em;
+        text-transform: uppercase;
+        color: #495057;
+    }
+
+    .voucher-table tbody td {
+        white-space: nowrap;
+    }
+
+    .voucher-icon-btn {
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .voucher-label {
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+        color: #6c757d;
+        margin-bottom: .35rem;
+    }
+
+    .voucher-section-card {
+        border: 0;
+        box-shadow: var(--bs-box-shadow-sm);
+    }
+
+    .voucher-section-card .card-header {
+        background: var(--bs-tertiary-bg);
+        border-bottom: 1px solid var(--bs-border-color-translucent);
+    }
+
+    .voucher-brand-head th {
+        background-color: #af2910 !important;
+        color: #fff !important;
+        border-color: #af2910 !important;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
     #addReportModal .modal-dialog {
         max-height: calc(100vh - 2rem);
         margin: 1rem auto;
     }
 
-    #addReportModal .modal-content {
+    #addReportModal .modal-content,
+    #viewReportModal .modal-content,
+    #editReportModal .modal-content,
+    #returnItemModal .modal-content {
         max-height: calc(100vh - 2rem);
         display: flex;
         flex-direction: column;
+        border: 0;
+        box-shadow: var(--bs-box-shadow-lg);
     }
 
-    #addReportModal .modal-body {
+    #addReportModal .modal-header,
+    #viewReportModal .modal-header,
+    #editReportModal .modal-header,
+    #returnItemModal .modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bs-tertiary-bg) !important;
+    }
+
+    #addReportModal .modal-footer,
+    #viewReportModal .modal-footer,
+    #editReportModal .modal-footer,
+    #returnItemModal .modal-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        background: #fff;
+    }
+
+    #addReportModal .modal-body,
+    #viewReportModal .modal-body,
+    #editReportModal .modal-body,
+    #returnItemModal .modal-body {
         overflow-y: auto;
         max-height: calc(100vh - 10rem);
     }
 
+    #addReportModal .card,
+    #viewReportModal .card,
+    #editReportModal .card,
+    #returnItemModal .card {
+        border: 0;
+        box-shadow: var(--bs-box-shadow-sm);
+    }
+
     /* Mobile: enable horizontal scroll for wide table */
-    @media (max-width: 768px) {
+    @media (max-width: 991.98px) {
         .selling-voucher-card .card-body {
             overflow-x: auto;
         }
@@ -214,16 +315,16 @@
         }
 
         #sellingVoucherDateRangeTable {
-            min-width: 1100px;
+            min-width: 1200px;
         }
     }
 </style>
 <div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down">
         <div class="modal-content">
             <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="addReportModalLabel">ADD Selling Voucher with Date Range</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -240,14 +341,14 @@
                     @endif
 
                     {{-- Voucher Details (exactly same as Add Selling Voucher) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
+                    <div class="card mb-4 voucher-section-card">
+                        <div class="card-header py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    <label class="form-label">Client Type <span class="text-danger">*</span></label>
+                                    <label class="form-label voucher-label">Client Type <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3 pt-1">
                                         @foreach($clientTypes as $slug => $label)
                                         <div class="form-check">
@@ -258,17 +359,17 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select" required>
+                                    <label class="form-label voucher-label">Payment Type <span class="text-danger">*</span></label>
+                                    <select name="payment_type" class="form-select form-select-sm" required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                                         <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
                                         <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>UPI</option>
                                     </select>
-                                    <small class="text-muted" id="drPaymentTypeHint">Cash / UPI / Credit</small>
+                                    <small class="form-text text-muted" id="drPaymentTypeHint">Cash / UPI / Credit</small>
                                 </div>
                                 <div class="col-md-4" id="drClientNameWrap">
-                                    <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select" id="drClientNameSelect">
+                                    <label class="form-label voucher-label">Client Name <span class="text-danger">*</span></label>
+                                    <select name="client_type_pk" class="form-select form-select-sm" id="drClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                         @foreach($list as $c)
@@ -276,13 +377,13 @@
                                         @endforeach
                                         @endforeach
                                     </select>
-                                    <select id="drOtCourseSelect" class="form-select" style="display:none;">
+                                    <select id="drOtCourseSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="drCourseSelect" class="form-select" style="display:none;">
+                                    <select id="drCourseSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
@@ -290,30 +391,30 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4" id="drNameFieldWrap">
-                                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" id="drClientNameInput" class="form-control" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
-                                    <select id="drFacultySelect" class="form-select" style="display:none;">
+                                    <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="client_name" id="drClientNameInput" class="form-control form-control-sm" value="{{ old('client_name') }}" placeholder="Client / section / role name" required>
+                                    <select id="drFacultySelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
                                         <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="drAcademyStaffSelect" class="form-select" style="display:none;">
+                                    <select id="drAcademyStaffSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
                                         <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="drMessStaffSelect" class="form-select" style="display:none;">
+                                    <select id="drMessStaffSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
                                         <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="drOtStudentSelect" class="form-select" style="display:none;">
+                                    <select id="drOtStudentSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Student</option>
                                     </select>
-                                    <select id="drCourseNameSelect" class="form-select" style="display:none;">
+                                    <select id="drCourseNameSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
@@ -321,8 +422,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select" required>
+                                    <label class="form-label voucher-label">Transfer From Store <span class="text-danger">*</span></label>
+                                    <select name="inve_store_master_pk" class="form-select form-select-sm" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                         <option value="{{ $store['id'] }}" {{ old('inve_store_master_pk') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -330,31 +431,31 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
+                                    <label class="form-label voucher-label">Remarks</label>
+                                    <input type="text" name="remarks" class="form-control form-control-sm" value="{{ old('remarks') }}" placeholder="Remarks (optional)">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control form-control-sm" value="{{ old('reference_number') }}" placeholder="Reference number (optional)" maxlength="100">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control form-control-sm" value="{{ old('order_by') }}" placeholder="Order by (optional)" maxlength="100">
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
+                    <div class="card mb-4 voucher-section-card border-primary-subtle">
+                        <div class="card-header py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
                         </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="addDrBillFileInput">
+                                    <label class="form-label voucher-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
+                                    <input type="file" name="bill_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp" id="addDrBillFileInput">
                                     <div id="addDrBillFileChosenWrap" class="d-flex align-items-center gap-2 mt-1 d-none">
                                         <span id="addDrBillFileChosenName" class="text-muted small"></span>
                                         <button type="button" class="btn btn-sm btn-outline-danger" id="addDrBillFileRemove">Remove</button>
@@ -366,25 +467,28 @@
                     </div>
 
                     {{-- Item Details (exactly same as Add Selling Voucher) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card mb-4 voucher-section-card">
+                        <div class="card-header d-flex justify-content-between align-items-center py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addModalAddItemRow">+ Add Item</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" id="addModalAddItemRow">
+                                <i class="material-symbols-rounded" style="font-size: 1rem;">add</i>
+                                <span>Add Item</span>
+                            </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0" id="addReportItemsTable">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table table-bordered table-sm align-middle mb-0" id="addReportItemsTable">
+                                    <thead class="voucher-brand-head">
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
-                                            <th style="min-width: 120px; color: #fff; border-color: #af2910;">Issue Date</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Left Qty</th>
+                                            <th style="min-width: 120px;">Issue Date</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Amount</th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="addModalItemsBody">
@@ -397,17 +501,17 @@
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td><input type="text" name="items[0][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="text" name="items[0][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>
+                                            <td><input type="number" name="items[0][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="number" name="items[0][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
-                                            <td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>
-                                            <td><input type="date" name="items[0][issue_date]" class="form-control  dr-issue-date" value="{{ date('Y-m-d') }}"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>
-                                            <td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>
-                                            <td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row" disabled title="Remove">×</button></td>
+                                            <td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>
+                                            <td><input type="date" name="items[0][issue_date]" class="form-control form-control-sm dr-issue-date" value="{{ date('Y-m-d') }}"></td>
+                                            <td><input type="number" name="items[0][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="text" class="form-control form-control-sm dr-total bg-light" readonly placeholder="0.00"></td>
+                                            <td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row voucher-icon-btn" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -423,7 +527,10 @@
                 </div>
                 <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Selling Voucher</button>
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">save</i>
+                        <span>Save Selling Voucher</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -537,7 +644,7 @@
     }
 
     #viewReportModal .badge {
-        color: #212529 !important;
+        font-weight: 600;
     }
 
     #viewReportModal .modal-footer {
@@ -546,99 +653,99 @@
     }
 </style>
 <div class="modal fade" id="viewReportModal" tabindex="-1" aria-labelledby="viewReportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down">
         <div class="modal-content">
-            <div class="modal-header border-bottom bg-light">
-                <h5 class="modal-title fw-semibold" id="viewReportModalLabel" style="color: #212529;">View Selling Voucher with Date Range</h5>
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-semibold" id="viewReportModalLabel">View Selling Voucher with Date Range</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 {{-- Voucher Details (exactly same as Selling Voucher view modal) --}}
-                <div class="card mb-4">
-                    <div class="card-header bg-white py-2">
+                <div class="card mb-4 voucher-section-card">
+                    <div class="card-header py-3">
                         <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                     </div>
-                    <div class="card-body" style="color: #212529;">
-                        <div class="row">
+                    <div class="card-body">
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <table class="table table-borderless table-sm">
+                                <table class="table table-borderless table-sm mb-0">
                                     <tr>
-                                        <th width="40%" style="color: #495057;">Request Date:</th>
-                                        <td id="viewRequestDate" style="color: #212529;">—</td>
+                                        <th width="40%" class="text-secondary fw-semibold">Request Date:</th>
+                                        <td id="viewRequestDate">—</td>
                                     </tr>
                                     <tr>
-                                        <th style="color: #495057;">Transfer From Store:</th>
-                                        <td id="viewStoreName" style="color: #212529;">—</td>
+                                        <th class="text-secondary fw-semibold">Transfer From Store:</th>
+                                        <td id="viewStoreName">—</td>
                                     </tr>
                                     <tr>
-                                        <th style="color: #495057;">Reference Number:</th>
-                                        <td id="viewReferenceNumber" style="color: #212529;">—</td>
+                                        <th class="text-secondary fw-semibold">Reference Number:</th>
+                                        <td id="viewReferenceNumber">—</td>
                                     </tr>
                                     <tr>
-                                        <th style="color: #495057;">Order By:</th>
-                                        <td id="viewOrderBy" style="color: #212529;">—</td>
+                                        <th class="text-secondary fw-semibold">Order By:</th>
+                                        <td id="viewOrderBy">—</td>
                                     </tr>
                                 </table>
                             </div>
                             <div class="col-md-6">
-                                <table class="table table-borderless table-sm">
+                                <table class="table table-borderless table-sm mb-0">
                                     <tr>
-                                        <th width="40%" style="color: #495057;">Client Type:</th>
-                                        <td id="viewClientType" style="color: #212529;">—</td>
+                                        <th width="40%" class="text-secondary fw-semibold">Client Type:</th>
+                                        <td id="viewClientType">—</td>
                                     </tr>
                                     <tr>
-                                        <th style="color: #495057;">Client Name:</th>
-                                        <td id="viewClientName" style="color: #212529;">—</td>
+                                        <th class="text-secondary fw-semibold">Client Name:</th>
+                                        <td id="viewClientName">—</td>
                                     </tr>
                                     <tr>
-                                        <th style="color: #495057;">Payment Type:</th>
-                                        <td id="viewPaymentType" style="color: #212529;">—</td>
+                                        <th class="text-secondary fw-semibold">Payment Type:</th>
+                                        <td id="viewPaymentType">—</td>
                                     </tr>
                                     <tr>
-                                        <th style="color: #495057;">Status:</th>
-                                        <td id="viewStatus" style="color: #212529;">—</td>
+                                        <th class="text-secondary fw-semibold">Status:</th>
+                                        <td id="viewStatus">—</td>
                                     </tr>
                                 </table>
                             </div>
                         </div>
-                        <p class="mb-0 mt-2" id="viewRemarksWrap" style="display:none; color: #212529;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
-                        <p class="mb-0 mt-2" style="color: #212529;"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
+                        <p class="mb-0 mt-3" id="viewRemarksWrap" style="display:none;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
+                        <p class="mb-0 mt-2"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
                 {{-- Item Details (same as Selling Voucher view modal + one extra column Issue Date) --}}
-                <div class="card mb-4" id="viewReportItemsCard">
-                    <div class="card-header bg-white py-2">
+                <div class="card mb-4 voucher-section-card" id="viewReportItemsCard">
+                    <div class="card-header py-3">
                         <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-bordered mb-0">
-                                <thead style="background-color: #af2910;">
+                            <table class="table table-bordered table-sm align-middle mb-0">
+                                <thead class="voucher-brand-head">
                                     <tr>
-                                        <th style="color: #fff !important; border-color: #af2910;">Item Name</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Unit</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Issue Qty</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Return Qty</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Rate</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Total</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Issue Date</th>
+                                        <th>Item Name</th>
+                                        <th>Unit</th>
+                                        <th>Issue Qty</th>
+                                        <th>Return Qty</th>
+                                        <th>Rate</th>
+                                        <th>Total</th>
+                                        <th>Issue Date</th>
                                     </tr>
                                 </thead>
                                 <tbody id="viewReportItemsBody"></tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-light d-flex justify-content-end" style="color: #212529;">
+                    <div class="card-footer bg-light d-flex justify-content-end">
                         <strong>Grand Total: ₹<span id="viewReportGrandTotal">0.00</span></strong>
                     </div>
                 </div>
-                <div class="small" style="color: #495057;">
-                    Created: <span id="viewCreatedAt" style="color: #212529;">—</span>
-                    <span class="ms-3" id="viewUpdatedAtWrap" style="display:none;">Last Updated: <span id="viewUpdatedAt" style="color: #212529;"></span></span>
+                <div class="small text-secondary">
+                    Created: <span id="viewCreatedAt" class="text-body">—</span>
+                    <span class="ms-3" id="viewUpdatedAtWrap" style="display:none;">Last Updated: <span id="viewUpdatedAt" class="text-body"></span></span>
                 </div>
             </div>
             <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-primary btn-print-view-modal" data-print-target="#viewReportModal" title="Print">
+                <button type="button" class="btn btn-outline-primary btn-print-view-modal d-inline-flex align-items-center gap-1" data-print-target="#viewReportModal" title="Print">
                     <i class="ti ti-printer"></i> Print
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -649,34 +756,34 @@
 
 {{-- Return Item Modal (Transfer To) --}}
 <div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-lg-down">
         <div class="modal-content">
             <form id="returnItemForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="returnItemModalLabel">Transfer To</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Transfer From Store</label>
+                        <label class="form-label voucher-label">Transfer From Store</label>
                         <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
                     </div>
-                    <div class="card">
-                        <div class="card-header bg-white py-2">
+                    <div class="card voucher-section-card">
+                        <div class="card-header py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table table-bordered table-sm align-middle mb-0">
+                                    <thead class="voucher-brand-head">
                                         <tr>
-                                            <th style="color: #fff;">Item Name</th>
-                                            <th style="color: #fff;">Issued Quantity</th>
-                                            <th style="color: #fff;">Item Unit</th>
-                                            <th style="color: #fff;">Return Quantity</th>
-                                            <th style="color: #fff;">Return Date</th>
+                                            <th>Item Name</th>
+                                            <th>Issued Quantity</th>
+                                            <th>Item Unit</th>
+                                            <th>Return Quantity</th>
+                                            <th>Return Date</th>
                                         </tr>
                                     </thead>
                                     <tbody id="returnItemModalBody"></tbody>
@@ -687,7 +794,10 @@
                 </div>
                 <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">sync</i>
+                        <span>Update</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -713,25 +823,25 @@
     }
 </style>
 <div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-xl-down">
         <div class="modal-content">
             <form id="editReportForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editReportModalLabel">Edit Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     {{-- Voucher Details (exactly same as Edit Selling Voucher) --}}
-                    <div class="card mb-4">
-                        <div class="card-header bg-white py-2">
+                    <div class="card mb-4 voucher-section-card">
+                        <div class="card-header py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Voucher Details</h6>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    <label class="form-label">Client Type <span class="text-danger">*</span></label>
+                                    <label class="form-label voucher-label">Client Type <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3 pt-1">
                                         @foreach($clientTypes as $slug => $label)
                                         <div class="form-check">
@@ -742,16 +852,16 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Payment Type <span class="text-danger">*</span></label>
-                                    <select name="payment_type" class="form-select edit-payment-type" required>
+                                    <label class="form-label voucher-label">Payment Type <span class="text-danger">*</span></label>
+                                    <select name="payment_type" class="form-select form-select-sm edit-payment-type" required>
                                         <option value="1">Credit</option>
                                         <option value="0">Cash</option>
                                         <option value="2">UPI</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4" id="editDrClientNameWrap">
-                                    <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                                    <select name="client_type_pk" class="form-select edit-client-type-pk" id="editDrClientNameSelect">
+                                    <label class="form-label voucher-label">Client Name <span class="text-danger">*</span></label>
+                                    <select name="client_type_pk" class="form-select form-select-sm edit-client-type-pk" id="editDrClientNameSelect">
                                         <option value="">Select Client Name</option>
                                         @foreach($clientNamesByType as $type => $list)
                                         @foreach($list as $c)
@@ -759,13 +869,13 @@
                                         @endforeach
                                         @endforeach
                                     </select>
-                                    <select id="editDrOtCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editDrOtCourseSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrCourseSelect" class="form-select" style="display:none;">
+                                    <select id="editDrCourseSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}" data-course-name="{{ e($course->course_name) }}">{{ e($course->course_name) }}</option>
@@ -773,30 +883,30 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4" id="editDrNameFieldWrap">
-                                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="client_name" class="form-control edit-client-name" id="editDrClientNameInput" placeholder="Client / section / role name" required>
-                                    <select id="editDrFacultySelect" class="form-select" style="display:none;">
+                                    <label class="form-label voucher-label">Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="client_name" class="form-control form-control-sm edit-client-name" id="editDrClientNameInput" placeholder="Client / section / role name" required>
+                                    <select id="editDrFacultySelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
                                         <option value="{{ e($f->full_name) }}">{{ e($f->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrAcademyStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editDrAcademyStaffSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
                                         <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrMessStaffSelect" class="form-select" style="display:none;">
+                                    <select id="editDrMessStaffSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
                                         <option value="{{ e($e->full_name) }}">{{ e($e->full_name) }}</option>
                                         @endforeach
                                     </select>
-                                    <select id="editDrOtStudentSelect" class="form-select" style="display:none;">
+                                    <select id="editDrOtStudentSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Student</option>
                                     </select>
-                                    <select id="editDrCourseNameSelect" class="form-select" style="display:none;">
+                                    <select id="editDrCourseNameSelect" class="form-select form-select-sm" style="display:none;">
                                         <option value="">Select Course</option>
                                         @foreach($otCourses ?? [] as $course)
                                         <option value="{{ $course->pk }}">{{ e($course->course_name) }}</option>
@@ -804,8 +914,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Transfer From Store <span class="text-danger">*</span></label>
-                                    <select name="inve_store_master_pk" class="form-select edit-store-id" required>
+                                    <label class="form-label voucher-label">Transfer From Store <span class="text-danger">*</span></label>
+                                    <select name="inve_store_master_pk" class="form-select form-select-sm edit-store-id" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                         <option value="{{ $store['id'] }}">{{ $store['store_name'] }}</option>
@@ -813,29 +923,29 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Remarks</label>
-                                    <input type="text" name="remarks" class="form-control edit-remarks" placeholder="Remarks (optional)">
+                                    <label class="form-label voucher-label">Remarks</label>
+                                    <input type="text" name="remarks" class="form-control form-control-sm edit-remarks" placeholder="Remarks (optional)">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Reference Number</label>
-                                    <input type="text" name="reference_number" class="form-control edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Reference Number</label>
+                                    <input type="text" name="reference_number" class="form-control form-control-sm edit-reference-number" placeholder="Reference number (optional)" maxlength="100">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Order By</label>
-                                    <input type="text" name="order_by" class="form-control edit-order-by" placeholder="Order by (optional)" maxlength="100">
+                                    <label class="form-label voucher-label">Order By</label>
+                                    <input type="text" name="order_by" class="form-control form-control-sm edit-order-by" placeholder="Order by (optional)" maxlength="100">
                                 </div>
                             </div>
                         </div>
                     </div>
                     {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
+                    <div class="card mb-4 voucher-section-card border-primary-subtle">
+                        <div class="card-header py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
                         </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
+                                    <label class="form-label voucher-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
                                     <input type="hidden" name="remove_bill" id="editDrRemoveBillFlag" value="0">
                                     <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
                                         <span id="editSvCurrentBillPath" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
@@ -851,25 +961,28 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card mb-4">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card mb-4 voucher-section-card">
+                        <div class="card-header d-flex justify-content-between align-items-center py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="editModalAddItemRow">+ Add Item</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" id="editModalAddItemRow">
+                                <i class="material-symbols-rounded" style="font-size: 1rem;">add</i>
+                                <span>Add Item</span>
+                            </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table table-bordered table-sm align-middle mb-0">
+                                    <thead class="voucher-brand-head">
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
-                                            <th style="min-width: 120px; color: #fff; border-color: #af2910;">Issue Date</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 180px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 90px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 90px;">Left Qty</th>
+                                            <th style="min-width: 120px;">Issue Date</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 110px;">Total Amount</th>
+                                            <th style="width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editModalItemsBody"></tbody>
@@ -886,7 +999,10 @@
                 </div>
                 <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Selling Voucher</button>
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">save</i>
+                        <span>Update Selling Voucher</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -1085,14 +1201,14 @@
             }).join('');
             return '<tr class="dr-item-row">' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
-                '<td><input type="text" name="items[' + index + '][unit]" class="form-control  dr-unit" readonly placeholder="—"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-                '<td><input type="text" class="form-control  dr-left bg-light" readonly placeholder="0"></td>' +
-                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
-                '<td><input type="text" class="form-control  dr-total bg-light" readonly placeholder="0.00"></td>' +
-                '<td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row" title="Remove">×</button></td>' +
+                '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm dr-unit" readonly placeholder="—"></td>' +
+                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm dr-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>' +
+                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm dr-qty" step="0.01" min="0.01" placeholder="0" required><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="text" class="form-control form-control-sm dr-left bg-light" readonly placeholder="0"></td>' +
+                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control form-control-sm dr-issue-date" value="' + new Date().toISOString().slice(0, 10) + '"></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm dr-rate" step="0.01" min="0" placeholder="0" required></td>' +
+                '<td><input type="text" class="form-control form-control-sm dr-total bg-light" readonly placeholder="0.00"></td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline-danger dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
         }
 
@@ -1898,14 +2014,14 @@
             const originalQtyAttr = (item.quantity != null && item.quantity !== '') ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
             return '<tr class="edit-dr-item-row"' + originalQtyAttr + '>' +
                 '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm edit-dr-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
-                '<td><input type="text" name="items[' + index + '][unit]" class="form-control  edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
-                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control  edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
-                '<td><input type="text" class="form-control  edit-dr-left bg-light" readonly value="' + left + '"></td>' +
-                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control  edit-dr-issue-date" value="' + issueDate + '"></td>' +
-                '<td><input type="number" name="items[' + index + '][rate]" class="form-control  edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
-                '<td><input type="text" class="form-control  edit-dr-total bg-light" readonly value="' + total + '"></td>' +
-                '<td><button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row" title="Remove">×</button></td>' +
+                '<td><input type="text" name="items[' + index + '][unit]" class="form-control form-control-sm edit-dr-unit" readonly placeholder="—" value="' + (item.unit || '').replace(/"/g, '&quot;') + '"></td>' +
+                '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control form-control-sm edit-dr-avail bg-light" step="0.01" min="0" value="' + avail + '" readonly></td>' +
+                '<td><input type="number" name="items[' + index + '][quantity]" class="form-control form-control-sm edit-dr-qty" step="0.01" min="0.01" required value="' + qty + '"><div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div></td>' +
+                '<td><input type="text" class="form-control form-control-sm edit-dr-left bg-light" readonly value="' + left + '"></td>' +
+                '<td><input type="date" name="items[' + index + '][issue_date]" class="form-control form-control-sm edit-dr-issue-date" value="' + issueDate + '"></td>' +
+                '<td><input type="number" name="items[' + index + '][rate]" class="form-control form-control-sm edit-dr-rate" step="0.01" min="0" required value="' + rate + '"></td>' +
+                '<td><input type="text" class="form-control form-control-sm edit-dr-total bg-light" readonly value="' + total + '"></td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline-danger edit-dr-remove-row voucher-icon-btn" title="Remove">×</button></td>' +
                 '</tr>';
         }
 
@@ -2063,7 +2179,7 @@
                     document.getElementById('viewClientName').textContent = (v.client_name_text || v.client_name || '—');
                     document.getElementById('viewPaymentType').textContent = v.payment_type || '—';
                     const statusEl = document.getElementById('viewStatus');
-                    statusEl.innerHTML = v.status === 0 ? '<span class="badge bg-warning">Pending</span>' : (v.status === 2 ? '<span class="badge bg-success">Approved</span>' : (v.status === 4 ? '<span class="badge bg-primary">Completed</span>' : '<span class="badge bg-secondary">' + (v.status_label || v.status) + '</span>'));
+                    statusEl.innerHTML = v.status === 0 ? '<span class="badge rounded-pill text-bg-warning">Pending</span>' : (v.status === 2 ? '<span class="badge rounded-pill text-bg-success">Approved</span>' : (v.status === 4 ? '<span class="badge rounded-pill text-bg-primary">Completed</span>' : '<span class="badge rounded-pill text-bg-secondary">' + (v.status_label || v.status) + '</span>'));
                     if (v.remarks) {
                         document.getElementById('viewRemarksWrap').style.display = 'block';
                         document.getElementById('viewRemarks').textContent = v.remarks;
@@ -2136,8 +2252,8 @@
                         const issuedQty = parseFloat(qty) || 0;
                         tbody.insertAdjacentHTML('beforeend',
                             '<tr><td>' + name + '<input type="hidden" name="items[' + i + '][id]" value="' + id + '"></td><td>' + qty + '</td><td>' + unit + '</td>' +
-                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control  dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
-                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control  dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
+                            '<td><input type="number" name="items[' + i + '][return_quantity]" class="form-control form-control-sm dr-return-qty" step="0.01" min="0" max="' + issuedQty + '" data-issued="' + issuedQty + '" value="' + retQty + '"><div class="invalid-feedback">Return Qty cannot exceed Issued Qty.</div></td>' +
+                            '<td><input type="date" name="items[' + i + '][return_date]" class="form-control form-control-sm dr-return-date" ' + (issueDate ? ('min="' + issueDate + '" data-issue-date="' + issueDate + '"') : '') + ' value="' + retDate + '"><div class="invalid-feedback">Return date cannot be earlier than issue date.</div></td></tr>');
                     });
                     document.getElementById('returnItemForm').action = baseUrl + '/' + reportId + '/return';
                     new bootstrap.Modal(document.getElementById('returnItemModal')).show();

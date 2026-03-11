@@ -498,6 +498,8 @@
     }
     </style>
 
+    {{-- Page-specific styles stack --}}
+    @stack('styles')
 </head>
 
 <body data-sidebartype="full">
