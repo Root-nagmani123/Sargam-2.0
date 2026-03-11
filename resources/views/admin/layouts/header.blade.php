@@ -1,40 +1,38 @@
 @php
-// Determine active tab based on current route/path
-$activeNavTab = '#home';
-$path = request()->path();
-$routeName = request()->route()?->getName() ?? '';
-if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') ||
-request()->routeIs('calendar.index')) {
-$activeNavTab = '#home';
-} elseif (
-request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
-request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
-request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
-str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
-str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
-str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
-str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') ||
-str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
-str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
-str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
-str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
-str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
-str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
-str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
-str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path,
-'password') ||
-str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
-) {
-$activeNavTab = '#tab-setup';
-} elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
-$activeNavTab = '#tab-communications';
-} elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
-$activeNavTab = '#tab-academics';
-} elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
-$activeNavTab = '#tab-material-management';
-}
+    // Determine active tab based on current route/path
+    $activeNavTab = '#home';
+    $path = request()->path();
+    $routeName = request()->route()?->getName() ?? '';
+    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->routeIs('calendar.index')) {
+        $activeNavTab = '#home';
+    } elseif (
+        request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
+        request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
+        request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
+        str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
+        str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
+        str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
+        str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
+        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') ||
+        str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
+        str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
+        str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
+        str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
+        str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
+        str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
+        str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
+        str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
+        str_starts_with($path, 'admin/master') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
+        str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
+    ) {
+        $activeNavTab = '#tab-setup';
+    } elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
+        $activeNavTab = '#tab-communications';
+    } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
+        $activeNavTab = '#tab-academics';
+    } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
+        $activeNavTab = '#tab-material-management';
+    }
 @endphp
 <header class="topbar">
     <!-- Skip to Content (GIGW Mandatory) -->
@@ -43,45 +41,42 @@ $activeNavTab = '#tab-material-management';
     </a>
 
     <header class="header-top-bar d-none d-lg-block">
-        <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+    <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
 
-            <!-- Left: Government Identity -->
-            <div class="d-flex align-items-center gap-2">
-                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-                    alt="Emblem of India" class="header-flag-icon">
-                <span class="fw-semibold small text-white">
-                    भारत सरकार | Government of India
-                </span>
-            </div>
+    <!-- Left: Government Identity -->
+    <div class="d-flex align-items-center gap-2">
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+            alt="Emblem of India" class="header-flag-icon">
+        <span class="fw-semibold small text-white">
+            भारत सरकार | Government of India
+        </span>
+    </div>
 
-            <!-- Right: Utilities with vertical separators -->
-            <nav aria-label="Utility Navigation">
-                <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
-                    <li class="list-inline-item">
-                        <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
-                    </li>
-                    <li class="header-utility-sep" aria-hidden="true"></li>
-                    <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
-                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn"
-                            aria-label="Decrease font size">A-</a>
-                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn"
-                            aria-label="Normal font size">A</a>
-                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn"
-                            aria-label="Increase font size">A+</a>
-                    </li>
-                    <li class="header-utility-sep" aria-hidden="true"></li>
-                    <li class="list-inline-item">
-                        <div class="header-lang-dropdown">
-                            <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
-                            <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
-                                <option selected>English</option>
-                                <option>हिन्दी</option>
-                            </select>
-                        </div>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+    <!-- Right: Utilities with vertical separators -->
+    <nav aria-label="Utility Navigation">
+        <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
+            <li class="list-inline-item">
+                <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
+            </li>
+            <li class="header-utility-sep" aria-hidden="true"></li>
+            <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
+            </li>
+            <li class="header-utility-sep" aria-hidden="true"></li>
+            <li class="list-inline-item">
+                <div class="header-lang-dropdown">
+                    <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
+                    <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
+                        <option selected>English</option>
+                        <option>हिन्दी</option>
+                    </select>
+                </div>
+            </li>
+        </ul>
+    </nav>
+    </div>
     </header>
 
     <div class="with-vertical">
@@ -110,16 +105,14 @@ $activeNavTab = '#tab-material-management';
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container (Desktop) -->
                     <div class="nav-container position-relative d-none d-lg-block">
-                        <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar"
-                            aria-label="Main navigation">
+                        <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar" aria-label="Main navigation">
 
                             <!-- Home -->
                             <li class="nav-item" role="none">
                                 <a href="#home"
                                     class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#home' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab"
-                                    aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}"
-                                    aria-controls="home-panel" id="home-tab">
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
+                                    id="home-tab">
                                     <span>Home</span>
                                 </a>
                             </li>
@@ -128,9 +121,8 @@ $activeNavTab = '#tab-material-management';
                             <li class="nav-item" role="none">
                                 <a href="#tab-setup"
                                     class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab"
-                                    aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}"
-                                    aria-controls="setup-panel" id="setup-tab">
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
+                                    id="setup-tab">
 
                                     @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff') ||
                                     hasRole('IST'))
@@ -146,8 +138,7 @@ $activeNavTab = '#tab-material-management';
                             <li class="nav-item" role="none">
                                 <a href="#tab-communications"
                                     class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab"
-                                    aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
                                     aria-controls="communications-panel" id="communications-tab">
                                     <span>Communications</span>
                                 </a>
@@ -157,8 +148,7 @@ $activeNavTab = '#tab-material-management';
                             <li class="nav-item" role="none">
                                 <a href="#tab-academics"
                                     class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-academics' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab"
-                                    aria-selected="{{ $activeNavTab === '#tab-academics' ? 'true' : 'false' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-academics' ? 'true' : 'false' }}"
                                     aria-controls="academics-panel" id="academics-tab">
                                     <span>Academics</span>
                                 </a>
@@ -168,8 +158,7 @@ $activeNavTab = '#tab-material-management';
                             <li class="nav-item" role="none">
                                 <a href="#tab-material-management"
                                     class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab"
-                                    aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
                                     aria-controls="material-management-panel" id="material-management-tab">
                                     <span>Material Management</span>
                                 </a>
@@ -215,8 +204,8 @@ $activeNavTab = '#tab-material-management';
 
                 </div>
 
-                <!-- Right Side Actions - Enhanced -->
-                <div class="d-flex align-items-center ms-auto gap-2" style="margin-right: 56px;">
+                <!-- Right Side: Logout + Last Login -->
+                <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
 
     <!-- Notifications (visible on both desktop and mobile) -->
     <div class="dropdown position-relative d-none d-lg-block">
@@ -301,39 +290,38 @@ $activeNavTab = '#tab-material-management';
     <form action="{{ route('logout') }}" method="POST" class="m-0">
         @csrf
         <button type="submit"
-            class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
+            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
             aria-label="Sign out">
             <i class="material-icons material-symbols-rounded fs-6">logout</i>
             <span class="small fw-medium">Logout</span>
         </button>
     </form>
+
+    <!-- Last Login -->
+    <div class="d-flex align-items-center gap-1 small">
+        <i class="material-icons material-symbols-rounded fs-6">
+            history
+        </i>
+        <span class="fw-semibold">Last login:</span>
+
+        @php
+            $lastLogin = Auth::user()->last_login ?? null;
+            if ($lastLogin) {
+                $date = \Carbon\Carbon::parse($lastLogin);
+                $formattedDate = $date->format('Y-m-d H:i:s');
+                $isoDate = $date->toIso8601String();
+            } else {
+                $formattedDate = 'Never';
+                $isoDate = '';
+            }
+        @endphp
+
+        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}" class="fw-medium">
+            {{ $formattedDate }}
+        </time>
+    </div>
 </div>
 
-                    <!-- Last Login - Enhanced -->
-                    <div class="d-flex flex-column align-items-end">
-                        <div class="text-muted small d-flex align-items-center gap-1"
-                            style="font-size: 11px; line-height: 14px;">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 14px;"
-                                aria-hidden="true">schedule</i>
-                            <span class="fw-medium">Last login:</span>
-                        </div>
-                        @php
-                        $lastLogin = Auth::user()->last_login ?? null;
-                        if ($lastLogin) {
-                        $date = \Carbon\Carbon::parse($lastLogin);
-                        $formattedDate = $date->format('d-m-Y H:i:s');
-                        $isoDate = $date->toIso8601String();
-                        } else {
-                        $formattedDate = 'Never';
-                        $isoDate = '';
-                        }
-                        @endphp
-                        <time id="myTime" datetime="{{ $isoDate }}" class="text-dark fw-semibold"
-                            style="font-size: 13px; line-height: 16px;" aria-live="polite">
-                            {{ $formattedDate }}
-                        </time>
-                    </div>
-                </div>
             </div>
 
             <!-- Mobile Navigation Container (FB/Instagram-style) -->
@@ -342,9 +330,8 @@ $activeNavTab = '#tab-material-management';
                     <!-- Home -->
                     <li class="nav-item" role="none">
                         <a href="#home" class="nav-link mobile-tab-link {{ $activeNavTab === '#home' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab"
-                            aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}"
-                            aria-controls="home-panel" id="home-tab-mobile">
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
+                            id="home-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">home</i>
                             <span>Home</span>
                         </a>
@@ -352,11 +339,9 @@ $activeNavTab = '#tab-material-management';
 
                     <!-- Setup -->
                     <li class="nav-item" role="none">
-                        <a href="#tab-setup"
-                            class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab"
-                            aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}"
-                            aria-controls="setup-panel" id="setup-tab-mobile">
+                        <a href="#tab-setup" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
+                            id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
                             @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
                             <span>Setup</span>
@@ -369,10 +354,8 @@ $activeNavTab = '#tab-material-management';
 
                     <!-- Communications -->
                     <li class="nav-item" role="none">
-                        <a href="#tab-communications"
-                            class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab"
-                            aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
+                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
                             aria-controls="communications-panel" id="communications-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
                             <span>Comms</span>
@@ -381,10 +364,8 @@ $activeNavTab = '#tab-material-management';
 
                     <!-- Material Management -->
                     <li class="nav-item" role="none">
-                        <a href="#tab-material-management"
-                            class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab"
-                            aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
+                        <a href="#tab-material-management" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
                             aria-controls="material-management-panel" id="material-management-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
                             <span>Material</span>
@@ -422,18 +403,14 @@ $activeNavTab = '#tab-material-management';
                     <li class="nav-item" role="none">
                         <button type="button"
                             class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
-                            id="notificationBtnMobile" data-bs-toggle="offcanvas"
-                            data-bs-target="#notificationOffcanvasMobile" aria-controls="notificationOffcanvasMobile"
-                            aria-label="Notifications" title="Notifications">
-                            <i class="material-icons material-symbols-rounded"
-                                aria-hidden="true">notifications_active</i>
+                            id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
+                            aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
                             @php
                             $unreadCountMobile = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
                             @endphp
                             @if($unreadCountMobile > 0)
-                            <span
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                style="font-size: 9px;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
                                 {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
                             </span>
                             @endif
@@ -443,8 +420,8 @@ $activeNavTab = '#tab-material-management';
 
                     <!-- Search -->
                     <li class="nav-item" role="none">
-                        <button type="button" class="nav-link mobile-tab-link search-trigger" aria-label="Open search"
-                            aria-expanded="false" aria-controls="searchModal">
+                        <button type="button" class="nav-link mobile-tab-link search-trigger"
+                            aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
                             <span>Search</span>
                         </button>
@@ -454,8 +431,7 @@ $activeNavTab = '#tab-material-management';
 
             <!-- Mobile Notifications Offcanvas (slides up from bottom) -->
             <div class="offcanvas offcanvas-bottom d-lg-none" tabindex="-1" id="notificationOffcanvasMobile"
-                aria-labelledby="notificationOffcanvasMobileLabel"
-                style="max-height: 70vh; border-radius: 16px 16px 0 0;">
+                aria-labelledby="notificationOffcanvasMobileLabel" style="max-height: 70vh; border-radius: 16px 16px 0 0;">
                 <div class="offcanvas-header border-bottom py-3">
                     <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
                     @if($unreadCountMobile > 0)
@@ -483,8 +459,7 @@ $activeNavTab = '#tab-material-management';
                         @endforeach
                         @else
                         <div class="px-3 py-5 text-center text-muted">
-                            <i class="material-icons material-symbols-rounded"
-                                style="font-size: 48px; opacity: 0.3;">notifications_none</i>
+                            <i class="material-icons material-symbols-rounded" style="font-size: 48px; opacity: 0.3;">notifications_none</i>
                             <div class="mt-2">No notifications</div>
                         </div>
                         @endif
@@ -493,249 +468,179 @@ $activeNavTab = '#tab-material-management';
             </div>
 
             <style>
-            .notification-btn:hover {
-                background-color: var(--bs-light);
-                transform: translateY(-1px);
-            }
+                .notification-btn:hover {
+    background-color: var(--bs-light);
+    transform: translateY(-1px);
+}
 
-            .notification-badge {
-                font-size: 10px;
-                padding: 4px 6px;
-            }
+.notification-badge {
+    font-size: 10px;
+    padding: 4px 6px;
+}
 
-            .notification-dropdown {
-                width: 360px;
-                max-height: 420px;
-                overflow: hidden;
-            }
+.notification-dropdown {
+    width: 360px;
+    max-height: 420px;
+    overflow: hidden;
+}
 
-            .notification-list {
-                max-height: 360px;
-                overflow-y: auto;
-            }
+.notification-list {
+    max-height: 360px;
+    overflow-y: auto;
+}
 
-            .notification-item {
-                border-left: 3px solid transparent;
-                transition: background-color 0.2s ease;
-            }
+.notification-item {
+    border-left: 3px solid transparent;
+    transition: background-color 0.2s ease;
+}
 
-            .notification-item.unread {
-                background-color: var(--bs-light);
-                border-left-color: var(--bs-primary);
-            }
+.notification-item.unread {
+    background-color: var(--bs-light);
+    border-left-color: var(--bs-primary);
+}
 
-            .notification-item:hover {
-                background-color: rgba(0, 0, 0, 0.03);
-            }
+.notification-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
 
-            /* Skip link visibility */
-            .skip-link {
-                position: absolute;
-                top: -40px;
-                left: 10px;
-                background: #0d6efd;
-                color: #fff;
-                padding: 6px 12px;
-                z-index: 1000;
-                border-radius: 4px;
-            }
+                /* Skip link visibility */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 10px;
+    background: #0d6efd;
+    color: #fff;
+    padding: 6px 12px;
+    z-index: 1000;
+    border-radius: 4px;
+}
+.skip-link:focus { top: 10px; }
+:focus-visible { outline: 3px solid #ffbf47; outline-offset: 2px; }
 
-            .skip-link:focus {
-                top: 10px;
-            }
+/* Header - Match reference design */
+.header-top-bar {
+    background: #122442;
+    height: 40px;
+    border: none;
+}
+.header-flag-icon { height: 20px; }
+.header-utility-nav .header-utility-sep {
+    width: 1px;
+    height: 16px;
+    background: rgba(255,255,255,0.5);
+    margin: 0 8px;
+    display: inline-block;
+}
+.header-font-btn { text-decoration: none !important; }
+.header-lang-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+.header-globe-icon { font-size: 18px !important; color: #fff !important; }
+.header-lang-select {
+    background: transparent !important;
+    border: none !important;
+    color: #fff !important;
+    font-size: 0.875rem;
+    padding: 2px 4px;
+    min-width: 80px;
+}
+.header-lang-select option { background: #122442; color: #fff; }
 
-            :focus-visible {
-                outline: 3px solid #ffbf47;
-                outline-offset: 2px;
-            }
+/* Main nav bar - white background */
+.with-vertical .navbar { background: #fff !important }
+.header-brand { gap: 10px !important; }
+.header-logo-emblem { height: 40px; object-fit: contain; }
+.header-logo { height: 32px; object-fit: contain; }
+/* Desktop: larger, more prominent logo */
+@media (min-width: 992px) {
+    .header-brand { gap: 12px !important; }
+    .header-logo-emblem { height: 52px !important; }
+    .header-logo { height: 44px !important; }
+}
+.header-app-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #004a93;
+}
 
-            /* Header - Match reference design */
-            .header-top-bar {
-                background: #122442;
-                height: 40px;
-                border: none;
-            }
+/* Nav container - light grey pill */
+.header-main-nav {
+    background: #f0f0f0 !important;
+    border-radius: 12px;
+    height: 48px;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.header-nav-link {
+    color: #6c757d !important;
+    border-radius: 8px;
+    text-decoration: none !important;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+}
+.header-nav-link:hover { color: #495057 !important; }
+.header-nav-link.active {
+    color: #004a93 !important;
+    border-bottom-color: #004a93;
+    font-weight: 500;
+}
+.header-search-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #6c757d !important;
+    padding: 6px 10px !important;
+    border-radius: 8px;
+}
+.header-search-btn:hover { color: #004a93 !important; }
 
-            .header-flag-icon {
-                height: 20px;
-            }
+/* Right side */
+.header-right-actions { margin-right: 1rem; }
+.header-icon-sm { font-size: 24px !important; }
+.header-logout-icon { font-size: 22px !important; }
+.header-last-login { font-size: 0.8125rem; }
 
-            .header-utility-nav .header-utility-sep {
-                width: 1px;
-                height: 16px;
-                background: rgba(255, 255, 255, 0.5);
-                margin: 0 8px;
-                display: inline-block;
-            }
+/* Divider before logout */
+.header-logout-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+}
 
-            .header-font-btn {
-                text-decoration: none !important;
-            }
+/* Logout button - enhanced */
+.header-logout-btn {
+    gap: 3px;
+    min-width: 52px;
+    padding: 6px 10px !important;
+    border-radius: 10px;
+    color: #6c757d !important;
+    border: 1px solid transparent;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.header-logout-btn:hover {
+    color: #004a93 !important;
+    background-color: rgba(0, 74, 147, 0.08) !important;
+    border-color: rgba(0, 74, 147, 0.12);
+}
+.header-logout-btn:active {
+    transform: scale(0.97);
+}
 
-            .header-lang-dropdown {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                background: rgba(255, 255, 255, 0.15);
-                border-radius: 6px;
-                padding: 4px 10px;
-            }
-
-            .header-globe-icon {
-                font-size: 18px !important;
-                color: #fff !important;
-            }
-
-            .header-lang-select {
-                background: transparent !important;
-                border: none !important;
-                color: #fff !important;
-                font-size: 0.875rem;
-                padding: 2px 4px;
-                min-width: 80px;
-            }
-
-            .header-lang-select option {
-                background: #122442;
-                color: #fff;
-            }
-
-            /* Main nav bar - white background */
-            .with-vertical .navbar {
-                background: #fff !important
-            }
-
-            .header-brand {
-                gap: 10px !important;
-            }
-
-            .header-logo-emblem {
-                height: 40px;
-                object-fit: contain;
-            }
-
-            .header-logo {
-                height: 32px;
-                object-fit: contain;
-            }
-
-            /* Desktop: larger, more prominent logo */
-            @media (min-width: 992px) {
-                .header-brand {
-                    gap: 12px !important;
-                }
-
-                .header-logo-emblem {
-                    height: 52px !important;
-                }
-
-                .header-logo {
-                    height: 44px !important;
-                }
-            }
-
-            .header-app-name {
-                font-size: 1.25rem;
-                font-weight: 700;
-                color: #004a93;
-            }
-
-            /* Nav container - light grey pill */
-            .header-main-nav {
-                background: #f0f0f0 !important;
-                border-radius: 12px;
-                height: 48px;
-                border: 1px solid rgba(0, 0, 0, 0.05);
-            }
-
-            .header-nav-link {
-                color: #6c757d !important;
-                border-radius: 8px;
-                text-decoration: none !important;
-                border-bottom: 2px solid transparent;
-                transition: color 0.2s, border-color 0.2s;
-            }
-
-            .header-nav-link:hover {
-                color: #495057 !important;
-            }
-
-            .header-nav-link.active {
-                color: #004a93 !important;
-                border-bottom-color: #004a93;
-                font-weight: 500;
-            }
-
-            .header-search-btn {
-                background: transparent !important;
-                border: none !important;
-                color: #6c757d !important;
-                padding: 6px 10px !important;
-                border-radius: 8px;
-            }
-
-            .header-search-btn:hover {
-                color: #004a93 !important;
-            }
-
-            /* Right side */
-            .header-right-actions {
-                margin-right: 1rem;
-            }
-
-            .header-icon-sm {
-                font-size: 24px !important;
-            }
-
-            .header-logout-icon {
-                font-size: 22px !important;
-            }
-
-            .header-last-login {
-                font-size: 0.8125rem;
-            }
-
-            /* Divider before logout */
-            .header-logout-divider {
-                width: 1px;
-                height: 28px;
-                background: rgba(0, 0, 0, 0.08);
-                flex-shrink: 0;
-            }
-
-            /* Logout button - enhanced */
-            .header-logout-btn {
-                gap: 3px;
-                min-width: 52px;
-                padding: 6px 10px !important;
-                border-radius: 10px;
-                color: #6c757d !important;
-                border: 1px solid transparent;
-                transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-            }
-
-            .header-logout-btn:hover {
-                color: #004a93 !important;
-                background-color: rgba(0, 74, 147, 0.08) !important;
-                border-color: rgba(0, 74, 147, 0.12);
-            }
-
-            .header-logout-btn:active {
-                transform: scale(0.97);
-            }
-
-            /* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
-            .dropdown-menu-end-lg[data-bs-popper] {
-                left: 0;
-                right: auto;
-            }
-
-            @media (min-width: 992px) {
-                .dropdown-menu-end-lg[data-bs-popper] {
-                    left: auto;
-                    right: 0;
-                }
-            }
+/* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
+.dropdown-menu-end-lg[data-bs-popper] {
+    left: 0;
+    right: auto;
+}
+@media (min-width: 992px) {
+    .dropdown-menu-end-lg[data-bs-popper] {
+        left: auto;
+        right: 0;
+    }
+}
 
             @media (max-width: 991.98px) {
                 body {
@@ -937,7 +842,6 @@ $activeNavTab = '#tab-material-management';
 
             /* Very small phones - narrower sidebar */
             @media (max-width: 375px) {
-
                 .left-sidebar,
                 .side-mini-panel,
                 aside.side-mini-panel,
@@ -945,7 +849,6 @@ $activeNavTab = '#tab-material-management';
                     width: min(280px, 92vw) !important;
                     max-width: 280px !important;
                 }
-
                 .side-mini-panel.show-sidebar,
                 aside.side-mini-panel.show-sidebar,
                 aside.side-mini-panel.with-vertical.show-sidebar {
@@ -1275,39 +1178,35 @@ $activeNavTab = '#tab-material-management';
                         }
                     });
                 }
-
+                
                 // Mobile collapse: document-level delegation (capture phase)
                 let collapseHandledAt = 0;
-
                 function handleMobileCollapse(e) {
                     if (window.innerWidth >= 992) return;
-
+                    
                     const trigger = e.target.closest('[data-bs-toggle="collapse"]');
                     if (!trigger) return;
-
+                    
                     const sidebarTabContent = document.getElementById('sidebarTabContent');
                     if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
-
+                    
                     if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
-
+                    
                     // Prevent double-fire from pointerup + click on touch devices
                     const now = Date.now();
                     if (now - collapseHandledAt < 400) return;
                     collapseHandledAt = now;
-
-                    const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') ||
-                        '').replace(/^#/, '');
+                    
+                    const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
                     if (!targetId) return;
-
+                    
                     const targetElement = document.getElementById(targetId);
                     if (!targetElement) return;
-
+                    
                     if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
                         let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
                         if (!bsCollapse) {
-                            bsCollapse = new bootstrap.Collapse(targetElement, {
-                                toggle: false
-                            });
+                            bsCollapse = new bootstrap.Collapse(targetElement, { toggle: false });
                         }
                         bsCollapse.toggle();
                         // Accordion: close other collapses in same sidebar-nav
@@ -1324,18 +1223,17 @@ $activeNavTab = '#tab-material-management';
                         const icon = trigger.querySelector('.material-icons');
                         if (icon) {
                             setTimeout(() => {
-                                icon.textContent = targetElement.classList.contains('show') ?
-                                    'keyboard_arrow_up' : 'keyboard_arrow_down';
+                                icon.textContent = targetElement.classList.contains('show') ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
                             }, 350);
                         }
                         e.preventDefault();
                         e.stopPropagation();
                     }
                 }
-
+                
                 document.addEventListener('pointerup', handleMobileCollapse, true);
                 document.addEventListener('click', handleMobileCollapse, true);
-
+             
 
                 // Time format is already set in PHP, no need to override
 
@@ -1398,13 +1296,9 @@ $activeNavTab = '#tab-material-management';
                             e.stopPropagation();
                             this.setAttribute('aria-expanded', 'true');
                             // Find DataTables search input on current page
-                            const dtSearchInput = document.querySelector(
-                                '.dataTables_filter input');
+                            const dtSearchInput = document.querySelector('.dataTables_filter input');
                             if (dtSearchInput) {
-                                dtSearchInput.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'center'
-                                });
+                                dtSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 dtSearchInput.focus();
                             }
                         });
@@ -1561,12 +1455,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 </script>
 
 <!-- Fallback Tab Switcher (if Bootstrap JS not active) -->
 <script>
-// Server-computed active tab (from PHP) - used for route-based tab highlighting
-window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
+    // Server-computed active tab (from PHP) - used for route-based tab highlighting
+    window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
