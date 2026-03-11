@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             @php
-                                $showUserManagement = hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+                                $showUserManagement = hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
                                 $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
                                 // Check if current self-service user is a permanent LBSNAA employee (payroll = 0)
                                 $isPermanentEstateEmployee = false;
@@ -35,11 +35,13 @@
                                         }
                                     }
                                 }
-                                // Estate section visible only for:
-                                // - Admin / Estate / HAC / Training / IST, OR
-                                // - Self-service roles that are permanent employees (payroll = 0)
-                                $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('HAC Person') || ($estateSelfServiceRoles && $isPermanentEstateEmployee);
-                                $isEstateAdmin = hasRole('Estate');
+                                // Estate section visible for:
+                                // - Admin / Super Admin / Training / IST (user management)
+                                // - Estate / HAC Person
+                                // - All self-service estate roles (Staff, Student-OT, Doctor, Guest Faculty, Internal Faculty)
+                                //   They will still be restricted inside the menu to only their own-data items.
+                                $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person') || $estateSelfServiceRoles;
+                                $isEstateAdmin = hasRole('Estate') || hasRole('Super Admin');
                                 $isHACPerson = hasRole('HAC Person');
                             @endphp
                              @if($showUserManagement)
