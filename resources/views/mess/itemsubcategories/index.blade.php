@@ -85,7 +85,7 @@
                                               onsubmit="return confirm('Are you sure you want to delete this item?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete" style="display: none;"><i class="material-icons material-symbol-rounded">delete</i></button>
+                                            <button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete"><i class="material-icons material-symbol-rounded">delete</i></button>
                                         </form>
                                     </div>
                                 </td>
