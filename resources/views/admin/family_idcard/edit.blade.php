@@ -60,12 +60,19 @@
                     <input type="hidden" name="valid_to" value="{{ old('valid_to', $request->valid_to ? $request->valid_to->format('Y-m-d') : '') }}">
                     <div class="col-12">
                         <label class="form-label">Upload Family Photo</label>
+                        @php
+                            $familyPhotoPath = $request->family_photo;
+                            $familyPhotoExists = $familyPhotoPath && \Storage::disk('public')->exists($familyPhotoPath);
+                        @endphp
                         <div class="family-idcard-upload-zone position-relative" id="familyPhotoUploadZone">
                             <input type="file" name="family_photo" id="family_photo" class="d-none" accept=".jpeg,.jpg,.png">
                             <div class="family-idcard-upload-placeholder" id="familyPhotoPlaceholder">
-                                @if($request->family_photo)
-                                    <img src="{{ asset('storage/' . $request->family_photo) }}" alt="Current" class="family-idcard-preview-img mb-2" style="max-height:120px;">
+                                @if($familyPhotoExists)
+                                    <img src="{{ asset('storage/' . $familyPhotoPath) }}" alt="Current" class="family-idcard-preview-img mb-2" style="max-height:120px;">
                                     <p class="mb-0 small text-muted">Click to change or drag and drop</p>
+                                @elseif($familyPhotoPath)
+                                    <p class="mb-0 small text-muted text-warning">No file available in storage</p>
+                                    <p class="mt-1 mb-0 small text-muted">Click to upload or drag and drop</p>
                                 @else
                                     <i class="material-icons material-symbols-rounded family-idcard-upload-icon">upload</i>
                                     <p class="mt-2 mb-0">Click to upload or drag and drop</p>
@@ -131,12 +138,20 @@
                                         <input type="date" name="members[{{ $idx }}][valid_to]" class="form-control " value="{{ old('members.'.$idx.'.valid_to', $member->valid_to ? $member->valid_to->format('Y-m-d') : '') }}">
                                     </td>
                                     <td class="align-middle">
+                                    <td class="align-middle">
+                                        @php
+                                            $memberPhoto = $member->id_photo_path ?? $member->family_photo ?? null;
+                                            $memberPhotoExists = $memberPhoto && \Storage::disk('public')->exists($memberPhoto);
+                                        @endphp
                                         <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{ $idx }}">
                                             <input type="file" name="members[{{ $idx }}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" data-row="{{ $idx }}">
                                             <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{ $idx }}">
-                                                @if(!empty($member->id_photo_path ?? $member->family_photo))
-                                                    <img src="{{ asset('storage/' . ($member->id_photo_path ?? $member->family_photo)) }}" alt="" class="member-preview-img" data-img="{{ $idx }}" style="max-height:60px; border-radius:4px;">
+                                                @if($memberPhotoExists)
+                                                    <img src="{{ asset('storage/' . $memberPhoto) }}" alt="" class="member-preview-img" data-img="{{ $idx }}" style="max-height:60px; border-radius:4px;">
                                                     <span class="small d-block mt-1 text-muted">Click to change</span>
+                                                @elseif($memberPhoto)
+                                                    <span class="small d-block mt-1 text-warning">No file available in storage</span>
+                                                    <span class="small text-muted d-block">Click to upload</span>
                                                 @else
                                                     <i class="material-icons material-symbols-rounded" style="font-size:1.5rem; color:#6c757d;">upload</i>
                                                     <span class="small d-block mt-1">Upload</span>

@@ -44,17 +44,22 @@
                         @endif
                     </td>
                     <td class="text-center">
-                        @if($req->photo)
-                            @php
+                        @php
+                            $photoPath = null;
+                            $photoExists = false;
+                            if ($req->photo) {
                                 $photoPath = str_starts_with($req->photo, 'idcard/')
                                     ? $req->photo
                                     : 'idcard/photos/' . $req->photo;
                                 $photoExists = \Storage::disk('public')->exists($photoPath);
-                                $photoUrl = $photoExists ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
-                            @endphp
-                            <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block">
-                                <img src="{{ $photoUrl }}" alt="Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6; cursor:pointer;" title="Click to view full photo">
+                            }
+                        @endphp
+                        @if($photoExists)
+                            <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="d-inline-block">
+                                <img src="{{ asset('storage/' . $photoPath) }}" alt="Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6; cursor:pointer;" title="Click to view full photo">
                             </a>
+                        @elseif($req->photo)
+                            <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No file available in storage">
                         @else
                             <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #dee2e6;" title="No photo available">
                         @endif
