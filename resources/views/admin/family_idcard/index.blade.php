@@ -2,11 +2,19 @@
 @section('title', 'Request For Family Id Card - Sargam | Lal Bahadur Shastri')
 @section('setup_content')
 <div class="container-fluid family-idcard-index-page family-idcard-print-area">
-    {{-- Print-only header: visible only when printing --}}
-    <div class="print-only-header family-idcard-print-header">
-        <h5 class="mb-0">Request For Family Id Card - List</h5>
-        <p class="text-muted small mb-0">Printed on: {{ now()->format('d-m-Y H:i') }}</p>
-        <p class="text-muted small mb-0 print-tab-info" id="familyIdcardPrintTabInfo">Active requests</p>
+    {{-- Print-only header: LBSNAA theme + logo, visible only when printing --}}
+    <div class="print-only-header family-idcard-print-header family-idcard-print-header-lbsnaa">
+        <div class="family-idcard-print-header-top">
+            <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="LBSNAA" class="family-idcard-print-logo">
+            <div class="family-idcard-print-title-block">
+                <h5 class="mb-0">Lal Bahadur Shastri National Academy of Administration</h5>
+                <p class="mb-0 family-idcard-print-sub">Request For Family Id Card – List</p>
+            </div>
+        </div>
+        <div class="family-idcard-print-meta">
+            <span>Printed on: {{ now()->format('d-m-Y H:i') }}</span>
+            <span class="print-tab-info" id="familyIdcardPrintTabInfo">Active requests</span>
+        </div>
     </div>
 
     <div class="no-print">
@@ -109,11 +117,12 @@
                     </li>
                 </ul>
             </div>
-            <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-success btn-sm d-flex align-items-center gap-1" title="Add">
+            <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-success  d-flex align-items-center gap-1" title="Add">
                 <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
             </a>
-            <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" title="Print" onclick="window.print();">
+            <button type="button" class="btn btn-primary family-idcard-print-btn d-flex align-items-center gap-2 px-3" title="Print" onclick="window.print();" aria-label="Print list">
                 <i class="material-icons material-symbols-rounded" style="font-size:20px;">print</i>
+                <span class="d-none d-sm-inline">Print</span>
             </button>
         </div>
     </div>
@@ -124,18 +133,18 @@
             <!-- Active Tab -->
             <div class="tab-pane show active" id="active-panel" role="tabpanel" aria-labelledby="active-tab">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle family-idcard-table">
+                    <table class="table text-nowrap align-middle mb-0 family-idcard-table">
                         <thead>
                             <tr class="table-primary">
-                                <th>S.NO.</th>
-                                <th>REQUEST DATE</th>
-                                <th>EMPLOYEE ID</th>
-                                <th>EMPLOYEE NAME</th>
-                                <th>DESIGNATION</th>
-                                <th>DEPARTMENT</th>
-                                <th>NO OF MEMBERS</th>
-                                <th>ID TYPE</th>
-                                    <th class="text-end family-idcard-actions-col">ACTIONS</th>
+                                <th>S.No.</th>
+                                <th>Request Date</th>
+                                <th>Employee ID</th>
+                                <th>Employee Name</th>
+                                <th>Designation</th>
+                                <th>Department</th>
+                                <th>No of Members</th>
+                                <th>ID Type</th>
+                                    <th class="family-idcard-actions-col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -149,14 +158,14 @@
                                     <td>{{ $req->section ?? '--' }}</td>
                                     <td><a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="text-primary fw-medium">{{ $req->member_count }}</a></td>
                                     <td>{{ $req->card_type ?? 'Family Card' }}</td>
-                                    <td class="text-end family-idcard-actions-col">
-                                        <div class="d-flex align-items-center justify-content-end gap-1">
-                                            <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn btn-sm btn-outline-primary" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
-                                            <a href="{{ route('admin.family_idcard.edit', $req->first_id) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i></a>
+                                    <td class="family-idcard-actions-col">
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
+                                            <a href="{{ route('admin.family_idcard.edit', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit"><i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i></a>
                                             <form action="{{ route('admin.family_idcard.destroy', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Archive"><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i></button>
+                                                <button type="submit" class="btn btn-outline-danger bg-transparent border-0 text-primary p-0" title="Archive"><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i></button>
                                             </form>
                                         </div>
                                     </td>
@@ -166,7 +175,7 @@
                                     <td colspan="9" class="text-center py-5 text-body-secondary">
                                         <i class="material-icons material-symbols-rounded d-block mb-2" style="font-size:48px; opacity:0.4;">inbox</i>
                                         <p class="mb-1">No family ID card requests found.</p>
-                                        <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-primary btn-sm mt-2">Add Request</a>
+                                        <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-primary  mt-2">Add Request</a>
                                     </td>
                                 </tr>
                             @endforelse
@@ -189,15 +198,15 @@
                     <table class="table table-hover mb-0 align-middle family-idcard-table">
                         <thead>
                             <tr class="table-primary">
-                                <th>S.NO.</th>
-                                <th>REQUEST DATE</th>
-                                <th>EMPLOYEE ID</th>
-                                <th>EMPLOYEE NAME</th>
-                                <th>DESIGNATION</th>
-                                <th>DEPARTMENT</th>
-                                <th>NO OF MEMBERS</th>
-                                <th>ID TYPE</th>
-                                <th class="text-end family-idcard-actions-col">ACTIONS</th>
+                                <th>S.No.</th>
+                                <th>Request Date</th>
+                                <th>Employee ID</th>
+                                <th>Employee Name</th>
+                                <th>Designation</th>
+                                <th>Department</th>
+                                <th>No of Members</th>
+                                <th>ID Type</th>
+                                <th class="family-idcard-actions-col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -211,23 +220,23 @@
                                     <td>{{ $req->section ?? '--' }}</td>
                                     <td><a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="text-primary fw-medium">{{ $req->member_count }}</a></td>
                                     <td>{{ $req->card_type ?? 'Family Card' }}</td>
-                                    <td class="text-end family-idcard-actions-col">
-                                        <div class="d-flex align-items-center justify-content-end gap-1">
-                                            <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn btn-sm btn-outline-primary" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
+                                    <td class="family-idcard-actions-col">
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ route('admin.family_idcard.members', $req->first_id) }}" class="btn  btn-outline-primary bg-transparent border-0 text-primary p-0" title="View members"><i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i></a>
                                             @if(($req->id_status ?? 1) === 3)
                                             <form action="{{ route('admin.family_idcard.restore', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
                                                 @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Restore"><i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i></button>
+                                                <button type="submit" class="btn  btn-outline-success bg-transparent border-0 text-primary p-0" title="Restore"><i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i></button>
                                             </form>
                                             @endif
                                             @if(($req->id_status ?? 1) === 1)
                                             <form action="{{ route('admin.family_idcard.forceDelete', $req->first_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i></button>
+                                                <button type="submit" class="btn  btn-outline-danger bg-transparent border-0 text-primary p-0" title="Delete"><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i></button>
                                             </form>
                                             @else
-                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" disabled><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete_forever</i></button>
+                                            <button type="button" class="btn  btn-outline-danger bg-transparent border-0 text-primary p-0" title="Delete" disabled><i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i></button>
                                             @endif
                                         </div>
                                     </td>
@@ -254,6 +263,18 @@
 </div>
 
 <style>
+    /* LBSNAA theme: primary blue */
+    .family-idcard-print-btn {
+        background-color: #004a93 !important;
+        border-color: #004a93 !important;
+        color: #fff !important;
+    }
+    .family-idcard-print-btn:hover {
+        background-color: #003d7a !important;
+        border-color: #003d7a !important;
+        color: #fff !important;
+    }
+
     .family-idcard-tabs .nav-link {
         border-radius: 8px 8px 0 0;
         color: #6c757d;
@@ -293,11 +314,42 @@
         .family-idcard-print-header {
             display: block !important;
             visibility: visible !important;
-            margin-bottom: 12px !important;
-            padding-bottom: 8px !important;
-            border-bottom: 1px solid #000 !important;
+            margin-bottom: 14px !important;
+            padding: 0 0 10px 0 !important;
+            border-bottom: 2px solid #004a93 !important;
         }
-        .family-idcard-print-header h5 { font-size: 16px !important; color: #000 !important; font-weight: 700 !important; }
+        .family-idcard-print-header-lbsnaa .family-idcard-print-header-top {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            margin-bottom: 8px !important;
+        }
+        .family-idcard-print-header-lbsnaa .family-idcard-print-logo {
+            height: 44px !important;
+            width: auto !important;
+            max-width: 140px !important;
+            object-fit: contain !important;
+        }
+        .family-idcard-print-header-lbsnaa .family-idcard-print-title-block h5 {
+            font-size: 14px !important;
+            color: #004a93 !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+        }
+        .family-idcard-print-header-lbsnaa .family-idcard-print-sub {
+            font-size: 12px !important;
+            color: #000 !important;
+            font-weight: 600 !important;
+            margin-top: 2px !important;
+        }
+        .family-idcard-print-header-lbsnaa .family-idcard-print-meta {
+            font-size: 10px !important;
+            color: #333 !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 4px !important;
+        }
         .family-idcard-print-header p { font-size: 11px !important; margin: 2px 0 !important; color: #000 !important; }
         .family-idcard-print-area .card { border: 1px solid #000 !important; box-shadow: none !important; background: #fff !important; }
         .family-idcard-print-area .table-responsive { overflow: visible !important; }
