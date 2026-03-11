@@ -392,8 +392,16 @@ $(document).ready(function() {
         syncLockedHiddenSelects();
         var opt = $(this).find('option:selected');
         var meterOne = opt.attr('data-meter-one') || '';
-        if (meterOne !== '') {
-            if (meterOne !== '') $('#electric_meter_reading_primary').val(meterOne);
+        var meterTwo = opt.attr('data-meter-two') || '';
+
+        if (meterOne !== '' || meterTwo !== '') {
+            if (meterOne !== '') {
+                $('#electric_meter_reading_primary').val(meterOne);
+            }
+            if (meterTwo !== '') {
+                $('#electric_meter_reading_secondary').val(meterTwo);
+            }
+            sanitizeMeterInputs();
             syncElectricMeterReading();
         }
     });

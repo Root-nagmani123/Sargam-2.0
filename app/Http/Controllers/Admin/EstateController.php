@@ -483,8 +483,21 @@ class EstateController extends Controller
         // Jinke sab houses return ho chuke hain (sirf return_home_status = 1 rows),
         // unhe dubara request karne dena hai.
         $activePossessionEmployeePks = [];
+        $allPossessionEmployeePks = [];
         if (\Illuminate\Support\Facades\Schema::hasTable('estate_possession_details')) {
             $hasReturnStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status');
+
+            // Sabhi possessions ke employee_pk (returned + active) capture karo
+            $allPossessionEmployeePks = DB::table('estate_possession_details as epd')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('ehrd.employee_pk', '>', 0)
+                ->whereNotNull('epd.estate_house_master_pk')
+                ->pluck('ehrd.employee_pk')
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->all();
+
+            // Sirf active possessions ke employee_pk (return_home_status = 0 / NULL)
             $epdQuery = DB::table('estate_possession_details as epd')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->where('ehrd.employee_pk', '>', 0)
@@ -607,6 +620,47 @@ class EstateController extends Controller
                 }
             }
             $rows = $fallbackQuery->get();
+        }
+
+        // Additional mapping: ensure jo employees pehle kabhi estate possession me the
+        // aur ab unke saare houses return ho chuke hain, unka naam bhi dropdown me aaye,
+        // chahe wo current estate_eligibility_mapping chain se na aa rahe hon.
+        if (!empty($allPossessionEmployeePks)) {
+            $allPossessionEmployeePks = array_values(array_unique($allPossessionEmployeePks));
+            // Returned-only = jinke paas koi active possession nahi hai
+            $returnedOnlyEmployeePks = array_diff($allPossessionEmployeePks, $activeEmployeePks);
+
+            if (!empty($returnedOnlyEmployeePks)) {
+                $existingPks = $rows->pluck('pk')->map(fn ($v) => (int) $v)->all();
+                $missingReturnedPks = array_diff($returnedOnlyEmployeePks, $existingPks);
+
+                if (!empty($missingReturnedPks)) {
+                    $extraReturnedQuery = DB::table('employee_master as em')
+                        ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
+                        ->select(
+                            'em.' . $empPkCol . ' as pk',
+                            DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
+                            DB::raw($employeeIdSelect . ' as employee_id'),
+                            DB::raw("COALESCE(d.designation_name, '') as emp_designation")
+                        )
+                        ->whereIn('em.' . $empPkCol, $missingReturnedPks)
+                        ->where('em.status', 1);
+
+                    // Self-service restriction: non-estate/admin users should still only see themselves
+                    if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
+                        if (!empty($employeeIds)) {
+                            $extraReturnedQuery->whereIn('em.' . $empPkCol, $employeeIds);
+                        } else {
+                            $extraReturnedQuery->whereRaw('1 = 0');
+                        }
+                    }
+
+                    $extraReturned = $extraReturnedQuery->get();
+                    if ($extraReturned->isNotEmpty()) {
+                        $rows = $rows->merge($extraReturned)->unique('pk')->values();
+                    }
+                }
+            }
         }
 
         $includePk = (int) $request->query('include_pk', 0);
@@ -5695,6 +5749,8 @@ class EstateController extends Controller
         $unitSubTypePk = $request->get('unit_sub_type_pk');
         $bills = collect();
 
+        $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+
         if ($billMonth) {
             [$year, $month] = explode('-', $billMonth);
             $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
@@ -5723,12 +5779,15 @@ class EstateController extends Controller
                     'emrd.meter_one',
                     'emrd.meter_one_elec_charge',
                     'emrd.meter_one_consume_unit',
+                    ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'ehm.estate_unit_master_pk as unit_type_pk'),
+                    'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
                     'ehrd.emp_name',
                     'ehrd.employee_id',
                     'ehrd.emp_designation',
                     'eust.unit_sub_type',
                     'ehm.water_charge as ehm_water_charge',
-                    'ehm.licence_fee as ehm_licence_fee'
+                    'ehm.licence_fee as ehm_licence_fee',
+                    'ehm.electric_charge as ehm_electric_charge'
                 );
 
             // RBAC: Non-admin/estate/super-admin/training/IST users should only see/generate their own bills.
@@ -5757,6 +5816,30 @@ class EstateController extends Controller
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+
+                // Recalculate electricity using same slab logic as print view so values match PDF
+                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
+                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
+                    $derived = DB::table('estate_eligibility_mapping')
+                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
+                        ->whereNotNull('estate_unit_type_master_pk')
+                        ->orderBy('estate_unit_type_master_pk')
+                        ->value('estate_unit_type_master_pk');
+                    if ($derived) {
+                        $unitTypePk = (int) $derived;
+                    }
+                }
+                $prev1 = isset($b->last_month_elec_red) ? (int) $b->last_month_elec_red : 0;
+                $curr1 = isset($b->curr_month_elec_red) ? (int) $b->curr_month_elec_red : 0;
+                $u1 = isset($b->meter_one_consume_unit) && $b->meter_one_consume_unit !== null
+                    ? (int) $b->meter_one_consume_unit
+                    : (($curr1 >= $prev1) ? $curr1 - $prev1 : 0);
+                if ($u1 > 0) {
+                    $m1Charge = $this->calculateElectricChargeForUnits($unitTypePk, $u1);
+                    $b->meter_one_elec_charge = $m1Charge;
+                    $b->electricty_charges = $m1Charge;
+                }
+
                 // Fallback: when reading has 0/null water or licence, use estate_house_master (Define House) values
                 $billWater = (float) ($b->water_charges ?? 0);
                 $billLicence = (float) ($b->licence_fees ?? 0);
@@ -5766,6 +5849,13 @@ class EstateController extends Controller
                 if ($billLicence <= 0 && isset($b->ehm_licence_fee) && ($b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '')) {
                     $b->licence_fees = (float) $b->ehm_licence_fee;
                 }
+
+                // Fallback for electricity: when still 0/null, use house master electric charge
+                $billElectric = (float) ($b->electricty_charges ?? 0);
+                if ($billElectric <= 0 && isset($b->ehm_electric_charge) && ($b->ehm_electric_charge !== null && $b->ehm_electric_charge !== '')) {
+                    $b->electricty_charges = (float) $b->ehm_electric_charge;
+                }
+
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
         }
@@ -5888,13 +5978,13 @@ class EstateController extends Controller
         $listMonthVariants = $month ? $resolveMonthVariants($month) : [];
         $listYear = is_string($year) && trim($year) !== '' ? trim($year) : null;
 
+        // Employee list for filters: show all who have a bill for selected month/year (including draft/un-notified) so dropdown is never empty
         $employees = $isOtherEmployee
             ? DB::table('estate_month_reading_details_other as emro')
                 ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
                 ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
                 ->when(!empty($listMonthVariants), fn ($q) => $q->whereIn('emro.bill_month', $listMonthVariants))
                 ->when($listYear, fn ($q) => $q->where('emro.bill_year', $listYear))
-                ->where('emro.notify_employee_status', 1)
                 ->whereNotNull('eor.emp_name')
                 ->select('eor.pk', 'eor.emp_name', DB::raw('NULL as employee_id'))
                 ->distinct()
@@ -5905,7 +5995,6 @@ class EstateController extends Controller
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
                 ->when(!empty($listMonthVariants), fn ($q) => $q->whereIn('emrd.bill_month', $listMonthVariants))
                 ->when($listYear, fn ($q) => $q->where('emrd.bill_year', $listYear))
-                ->where('emrd.notify_employee_status', 1)
                 ->whereNotNull('ehrd.employee_pk')
                 // Use employee_pk as the stable key (matches employee_master.pk)
                 ->select('ehrd.employee_pk as pk', 'ehrd.emp_name', 'ehrd.employee_id')
@@ -5998,7 +6087,6 @@ class EstateController extends Controller
             $bill = $baseQuery()
                 ->whereIn('emrd.bill_month', $monthVariants)
                 ->where('emrd.bill_year', $year)
-                ->where('emrd.notify_employee_status', 1)
                 ->where(function ($q) use ($billNo) {
                     $q->where('emrd.bill_no', $billNo)
                         ->orWhere('emrd.pk', $billNo);
@@ -6009,7 +6097,6 @@ class EstateController extends Controller
                 $bill = $baseQueryOther()
                     ->whereIn('emro.bill_month', $monthVariants)
                     ->where('emro.bill_year', $year)
-                    ->where('emro.notify_employee_status', 1)
                     ->where(function ($q) use ($billNo) {
                         $q->where('emro.bill_no', $billNo)
                             ->orWhere('emro.pk', $billNo);
@@ -6018,11 +6105,11 @@ class EstateController extends Controller
             }
         } elseif ($month && $year && $employeePk) {
             $monthVariants = $resolveMonthVariants($month);
+            // Allow print preview for any bill (draft or notified) when filtering by employee
             if ($isOtherEmployee) {
                 $query = $baseQueryOther()
                     ->whereIn('emro.bill_month', $monthVariants)
                     ->where('emro.bill_year', $year)
-                    ->where('emro.notify_employee_status', 1)
                     ->where('eor.pk', $employeePk);
                 if (! empty($employeeTypePk)) {
                     $query->where('epo.estate_unit_sub_type_master_pk', $employeeTypePk);
@@ -6032,7 +6119,6 @@ class EstateController extends Controller
                 $query = $baseQuery()
                     ->whereIn('emrd.bill_month', $monthVariants)
                     ->where('emrd.bill_year', $year)
-                    ->where('emrd.notify_employee_status', 1)
                     ->where(function ($q) use ($employeePk) {
                         // Primary: filter by employee_master pk
                         $q->where('ehrd.employee_pk', $employeePk)
@@ -6077,17 +6163,10 @@ class EstateController extends Controller
                 ? (int) $bill->meter_two_consume_unit
                 : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
 
-            // 1) Electricity from consumption (slab) when units > 0
+            // 1) Electricity from consumption (slab) – ALWAYS recalculate for print using Define Electric Slab.
             if ($u1 > 0 || $u2 > 0) {
-                $hasM1Charge = $bill->meter_one_elec_charge !== null && $bill->meter_one_elec_charge !== '' && (float) $bill->meter_one_elec_charge > 0;
-                $hasM2Charge = $bill->meter_two_elec_charge !== null && $bill->meter_two_elec_charge !== '' && (float) $bill->meter_two_elec_charge > 0;
-
-                $m1Charge = $hasM1Charge
-                    ? (float) $bill->meter_one_elec_charge
-                    : $this->calculateElectricChargeForUnits($unitTypePk, $u1);
-                $m2Charge = $hasM2Charge
-                    ? (float) $bill->meter_two_elec_charge
-                    : $this->calculateElectricChargeForUnits($unitTypePk, $u2);
+                $m1Charge = $u1 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u1) : 0.0;
+                $m2Charge = $u2 > 0 ? $this->calculateElectricChargeForUnits($unitTypePk, $u2) : 0.0;
                 $bill->meter_one_elec_charge = $m1Charge;
                 $bill->meter_two_elec_charge = $m2Charge;
                 $bill->electricty_charges = $m1Charge + $m2Charge;
@@ -6135,33 +6214,63 @@ class EstateController extends Controller
             return 0.0;
         }
 
-        // Simple and robust: use all slabs from estate_electric_slab (no unit-type/house filter)
-        $slabs = DB::table('estate_electric_slab')
-            ->orderBy('start_unit_range')
-            ->get();
+        // Use slabs from estate_electric_slab:
+        // - Prefer matching estate_unit_type_master_pk when available
+        // - Fallback to all slabs only if no type-specific slabs exist
+        $baseQuery = DB::table('estate_electric_slab')
+            ->orderBy('start_unit_range');
+
+        if ($unitTypePk) {
+            $typed = (clone $baseQuery)
+                ->where('estate_unit_type_master_pk', $unitTypePk)
+                ->get();
+            $slabs = $typed->isNotEmpty()
+                ? $typed
+                : $baseQuery->get();
+        } else {
+            $slabs = $baseQuery->get();
+        }
 
         if ($slabs->isEmpty()) {
             return 0.0;
         }
 
-        $total = 0.0;
-        $targetUnits = $units;
+        // New logic (as per requirement):
+        // - Find the slab whose range contains the total units
+        // - Effective rate = sum of rate_per_unit of all slabs from start up to that slab
+        // - Amount = units * effective_rate
+        $selectedIndex = null;
+        $indexedSlabs = $slabs->values();
 
-        foreach ($slabs as $slab) {
+        foreach ($indexedSlabs as $idx => $slab) {
             $start = (int) $slab->start_unit_range;
-            $end = (int) $slab->end_unit_range;
-            if ($targetUnits < $start) {
+            $endRaw = $slab->end_unit_range;
+            $end = ($endRaw === null || (int) $endRaw === 0) ? PHP_INT_MAX : (int) $endRaw;
+            if ($units >= $start && $units <= $end) {
+                $selectedIndex = $idx;
                 break;
             }
-            $upperBound = min($targetUnits, $end);
-            $slabUnits = max(0, $upperBound - $start + 1);
-            if ($slabUnits <= 0) {
-                continue;
-            }
-            $total += $slabUnits * (float) $slab->rate_per_unit;
         }
 
-        return $total;
+        // If no exact containing slab found, fall back to the last slab whose start is <= units.
+        if ($selectedIndex === null) {
+            foreach ($indexedSlabs as $idx => $slab) {
+                if ((int) $slab->start_unit_range <= $units) {
+                    $selectedIndex = $idx;
+                }
+            }
+        }
+
+        if ($selectedIndex === null) {
+            return 0.0;
+        }
+
+        $effectiveRate = 0.0;
+        for ($i = 0; $i <= $selectedIndex; $i++) {
+            $effectiveRate += (float) $indexedSlabs[$i]->rate_per_unit;
+        }
+
+        return $units * $effectiveRate;
     }
 
     /**

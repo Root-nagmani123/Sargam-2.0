@@ -396,6 +396,23 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('form[action="{{ route('admin.estate.reports.bill-report-print') }}"]');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var base = '{{ route('admin.estate.reports.bill-report-print') }}';
+            var names = ['employee_category', 'month', 'year', 'employee_type_pk', 'employee_pk'];
+            var params = [];
+            names.forEach(function (name) {
+                var el = form.querySelector('[name="' + name + '"]');
+                if (el && el.value !== undefined && String(el.value).trim() !== '') {
+                    params.push(encodeURIComponent(name) + '=' + encodeURIComponent(el.value.trim()));
+                }
+            });
+            window.location = params.length > 0 ? base + '?' + params.join('&') : base;
+            return false;
+        });
+    }
     if (window.Choices) {
         var commonConfig = {
             searchEnabled: true,
