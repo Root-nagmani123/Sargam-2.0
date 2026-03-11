@@ -27,11 +27,15 @@ class PurchaseOrder extends Model
         'bill_path',
         'bill_no',
         'challan_no',
+        'bill_date',
+        'challan_date', 
     ];
     
     protected $casts = [
         'po_date' => 'date',
         'delivery_date' => 'date',
+        'bill_date' => 'date',
+        'challan_date' => 'date',
         'approved_at' => 'datetime',
     ];
     
