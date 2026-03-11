@@ -196,17 +196,25 @@
             </div>
 
             <!-- Attachment -->
-            @if($vehiclePass->doc_upload)
+            @php
+                $docPath = $vehiclePass->doc_upload;
+                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+            @endphp
+            @if($docPath)
                 <div class="row mb-3 mt-3">
                     <div class="col-md-12">
                         <h5 class="text-primary mb-3">
                             <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">attach_file</i>
                             Attached Document
                         </h5>
-                        <a href="{{ Storage::url($vehiclePass->doc_upload) }}" target="_blank" class="btn btn-outline-primary">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">download</i>
-                            Download Document
-                        </a>
+                        @if($docExists)
+                            <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-outline-primary">
+                                <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">download</i>
+                                Download Document
+                            </a>
+                        @else
+                            <span class="text-warning small">No file available in storage</span>
+                        @endif
                     </div>
                 </div>
             @endif

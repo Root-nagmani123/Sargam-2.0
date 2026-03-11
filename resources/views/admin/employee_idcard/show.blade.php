@@ -284,7 +284,10 @@
                 <div class="card-body p-3">
                     <div class="row g-2">
                         <!-- Photo -->
-                        @if($request->photo)
+                        @php
+                            $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
+                        @endphp
+                        @if($photoExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-primary" style="font-size:48px;">image</i>
@@ -305,7 +308,10 @@
                         @endif
 
                         <!-- Joining Letter -->
-                        @if($request->joining_letter)
+                        @php
+                            $joiningExists = $request->joining_letter && \Storage::disk('public')->exists($request->joining_letter);
+                        @endphp
+                        @if($joiningExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-info" style="font-size:48px;">description</i>
@@ -319,7 +325,10 @@
                         @endif
 
                         <!-- FIR Receipt (for Lost/Damaged) -->
-                        @if($request->fir_receipt)
+                        @php
+                            $firExists = $request->fir_receipt && \Storage::disk('public')->exists($request->fir_receipt);
+                        @endphp
+                        @if($firExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-warning" style="font-size:48px;">gavel</i>
@@ -333,7 +342,10 @@
                         @endif
 
                         <!-- Payment Receipt -->
-                        @if($request->payment_receipt)
+                        @php
+                            $paymentExists = $request->payment_receipt && \Storage::disk('public')->exists($request->payment_receipt);
+                        @endphp
+                        @if($paymentExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-success" style="font-size:48px;">receipt</i>
@@ -347,7 +359,10 @@
                         @endif
 
                         <!-- Documents -->
-                        @if($request->documents)
+                        @php
+                            $documentsExists = $request->documents && \Storage::disk('public')->exists($request->documents);
+                        @endphp
+                        @if($documentsExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-success" style="font-size:48px;">description</i>

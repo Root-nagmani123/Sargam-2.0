@@ -62,11 +62,17 @@
                 </div>
                 <div class="col-12">
                     <div class="text-muted small mb-1">Uploaded Document</div>
-                    @if($req->doc_upload)
-                        <a href="{{ asset('storage/' . $req->doc_upload) }}" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+                    @php
+                        $docPath = $req->doc_upload;
+                        $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                    @endphp
+                    @if($docExists)
+                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">description</i>
                             <span>View / Download</span>
                         </a>
+                    @elseif($docPath)
+                        <span class="text-warning small">No file available in storage</span>
                     @else
                         <span class="text-muted">--</span>
                     @endif
