@@ -4807,13 +4807,19 @@ class EstateController extends Controller
                     ? $lastReadingRaw
                     : ($epdSecondaryReading ?? $epdPrimaryReading ?? 'N/A');
 
+                // For fallback rows (no explicit meter_one/meter_two), if a current-month reading has already
+                // been saved, prefer that value for the "New Meter Reading" textbox. Otherwise, prefill from
+                // estate_possession_details.electric_meter_reading (first-time entry behaviour).
+                $newMeterReadingFallback = (isset($currReadingRaw) && $currReadingRaw !== null && (int) $currReadingRaw > 0)
+                    ? (string) $currReadingRaw
+                    : $newMeterReadingFromPossession;
+
                 $rows->push(array_merge($base, [
                     'meter_slot' => 1,
                     'old_meter_no' => (string) $lastMeter,
                     'electric_meter_reading' => $displayFallback,
                     'new_meter_no' => '',
-                    // Business requirement: always prefill from estate_possession_details.electric_meter_reading.
-                    'new_meter_reading' => $newMeterReadingFromPossession,
+                    'new_meter_reading' => $newMeterReadingFallback,
                     'unit' => $unitFallback,
                 ]));
             }
@@ -4895,6 +4901,8 @@ class EstateController extends Controller
             'readings' => 'required|array',
             'readings.*.pk' => 'required|exists:estate_month_reading_details,pk',
             'readings.*.meter_slot' => 'nullable|in:1,2',
+            // Keep the "selected" flag so we know which rows to actually update.
+            'readings.*.selected' => 'nullable|in:1',
             'readings.*.curr_month_elec_red' => 'nullable|regex:/^[0-9]{1,20}$/',
             'readings.*.new_meter_no' => 'nullable|string|max:50|regex:/^[0-9]+$/',
             'reading_bill_month' => 'required|date_format:Y-m',
@@ -6104,6 +6112,15 @@ class EstateController extends Controller
             }
 
             $bill->grand_total = (float) ($bill->electricty_charges ?? 0) + (float) ($bill->water_charges ?? 0) + (float) ($bill->licence_fees ?? 0);
+
+            // Direct bill link (from Generate Estate Bill): when bill_no is present,
+            // return a streamed PDF so browser shows PDF preview.
+            if (!empty($billNo)) {
+                $pdf = Pdf::loadView('admin.estate.estate_bill_report_print_single_pdf', compact('bill'))
+                    ->setPaper('a4', 'portrait');
+                $filename = 'estate-bill-' . preg_replace('/[^A-Za-z0-9\-]/', '', (string) ($bill->bill_no ?? 'bill')) . '.pdf';
+                return $pdf->stream($filename);
+            }
         }
 
         return view('admin.estate.estate_bill_report_print', compact('bill', 'years', 'months', 'employeeTypes', 'employees'));
