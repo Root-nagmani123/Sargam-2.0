@@ -34,6 +34,14 @@
                     <small class="text-muted d-block">Select Bill Month</small>
                 </div>
                 <div class="col-12 col-md-4">
+                    <label for="employee_type" class="form-label">Employee Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="employee_type" name="employee_type" required>
+                        <option value="LBSNAA" selected>LBSNAA</option>
+                        <option value="Other Employee">Other Employee</option>
+                    </select>
+                    <small class="text-muted d-block">Select Employee Type</small>
+                </div>
+                <div class="col-12 col-md-4">
                     <label for="block_id" class="form-label">Building Name <span class="text-danger">*</span></label>
                     <select class="form-select" id="block_id" name="block_id">
                         <option value="all">All</option>
@@ -92,12 +100,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function initOrReload() {
         var billMonth = document.getElementById('bill_month').value;
+        var employeeType = document.getElementById('employee_type').value;
         var blockId = document.getElementById('block_id').value;
         if (!billMonth) {
             alert('Please select Bill Month.');
             return;
         }
-        lastLoadedParams = { bill_month: billMonth, block_id: blockId };
+        lastLoadedParams = { bill_month: billMonth, employee_type: employeeType, block_id: blockId };
 
         if (typeof $ === 'undefined' || !$.fn.DataTable) {
             alert('DataTable library not loaded.');
@@ -114,8 +123,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 ajax: {
                     url: '{{ route("admin.estate.list-meter-reading.data") }}',
                     data: function (d) {
-                        d.bill_month = billMonth;
-                        d.block_id = blockId;
+                        // Always read latest filter values (avoid stale closure values on reload)
+                        d.bill_month = document.getElementById('bill_month').value;
+                        d.employee_type = document.getElementById('employee_type').value;
+                        d.block_id = document.getElementById('block_id').value;
                     }
                 },
                 columns: [

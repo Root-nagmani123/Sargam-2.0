@@ -173,6 +173,16 @@
         <div class="card-body p-4">
             <form method="get" action="{{ route('admin.estate.reports.bill-report-print') }}" class="row g-3 g-md-4 align-items-end">
                 <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+                    <label for="employee_category" class="form-label fw-medium">Employee Category</label>
+                    <select class="form-select" id="employee_category" name="employee_category" aria-label="Employee Category">
+                        @php
+                            $empCat = old('employee_category', request('employee_category', 'LBSNAA'));
+                        @endphp
+                        <option value="LBSNAA" {{ $empCat === 'LBSNAA' ? 'selected' : '' }}>LBSNAA</option>
+                        <option value="Other Employee" {{ $empCat === 'Other Employee' ? 'selected' : '' }}>Other Employee</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
                     <label for="month" class="form-label fw-medium">Select Month</label>
                     <select class="form-select" id="month" name="month" aria-label="Select Month">
                         <option value="">— Select Month —</option>
@@ -382,3 +392,23 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.Choices) {
+        var commonConfig = {
+            searchEnabled: true,
+            removeItemButton: false,
+            shouldSort: false,
+            itemSelectText: '',
+        };
+        new Choices('#employee_category', Object.assign({}, commonConfig, { placeholderValue: 'Employee Category' }));
+        new Choices('#month', Object.assign({}, commonConfig, { placeholderValue: 'Select Month' }));
+        new Choices('#year', Object.assign({}, commonConfig, { placeholderValue: 'Select Year' }));
+        new Choices('#employee_type_pk', Object.assign({}, commonConfig, { placeholderValue: 'Select Employee Type' }));
+        new Choices('#employee_pk', Object.assign({}, commonConfig, { placeholderValue: 'Select Employee' }));
+    }
+});
+</script>
+@endpush
