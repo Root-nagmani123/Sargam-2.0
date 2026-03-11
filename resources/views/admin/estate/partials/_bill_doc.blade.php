@@ -106,7 +106,7 @@
                     <th class="text-right">Previous Reading</th>
                     <th class="text-right">Current Reading</th>
                     <th class="text-right">Units Consumed</th>
-                    <th class="text-right">Amount (₹)</th>
+                    <th class="text-right">Amount (Rs.)</th>
                 </tr>
             </thead>
             <tbody>
@@ -115,8 +115,17 @@
                     <td class="text-right">{{ $bill->last_month_elec_red ?? '—' }}</td>
                     <td class="text-right">{{ $bill->curr_month_elec_red ?? '—' }}</td>
                     <td class="text-right">{{ $bill->meter_one_consume_unit ?? '—' }}</td>
-                    <td class="amount">₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</td>
+                    <td class="amount">Rs. {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</td>
                 </tr>
+                @if(!empty($bill->meter_two) || isset($bill->meter_two_consume_unit) || (float)($bill->meter_two_elec_charge ?? 0) > 0)
+                <tr>
+                    <td>{{ $bill->meter_two ?? '—' }}</td>
+                    <td class="text-right">{{ $bill->last_month_elec_red2 ?? '—' }}</td>
+                    <td class="text-right">{{ $bill->curr_month_elec_red2 ?? '—' }}</td>
+                    <td class="text-right">{{ $bill->meter_two_consume_unit ?? '—' }}</td>
+                    <td class="amount">Rs. {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</td>
+                </tr>
+                @endif
             </tbody>
         </table>
     </div>
@@ -126,21 +135,21 @@
             <thead>
                 <tr>
                     <th>Particulars</th>
-                    <th class="text-right" style="width: 28%;">Amount (₹)</th>
+                    <th class="text-right" style="width: 28%;">Amount (Rs.)</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>Electricity Charges</td>
-                    <td class="amount">₹ {{ number_format((float)($bill->electricty_charges ?? 0), 2) }}</td>
+                    <td class="amount">Rs. {{ number_format((float)($bill->electricty_charges ?? 0), 2) }}</td>
                 </tr>
                 <tr>
                     <td>Water Charges</td>
-                    <td class="amount">₹ {{ number_format((float)($bill->water_charges ?? 0), 2) }}</td>
+                    <td class="amount">Rs. {{ number_format((float)($bill->water_charges ?? 0), 2) }}</td>
                 </tr>
                 <tr>
                     <td>Licence Fee</td>
-                    <td class="amount">₹ {{ number_format((float)($bill->licence_fees ?? 0), 2) }}</td>
+                    <td class="amount">Rs. {{ number_format((float)($bill->licence_fees ?? 0), 2) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -148,7 +157,7 @@
     <div class="bill-total-wrap">
         <div class="bill-total-box">
             <div class="bill-total-label">Total Amount Payable</div>
-            <div class="grand-total">₹ {{ number_format($bill->grand_total ?? 0, 2) }}</div>
+            <div class="grand-total">Rs. {{ number_format($bill->grand_total ?? 0, 2) }}</div>
             <div class="bill-amount-words">Amount in words: {{ $amountInWords }}</div>
             <div class="bill-pay-by">Please pay as per institutional procedure. Quote Bill No. {{ $bill->bill_no ?? '—' }} when paying.</div>
         </div>

@@ -127,9 +127,29 @@
                         </div>
                     </div>
 
+                    @php
+                        $hasMeterTwo = isset($bill->meter_two) && (int)$bill->meter_two !== 0;
+                        $hasMeterTwoUnits = isset($bill->meter_two_consume_unit) && (int)$bill->meter_two_consume_unit > 0;
+                    @endphp
+                    @if($hasMeterTwo || $hasMeterTwoUnits)
+                    <div class="border-top pt-3 mt-3">
+                        <h6 class="text-secondary small text-uppercase fw-semibold mb-2 opacity-75">Meter Two</h6>
+                        <div class="row row-cols-2 row-cols-md-5 g-2 g-md-3">
+                            <div class="col"><span class="text-muted small d-block">Meter No.</span><span class="fw-medium">{{ $bill->meter_two ?? '—' }}</span></div>
+                            <div class="col"><span class="text-muted small d-block">Previous Reading</span><span>{{ $bill->last_month_elec_red2 ?? '—' }}</span></div>
+                            <div class="col"><span class="text-muted small d-block">Current Reading</span><span>{{ $bill->curr_month_elec_red2 ?? '—' }}</span></div>
+                            <div class="col"><span class="text-muted small d-block">Consumed Unit</span><span>{{ $bill->meter_two_consume_unit ?? '—' }}</span></div>
+                            <div class="col"><span class="text-muted small d-block">Electricity Bill</span><span>₹ {{ number_format((float)($bill->meter_two_elec_charge ?? 0), 2) }}</span></div>
+                        </div>
+                    </div>
+                    @endif
+
                     <div class="border-top pt-3 mt-3">
                         <div class="row g-2 g-md-3 align-items-center flex-wrap">
-                            <div class="col-12 col-md-auto"><span class="text-muted small">Total Consumed Unit</span> <strong class="d-inline-block ms-1">{{ $bill->meter_one_consume_unit ?? 0 }}</strong></div>
+                            <div class="col-12 col-md-auto">
+                                <span class="text-muted small">Total Consumed Unit</span>
+                                <strong class="d-inline-block ms-1">{{ $bill->total_consumed_unit ?? $bill->meter_one_consume_unit ?? 0 }}</strong>
+                            </div>
                             <div class="col-12 col-md-auto"><span class="text-muted small">Total Electricity</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->electricty_charges ?? 0), 2) }}</strong></div>
                             <div class="col-12 col-md-auto"><span class="text-muted small">Licence Fee</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->licence_fees ?? 0), 2) }}</strong> <small class="text-muted">(not Outside Recovery)</small></div>
                             <div class="col-12 col-md-auto"><span class="text-muted small">Water Charge</span> <strong class="d-inline-block ms-1">₹ {{ number_format((float)($bill->water_charges ?? 0), 2) }}</strong></div>
