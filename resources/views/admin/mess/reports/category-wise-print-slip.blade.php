@@ -1,15 +1,15 @@
 @extends('admin.layouts.master')
-@section('title', 'Print Slip - Category Wise')
+@section('title', 'Sale Voucher Report')
 @section('setup_content')
 <div class="container-fluid py-3 py-md-4 {{ request('print_all') ? 'print-all-mode' : '' }}">
-    <x-breadcrum title="Print Slip - Category Wise"></x-breadcrum>
+    <x-breadcrum title="Sale Voucher Report"></x-breadcrum>
     @if(!request('print_all'))
     <!-- Header Section -->
     <div class="card mb-4 border-0 shadow-sm rounded-3 no-print">
         <div class="card-header bg-white border-0 pb-0">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div>
-                    <h5 class="mb-0 fw-semibold text-dark">Filter Print Slip - Category Wise</h5>
+                    <h5 class="mb-0 fw-semibold text-dark">Filter Sale Voucher Report</h5>
                     <p class="mb-0 text-muted small">Refine results by date, client type &amp; buyer name</p>
                 </div>
                 <span class="badge bg-light text-secondary fw-normal d-flex align-items-center">
@@ -144,7 +144,7 @@
     <div class="report-header text-center mb-2 print-slip-page">
         <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
         <div class="report-title-bar">
-            Print Slip – Category Wise
+            Sale Voucher Report
             @if(request('from_date') || request('to_date'))
                 Between {{ $fromDateFormatted }} To {{ $toDateFormatted }}
             @endif
@@ -173,7 +173,7 @@
                         <tr>
                             <th class="th-slip-no">Slip No.</th>
                             <th class="th-buyer">Buyer Name</th>
-                            <th class="th-status">Status</th>
+                            <th class="th-remark">Remark</th>
                             <th class="th-item">Item Name</th>
                             <th class="th-date">Request Date</th>
                             <th class="th-qty">Quantity</th>
@@ -194,13 +194,12 @@
                                     $itemAmount = ($item->quantity ?? 0) * ($item->rate ?? 0);
                                     $sectionTotal += $itemAmount;
                                     $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                                    $statusLabel = $voucher->status_label ?? 'N/A';
                                 @endphp
                                 <tr>
                                     @if($itemIndex === 0)
                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
                                         <td class="align-middle" rowspan="{{ $rowCount }}">{{ $buyerName }}</td>
-                                        <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $statusLabel }}</td>
+                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                     @endif
                                     <td>{{ $itemName }}</td>
                                     <td class="text-center">{{ $requestDate }}</td>
@@ -297,7 +296,7 @@
         font-weight: 600;
         padding: 8px 6px;
     }
-    .print-slip-table .th-slip-no, .print-slip-table .th-date, .print-slip-table .th-status { text-align: center; }
+    .print-slip-table .th-slip-no, .print-slip-table .th-date { text-align: center; }
     .print-slip-table .th-qty, .print-slip-table .th-price, .print-slip-table .th-amount { text-align: right; }
     .print-slip-table tbody td { padding: 6px 8px; vertical-align: middle; }
     .print-slip-table .total-row { background-color: #f0f0f0; font-weight: bold; }
@@ -402,7 +401,7 @@ function printCategoryWiseSlip() {
         return;
     }
 
-    const title = 'Print Slip - Category Wise';
+    const title = 'Sale Voucher Report';
     const dateRange = '{{ (request('from_date') || request('to_date')) ? "Between $fromDateFormatted To $toDateFormatted" : "All Dates" }}';
 
     const printWindow = window.open('', '_blank');

@@ -157,7 +157,7 @@
             </li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.reports.category-wise-print-slip') }}">
-                    <span class="hide-menu small text-nowrap">Category-wise Print Slip</span>
+                    <span class="hide-menu small text-nowrap">Sale Voucher Report</span>
                 </a>
             </li>
             <li class="sidebar-item">
