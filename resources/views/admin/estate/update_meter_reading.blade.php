@@ -324,7 +324,7 @@ $(document).ready(function() {
         }
 
         $('#reading_bill_month').val(billMonthVal);
-        $('#reading_current_date').val(meterReadingDateVal);
+        $('#reading_current_date').val(meterReadingDateVal || '');
         $('#reading_campus_id').val($('#estate_name').val() || '');
         $('#reading_block_id').val($('#building').val() || '');
         $('#reading_unit_type_id').val($('#unit_name').val() || '');

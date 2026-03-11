@@ -118,41 +118,61 @@
                         <div class="text-danger small field-error" data-field="possession_date" role="alert">@error('possession_date'){{ $message }}@enderror</div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input
-                                type="number"
-                                class="form-control"
-                                id="electric_meter_reading_primary"
-                                name="electric_meter_reading_primary"
-                                inputmode="numeric"
-                                min="0"
-                                step="1"
-                                maxlength="10"
-                                value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', '')) }}"
-                                placeholder="Primary (from house meter)"
-                                oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
-                            >
-                            <span class="input-group-text">/</span>
-                            <input
-                                type="number"
-                                class="form-control"
-                                id="electric_meter_reading_secondary"
-                                name="electric_meter_reading_secondary"
-                                required
-                                inputmode="numeric"
-                                min="0"
-                                step="1"
-                                maxlength="10"
-                                value="{{ old('electric_meter_reading_secondary') }}"
-                                placeholder="Secondary (saved & shown in listing)"
-                                oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
-                            >
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-6">
+                                <label for="meter_one_display" class="form-label">Electric Meter No. (I)</label>
+                                <input
+                                    type="text"
+                                    class="form-control bg-body-secondary"
+                                    id="meter_one_display"
+                                    readonly
+                                >
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="electric_meter_reading_primary" class="form-label">Electric Meter Reading (I) <span class="text-danger">*</span></label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="electric_meter_reading_primary"
+                                    name="electric_meter_reading_primary"
+                                    inputmode="numeric"
+                                    min="0"
+                                    step="1"
+                                    maxlength="10"
+                                    value="{{ old('electric_meter_reading_primary', old('electric_meter_reading', '')) }}"
+                                    oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
+                                >
+                                <div class="text-danger small field-error" data-field="electric_meter_reading_primary" role="alert">@error('electric_meter_reading_primary'){{ $message }}@enderror</div>
+                            </div>
+                        </div>
+                        <div class="row g-3 align-items-end mt-1" id="secondary-meter-wrapper">
+                            <div class="col-12 col-md-6">
+                                <label for="meter_two_display" class="form-label">Electric Meter No. (II)</label>
+                                <input
+                                    type="text"
+                                    class="form-control bg-body-secondary"
+                                    id="meter_two_display"
+                                    readonly
+                                >
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="electric_meter_reading_secondary" class="form-label">Electric Meter Reading (II)</label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="electric_meter_reading_secondary"
+                                    name="electric_meter_reading_secondary"
+                                    inputmode="numeric"
+                                    min="0"
+                                    step="1"
+                                    maxlength="10"
+                                    value="{{ old('electric_meter_reading_secondary') }}"
+                                    oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
+                                >
+                                <div class="text-danger small field-error" data-field="electric_meter_reading_secondary" role="alert">@error('electric_meter_reading_secondary'){{ $message }}@enderror</div>
+                            </div>
                         </div>
                         <input type="hidden" id="electric_meter_reading" name="electric_meter_reading" value="{{ old('electric_meter_reading', '') }}">
-                        <div class="form-text">Primary = prefilled from house meter; Secondary = user entry (saved in record & shown in listing).</div>
-                        <div class="text-danger small field-error" data-field="electric_meter_reading_primary" role="alert">@error('electric_meter_reading_primary'){{ $message }}@enderror</div>
-                        <div class="text-danger small field-error" data-field="electric_meter_reading_secondary" role="alert">@error('electric_meter_reading_secondary'){{ $message }}@enderror</div>
                     </div>
                 </div>
 
@@ -194,9 +214,9 @@ $(document).ready(function() {
     }
 
     function syncElectricMeterReading() {
-        const secondary = $('#electric_meter_reading_secondary').val();
-        // estate_possession_details.electric_meter_reading should always mirror secondary input.
-        const valueToStore = (secondary !== '' && secondary !== null) ? secondary : '';
+        const primary = $('#electric_meter_reading_primary').val();
+        // estate_possession_details.electric_meter_reading should mirror the primary input (main meter).
+        const valueToStore = (primary !== '' && primary !== null) ? primary : '';
         $('#electric_meter_reading').val(valueToStore);
     }
 
@@ -273,8 +293,8 @@ $(document).ready(function() {
         if (prefill.allotmentDate) $('#allotment_date').val(prefill.allotmentDate);
         if (prefill.possessionDate) $('#possession_date').val(prefill.possessionDate);
         if (prefill.electricMeterReading !== '' || prefill.electricMeterReadingSecondary !== '') {
-            $('#electric_meter_reading_primary').val(prefill.electricMeterReadingSecondary || '');
-            $('#electric_meter_reading_secondary').val(prefill.electricMeterReading || '');
+            $('#electric_meter_reading_primary').val(prefill.electricMeterReading || '');
+            $('#electric_meter_reading_secondary').val(prefill.electricMeterReadingSecondary || '');
         } else {
             $('#electric_meter_reading_secondary').val('');
         }
@@ -306,6 +326,9 @@ $(document).ready(function() {
     });
     sanitizeMeterInputs();
     syncElectricMeterReading();
+
+    // Initially hide secondary meter row until a house with meter_two is selected.
+    $('#secondary-meter-wrapper').hide();
 
     $('#estate_campus_master_pk').change(function() {
         const campusId = $(this).val();
@@ -393,17 +416,32 @@ $(document).ready(function() {
         var opt = $(this).find('option:selected');
         var meterOne = opt.attr('data-meter-one') || '';
         var meterTwo = opt.attr('data-meter-two') || '';
+        var hadPrimary = $('#electric_meter_reading_primary').val();
+        var hadSecondary = $('#electric_meter_reading_secondary').val();
 
-        if (meterOne !== '' || meterTwo !== '') {
-            if (meterOne !== '') {
-                $('#electric_meter_reading_primary').val(meterOne);
-            }
-            if (meterTwo !== '') {
-                $('#electric_meter_reading_secondary').val(meterTwo);
-            }
-            sanitizeMeterInputs();
-            syncElectricMeterReading();
+        // Always show meter numbers (readonly) next to input boxes.
+        $('#meter_one_display').val(meterOne);
+        $('#meter_two_display').val(meterTwo);
+
+        // Show/hide secondary meter section based on presence of meterTwo (non-empty and non-zero).
+        var hasValidMeterTwo = meterTwo && String(meterTwo).trim() !== '' && parseInt(meterTwo, 10) !== 0;
+        if (hasValidMeterTwo) {
+            $('#secondary-meter-wrapper').show();
+        } else {
+            $('#secondary-meter-wrapper').hide();
+            $('#meter_two_display').val('');
+            $('#electric_meter_reading_secondary').val('');
         }
+
+        // Do not overwrite any existing readings typed/prefilled for requester.
+        // If no readings are present yet, keep inputs empty so user can enter opening readings.
+        if (!hadPrimary && !hadSecondary) {
+            $('#electric_meter_reading_primary').val('');
+            $('#electric_meter_reading_secondary').val('');
+        }
+
+        sanitizeMeterInputs();
+        syncElectricMeterReading();
     });
 
     // AJAX submit: show validation errors below fields only, no page refresh
