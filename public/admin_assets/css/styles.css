@@ -52083,6 +52083,12 @@ h6 {
     border-radius: 50%;
     opacity: 20%;
 }
+.sidebar-menu .sidebar-item .sidebar-link .hide-menu {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow: visible;
+    text-overflow: unset;
+}
 .navbar-nav .nav-link.active {
     background-color: transparent;
     color: #004a93 !important;
