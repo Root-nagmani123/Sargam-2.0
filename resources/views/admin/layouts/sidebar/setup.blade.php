@@ -97,20 +97,30 @@
 
                                             @endif
 
+                                            @endif
+
+                                            @php
+                                                // Estate Management mini section should be visible to:
+                                                // - Admin / Super Admin / Training / IST
+                                                // - Estate / HAC Person
+                                                // - Self-service estate roles (Staff, Student-OT, Doctor, Guest Faculty, Internal Faculty)
+                                                $showEstateMini = hasRole('Admin') || hasRole('Super Admin')
+                                                    || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST')
+                                                    || hasRole('Estate') || hasRole('HAC Person')
+                                                    || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
+                                            @endphp
+                                            @if($showEstateMini)
                                             <!-- Estate Management -->
                                             <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}"
                                                 id="mini-11">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span
-                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i
-                                                            class="material-icons menu-icon material-symbols-rounded">house</i>
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Estate Management</span>
                                                 </a>
                                             </li>
-
                                             @endif
 
                                         </div>

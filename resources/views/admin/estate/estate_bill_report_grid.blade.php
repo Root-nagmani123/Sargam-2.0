@@ -103,7 +103,8 @@ $(document).ready(function() {
                 ajax: {
                     url: dataUrl,
                     data: function (d) {
-                        d.bill_month = billMonth;
+                        // Always read latest value (avoid stale closure on reload)
+                        d.bill_month = $('#bill_month').val();
                     }
                 },
                 columns: [
