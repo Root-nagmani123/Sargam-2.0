@@ -43,6 +43,10 @@
                                 <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
                                 <span>Print</span>
                             </button>
+                            <a href="{{ route('admin.mess.reports.stock-balance-till-date.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
+                                <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                                <span>Download PDF</span>
+                            </a>
                             <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
                                 <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                                 <span>Export Excel</span>

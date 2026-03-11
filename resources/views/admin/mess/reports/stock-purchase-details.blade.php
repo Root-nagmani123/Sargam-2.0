@@ -58,6 +58,10 @@
                             <span class="material-symbols-rounded" style="font-size: 1rem;">print</span>
                             <span>Print</span>
                         </button>
+                        <a href="{{ route('admin.mess.reports.stock-purchase-details.pdf', request()->query()) }}" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" title="Download PDF">
+                             <span class="material-symbols-rounded" style="font-size: 1rem;">picture_as_pdf</span>
+                             <span>PDF</span>
+                        </a>
                         <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
                              <span class="material-symbols-rounded" style="font-size: 1rem;">table_view</span>
                              <span>Export Excel</span>
