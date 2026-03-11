@@ -45,13 +45,23 @@
                             <dd class="col-sm-7 mb-0">{{ $purchaseOrder->payment_code ?? 'N/A' }}</dd>
 
                             @if($purchaseOrder->bill_no)
-                                <dt class="col-sm-5 text-body-secondary fw-normal">Bill No</dt>
+                                <dt class="col-sm-5 text-body-secondary fw-normal">Bill No./Invoice No</dt>
                                 <dd class="col-sm-7 mb-0">{{ $purchaseOrder->bill_no }}</dd>
                             @endif
 
+                            @if($purchaseOrder->bill_date)
+                                <dt class="col-sm-5 text-body-secondary fw-normal">Bill Date</dt>
+                                <dd class="col-sm-7 mb-0">{{ \Illuminate\Support\Carbon::parse($purchaseOrder->bill_date)->format('d/m/Y') }}</dd>
+                            @endif
+
                             @if($purchaseOrder->challan_no)
-                                <dt class="col-sm-5 text-body-secondary fw-normal">Challan No</dt>
+                                <dt class="col-sm-5 text-body-secondary fw-normal">Challan No./Reference</dt>
                                 <dd class="col-sm-7 mb-0">{{ $purchaseOrder->challan_no }}</dd>
+                            @endif
+
+                            @if($purchaseOrder->challan_date)
+                                <dt class="col-sm-5 text-body-secondary fw-normal">Challan Date</dt>
+                                <dd class="col-sm-7 mb-0">{{ \Illuminate\Support\Carbon::parse($purchaseOrder->challan_date)->format('d/m/Y') }}</dd>
                             @endif
                         </dl>
                     </div>

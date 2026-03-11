@@ -222,12 +222,20 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Bill No</label>
+                                    <label class="form-label">Bill No./Invoice No</label>
                                     <input type="text" name="bill_no" class="form-control" maxlength="100" placeholder="Bill number (optional)">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Challan No</label>
+                                    <label class="form-label">Bill Date</label>
+                                    <input type="date" name="bill_date" class="form-control" max="{{ date('Y-m-d') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan No./Reference</label>
                                     <input type="text" name="challan_no" class="form-control" maxlength="100" placeholder="Challan number (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan Date</label>
+                                    <input type="date" name="challan_date" class="form-control" max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
@@ -368,12 +376,20 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Bill No</label>
+                                    <label class="form-label">Bill No./Invoice No</label>
                                     <input type="text" name="bill_no" id="editBillNo" class="form-control" maxlength="100" placeholder="Bill number (optional)">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Challan No</label>
+                                    <label class="form-label">Bill Date</label>
+                                    <input type="date" name="bill_date" id="editBillDate" class="form-control" max="{{ date('Y-m-d') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan No./Reference</label>
                                     <input type="text" name="challan_no" id="editChallanNo" class="form-control" maxlength="100" placeholder="Challan number (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan Date</label>
+                                    <input type="date" name="challan_date" id="editChallanDate" class="form-control" max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
@@ -489,14 +505,26 @@
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
                                 <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Bill No</label>
+                                    <label class="form-label text-body-secondary small mb-1">Bill No./Invoice No</label>
                                     <p class="mb-0 fw-medium text-body" id="viewBillNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
                                 <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Challan No</label>
+                                    <label class="form-label text-body-secondary small mb-1">Bill Date</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewBillDate">&mdash;</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Challan No./Reference</label>
                                     <p class="mb-0 fw-medium text-body" id="viewChallanNo">&mdash;</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Challan Date</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewChallanDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
@@ -782,7 +810,9 @@
                     document.getElementById('viewVendorName').textContent = po.vendor_name || '—';
                     document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
                     document.getElementById('viewBillNo').textContent = po.bill_no || '—';
+                    document.getElementById('viewBillDate').textContent = po.bill_date ? new Date(po.bill_date).toLocaleDateString('en-IN') : '—';
                     document.getElementById('viewChallanNo').textContent = po.challan_no || '—';
+                    document.getElementById('viewChallanDate').textContent = po.challan_date ? new Date(po.challan_date).toLocaleDateString('en-IN') : '—';
                     const billLink = document.getElementById('viewBillLink');
                     const billNone = document.getElementById('viewBillNone');
                     if (po.bill_url) {
@@ -877,7 +907,11 @@
                     document.getElementById('editVendorId').value = po.vendor_id || '';
                     document.getElementById('editPaymentCode').value = po.payment_code || '';
                     document.getElementById('editBillNo').value = po.bill_no || '';
+                    const editBillDateEl = document.getElementById('editBillDate');
+                    if (editBillDateEl) editBillDateEl.value = po.bill_date || '';
                     document.getElementById('editChallanNo').value = po.challan_no || '';
+                    const editChallanDateEl = document.getElementById('editChallanDate');
+                    if (editChallanDateEl) editChallanDateEl.value = po.challan_date || '';
                     var editBillPathEl = document.getElementById('editCurrentBillPath');
                     if (editBillPathEl) {
                         editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po.bill_path) : 'No file chosen';
