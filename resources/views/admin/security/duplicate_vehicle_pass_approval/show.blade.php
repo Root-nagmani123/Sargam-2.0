@@ -108,14 +108,25 @@
                 </div>
             </div>
 
-            @if($application->doc_upload)
+            @php
+                $docPath = $application->doc_upload;
+                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+            @endphp
+            @if($docExists)
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <h5 class="text-primary mb-3">Attached Document</h5>
-                        <a href="{{ asset('storage/' . $application->doc_upload) }}" target="_blank" class="btn btn-outline-primary">
+                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-outline-primary">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">download</i>
                             Download Document
                         </a>
+                    </div>
+                </div>
+            @elseif($docPath)
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <h5 class="text-primary mb-3">Attached Document</h5>
+                        <span class="text-warning small">No file available in storage</span>
                     </div>
                 </div>
             @endif

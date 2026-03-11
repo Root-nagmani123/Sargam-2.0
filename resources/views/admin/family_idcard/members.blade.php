@@ -84,10 +84,14 @@
                                 <td class="col-relation">{{ $member->relation ?? '--' }}</td>
                                 <td class="col-dob">{{ $member->dob ? \Carbon\Carbon::parse($member->dob)->format('d-m-Y') : '--' }}</td>
                                 <td class="col-individual_photo">
-                                    @if(!empty($member->id_photo_path))
-                                        <a href="{{ asset('storage/' . $member->id_photo_path) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
-                                    @elseif(!empty($member->family_photo))
-                                        <a href="{{ asset('storage/' . $member->family_photo) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
+                                    @php
+                                        $indPath = $member->id_photo_path ?: $member->family_photo;
+                                        $indExists = $indPath && \Storage::disk('public')->exists($indPath);
+                                    @endphp
+                                    @if($indExists)
+                                        <a href="{{ asset('storage/' . $indPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
+                                    @elseif($indPath)
+                                        <span class="text-warning small">No file available in storage</span>
                                     @else
                                         --
                                     @endif
@@ -95,8 +99,14 @@
                                 <td class="col-valid_from">{{ $member->valid_from ? \Carbon\Carbon::parse($member->valid_from)->format('d-m-Y') : '--' }}</td>
                                 <td class="col-valid_to">{{ $member->valid_to ? \Carbon\Carbon::parse($member->valid_to)->format('d-m-Y') : '--' }}</td>
                                 <td class="col-family_photo">
-                                    @if(!empty($member->family_photo))
-                                        <a href="{{ asset('storage/' . $member->family_photo) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
+                                    @php
+                                        $famPath = $member->family_photo;
+                                        $famExists = $famPath && \Storage::disk('public')->exists($famPath);
+                                    @endphp
+                                    @if($famExists)
+                                        <a href="{{ asset('storage/' . $famPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
+                                    @elseif($famPath)
+                                        <span class="text-warning small">No file available in storage</span>
                                     @else
                                         --
                                     @endif
