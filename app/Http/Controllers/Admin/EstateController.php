@@ -376,8 +376,9 @@ class EstateController extends Controller
             $data['employee_pk'] = (int) ($request->input('employee_pk', 0));
         }
 
-        // Prevent duplicate active requests: only one Pending (0) or Allotted (1) per employee.
-        // After Return House, status becomes 2 (Rejected/closed) so they can submit a new request.
+        // Prevent duplicate active occupation per employee.
+        // Rule: block only if the employee currently occupies a house
+        // (i.e. there is an active, not-yet-returned possession linked to any of their requests).
         if (! $isEdit) {
             $employeePkForCheck = (int) ($data['employee_pk'] ?? 0);
             $idsToCheck = [$employeePkForCheck];
@@ -386,9 +387,29 @@ class EstateController extends Controller
                 $idsToCheck = array_filter($idsToCheck, fn ($id) => $id > 0);
             }
             if (!empty($idsToCheck)) {
-                $hasActiveRequest = EstateHomeRequestDetails::whereIn('employee_pk', $idsToCheck)
-                    ->whereIn('status', [0, 1])
-                    ->exists();
+                $hasPossessionTable = \Illuminate\Support\Facades\Schema::hasTable('estate_possession_details');
+
+                $activeQuery = EstateHomeRequestDetails::whereIn('employee_pk', $idsToCheck)
+                    // Only requests that are Pending or Allotted can have an active occupation.
+                    ->whereIn('status', [0, 1]);
+
+                if ($hasPossessionTable) {
+                    // If possession table exists, require an active (not returned) possession row.
+                    $activeQuery->whereExists(function ($sub) {
+                        $sub->from('estate_possession_details as epd')
+                            ->whereColumn('epd.estate_home_request_details', 'estate_home_request_details.pk')
+                            ->whereNotNull('epd.estate_house_master_pk')
+                            ->where('epd.estate_change_id', -1);
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                            $sub->where(function ($q) {
+                                $q->whereNull('epd.return_home_status')
+                                    ->orWhere('epd.return_home_status', 0);
+                            });
+                        }
+                    });
+                }
+
+                $hasActiveRequest = $activeQuery->exists();
 
                 if ($hasActiveRequest) {
                     $errorMessage = 'You already have an active estate request. You cannot submit another until the current one is closed or you return the house.';
@@ -456,65 +477,34 @@ class EstateController extends Controller
                 : "COALESCE(NULLIF(TRIM(em.emp_id), ''), '')")
             : ($hasEmployeeId ? "COALESCE(NULLIF(TRIM(em.employee_id), ''), '')" : "''");
 
-        // Employees who have an active estate request (Allotted, or Pending and not Rejected)
-        // should NOT appear in the Add Estate Request employee dropdown.
-        // Rejected = main status=2, or status=0 with app_status=2 or hac_status=2 (so they can request again).
-        $hasAppStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_home_request_details', 'app_status');
-        $hasHacStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_home_request_details', 'hac_status');
-
-        // 1) Base "active request" rule from request table: Allotted, or Pending and not rejected.
-        $activeQuery = EstateHomeRequestDetails::where('employee_pk', '>', 0)
-            ->where(function ($q) use ($hasAppStatus, $hasHacStatus) {
-                $q->where('status', 1); // Allotted → always exclude
-                if ($hasAppStatus && $hasHacStatus) {
-                    // Pending but not rejected (app_status=2 or hac_status=2 = rejected → allow in dropdown)
-                    $q->orWhere(function ($q2) {
-                        $q2->where('status', 0)
-                            ->where(function ($q3) {
-                                $q3->whereNull('app_status')->orWhere('app_status', '!=', 2);
-                            })
-                            ->where(function ($q3) {
-                                $q3->whereNull('hac_status')->orWhere('hac_status', '!=', 2);
-                            });
-                    });
-                } else {
-                    $q->orWhere('status', 0); // No app/hac columns: exclude all Pending
-                }
-            });
-
-        // 2) For Allotted requests (current_alot not empty), treat them as "active"
-        //    only while there is an active possession (return_home_status = 0 or NULL).
-        //    Once house is returned, employee should be allowed to request again, so
-        //    such requests must drop out of the active set.
+        // Employees ko dropdown se block sirf tab karna hai jab unke paas
+        // kisi bhi request ke against ek "active possession" ho
+        // (estate_possession_details.return_home_status = 0 ya NULL).
+        // Jinke sab houses return ho chuke hain (sirf return_home_status = 1 rows),
+        // unhe dubara request karne dena hai.
+        $activePossessionEmployeePks = [];
         if (\Illuminate\Support\Facades\Schema::hasTable('estate_possession_details')) {
-            $activeQuery->where(function ($outer) {
-                $outer
-                    // (a) Pending requests (no current_alot) are always active until explicitly rejected.
-                    ->whereNull('estate_home_request_details.current_alot')
-                    // (b) Allotted requests (current_alot present) are active only while possession is not returned.
-                    ->orWhere(function ($inner) {
-                        $inner->whereNotNull('estate_home_request_details.current_alot')
-                            ->whereExists(function ($sub) {
-                                $sub->from('estate_possession_details as epd')
-                                    ->whereColumn('epd.estate_home_request_details', 'estate_home_request_details.pk')
-                                    ->whereNotNull('epd.estate_house_master_pk');
-                                if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
-                                    $sub->where(function ($q) {
-                                        $q->whereNull('epd.return_home_status')
-                                            ->orWhere('epd.return_home_status', 0);
-                                    });
-                                }
-                            });
-                    });
-            });
+            $hasReturnStatus = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status');
+            $epdQuery = DB::table('estate_possession_details as epd')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->where('ehrd.employee_pk', '>', 0)
+                ->whereNotNull('epd.estate_house_master_pk');
+            if ($hasReturnStatus) {
+                $epdQuery->where(function ($q) {
+                    $q->whereNull('epd.return_home_status')
+                        ->orWhere('epd.return_home_status', 0);
+                });
+            }
+            $activePossessionEmployeePks = $epdQuery
+                ->pluck('ehrd.employee_pk')
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->all();
         }
-        $activeEmployeePks = $activeQuery
-            ->pluck('employee_pk')
-            ->filter()
-            ->map(fn ($v) => (int) $v)
-            ->unique()
-            ->values()
-            ->toArray();
+
+        // Final active set = employees jinke paas kam se kam ek active possession hai.
+        // Baaki sab (including returned) dropdown me allowed hain.
+        $activeEmployeePks = array_values(array_unique($activePossessionEmployeePks));
 
         $query = DB::table('estate_house_master as h')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
