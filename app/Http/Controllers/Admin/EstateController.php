@@ -376,8 +376,11 @@ class EstateController extends Controller
             $data['employee_pk'] = (int) ($request->input('employee_pk', 0));
         }
 
-        // Prevent duplicate active requests: only one Pending (0) or Allotted (1) per employee.
-        // After Return House, status becomes 2 (Rejected/closed) so they can submit a new request.
+        // Prevent duplicate active possession (per employee).
+        // Business rule (self-service):
+        // - Employee should NOT be able to submit a new request if they already occupy a house
+        //   (i.e. there is an active, not-yet-returned possession tied to any of their requests).
+        // - Purely "Pending" requests without any possession should NOT block a new request.
         if (! $isEdit) {
             $employeePkForCheck = (int) ($data['employee_pk'] ?? 0);
             $idsToCheck = [$employeePkForCheck];
@@ -386,9 +389,29 @@ class EstateController extends Controller
                 $idsToCheck = array_filter($idsToCheck, fn ($id) => $id > 0);
             }
             if (!empty($idsToCheck)) {
-                $hasActiveRequest = EstateHomeRequestDetails::whereIn('employee_pk', $idsToCheck)
+                $hasPossessionTable = \Illuminate\Support\Facades\Schema::hasTable('estate_possession_details');
+
+                $activeReqQuery = EstateHomeRequestDetails::whereIn('employee_pk', $idsToCheck)
                     ->whereIn('status', [0, 1])
-                    ->exists();
+                    ->whereNotNull('current_alot')
+                    ->whereRaw("TRIM(COALESCE(current_alot, '')) != ''");
+
+                if ($hasPossessionTable) {
+                    $activeReqQuery->whereExists(function ($sub) {
+                        $sub->from('estate_possession_details as epd')
+                            ->whereColumn('epd.estate_home_request_details', 'estate_home_request_details.pk')
+                            ->whereNotNull('epd.estate_house_master_pk')
+                            ->where('epd.estate_change_id', -1);
+                        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                            $sub->where(function ($q) {
+                                $q->whereNull('epd.return_home_status')
+                                    ->orWhere('epd.return_home_status', 0);
+                            });
+                        }
+                    });
+                }
+
+                $hasActiveRequest = $activeReqQuery->exists();
 
                 if ($hasActiveRequest) {
                     $errorMessage = 'You already have an active estate request. You cannot submit another until the current one is closed or you return the house.';
