@@ -51,14 +51,11 @@ class IssueLogManagement extends Model
         'device_id',
         'updated_by',
         'updated_date',
-        'clear_date',
-        'clear_time',
     ];
 
     protected $casts = [
         'created_date' => 'datetime',
         'updated_date' => 'datetime',
-        'clear_date' => 'datetime',
         'issue_status' => 'integer',
         'behalf' => 'integer',
         'notification_status' => 'integer',
@@ -114,11 +111,12 @@ class IssueLogManagement extends Model
     }
 
     /**
-     * Get the status history for this issue.
+     * Get the status history for this issue (latest/last record first).
      */
     public function statusHistory()
     {
         return $this->hasMany(IssueLogStatus::class, 'issue_log_management_pk', 'pk')
+                    
                     ->orderBy('issue_date', 'desc');
     }
 
@@ -135,15 +133,20 @@ class IssueLogManagement extends Model
      */
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by', 'pk');
+        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
+    }
+
+     public function nodal_officer()
+    {
+        return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
     }
 
     /**
-     * Get the user who logged this issue.
+     * Get the employee who logged this issue (the one who submitted the form).
      */
     public function logger()
     {
-        return $this->belongsTo(User::class, 'issue_logger', 'pk');
+        return $this->belongsTo(EmployeeMaster::class, 'issue_logger', 'pk');
     }
 
     /**

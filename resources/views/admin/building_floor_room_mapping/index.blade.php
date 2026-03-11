@@ -30,7 +30,7 @@
                 <form method="GET" action="{{ route('hostel.building.floor.room.map.index') }}" class="mb-3">
                     <div class="row g-2">
                         <div class="col-md-3">
-                            <input type="text" name="search" class="form-control form-control-sm"
+                            <input type="text" name="search" class="form-control "
                                 placeholder="Search..." value="{{ request('search') }}">
                         </div>
                         <div class="col-md-2">
@@ -97,7 +97,7 @@
                                 <td>{{ $row->room_type }}</td>
                                 <td>{{ $row->capacity }}</td>
                                 <td>
-                                    <input type="text" class="form-control form-control-sm comment-input"
+                                    <input type="text" class="form-control  comment-input"
                                         data-id="{{ $row->pk }}" value="{{ $row->comment }}">
                                 </td>
                                 <td>

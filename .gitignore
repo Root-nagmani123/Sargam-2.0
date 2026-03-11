@@ -17,3 +17,13 @@ yarn-error.log
 /.vscode
 composer.lock
 composer.json
+
+# Project-specific ignores
+testsargam2_dump1811_20012026.sql
+docker-compose.yml
+/java-backup
+/java-project
+/nginx.conf
+/praposed-mess-management-sidebar-option.jpeg
+/LBSNAA
+/SECURITY_MODULE_IMPLEMENTATION.md

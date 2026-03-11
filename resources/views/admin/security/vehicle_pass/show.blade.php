@@ -174,9 +174,9 @@
                         <label class="form-label fw-bold">Employee Name</label>
                         <div class="form-control bg-light">
                             @if($vehiclePass->employee)
-                                {{ $vehiclePass->employee->emp_name }}
+                                {{ $vehiclePass->employee->name ?? trim($vehiclePass->employee->first_name . ' ' . ($vehiclePass->employee->last_name ?? '')) }}
                             @else
-                                <span class="text-muted">--</span>
+                                <span class="text-muted">{{ $vehiclePass->employee_id_card ?: '--' }}</span>
                             @endif
                         </div>
                     </div>
@@ -186,9 +186,9 @@
                         <label class="form-label fw-bold">Employee Code</label>
                         <div class="form-control bg-light">
                             @if($vehiclePass->employee)
-                                {{ $vehiclePass->employee->emp_code ?? '--' }}
+                                {{ $vehiclePass->employee->emp_id ?? $vehiclePass->employee_id_card ?? '--' }}
                             @else
-                                <span class="text-muted">--</span>
+                                <span class="text-muted">{{ $vehiclePass->employee_id_card ?: '--' }}</span>
                             @endif
                         </div>
                     </div>

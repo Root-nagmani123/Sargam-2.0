@@ -10,13 +10,16 @@ class VehiclePassTWApplyApproval extends Model
     protected $primaryKey = 'pk';
     public $timestamps = false;
 
+    /** Aligned with SQL: vehicle_pass_tw_apply_approval (vehicle_TW_pk varchar, created_by, veh_emp_approval_pk, modified_by, etc.) */
     protected $fillable = [
         'vehicle_TW_pk',
-        'veh_recommend_status',
         'status',
         'veh_approval_remarks',
-        'veh_approved_by',
+        'veh_recommend_status',
+        'veh_emp_approval_pk',
+        'created_by',
         'created_date',
+        'modified_by',
         'modified_date',
     ];
 
@@ -32,7 +35,7 @@ class VehiclePassTWApplyApproval extends Model
 
     public function approvedBy()
     {
-        return $this->belongsTo(EmployeeMaster::class, 'veh_approved_by', 'pk');
+        return $this->belongsTo(EmployeeMaster::class, 'created_by', 'pk');
     }
 
     public function getRecommendStatusTextAttribute()

@@ -97,7 +97,7 @@ class User extends Authenticatable
     );
 }
 
-    /**
+/**
      * Employees and faculty for complaint section (complainant / assignment dropdowns).
      * user_credentials.user_id maps to employee_master.pk and faculty_master.employee_master_pk.
      * Excludes students: user_credentials.user_category != 'S'.

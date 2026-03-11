@@ -5,14 +5,16 @@
 @section('content')
 <style>
 .admin-dashboard-surface {
-    background: #f5f6f8;
+    background: linear-gradient(180deg, #f8f9fb 0%, #f3f5f9 100%);
+    min-height: 100%;
 }
 
 .dashboard-stat-card {
     border: 0;
     border-left: 3px solid var(--bs-border-color);
-    border-radius: 0.45rem;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+    border-radius: 0.9rem;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
+    overflow: hidden;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -53,9 +55,9 @@
 
 .dashboard-panel {
     border: 0;
-    border-radius: 0.65rem;
-    background: #f2f2f6;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.07);
+    border-radius: 0.9rem;
+    background: var(--bs-body-bg);
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.07);
 }
 
 .dashboard-panel .card-header {
@@ -93,8 +95,8 @@
 }
 
 .dashboard-welcome {
-    background: var(--bs-primary);
-    border-radius: 0.65rem;
+    background: #004a93 !important;
+    border-radius: 0.9rem;
     color: #fff;
     padding: 1rem 1.25rem;
     margin-bottom: 1.25rem;
@@ -119,6 +121,9 @@
 
 .dashboard-stat-card .stat-link-hint {
     font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1rem;
     opacity: 0;
     transition: opacity 0.2s ease;
 }
@@ -129,7 +134,7 @@
     padding: 1.5rem 1rem;
     color: var(--bs-secondary);
 }
-.dashboard-empty-state .bi { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
+.dashboard-empty-state .material-icons { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
 
 .dashboard-tweet-item {
     border-left: 3px solid var(--bs-primary);
@@ -144,6 +149,9 @@
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
 }
+table>thead{
+    background-color: transparent !important;
+}
 </style>
 
 @php
@@ -155,14 +163,14 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
-<div class="container-fluid px-3 px-md-4 py-3 admin-dashboard-surface">
-    <div class="dashboard-welcome d-flex flex-wrap align-items-center justify-content-between gap-2">
+<div class="container-fluid px-3 px-md-4 py-3 pb-4 admin-dashboard-surface">
+    <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
             <div class="text-white">{{ now()->format('l, d F Y') }}</div>
         </div>
         <div class="d-none d-sm-block">
-            <i class="bi bi-calendar3 me-1"></i>
+            <span class="material-icons material-symbols-rounded align-middle me-1">calendar_month</span>
             <span class="small">{{ now()->format('h:i A') }}</span>
         </div>
     </div>
@@ -170,14 +178,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
     <div class="row g-3 mb-4">
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-blue h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Total Active Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $totalActiveCourses }}</div>
-                            <span class="stat-link-hint text-primary">View →</span>
+                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-journal-bookmark-fill"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">menu_book</span></span>
                     </div>
                 </div>
             </a>
@@ -185,14 +193,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-green h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Upcoming Courses</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $upcomingCourses }}</div>
-                            <span class="stat-link-hint text-success">View →</span>
+                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-calendar-event"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">event</span></span>
                     </div>
                 </div>
             </a>
@@ -200,14 +208,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-amber h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Upcoming Events</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">2</div>
-                            <span class="stat-link-hint text-warning">View →</span>
+                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-megaphone"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">campaign</span></span>
                     </div>
                 </div>
             </a>
@@ -216,27 +224,27 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         <div class="col-xl-3 col-md-6">
             @if(hasRole('Student-OT'))
             <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-rose h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Medical Exception</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $exemptionCount }}</div>
-                            <span class="stat-link-hint text-danger">View →</span>
+                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-heart-pulse"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">monitor_heart</span></span>
                     </div>
                 </div>
             </a>
             @else
             <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-rose h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Total Guest Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-danger">{{ $total_guest_faculty }}</div>
-                            <span class="stat-link-hint text-danger">View →</span>
+                            <span class="stat-link-hint text-danger">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-person-badge"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
                     </div>
                 </div>
             </a>
@@ -246,27 +254,27 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         <div class="col-xl-3 col-md-6">
             @if(hasRole('Student-OT'))
             <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-blue h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">OT MDO/Escort</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $MDO_count }}</div>
-                            <span class="stat-link-hint text-primary">View →</span>
+                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-person-gear"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">manage_accounts</span></span>
                     </div>
                 </div>
             </a>
             @else
             <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-blue h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Total Inhouse Faculty</p>
                             <div class="dashboard-stat-value fw-semibold text-primary">{{ $total_internal_faculty }}</div>
-                            <span class="stat-link-hint text-primary">View →</span>
+                            <span class="stat-link-hint text-primary">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-people"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">groups</span></span>
                     </div>
                 </div>
             </a>
@@ -276,14 +284,14 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-green h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Session Details</p>
                             <div class="dashboard-stat-value fw-semibold text-success">{{ $totalSessions }}</div>
-                            <span class="stat-link-hint text-success">View →</span>
+                            <span class="stat-link-hint text-success">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-clock-history"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">history</span></span>
                     </div>
                 </div>
             </a>
@@ -293,45 +301,28 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         @if(isset($isCCorACC) && $isCCorACC)
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-amber h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Total Students</p>
                             <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $totalStudents }}</div>
-                            <span class="stat-link-hint text-warning">View →</span>
+                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
                         </div>
-                        <span class="stat-icon"><i class="bi bi-person-vcard"></i></span>
+                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">contacts</span></span>
                     </div>
                 </div>
             </a>
         </div>
         @endif
-
-        {{--@if(hasRole('Admin') || hasRole('Training-Induction'))
-        <div class="col-xl-3 col-md-6">
-            <a href="{{ route('admin.dashboard-statistics.charts') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card card-rose h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                                <p class="small text-dark mb-1">Batch Profile</p>
-                            <div class="dashboard-stat-value fw-semibold text-danger">{{ $batchProfileCoursesCount ?? 0 }}</div>
-                            <span class="stat-link-hint text-danger">View →</span>
-                        </div>
-                        <span class="stat-icon"><i class="bi bi-bar-chart-line"></i></span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endif--}}
     </div>
 
     <div class="row g-4">
         <div class="col-lg-8">
         @if(hasRole('Admin') || hasRole('Training-Induction'))
-            <div class="card dashboard-panel mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-semibold d-flex align-items-center gap-2">
-                        <i class="bi bi-bell-fill text-primary"></i>
+                        <span class="material-icons material-symbols-rounded text-primary">notifications</span>
                         {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
                     </h5>
                     <span class="badge text-bg-primary rounded-pill">{{ $notifications->count() }}</span>
@@ -339,17 +330,17 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 <div class="card-body p-3 p-md-4 dashboard-list-scroll">
                     @if($notifications->isEmpty())
                     <div class="dashboard-empty-state">
-                        <i class="bi bi-bell"></i>
+                        <span class="material-icons material-symbols-rounded">notifications_off</span>
                         <p class="mb-0 small">No notifications available.</p>
                     </div>
                     @else
                     <div class="list-group list-group-flush">
                         @foreach($notifications as $notification)
                         <button type="button"
-                            class="list-group-item list-group-item-action border-0 rounded-2 mb-1 bg-body"
+                            class="list-group-item list-group-item-action border-0 rounded-3 mb-1 bg-body shadow-sm"
                             onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
                             <div class="d-flex gap-2">
-                                <i class="bi bi-circle-fill text-primary mt-1" style="font-size: .45rem;"></i>
+                                <span class="material-icons material-symbols-rounded text-primary mt-1" style="font-size: .5rem; line-height: 1;">lens</span>
                                 <span class="small text-start">{{ $notification->message }}</span>
                             </div>
                         </button>
@@ -359,9 +350,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 </div>
             </div>
 
-            <div class="card dashboard-panel mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <i class="bi bi-megaphone text-primary"></i>
+                    <span class="material-icons material-symbols-rounded text-primary">campaign</span>
                     <h5 class="mb-0 fw-semibold">Campus Tweets</h5>
                 </div>
                 <div class="card-body p-3 p-md-4">
@@ -379,9 +370,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             @endif
 
             @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
-            <div class="card dashboard-panel mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <i class="bi bi-journal-check text-primary"></i>
+                    <span class="material-icons material-symbols-rounded text-primary">fact_check</span>
                     <h5 class="mb-0 fw-semibold">Today's Classes</h5>
                 </div>
                 <div class="card-body p-3 p-md-4">
@@ -404,7 +395,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     </div>
                     @else
                     <div class="dashboard-empty-state">
-                        <i class="bi bi-calendar-x"></i>
+                        <span class="material-icons material-symbols-rounded">event_busy</span>
                         <p class="mb-0 small">No classes scheduled for today.</p>
                     </div>
                     @endif
@@ -412,27 +403,27 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
             </div>
             @endif
 
-            <div class="card dashboard-panel">
+            <div class="card dashboard-panel shadow-sm rounded-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <i class="bi bi-pin-angle text-primary"></i>
+                    <span class="material-icons material-symbols-rounded text-primary">push_pin</span>
                     <h5 class="mb-0 fw-semibold">Notices</h5>
                 </div>
                 <div class="card-body p-3 p-md-4 dashboard-list-scroll">
                     @if(count($notices) === 0)
                     <div class="dashboard-empty-state">
-                        <i class="bi bi-file-earmark-text"></i>
+                        <span class="material-icons material-symbols-rounded">description</span>
                         <p class="mb-0 small">No notices available.</p>
                     </div>
                     @else
                     <ul class="list-unstyled mb-0">
                         @foreach($notices as $notice)
-                        <li class="mb-3 d-flex gap-2 align-items-start">
-                            <i class="bi bi-file-earmark-text text-primary mt-1 flex-shrink-0" style="font-size: 0.9rem;"></i>
+                        <li class="mb-3 pb-2 border-bottom border-light-subtle d-flex gap-2 align-items-start">
+                            <span class="material-icons material-symbols-rounded text-primary mt-1 flex-shrink-0" style="font-size: 0.9rem;">description</span>
                             <div>
                                 <span class="text-body fw-medium">{{ $notice->notice_title }}</span>
                                 <small class="d-block text-body-secondary">{{ date('d M, Y', strtotime($notice->created_at)) }}</small>
                                 @if($notice->document)
-                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="small text-danger text-decoration-none"><i class="bi bi-paperclip me-1"></i>View attachment</a>
+                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="small text-danger text-decoration-none"><span class="material-icons material-symbols-rounded align-middle me-1" style="font-size: 1rem;">attach_file</span>View attachment</a>
                                 @endif
                             </div>
                         </li>
@@ -444,15 +435,15 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
 
         <div class="col-lg-4">
-            <div class="card dashboard-panel mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <i class="bi bi-balloon-heart text-primary"></i>
+                    <span class="material-icons material-symbols-rounded text-primary">cake</span>
                     <h4 class="mb-0 fw-semibold text-primary">Today's Birthday</h4>
                 </div>
                 <div class="card-body p-3 dashboard-list-scroll">
                     @if($emp_dob_data->isEmpty())
                     <div class="dashboard-empty-state">
-                        <i class="bi bi-gift"></i>
+                        <span class="material-icons material-symbols-rounded">card_giftcard</span>
                         <p class="mb-0 small">No birthdays today.</p>
                     </div>
                     @else
@@ -463,7 +454,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                         $avClass = $avClasses[$loop->index % count($avClasses)];
                         $photo = !empty($employee->profile_picture) ? asset('storage/' . $employee->profile_picture) : null;
                         @endphp
-                        <div class="card dashboard-birthday-item rounded-3">
+                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-3">
                             <div class="card-body p-3 d-flex align-items-start gap-2">
                                 @if($photo)
                                 <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
@@ -486,9 +477,9 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 </div>
             </div>
 
-            <div class="card dashboard-panel">
+            <div class="card dashboard-panel shadow-sm rounded-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <i class="bi bi-calendar3 text-primary"></i>
+                    <span class="material-icons material-symbols-rounded text-primary">calendar_month</span>
                     <h5 class="mb-0 fw-semibold">Calendar</h5>
                 </div>
                 <div class="card-body p-3 p-md-4">

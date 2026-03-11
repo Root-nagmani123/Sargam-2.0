@@ -538,6 +538,59 @@
 
             @include('admin.layouts.sidebar')
             <div class="body-wrapper">
+                @if(session('low_stock_alert') && is_array(session('low_stock_alert')) && count(session('low_stock_alert')) > 0)
+                    <div class="low-stock-alert-overlay" id="lowStockAlertOverlay" role="dialog" aria-modal="true" aria-labelledby="lowStockAlertTitle">
+                        <div class="low-stock-alert-box">
+                            <div class="low-stock-alert-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold" id="lowStockAlertTitle">Low Stock Alert!</h5>
+                                <button type="button" class="btn-close" onclick="document.getElementById('lowStockAlertOverlay').style.display='none'" aria-label="Close"></button>
+                            </div>
+                            <div class="low-stock-alert-body">
+                                <ul class="mb-0 ps-3">
+                                    @foreach(session('low_stock_alert') as $row)
+                                        <li class="mb-2">
+                                            <strong>Item:</strong> {{ $row['item_name'] ?? '—' }}
+                                            &nbsp;|&nbsp;
+                                            <strong>Available:</strong> {{ number_format($row['remaining_quantity'] ?? 0, 2) }} {{ $row['unit'] ?? 'Unit' }}
+                                            &nbsp;|&nbsp;
+                                            <strong>Minimum Required:</strong> {{ number_format($row['alert_quantity'] ?? 0, 2) }} {{ $row['unit'] ?? 'Unit' }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-danger mt-3">View Stock Balance</a>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        .low-stock-alert-overlay {
+                            position: fixed;
+                            inset: 0;
+                            z-index: 9999;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: rgba(0,0,0,0.4);
+                            padding: 1rem;
+                        }
+                        .low-stock-alert-box {
+                            background: #fff;
+                            border-radius: 12px;
+                            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                            max-width: 480px;
+                            width: 100%;
+                            overflow: hidden;
+                        }
+                        .low-stock-alert-header {
+                            background: #dc3545;
+                            color: #fff;
+                            padding: 1rem 1.25rem;
+                        }
+                        .low-stock-alert-body {
+                            padding: 1.25rem 1.5rem;
+                            background: #fff5f5;
+                        }
+                    </style>
+                @endif
                 <main id="main-content" tabindex="-1" role="main">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">

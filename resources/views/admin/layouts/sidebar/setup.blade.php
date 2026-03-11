@@ -1,25 +1,21 @@
 <aside class="side-mini-panel with-vertical sidebar-google-style">
-    <div style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
+    <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
-            <div style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
-                <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;">
+        <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
+            <div class="flex-fill d-flex flex-column" style="min-height: 0;">
+                <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
                     <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
-                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)"
-                            data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                            aria-label="Toggle menu">
+                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
+                            data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
 
-                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">
+                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
                                 menu
                             </i>
-
                         </a>
                     </div>
-                    <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init"
-                        style="flex: 1 1 auto; min-height: 0;">
+                    <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer"></div>
@@ -30,40 +26,32 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            <li class="mini-nav-item" id="setup-mini-4">
+                                            <li class="mini-nav-item {{ request()->is('academic*') ? 'selected' : '' }}" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span
-                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i
-                                                            class="material-icons menu-icon material-symbols-rounded">dashboard_customize</i>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">dashboard_customize</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Academic</span>
                                                 </a>
                                             </li>
 
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||
-                                            hasRole('Training-MCTP') || hasRole('IST'))
-                                            <li class="mini-nav-item" id="setup-mini-5">
+                                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))
+                                            <li class="mini-nav-item {{ request()->is('timetable*') ? 'selected' : '' }}" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span
-                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i
-                                                            class="material-icons menu-icon material-symbols-rounded">calendar_month</i>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">calendar_month</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Time Table</span>
                                                 </a>
                                             </li>
-                                            @endif
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
-                                            <li class="mini-nav-item" id="setup-mini-6">
+
+                                            <li class="mini-nav-item {{ request()->is('users*') ? 'selected' : '' }}" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span
-                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i
-                                                            class="material-icons menu-icon material-symbols-rounded">user_attributes</i>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">user_attributes</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Users</span>
                                                 </a>
@@ -71,54 +59,54 @@
                                             @endif
                                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
                                             @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
-                                            <li class="mini-nav-item" id="setup-mini-7">
+                                            <li class="mini-nav-item {{ request()->is('master*') ? 'selected' : '' }}" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span
-                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i
-                                                            class="material-icons menu-icon material-symbols-rounded">menu_open</i>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">menu_open</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">Master</span>
                                                 </a>
                                             </li>
-                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                id="mini-3">
+                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-3">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
-                                                    <span
-                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i
-                                                            class="material-icons menu-icon material-symbols-rounded">note_add</i>
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">note_add</i>
                                                     </span>
                                                     <span class="mini-nav-title sidebar-google-label">FC Forms</span>
                                                 </a>
                                             </li>
+                                           {{-- <li class="mini-nav-item {{ request()->is('mess*') ? 'selected' : '' }}" id="setup-mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">restaurant_menu</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Mess Management</span>
+                                                </a>
+                                            </li>--}}
 
                                             @endif
 
                                             @endif
-
-                                            @php
-                                                // Estate Management mini section should be visible to:
-                                                // - Admin / Super Admin / Training / IST
-                                                // - Estate / HAC Person
-                                                // - Self-service estate roles (Staff, Student-OT, Doctor, Guest Faculty, Internal Faculty)
-                                                $showEstateMini = hasRole('Admin') || hasRole('Super Admin')
-                                                    || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST')
-                                                    || hasRole('Estate') || hasRole('HAC Person')
-                                                    || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
-                                            @endphp
-                                            @if($showEstateMini)
-                                            <!-- Estate Management -->
-                                            <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}"
-                                                id="mini-11">
+                                            @if(! hasRole('Student-OT'))
+                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
                                                     <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i class="material-icons menu-icon material-symbols-rounded">house</i>
+                                                        <i class="material-icons menu-icon material-symbols-rounded">shield</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Estate Management</span>
+                                                    <span class="mini-nav-title sidebar-google-label">Security</span>
+                                                </a>
+                                            </li>
+                                            <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}" id="mini-10">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">report_problem</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Centcom</span>
                                                 </a>
                                             </li>
                                             @endif
@@ -128,8 +116,7 @@
                                 </div>
                             </div>
 
-                            <div class="simplebar-placeholder" style="width: 80px; min-width: 80px; height: 537px;">
-                            </div>
+                            <div class="simplebar-placeholder" style="width: 80px; min-width: 80px; height: 537px;"></div>
                         </div>
                         <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
                             <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
@@ -164,13 +151,21 @@
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mappings />
 
+                    <!-- Issue Management (CENTCOM) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_issue_management />
+
                     <!-- Forms -->
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
 
-                    <!-- Estate Management -->
-                    <x-menu.setup_estate_management />
+                    <!-- Mess Management -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_mess_management />
 
+                    <!-- Security Management (Vehicle & Visitor Pass) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_security_management />
 
                 </div>
             </div>
@@ -179,195 +174,202 @@
 </aside>
 
 <style>
-/* Google-style sidebar - light gray, icon above text, oval selected state */
-#sidebar-setup .sidebar-google-style.side-mini-panel {
-    width: 90px;
-}
+    /* Google-style sidebar - light gray, icon above text, oval selected state */
+    #sidebar-setup .sidebar-google-style.side-mini-panel {
+        width: 90px;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav {
-    background: #F0F0F0 !important;
-    padding: 12px 0;
-    border-radius: 10px;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav {
+        background: #f0f0f0 !important;
+        border: 1px solid var(--bs-border-color-translucent);
+        padding: 12px 0;
+        border-radius: 10px;
+    }
 
-#sidebar-setup .sidebar-google-style .sidebar-google-hamburger {
-    padding: 16px 0;
-    margin: 0;
-}
+    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger {
+        padding: 16px 0;
+        margin: 0;
+    }
 
-#sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
-    color: #555 !important;
-}
+    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
+        color: var(--bs-secondary-color) !important;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item {
-    list-style: none;
-    display: flex !important;
-    justify-content: center !important;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item {
+        list-style: none;
+        display: flex !important;
+        justify-content: center !important;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav ul.mini-nav-ul {
-    padding-inline-start: 0 !important;
-    list-style: none !important;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav ul.mini-nav-ul {
+        padding-inline-start: 0 !important;
+        list-style: none !important;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 12px 8px !important;
-    padding-left: 8px !important;
-    margin: 4px 8px !important;
-    background: transparent !important;
-    height: auto !important;
-    min-height: 56px;
-    width: 100%;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 12px 8px !important;
+        padding-left: 8px !important;
+        margin: 4px 8px !important;
+        background: transparent !important;
+        height: auto !important;
+        min-height: 56px;
+        width: 100%;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
 
-#sidebar-setup .sidebar-google-style .sidebar-google-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px;
-    text-align: center !important;
-}
+    #sidebar-setup .sidebar-google-style .sidebar-google-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px;
+        text-align: center !important;
+    }
 
-#sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 48px;
-    height: 32px;
-    margin-inline: auto;
-    border-radius: 24px;
-    transition: background 0.2s;
-}
+    #sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 48px;
+        height: 32px;
+        margin-inline: auto;
+        border-radius: 24px;
+        transition: background 0.2s;
+    }
 
-#sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
-    line-height: 1 !important;
-    vertical-align: middle !important;
-}
+    #sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
+        line-height: 1 !important;
+        vertical-align: middle !important;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a .material-icons {
-    font-size: 24px !important;
-    color: #555 !important;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a .material-icons {
+        font-size: 24px !important;
+        color: var(--bs-secondary-color) !important;
+    }
 
-#sidebar-setup .sidebar-google-style .sidebar-google-label {
-    font-size: 11px;
-    color: #555 !important;
-    font-weight: 400;
-    text-align: center;
-    line-height: 1.2;
-}
+    #sidebar-setup .sidebar-google-style .sidebar-google-label {
+        font-size: 11px;
+        color: var(--bs-secondary-color) !important;
+        font-weight: 400;
+        text-align: center;
+        line-height: 1.2;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:hover .material-icons,
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:hover .sidebar-google-label {
-    color: #333 !important;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:hover .material-icons,
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:hover .sidebar-google-label {
+        color: var(--bs-emphasis-color) !important;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-icon-wrap {
-    background: #E0E0E0 !important;
-    border-radius: 10px;
-    padding: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    transform: scale(1.05);
-    margin: 4px 8px;
-    width: 100%;
-    height: 100%;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:focus-visible {
+        outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
+        outline-offset: 2px;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .material-icons,
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-label {
-    color: #333 !important;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-icon-wrap {
+        background: var(--bs-primary-bg-subtle) !important;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
+        transition: all 0.2s ease;
+        transform: scale(1.05);
+        margin: 4px 8px;
+        width: 100%;
+        height: 100%;
+    }
 
-#sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a:before {
-    display: none !important;
-}
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .material-icons,
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-label {
+        color: var(--bs-primary-text-emphasis) !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a:before {
+        display: none !important;
+    }
 </style>
 
 <script>
-// Global function to collapse all menus
-function collapseAllMenus() {
-    const allCollapses = document.querySelectorAll('.sidebarmenu .collapse');
-    allCollapses.forEach(collapse => {
-        const bsCollapse = bootstrap.Collapse.getInstance(collapse);
-        if (bsCollapse) {
-            bsCollapse.hide();
-        } else {
-            collapse.classList.remove('show');
-        }
-
-        // Update the toggle button arrow
-        const collapseId = collapse.id;
-        const toggleBtn = document.querySelector(`[href="#${collapseId}"], [data-bs-target="#${collapseId}"]`);
-        if (toggleBtn) {
-            toggleBtn.setAttribute('aria-expanded', 'false');
-            toggleBtn.classList.add('collapsed');
-            const icon = toggleBtn.querySelector('.material-icons');
-            if (icon && icon.textContent.includes('keyboard_arrow_up')) {
-                icon.textContent = 'keyboard_arrow_down';
-            }
-        }
-    });
-}
-
-// Add accordion behavior - when one opens, others close
-document.addEventListener('DOMContentLoaded', function() {
-    const setupSidebar = document.getElementById('sidebar-setup');
-    if (!setupSidebar) return;
-
-    // Add accordion behavior to collapsible menus
-    const collapseElements = setupSidebar.querySelectorAll('.sidebar-item [data-bs-toggle="collapse"]');
-    collapseElements.forEach(trigger => {
-        trigger.addEventListener('click', function(e) {
-            const targetId = this.getAttribute('href') || this.getAttribute('data-bs-target');
-            const targetCollapse = document.querySelector(targetId);
-
-            // Find all collapse elements in the same parent container
-            const parentNav = this.closest('.sidebar-nav');
-            if (parentNav) {
-                const allCollapses = parentNav.querySelectorAll('.collapse');
-                allCollapses.forEach(collapse => {
-                    if (collapse !== targetCollapse && collapse.classList.contains(
-                            'show')) {
-                        const bsCollapse = bootstrap.Collapse.getInstance(collapse);
-                        if (bsCollapse) {
-                            bsCollapse.hide();
-                        }
-                    }
-                });
+    // Global function to collapse all menus
+    function collapseAllMenus() {
+        const allCollapses = document.querySelectorAll('.sidebarmenu .collapse');
+        allCollapses.forEach(collapse => {
+            const bsCollapse = bootstrap.Collapse.getInstance(collapse);
+            if (bsCollapse) {
+                bsCollapse.hide();
+            } else {
+                collapse.classList.remove('show');
             }
 
-            // Rotate arrow icon
-            const icon = this.querySelector('.material-icons');
-            if (icon) {
-                setTimeout(() => {
-                    if (targetCollapse.classList.contains('show')) {
-                        icon.textContent = 'keyboard_arrow_up';
-                    } else {
-                        icon.textContent = 'keyboard_arrow_down';
-                    }
-                }, 350);
+            // Update the toggle button arrow
+            const collapseId = collapse.id;
+            const toggleBtn = document.querySelector(`[href="#${collapseId}"], [data-bs-target="#${collapseId}"]`);
+            if (toggleBtn) {
+                toggleBtn.setAttribute('aria-expanded', 'false');
+                toggleBtn.classList.add('collapsed');
+                const icon = toggleBtn.querySelector('.material-icons');
+                if (icon && icon.textContent.includes('keyboard_arrow_up')) {
+                    icon.textContent = 'keyboard_arrow_down';
+                }
             }
         });
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Setup sidebar script started');
-    // Scope to setup sidebar (in #sidebar-setup tab pane)
-    const setupSidebar = document.getElementById('sidebar-setup');
-    if (!setupSidebar) {
-        console.error('Setup sidebar not found');
-        return;
     }
 
-    // Initialize mini-navbar functionality for setup ONLY
-    const miniNavItems = setupSidebar.querySelectorAll('.mini-nav .mini-nav-item');
-    const sidebarMenus = setupSidebar.querySelectorAll('.sidebarmenu nav');
+    // Add accordion behavior - when one opens, others close
+    document.addEventListener('DOMContentLoaded', function() {
+        const setupSidebar = document.getElementById('sidebar-setup');
+        if (!setupSidebar) return;
+
+        // Add accordion behavior to collapsible menus
+        const collapseElements = setupSidebar.querySelectorAll('.sidebar-item [data-bs-toggle="collapse"]');
+        collapseElements.forEach(trigger => {
+            trigger.addEventListener('click', function(e) {
+                const targetId = this.getAttribute('href') || this.getAttribute('data-bs-target');
+                const targetCollapse = document.querySelector(targetId);
+
+                // Find all collapse elements in the same parent container
+                const parentNav = this.closest('.sidebar-nav');
+                if (parentNav) {
+                    const allCollapses = parentNav.querySelectorAll('.collapse');
+                    allCollapses.forEach(collapse => {
+                        if (collapse !== targetCollapse && collapse.classList.contains(
+                                'show')) {
+                            const bsCollapse = bootstrap.Collapse.getInstance(collapse);
+                            if (bsCollapse) {
+                                bsCollapse.hide();
+                            }
+                        }
+                    });
+                }
+
+                // Rotate arrow icon
+                const icon = this.querySelector('.material-icons');
+                if (icon) {
+                    setTimeout(() => {
+                        if (targetCollapse.classList.contains('show')) {
+                            icon.textContent = 'keyboard_arrow_up';
+                        } else {
+                            icon.textContent = 'keyboard_arrow_down';
+                        }
+                    }, 350);
+                }
+            });
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Setup sidebar script started');
+        // Scope to setup sidebar (in #sidebar-setup tab pane)
+        const setupSidebar = document.getElementById('sidebar-setup');
+        if (!setupSidebar) {
+            console.error('Setup sidebar not found');
+            return;
+        }
+
+        // Initialize mini-navbar functionality for setup ONLY
+        const miniNavItems = setupSidebar.querySelectorAll('.mini-nav .mini-nav-item');
+        const sidebarMenus = setupSidebar.querySelectorAll('.sidebarmenu nav');
 
     console.log('Found mini-nav items in setup tab:', miniNavItems.length);
     console.log('Found sidebar menus in setup tab:', sidebarMenus.length);
@@ -495,58 +497,58 @@ document.addEventListener('DOMContentLoaded', function() {
     // Note: Mini-nav click handling is done globally by sidebar-navigation-fixed.js
     // No need to add event listeners here to avoid duplicate handlers
 
-    // Function to restore sidebar menu visibility
-    function restoreSidebarMenu() {
-        // Always remove selected from all mini-nav-items first
-        miniNavItems.forEach(function(navItem) {
-            navItem.classList.remove('selected');
-        });
-        let activeMiniId = null;
-        sidebarMenus.forEach(function(nav) {
-            const activeLink = nav.querySelector('.sidebar-link.active');
-            if (activeLink) {
-                const navId = nav.id;
-                activeMiniId = navId.replace('menu-right-', '');
-            }
-        });
-        if (activeMiniId) {
-            showSidebarMenu(activeMiniId);
-            setTimeout(function() {
-                expandActiveMenus();
-            }, 100);
-            // Only activate setup tab if it's not already active
-            setTimeout(function() {
-                const setupTabPane = document.getElementById('tab-setup');
-                if (setupTabPane && setupTabPane.classList.contains('active')) {
-                    // Already on setup tab, just ensure it stays active
-                    const setupTabLink = document.querySelector('a[href="#tab-setup"]');
-                    if (setupTabLink) {
-                        setupTabLink.classList.add('active');
-                    }
+        // Function to restore sidebar menu visibility
+        function restoreSidebarMenu() {
+            // Always remove selected from all mini-nav-items first
+            miniNavItems.forEach(function(navItem) {
+                navItem.classList.remove('selected');
+            });
+            let activeMiniId = null;
+            sidebarMenus.forEach(function(nav) {
+                const activeLink = nav.querySelector('.sidebar-link.active');
+                if (activeLink) {
+                    const navId = nav.id;
+                    activeMiniId = navId.replace('menu-right-', '');
                 }
-            }, 150);
-        } else {
-            const savedMiniId = localStorage.getItem('selectedMiniNav');
-            if (savedMiniId && document.getElementById(savedMiniId)) {
-                showSidebarMenu(savedMiniId);
-                setTimeout(expandActiveMenus, 100);
+            });
+            if (activeMiniId) {
+                showSidebarMenu(activeMiniId);
+                setTimeout(function() {
+                    expandActiveMenus();
+                }, 100);
+                // Only activate setup tab if it's not already active
+                setTimeout(function() {
+                    const setupTabPane = document.getElementById('tab-setup');
+                    if (setupTabPane && setupTabPane.classList.contains('active')) {
+                        // Already on setup tab, just ensure it stays active
+                        const setupTabLink = document.querySelector('a[href="#tab-setup"]');
+                        if (setupTabLink) {
+                            setupTabLink.classList.add('active');
+                        }
+                    }
+                }, 150);
             } else {
-                // Only one selected from server, if any
-                const hasSelected = setupSidebar.querySelector('.mini-nav .mini-nav-item.selected');
-                if (hasSelected) {
-                    // Remove selected from all, add only to this one
-                    miniNavItems.forEach(function(navItem) {
-                        navItem.classList.remove('selected');
-                    });
-                    hasSelected.classList.add('selected');
-                    showSidebarMenu(hasSelected.id);
+                const savedMiniId = localStorage.getItem('selectedMiniNav');
+                if (savedMiniId && document.getElementById(savedMiniId)) {
+                    showSidebarMenu(savedMiniId);
                     setTimeout(expandActiveMenus, 100);
-                } else if (miniNavItems.length > 0) {
-                    showSidebarMenu(miniNavItems[0].id);
+                } else {
+                    // Only one selected from server, if any
+                    const hasSelected = setupSidebar.querySelector('.mini-nav .mini-nav-item.selected');
+                    if (hasSelected) {
+                        // Remove selected from all, add only to this one
+                        miniNavItems.forEach(function(navItem) {
+                            navItem.classList.remove('selected');
+                        });
+                        hasSelected.classList.add('selected');
+                        showSidebarMenu(hasSelected.id);
+                        setTimeout(expandActiveMenus, 100);
+                    } else if (miniNavItems.length > 0) {
+                        showSidebarMenu(miniNavItems[0].id);
+                    }
                 }
             }
         }
-    }
 
     // Initial restore on page load
     restoreSidebarMenu();
@@ -560,9 +562,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Listen for window focus
-    window.addEventListener('focus', function() {
-        setTimeout(restoreSidebarMenu, 100);
+        // Listen for window focus
+        window.addEventListener('focus', function() {
+            setTimeout(restoreSidebarMenu, 100);
+        });
     });
-});
 </script>
