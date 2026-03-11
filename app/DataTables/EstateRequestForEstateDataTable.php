@@ -64,6 +64,12 @@ class EstateRequestForEstateDataTable extends DataTable
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
             ->editColumn('status', function ($row) {
+                // Prefer explicit Rejected flag from main status when status = 2.
+                $s = (int) ($row->status ?? 0);
+                if ($s === 2) {
+                    return '<span class="badge bg-danger">Rejected</span>';
+                }
+
                 // Prefer actual possession flags from estate_possession_details to decide "Returned".
                 $hasActive = (int) ($row->has_active_possession ?? 0) === 1;
                 $hasReturned = (int) ($row->has_any_returned ?? 0) === 1;
@@ -71,7 +77,6 @@ class EstateRequestForEstateDataTable extends DataTable
                     return '<span class="badge bg-info">Returned</span>';
                 }
 
-                $s = (int) ($row->status ?? 0);
                 // If system has a current allotment recorded but status is still Pending (0),
                 // treat it as Allotted in UI. This fixes legacy/migrated rows like Nishant Joshi,
                 // where possession exists (and house no. is set) but status was never updated.
@@ -129,9 +134,15 @@ class EstateRequestForEstateDataTable extends DataTable
                 $raiseChangeLink = $raiseChangeUrl !== ''
                     ? '<a href="' . e($raiseChangeUrl) . '" class="text-info" title="Raise Change Request"><i class="material-icons material-symbols-rounded">swap_horiz</i></a>'
                     : '';
-                $isAllotted = (int) ($row->status ?? 0) === 1;
-                $editLink = $isAllotted ? '' : '<a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>';
-                $deleteLink = $isAllotted ? '' : '<a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>';
+                // Lock row (no Edit/Delete) when request is effectively Allotted or Returned.
+                $statusInt = (int) ($row->status ?? 0);
+                $hasActive = (int) ($row->has_active_possession ?? 0) === 1;
+                $hasReturned = (int) ($row->has_any_returned ?? 0) === 1;
+                $isReturnedEffective = (! $hasActive && $hasReturned) || $statusInt === 3;
+                $isLocked = $statusInt === 1 || $isReturnedEffective;
+
+                $editLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-edit-request-estate" title="Edit" ' . $dataAttrs . '><i class="material-icons material-symbols-rounded">edit</i></a>';
+                $deleteLink = $isLocked ? '' : '<a href="javascript:void(0);" class="text-primary btn-delete-request-estate" title="Delete" data-url="' . e($deleteUrl) . '"><i class="material-icons material-symbols-rounded">delete</i></a>';
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">
                     <a href="' . e($detailsUrl) . '" class="text-primary" title="Request &amp; Change Details"><i class="material-icons material-symbols-rounded">visibility</i></a>
                     ' . $raiseChangeLink . '
@@ -237,8 +248,16 @@ class EstateRequestForEstateDataTable extends DataTable
         $statusFilter = request('status_filter');
         if ($statusFilter !== null && $statusFilter !== '') {
             $statusVal = (int) $statusFilter;
-            if (in_array($statusVal, [0, 1, 2], true)) {
-                $query->where('estate_home_request_details.status', $statusVal);
+            if ($statusVal === 0) {
+                // Pending: stored as status = 0 and not currently allotted or returned.
+                $query->where('estate_home_request_details.status', 0)
+                    ->havingRaw('has_active_possession = 0 AND has_any_returned = 0');
+            } elseif ($statusVal === 1) {
+                // Allotted: there is an active possession for this request.
+                $query->havingRaw('has_active_possession = 1');
+            } elseif ($statusVal === 2) {
+                // Rejected: stored as status = 2 (historic semantics kept).
+                $query->where('estate_home_request_details.status', 2);
             } elseif ($statusVal === 3) {
                 // Returned: no active possession, but at least one returned possession row.
                 $query->havingRaw('has_any_returned = 1 AND has_active_possession = 0');
