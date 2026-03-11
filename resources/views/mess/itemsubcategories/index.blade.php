@@ -1,5 +1,8 @@
 @extends('admin.layouts.master')
 @section('title', 'Subcategory Item Master')
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+@endpush
 @section('setup_content')
 @php
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
@@ -7,29 +10,38 @@
 <div class="container-fluid">
     <x-breadcrum title="Subcategory Item Master"></x-breadcrum>
     <div class="datatables">
-        <div class="card">
+        <div class="card shadow-sm border-0">
             <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h4 class="mb-0">Subcategory Item Master</h4>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
-                    Add Subcategory Item
+                <div>
+                    <h4 class="mb-0">Subcategory Item Master</h4>
+                    <p class="mb-0 text-muted small">Manage mess item subcategories, codes and alert quantities.</p>
+                </div>
+                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
+                    <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;">add</i>
+                    <span>Add Subcategory Item</span>
                 </button>
             </div>
 
-            <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="mb-3 row g-2 align-items-end">
-                <div class="col-auto">
-                    <label for="filter_category_id" class="form-label mb-0">Category name</label>
-                    <select name="category_id" id="filter_category_id" class="form-select form-select-sm" style="min-width: 200px;">
+            <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="mb-3 row g-3 align-items-end">
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                    <label for="filter_category_id" class="form-label mb-1 small fw-semibold">Category name</label>
+                    <select name="category_id" id="filter_category_id" class="form-select form-select-sm">
                         <option value="">All</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" {{ (string) $selectedCategoryId === (string) $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                <div class="col-sm-6 col-md-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
+                        <span>Filter</span>
+                    </button>
                     @if($selectedCategoryId !== '')
-                        <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                        <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-sm btn-outline-secondary">
+                            Clear
+                        </a>
                     @endif
                 </div>
             </form>
@@ -41,8 +53,8 @@
                 </div>
             @endif
 
-            <div class="table-responsive">
-                <table id="itemSubcategoriesTable" class="table align-middle w-100">
+            <div class="table-responsive rounded-3 border bg-white">
+                <table id="itemSubcategoriesTable" class="table table-striped table-hover align-middle mb-0 w-100">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -111,9 +123,9 @@
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label">Category <span class="text-danger">*</span></label>
-                            <select name="category_id" class="form-select" required>
+                            <select name="category_id" id="create_category_id" class="form-select js-choices" required>
                                 <option value="">Select Category</option>
                                 @foreach($categories as $cat)
                                     <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -147,7 +159,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
+                            <select name="status" id="create_status" class="form-select js-choices">
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
@@ -182,9 +194,9 @@
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-12">
+                        <div class="col-6">
                             <label class="form-label">Category <span class="text-danger">*</span></label>
-                            <select name="category_id" id="edit_category_id" class="form-select" required>
+                            <select name="category_id" id="edit_category_id" class="form-select js-choices" required>
                                 <option value="">Select Category</option>
                                 @foreach($categories as $cat)
                                     <option value="{{ $cat->id }}">{{ $cat->category_name }}</option>
@@ -215,7 +227,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" id="edit_status" class="form-select">
+                            <select name="status" id="edit_status" class="form-select js-choices">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
@@ -237,8 +249,10 @@
 
 @include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search subcategory items...', 'orderColumn' => 2, 'actionColumnIndex' => 7, 'infoLabel' => 'subcategory items'])
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function () {
+function initItemSubcategoryScripts() {
     // Validation rules (must match ItemSubcategoryController)
     var itemNameRegex = /^[a-zA-Z0-9\s\-]+$/;
     var unitMeasurementRegex = /^[a-zA-Z0-9\s\-\/\.]+$/;
@@ -356,22 +370,62 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Initialize Choices.js on create & edit modal selects
+    var choicesInstances = {};
+    function createChoicesInstance(selectEl, key) {
+        if (!window.Choices || !selectEl) return null;
+        if (choicesInstances[key]) {
+            choicesInstances[key].destroy();
+        }
+        choicesInstances[key] = new Choices(selectEl, {
+            searchEnabled: true,
+            itemSelectText: '',
+            shouldSort: false
+        });
+        return choicesInstances[key];
+    }
+
+    // Initial setup for create modal selects
+    createChoicesInstance(document.getElementById('create_category_id'), 'createCategory');
+    createChoicesInstance(document.getElementById('create_status'), 'createStatus');
+
     document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemsubcategory');
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
         document.getElementById('editItemSubcategoryForm').action = '{{ url("admin/mess/itemsubcategories") }}/' + btn.getAttribute('data-id');
-        document.getElementById('edit_category_id').value = btn.getAttribute('data-category-id') || '';
+        var categoryId = (btn.getAttribute('data-category-id') || '').toString().trim();
+        var statusVal = (btn.getAttribute('data-status') || 'active').toString().trim();
+
+        var editCategorySelect = document.getElementById('edit_category_id');
+        var editStatusSelect = document.getElementById('edit_status');
+
+        if (editCategorySelect) {
+            editCategorySelect.value = categoryId;
+            // Recreate Choices instance so it picks up the selected option
+            createChoicesInstance(editCategorySelect, 'editCategory');
+        }
         document.getElementById('edit_item_name').value = btn.getAttribute('data-item-name') || '';
         document.getElementById('edit_item_code_display').value = btn.getAttribute('data-item-code') || '-';
         document.getElementById('edit_unit_measurement').value = btn.getAttribute('data-unit-measurement') || '';
         document.getElementById('edit_alert_quantity').value = btn.getAttribute('data-alert-quantity') || '';
         document.getElementById('edit_description').value = btn.getAttribute('data-description') || '';
-        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+
+        if (editStatusSelect) {
+            editStatusSelect.value = statusVal;
+            createChoicesInstance(editStatusSelect, 'editStatus');
+        }
         new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
     }, true);
-});
+}
+// Run immediately if DOM is already ready, otherwise wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initItemSubcategoryScripts);
+} else {
+    initItemSubcategoryScripts();
+}
+})(); 
 </script>
 @endpush
 

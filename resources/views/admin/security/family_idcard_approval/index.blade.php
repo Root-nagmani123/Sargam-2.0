@@ -7,9 +7,6 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Pending Family ID Card Approvals</h4>
-                <a href="{{ route('admin.security.family_idcard_approval.all') }}" class="btn btn-secondary">
-                    View All Applications
-                </a>
             </div>
 
             @if(session('success'))
@@ -27,7 +24,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-striped mb-0">
+                <table class="table text-nowrap mb-0">
                     <thead>
                         <tr>
                             <th>Submitted By</th>
@@ -57,21 +54,21 @@
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
                                         <a href="{{ route('admin.family_idcard.members', $group->first_id) }}"
-                                           class="btn btn-sm btn-info" title="View Members">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i> View
+                                           class="btn  btn-outline-info bg-transparent border-0 text-primary p-0" title="View Members">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                         </a>
                                         <form action="{{ route('admin.security.family_idcard_approval.approve_group', encrypt($group->first_id)) }}" method="POST" class="d-inline">
                                             @csrf
-                                            <button type="submit" class="btn btn-sm btn-success" title="Approve"
+                                            <button type="submit" class="btn  btn-outline-success bg-transparent border-0 text-primary p-0" title="Approve"
                                                     onclick="return confirm('Approve all {{ $group->member_count }} family member(s)?')">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i> Approve
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i>
                                             </button>
                                         </form>
-                                        <button type="button" class="btn btn-sm btn-danger" title="Reject"
+                                        <button type="button" class="btn  btn-outline-danger bg-transparent border-0 text-primary p-0" title="Reject"
                                                 data-encrypted-id="{{ encrypt($group->first_id) }}"
                                                 data-member-count="{{ $group->member_count }}"
                                                 onclick="openRejectModal(this)">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i> Reject
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i>
                                         </button>
                                     </div>
                                 </td>

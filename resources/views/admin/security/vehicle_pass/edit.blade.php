@@ -169,21 +169,27 @@
                     <div class="col-md-12">
                         <div class="mb-3">
                             <label for="doc_upload" class="form-label">Ownership Documents</label>
-                            @if($vehiclePass->doc_upload)
-                                @php $ext = strtolower(pathinfo($vehiclePass->doc_upload, PATHINFO_EXTENSION)); @endphp
+                            @php
+                                $docPath = $vehiclePass->doc_upload;
+                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                            @endphp
+                            @if($docExists)
+                                @php $ext = strtolower(pathinfo($docPath, PATHINFO_EXTENSION)); @endphp
                                 <div class="vehicle-pass-edit-current mb-2 position-relative d-inline-block">
                                     <div class="vehicle-pass-preview-inner position-relative p-2 rounded border bg-light">
                                         @if(in_array($ext, ['jpg','jpeg','png','gif']))
-                                            <img src="{{ Storage::url($vehiclePass->doc_upload) }}" alt="Current document" style="max-height:120px; border-radius:4px; display:block;">
+                                            <img src="{{ asset('storage/' . $docPath) }}" alt="Current document" style="max-height:120px; border-radius:4px; display:block;">
                                         @else
                                             <div class="d-flex flex-column align-items-center justify-content-center p-2">
                                                 <i class="material-icons material-symbols-rounded text-muted mb-1">description</i>
-                                                <span class="small text-break text-center">{{ basename($vehiclePass->doc_upload) }}</span>
+                                                <span class="small text-break text-center">{{ basename($docPath) }}</span>
                                             </div>
                                         @endif
-                                        <a href="{{ Storage::url($vehiclePass->doc_upload) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2 w-100">View</a>
+                                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2 w-100">View</a>
                                     </div>
                                 </div>
+                            @elseif($docPath)
+                                <div class="text-warning small mb-2">No file available in storage</div>
                             @endif
                             <div class="vehicle-pass-upload-zone position-relative" id="editDocUploadZone" style="min-height:120px; border:2px dashed #dee2e6; border-radius:0.5rem; padding:1rem; cursor:pointer; background:#f8f9fa;">
                                 <input type="file" name="doc_upload" id="doc_upload" class="d-none" accept=".pdf,.jpg,.jpeg,.png">

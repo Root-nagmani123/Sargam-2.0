@@ -248,7 +248,7 @@ class DuplicateIDCardRequestController extends Controller
 
         return response()->json([
             'success' => false,
-            'message' => 'Lookup is currently supported only for Permanent and Family ID cards.',
+            'message' => 'Lookup is currently supported only for Permanent and Contractual cards.',
         ], 422);
     }
 
@@ -408,6 +408,7 @@ class DuplicateIDCardRequestController extends Controller
             'aadhar_doc' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'damage_doc' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'fir_doc' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
+            'payment_receipt' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'service_ext' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
             'new_employee_name' => 'nullable|string|max:100',
             'name_proof' => 'nullable|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120',
@@ -461,6 +462,12 @@ class DuplicateIDCardRequestController extends Controller
                 $file = $id . '_SERVICE_EXT_' . time() . '.' . $ext;
                 $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['service_ext'] = $file;
+            }
+            if ($request->hasFile('payment_receipt')) {
+                $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                $file = $id . '_PAY_' . time() . '.' . $ext;
+                $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['payment_receipt'] = $file;
             }
             if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
                 $updates['employee_name'] = $request->new_employee_name;
@@ -527,6 +534,12 @@ class DuplicateIDCardRequestController extends Controller
                 $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['service_ext'] = $file;
             }
+            if ($request->hasFile('payment_receipt')) {
+                $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                $file = $id . '_PAY_' . time() . '.' . $ext;
+                $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                $updates['payment_receipt'] = $file;
+            }
             if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
                 $updates['employee_name'] = $request->new_employee_name;
                 if ($request->hasFile('name_proof')) {
@@ -580,6 +593,7 @@ class DuplicateIDCardRequestController extends Controller
             $baseRules['damage_doc'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Card Lost') {
             $baseRules['fir_doc'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
+            // Payment receipt is optional for Card Lost; no required rule.
         } elseif ($cardReason === 'Service Extended') {
             $baseRules['service_ext'] = 'required|file|mimes:pdf,doc,docx,jpeg,png,jpg|max:5120';
         } elseif ($cardReason === 'Change in Name') {
@@ -740,11 +754,19 @@ class DuplicateIDCardRequestController extends Controller
             $file = $applyId . '_DAMAGE_PROOF_' . time() . '.' . $ext;
             $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
             $data['fir_doc'] = $file; // Reusing fir_doc column for damage proof
-        } elseif ($cardReason === 'Card Lost' && $request->hasFile('fir_doc')) {
-            $ext = $request->file('fir_doc')->getClientOriginalExtension();
-            $file = $applyId . '_FIR_' . time() . '.' . $ext;
-            $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
-            $data['fir_doc'] = $file;
+        } elseif ($cardReason === 'Card Lost') {
+            if ($request->hasFile('fir_doc')) {
+                $ext = $request->file('fir_doc')->getClientOriginalExtension();
+                $file = $applyId . '_FIR_' . time() . '.' . $ext;
+                $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $data['fir_doc'] = $file;
+            }
+            if ($request->hasFile('payment_receipt')) {
+                $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                $file = $applyId . '_PAY_' . time() . '.' . $ext;
+                $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                $data['payment_receipt'] = $file;
+            }
         } elseif ($cardReason === 'Service Extended' && $request->hasFile('service_ext')) {
             $ext = $request->file('service_ext')->getClientOriginalExtension();
             $file = $applyId . '_SERVICE_EXT_' . time() . '.' . $ext;

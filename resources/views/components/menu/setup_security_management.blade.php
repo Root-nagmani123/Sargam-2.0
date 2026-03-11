@@ -38,10 +38,10 @@
                                         href="{{ route('admin.security.vehicle_pass.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
+                                {{--<li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.security.duplicate_vehicle_pass.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Duplicate Vehicle Pass Request</span>
-                                    </a></li>
+                                    </a></li>--}}
                                     @if (hasRole('Admin'))
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.security.vehicle_pass_approval.index') }}">

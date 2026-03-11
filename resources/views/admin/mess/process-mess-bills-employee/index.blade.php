@@ -111,30 +111,30 @@
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
-                        <select name="client_type" id="filterClientTypeSlug" class="form-select form-select-sm choices-select" data-placeholder="All client types">
+                        <select name="client_type" id="filterClientTypeSlug" class="form-select  choices-select" data-placeholder="All client types">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes ?? [] as $key => $label)
                                 <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-semibold">Client Type</label>
-                        <select id="filterClientTypePk" class="form-select form-select-sm">
+                        <select id="filterClientTypePk" class="form-select choices-select">
                             <option value="">All</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-semibold">Buyer Name</label>
-                        <select name="buyer_name" id="filterBuyerName" class="form-select form-select-sm">
+                        <select name="buyer_name" id="filterBuyerName" class="form-select choices-select">
                             <option value="">All Buyers</option>
                         </select>
                     </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary  flex-grow-1">
-                            <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">filter_list</i>
+                            <i class="material-symbols-rounded align-middle">filter_list</i>
                             Apply
                         </button>
                         @php
@@ -169,8 +169,8 @@
                 </div>
             </form>
 
-            <div class="table-responsive">
-                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
+            <div class="table-responsive rounded-3 border bg-white">
+                <table class="table table-striped table-hover text-nowrap align-middle mb-0" id="processMessBillsTable">
                     <thead>
                         <tr>
                             <th class="text-nowrap py-2">S.No.</th>
@@ -547,7 +547,7 @@
                     <button type="button" class="btn  btn-outline-success" id="modalBulkPaymentBtn">Mark as Paid (selected)</button>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted">Show</span>
                         <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
@@ -559,13 +559,13 @@
                         <span class="small text-muted">entries</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="input-group input-group-sm" style="width: 220px;">
+                        <div class="input-group input-group-sm" style="width: 220px; max-width: 100%;">
                             <span class="input-group-text bg-transparent border-end-0">
                                 <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">search</i>
                             </span>
                             <input type="text" id="modalSearch" class="form-control  border-start-0" placeholder="Search bills...">
                         </div>
-                        <button type="button" class="btn btn-outline-primary  d-inline-flex align-items-center gap-1" onclick="printProcessMessBillsTable()" title="Print bills list">
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printProcessMessBillsTable()" title="Print bills list">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">print</i>
                             <span>Print</span>
                         </button>
@@ -573,7 +573,7 @@
                 </div>
 
                 <div class="table-responsive rounded-3 border bg-white">
-                    <table id="modalBillsTable" class="table table-sm table-hover align-middle mb-0">
+                <table id="modalBillsTable" class="table table-sm table-striped table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th class="text-nowrap py-2" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
