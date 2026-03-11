@@ -23,21 +23,27 @@
                         <div class="card-body">
                             <div class="text-center mb-3">
                                 <h6 class="card-title mb-3">Employee Photo</h6>
-                                @if($request->photo)
-                                    @php
+                                @php
+                                    $photoPath = null;
+                                    $photoExists = false;
+                                    if ($request->photo) {
                                         $photoPath = str_starts_with($request->photo, 'idcard/')
                                             ? $request->photo
                                             : 'idcard/photos/' . $request->photo;
                                         $photoExists = \Storage::disk('public')->exists($photoPath);
-                                        $photoUrl = $photoExists ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
-                                    @endphp
-                                    <img src="{{ $photoUrl }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
+                                    }
+                                @endphp
+                                @if($photoExists)
+                                    <img src="{{ asset('storage/' . $photoPath) }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
                                     <div class="mt-2">
-                                        <a href="{{ $photoUrl }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                             <i class="material-icons material-symbols-rounded" style="font-size:16px;">download</i>
                                             Download
                                         </a>
                                     </div>
+                                @elseif($request->photo)
+                                    <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
+                                    <p class="text-warning small mt-2">No file available in storage</p>
                                 @else
                                     <img src="{{ asset('images/dummypic.jpeg') }}" alt="No Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
                                     <p class="text-muted small mt-2">No photo available</p>
@@ -50,50 +56,58 @@
                                 if (!empty($request->joining_letter)) {
                                     $docLinks[] = [
                                         'label' => 'Joining Letter',
-                                        'path' => 'storage/' . ltrim($request->joining_letter, '/'),
+                                        'path' => 'idcard/' . ltrim($request->joining_letter, '/'),
+                                        'full' => false,
                                     ];
                                 }
                                 if (!empty($request->extension_document_path)) {
                                     $docLinks[] = [
                                         'label' => 'Extension Document',
-                                        'path' => 'storage/' . ltrim($request->extension_document_path, '/'),
+                                        'path' => ltrim($request->extension_document_path, '/'),
+                                        'full' => false,
                                     ];
                                 }
                                 // Duplicate-specific docs (Card Lost / Damage / Service Extended / etc.)
                                 if (!empty($request->fir_receipt)) {
                                     $docLinks[] = [
                                         'label' => 'FIR Copy / Document Proof',
-                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->fir_receipt, '/'),
+                                        'path' => 'idcard/dup_docs/' . ltrim($request->fir_receipt, '/'),
+                                        'full' => false,
                                     ];
                                 }
                                 if (!empty($request->payment_receipt)) {
                                     $docLinks[] = [
                                         'label' => 'Payment Receipt',
-                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->payment_receipt, '/'),
+                                        'path' => 'idcard/dup_docs/' . ltrim($request->payment_receipt, '/'),
+                                        'full' => false,
                                     ];
                                 }
                                 if (!empty($request->service_ext)) {
                                     $docLinks[] = [
                                         'label' => 'Service Extension / Renewal Proof',
-                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->service_ext, '/'),
+                                        'path' => 'idcard/dup_docs/' . ltrim($request->service_ext, '/'),
+                                        'full' => false,
                                     ];
                                 }
                                 if (!empty($request->id_proof_doc)) {
                                     $docLinks[] = [
                                         'label' => 'ID Proof (Aadhar / Other)',
-                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->id_proof_doc, '/'),
+                                        'path' => 'idcard/dup_docs/' . ltrim($request->id_proof_doc, '/'),
+                                        'full' => false,
                                     ];
                                 }
                                 if (!empty($request->documents)) {
                                     $docLinks[] = [
                                         'label' => 'Supporting Document',
-                                        'path' => 'storage/' . ltrim($request->documents, '/'),
+                                        'path' => ltrim($request->documents, '/'),
+                                        'full' => false,
                                     ];
                                 }
                                 if (!empty($request->other_documents)) {
                                     $docLinks[] = [
                                         'label' => 'Other Document',
-                                        'path' => 'storage/idcard/dup_docs/' . ltrim($request->other_documents, '/'),
+                                        'path' => 'idcard/dup_docs/' . ltrim($request->other_documents, '/'),
+                                        'full' => false,
                                     ];
                                 }
                             @endphp
@@ -103,11 +117,19 @@
                                 <h6 class="card-title mb-2">Uploaded Documents</h6>
                                 <ul class="list-unstyled mb-0 small text-start">
                                     @foreach($docLinks as $doc)
+                                        @php
+                                            $p = $doc['path'] ?? null;
+                                            $exists = $p && \Storage::disk('public')->exists($p);
+                                        @endphp
                                         <li class="mb-1">
                                             <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">attach_file</i>
-                                            <a href="{{ asset($doc['path']) }}" target="_blank">
-                                                {{ $doc['label'] }}
-                                            </a>
+                                            @if($exists)
+                                                <a href="{{ asset('storage/' . $p) }}" target="_blank">
+                                                    {{ $doc['label'] }}
+                                                </a>
+                                            @else
+                                                <span class="text-warning small">{{ $doc['label'] }} - No file available in storage</span>
+                                            @endif
                                         </li>
                                     @endforeach
                                 </ul>

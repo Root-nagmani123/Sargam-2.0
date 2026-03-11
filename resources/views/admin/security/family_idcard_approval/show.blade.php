@@ -100,13 +100,18 @@
                 </div>
             </div>
 
-            @if($application->family_photo || $application->id_photo_path)
+            @php
+                $photoPath = $application->family_photo ?? $application->id_photo_path ?? null;
+                $photoExists = $photoPath && \Storage::disk('public')->exists($photoPath);
+            @endphp
+            @if($photoPath)
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <h5 class="text-primary mb-3">Photo</h5>
-                        @php $photoPath = $application->family_photo ?? $application->id_photo_path; @endphp
-                        @if($photoPath)
+                        @if($photoExists)
                             <img src="{{ asset('storage/' . $photoPath) }}" alt="Family Photo" class="img-thumbnail" style="max-height: 200px;">
+                        @else
+                            <p class="text-warning small mb-0">No file available in storage</p>
                         @endif
                     </div>
                 </div>

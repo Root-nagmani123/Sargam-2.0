@@ -51,12 +51,22 @@ class FamilyIDCardApprovalController extends Controller
         $creatorPks = $pendingRows->pluck('created_by')->filter()->unique();
         $creators = collect();
         if ($creatorPks->isNotEmpty()) {
-            // created_by stores employee pk (from user_credentials.user_id which maps to employee_master.pk)
-            // Look up directly in employee_master
-            $emps = DB::table('employee_master')->whereIn('pk', $creatorPks)->get(['pk', 'first_name', 'last_name']);
+            // created_by may store either current pk or legacy pk_old from employee_master
+            $emps = DB::table('employee_master')
+                ->whereIn('pk', $creatorPks)
+                ->orWhereIn('pk_old', $creatorPks)
+                ->get(['pk', 'pk_old', 'first_name', 'last_name']);
+
             foreach ($emps as $e) {
                 $fullName = trim(($e->first_name ?? '') . ' ' . ($e->last_name ?? ''));
-                $creators[(string) $e->pk] = $fullName ?: ('Employee #' . $e->pk);
+                $label = $fullName ?: ('Employee #' . ($e->pk ?? $e->pk_old));
+
+                if (!is_null($e->pk)) {
+                    $creators[(string) $e->pk] = $label;
+                }
+                if (!is_null($e->pk_old)) {
+                    $creators[(string) $e->pk_old] = $label;
+                }
             }
         }
 

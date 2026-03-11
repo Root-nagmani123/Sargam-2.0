@@ -106,11 +106,17 @@
                                 <td class="col-type">{{ $r->vehicleType->vehicle_type ?? '--' }}</td>
                                 <td class="col-veh">{{ $r->vehicle_no ?? '--' }}</td>
                                 <td class="col-doc">
-                                    @if($r->doc_upload)
-                                        <a href="{{ asset('storage/' . $r->doc_upload) }}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
+                                    @php
+                                        $docPath = $r->doc_upload;
+                                        $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                                    @endphp
+                                    @if($docExists)
+                                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
                                             <i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i>
                                             <span class="d-none d-sm-inline">Download</span>
                                         </a>
+                                    @elseif($docPath)
+                                        <span class="text-warning small">No file available in storage</span>
                                     @else
                                         --
                                     @endif
