@@ -33,18 +33,27 @@
                     @php
                         $firstMember = isset($members) && count($members) ? $members->first() : null;
                         $groupPhotoPath = $firstMember->family_photo ?? $request->family_photo ?? null;
+                        $groupPhotoExists = $groupPhotoPath && \Storage::disk('public')->exists($groupPhotoPath);
                     @endphp
-                    @if($groupPhotoPath)
+                    @if($groupPhotoExists)
                         <strong>Group Photo:</strong><br>
                         <img src="{{ asset('storage/' . $groupPhotoPath) }}" alt="Group Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
+                    @elseif($groupPhotoPath)
+                        <strong>Group Photo:</strong> <span class="text-warning small">No file available in storage</span>
                     @else
                         <strong>Group Photo:</strong> --
                     @endif
                 </div>
                 <div class="col-md-6">
-                    @if($request->id_photo_path)
+                    @php
+                        $individualPath = $request->id_photo_path;
+                        $individualExists = $individualPath && \Storage::disk('public')->exists($individualPath);
+                    @endphp
+                    @if($individualExists)
                         <strong>Individual Photo (selected member):</strong><br>
-                        <img src="{{ asset('storage/' . $request->id_photo_path) }}" alt="Individual Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
+                        <img src="{{ asset('storage/' . $individualPath) }}" alt="Individual Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
+                    @elseif($individualPath)
+                        <strong>Individual Photo (selected member):</strong> <span class="text-warning small">No file available in storage</span>
                     @else
                         <strong>Individual Photo (selected member):</strong> --
                     @endif
@@ -80,9 +89,12 @@
                                     <td class="text-center">
                                         @php
                                             $photo = $member->id_photo_path ?? $member->family_photo ?? null;
+                                            $photoExists = $photo && \Storage::disk('public')->exists($photo);
                                         @endphp
-                                        @if($photo)
+                                        @if($photoExists)
                                             <img src="{{ asset('storage/' . $photo) }}" alt="Member Photo" class="img-thumbnail" style="max-height:80px;">
+                                        @elseif($photo)
+                                            <span class="text-warning small">No file available in storage</span>
                                         @else
                                             --
                                         @endif

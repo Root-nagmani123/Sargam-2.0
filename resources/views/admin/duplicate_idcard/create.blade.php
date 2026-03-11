@@ -45,8 +45,14 @@
                     <div class="col-md-4">
                         <label class="form-label">Upload Photo <span class="text-danger">*</span></label>
                         @if(isset($edit_id))
-                            @if($data['photo_path'] ?? null)
-                                <a href="{{ asset('storage/' . $data['photo_path']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Photo</a>
+                            @php
+                                $photoPath = $data['photo_path'] ?? null;
+                                $photoExists = $photoPath && \Storage::disk('public')->exists($photoPath);
+                            @endphp
+                            @if($photoExists)
+                                <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Photo</a>
+                            @else
+                                <div class="text-muted small mb-2">No file available in storage</div>
                             @endif
                             <input type="file" name="photo" class="form-control" accept=".jpeg,.jpg,.png,.gif">
                             <small class="text-muted d-block">Leave empty to keep current. Allowed: JPG, PNG, GIF. Max size: 2 MB</small>
@@ -70,8 +76,15 @@
                     <div class="col-md-4">
                         <label class="form-label">Upload Aadhar Copy <span class="text-danger">*</span></label>
                         @if(isset($edit_id))
-                            @if($existing_docs['aadhar_doc'] ?? null)
-                                <a href="{{ asset('storage/idcard/dup_docs/' . $existing_docs['aadhar_doc']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Document</a>
+                            @php
+                                $aadharDoc = $existing_docs['aadhar_doc'] ?? null;
+                                $aadharPath = $aadharDoc ? 'idcard/dup_docs/' . $aadharDoc : null;
+                                $aadharExists = $aadharPath && \Storage::disk('public')->exists($aadharPath);
+                            @endphp
+                            @if($aadharExists)
+                                <a href="{{ asset('storage/' . $aadharPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Document</a>
+                            @elseif($aadharDoc)
+                                <div class="text-muted small mb-2">No file available in storage</div>
                             @endif
                             <input type="file" name="aadhar_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
                             <small class="text-muted d-block">Leave empty to keep current. Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
@@ -157,8 +170,17 @@
                     <!-- Card Lost - FIR Document -->
                     <div class="col-md-6" id="fir_doc_section" style="display: none;">
                         <label class="form-label">Upload FIR Copy / Document Proof <span class="text-danger">*</span></label>
-                        @if(isset($edit_id) && !empty($existing_docs['fir_doc'] ?? null))
-                            <a href="{{ asset('storage/idcard/dup_docs/' . $existing_docs['fir_doc']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current FIR Document</a>
+                        @if(isset($edit_id))
+                            @php
+                                $firDoc = $existing_docs['fir_doc'] ?? null;
+                                $firPath = $firDoc ? 'idcard/dup_docs/' . $firDoc : null;
+                                $firExists = $firPath && \Storage::disk('public')->exists($firPath);
+                            @endphp
+                            @if($firExists)
+                                <a href="{{ asset('storage/' . $firPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current FIR Document</a>
+                            @elseif($firDoc)
+                                <div class="text-muted small mb-2">No file available in storage</div>
+                            @endif
                         @endif
                         <input type="file" name="fir_doc" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
                         @if(isset($edit_id))
@@ -172,8 +194,17 @@
                     <!-- Card Lost - Payment Receipt (optional) -->
                     <div class="col-md-6" id="payment_receipt_section" style="display: none;">
                         <label class="form-label">Upload Payment Receipt</label>
-                        @if(isset($edit_id) && !empty($existing_docs['payment_receipt'] ?? null))
-                            <a href="{{ asset('storage/idcard/dup_docs/' . $existing_docs['payment_receipt']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Payment Receipt</a>
+                        @if(isset($edit_id))
+                            @php
+                                $payDoc = $existing_docs['payment_receipt'] ?? null;
+                                $payPath = $payDoc ? 'idcard/dup_docs/' . $payDoc : null;
+                                $payExists = $payPath && \Storage::disk('public')->exists($payPath);
+                            @endphp
+                            @if($payExists)
+                                <a href="{{ asset('storage/' . $payPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Payment Receipt</a>
+                            @elseif($payDoc)
+                                <div class="text-muted small mb-2">No file available in storage</div>
+                            @endif
                         @endif
                         <input type="file" name="payment_receipt" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
                         <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
