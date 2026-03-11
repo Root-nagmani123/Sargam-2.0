@@ -1,6 +1,6 @@
 @extends('admin.layouts.timetable')
 @section('title', 'Course Details')
-@section('content')
+@section('setup_content')
     <main class="container-fluid px-4 py-4" id="main-content" role="main">
         <!-- Action Bar -->
         <div class="no-print mb-4">

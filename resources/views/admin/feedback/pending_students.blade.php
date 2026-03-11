@@ -1,34 +1,18 @@
 @extends('admin.layouts.master')
-
-@section('content')
+@section('title', 'Pending Feedback – Students')
+@section('setup_content')
 
 <div class="container-fluid">
-
-    <!-- Page Header -->
-  <div class="row mb-3 align-items-center">
-    <div class="col-md-6">
-        <h4 class="mb-0">Pending Feedback – Students</h4>
-        <small class="text-muted">Total: {{ $pendingStudents->total() }} records</small>
-    </div>
-
-    <div class="col-md-6 text-end">
-        <a href="{{ route('admin.feedback.feedback_details') }}"
-           class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Back
-        </a>
-    </div>
-</div>
-
-
+<x-breadcrum title="Pending Feedback – Students" />
     <!-- Course Filter + Export Buttons -->
     <div class="card mb-3">
         <div class="card-body">
             <form id="exportForm" method="POST">
                 @csrf
                 <div class="row align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label fw-semibold">Filter by Course</label>
-                        <select id="course_filter" name="course_pk" class="form-select">
+                        <select id="course_filter" name="course_pk" class="form-control">
                             <option value="">All Courses</option>
                             @isset($courses)
                                 @foreach($courses as $course)
@@ -40,7 +24,11 @@
                             @endisset
                         </select>
                     </div>
-                    <div class="col-md-8 text-end">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Filter by Date</label>
+                        <input type="date" id="date_filter" name="date_filter" class="form-control" value="{{ request('date_filter') }}">
+                    </div>
+                    <div class="col-md-6 text-end">
                         <button type="button" id="export_pdf" class="btn btn-primary">
                             <i class="fas fa-file-pdf"></i> Export PDF
                         </button>
@@ -58,16 +46,17 @@
         <div class="card-body" id="pendingStudentsData">
 
             <div class="table-responsive">
-                <table class="table table-bordered table-striped align-middle">
-                    <thead class="table">
+                <table class="table text-nowrap align-middle">
+                    <thead>
                         <tr>
-                            <th width="50">#</th>
+                            <th>#</th>
                             <th>OT / Participant</th>
                             <th>Email</th>
                             <th>Phone</th>
                             <th>OT Code</th>
-                            {{-- <th>Course</th>
-                            <th>Session</th> --}}
+                            <th>Course</th>
+                            <th>Date</th>
+
                         </tr>
                     </thead>
 
@@ -79,8 +68,8 @@
                                 <td>{{ $row->email }}</td>
                                 <td>{{ $row->contact_no }}</td>
                                 <td>{{ $row->generated_OT_code }}</td>
-                                {{-- <td>{{ $row->course_name }}</td>
-                                <td>{{ $row->subject_topic }}</td> --}}
+                                <td>{{ $row->course_name }}</td>
+                                <td>{{ $row->from_date ? \Carbon\Carbon::parse($row->from_date)->format('d-m-Y') : '-' }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -140,6 +129,14 @@ $(document).ready(function () {
         courseInput.value = coursePk;
         form.appendChild(courseInput);
         
+        // Add date_filter parameter
+        let dateFilter = $('#date_filter').val();
+        let dateInput = document.createElement('input');
+        dateInput.type = 'hidden';
+        dateInput.name = 'date_filter';
+        dateInput.value = dateFilter;
+        form.appendChild(dateInput);
+        
         // Add the form to body and submit
         document.body.appendChild(form);
         form.submit();
@@ -165,13 +162,15 @@ $(document).ready(function () {
     // Function to fetch pending students (for AJAX filtering)
     function fetchPendingStudents(page = 1) {
         let course_pk = $('#course_filter').val();
+        let date_filter = $('#date_filter').val();
 
         $.ajax({
             url: "{{ route('admin.feedback.pending.students') }}",
             type: "GET",
             data: { 
                 page: page, 
-                course_pk: course_pk 
+                course_pk: course_pk,
+                date_filter: date_filter
             },
             beforeSend: function () {
                 $('#pendingStudentsData').html(
@@ -203,6 +202,11 @@ $(document).ready(function () {
 
     // Course filter change
     $('#course_filter').change(function () {
+        fetchPendingStudents(1);
+    });
+    
+    // Date filter change - automatic filtering
+    $('#date_filter').change(function () {
         fetchPendingStudents(1);
     });
 

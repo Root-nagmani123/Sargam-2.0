@@ -295,30 +295,6 @@
             <span class="small fw-medium">Logout</span>
         </button>
     </form>
-
-    <!-- Last Login -->
-    <div class="d-flex align-items-center gap-1 small">
-        <i class="material-icons material-symbols-rounded fs-6">
-            history
-        </i>
-        <span class="fw-semibold">Last login:</span>
-
-        @php
-            $lastLogin = Auth::user()->last_login ?? null;
-            if ($lastLogin) {
-                $date = \Carbon\Carbon::parse($lastLogin);
-                $formattedDate = $date->format('Y-m-d H:i:s');
-                $isoDate = $date->toIso8601String();
-            } else {
-                $formattedDate = 'Never';
-                $isoDate = '';
-            }
-        @endphp
-
-        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}" class="fw-medium">
-            {{ $formattedDate }}
-        </time>
-    </div>
 </div>
 
             </div>

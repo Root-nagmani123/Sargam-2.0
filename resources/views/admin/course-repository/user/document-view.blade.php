@@ -2,7 +2,7 @@
 
 @section('title', 'Document View | Course Repository Admin')
 
-@section('content')
+@section('setup_content')
 <div class="document-viewer-wrapper">
     <!-- PDF Viewer Header -->
     <div class="pdf-viewer-header bg-white shadow-sm sticky-top">

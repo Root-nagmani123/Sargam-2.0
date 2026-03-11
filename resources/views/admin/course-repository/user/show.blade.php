@@ -2,7 +2,7 @@
 
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Course Repository')
 
-@section('content')
+@section('setup_content')
 <!-- Main Content -->
 <!-- Title Section with Back Button -->
 <div class="container-fluid">

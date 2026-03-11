@@ -2,7 +2,7 @@
 
 @section('title', 'Video | Course Repository Admin')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid px-4 py-4">
     <div class="row justify-content-center">
         <div class="col-lg-10">

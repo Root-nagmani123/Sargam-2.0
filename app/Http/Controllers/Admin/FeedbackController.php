@@ -3039,6 +3039,10 @@ class FeedbackController extends Controller
         if ($request->filled('course_pk')) {
             $query->where('t.course_master_pk', $request->course_pk);
         }
+        
+        if ($request->filled('date_filter')) {
+            $query->whereDate('t.START_DATE', $request->date_filter);
+        }
 
         $pendingStudents = $query
             ->orderBy('from_date', 'asc')
@@ -3062,6 +3066,10 @@ class FeedbackController extends Controller
 
         if ($request->filled('course_pk')) {
             $query->where('t.course_master_pk', $request->course_pk);
+        }
+        
+        if ($request->filled('date_filter')) {
+            $query->whereDate('t.START_DATE', $request->date_filter);
         }
 
         $students = collect();
@@ -3101,6 +3109,10 @@ class FeedbackController extends Controller
 
         if ($request->filled('course_pk')) {
             $query->where('t.course_master_pk', $request->course_pk);
+        }
+        
+        if ($request->filled('date_filter')) {
+            $query->whereDate('t.START_DATE', $request->date_filter);
         }
 
         return Excel::download(

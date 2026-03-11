@@ -2,7 +2,7 @@
 
 @section('title', 'Central Course Repository of LBSNAA | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
 <!-- Main Content -->
 <div class="container-fluid px-4 py-4" id="main-content">

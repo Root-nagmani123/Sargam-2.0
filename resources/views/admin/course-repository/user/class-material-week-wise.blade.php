@@ -2,7 +2,7 @@
 
 @section('title', 'Class Material (Week Wise) | Course Repository Admin')
 
-@section('content')
+@section('setup_content')
 <div class="d-flex">
     <!-- Left Sidebar -->
     <aside class="course-sidebar-wrapper">

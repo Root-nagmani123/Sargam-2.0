@@ -307,10 +307,10 @@
 
                 <div class="d-flex align-items-center">
                     <div class="btn-group ms-2" role="group">
-                        <button type="button" class="btn btn-sm btn-success" onclick="exportToExcel()">
+                        <button type="button" class="btn  btn-success" onclick="exportToExcel()">
                             <i class="fas fa-file-excel me-1"></i> Export Excel
                         </button>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="exportToPDF()">
+                        <button type="button" class="btn  btn-danger" onclick="exportToPDF()">
                             <i class="fas fa-file-pdf me-1"></i> Export PDF
                         </button>
                     </div>
@@ -321,7 +321,7 @@
                             <i class="fas fa-redo me-1"></i> Reset Filters
                         </button>
                     </div>
-                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-sm btn-warning ms-2">
+                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn  btn-warning ms-2">
                         <i class="fas fa-user-clock me-1"></i>
                         Pending Feedback (Students)
                     </a>

@@ -2,7 +2,7 @@
 
 @section('title', 'Student Details - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <style>
     .student-info-table th {
         color: #1a1a1a !important;

@@ -2,7 +2,7 @@
 
 @section('title', 'Week-{{ str_pad($weekNumber, 2, "0", STR_PAD_LEFT) }} | Course Repository Admin')
 
-@section('content')
+@section('setup_content')
 <div class="d-flex">
     <!-- Left Sidebar -->
     <aside class="course-sidebar-wrapper">

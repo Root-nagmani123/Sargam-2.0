@@ -10,86 +10,98 @@
 
     <div class="card" style="border-left: 4px solid #004a93;">
         @if ($errors->any())
-            <div class="alert alert-danger">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
         @endif
 
         <div class="card-body">
-        <h4 class="card-title mb-0">Edit Notice notification</h4>
-        <hr>
+            <h4 class="card-title mb-0">Edit Notice notification</h4>
+            <hr>
             <form method="POST" action="{{ route('admin.notice.update', $encId) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-
-                <div class="mb-3">
-                    <label class="form-label">Notice Title <span class="text-danger">*</span></label>
-                    <input type="text" name="notice_title" class="form-control"
-                           value="{{ $notice->notice_title }}">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Title <span class="text-danger">*</span></label>
+                            <input type="text" name="notice_title" class="form-control"
+                                value="{{ $notice->notice_title }}">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea id="editor" name="description"
+                                class="form-control">{!! $notice->description !!}</textarea>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Type <span class="text-danger">*</span></label>
+                            <select name="notice_type" class="form-control">
+                                <option value="">Select Notice Type</option>
+                                @foreach($types as $t)
+                                <option value="{{ $t }}" @if($notice->notice_type == $t) selected @endif>{{ $t }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <label class="form-label">Display Date <span class="text-danger">*</span></label>
+                            <input type="date" name="display_date" class="form-control"
+                                value="{{ $notice->display_date }}">
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                            <input type="date" name="expiry_date" class="form-control"
+                                value="{{ $notice->expiry_date }}">
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <label class="form-label">Document (Optional)</label>
+                            <input type="file" name="document" class="form-control">
+                            @if($notice->document)
+                            <a href="{{ asset('storage/'.$notice->document) }}" target="_blank">View Document</a>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <label class="form-label">Target Audience <span class="text-danger">*</span></label>
+                            <select name="target_audience" id="targetAudience" class="form-control">
+                                <option value="">Select Target Audience</option>
+                                @foreach($target as $t)
+                                <option value="{{ $t }}" @if($notice->target_audience == $t) selected @endif>
+                                    {{ $t }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-4"> {{-- COURSE BOX --}}
+                        <div class="mb-3 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}"
+                            id="courseBox">
+                            <label class="form-label">Select Course</label>
+                            <select name="course_master_pk" id="courseSelect" class="form-control">
+                                <option value="">Select Course</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Description <span class="text-danger">*</span></label>
-                    <textarea id="editor" name="description" class="form-control">{!! $notice->description !!}</textarea>
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-primary">Update</button>
+                    <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary">Cancel</a>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Notice Type <span class="text-danger">*</span></label>
-                    <select name="notice_type" class="form-control">
-                        <option value="">Select Notice Type</option>
-                        @foreach($types as $t)
-                            <option value="{{ $t }}" @if($notice->notice_type == $t) selected @endif>{{ $t }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Display Date <span class="text-danger">*</span></label>
-                    <input type="date" name="display_date" class="form-control"
-                           value="{{ $notice->display_date }}">
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
-                    <input type="date" name="expiry_date" class="form-control"
-                           value="{{ $notice->expiry_date }}">
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Document (Optional)</label>
-                    <input type="file" name="document" class="form-control">
-                    @if($notice->document)
-                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank">View Document</a>
-                    @endif
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Target Audience <span class="text-danger">*</span></label>
-                    <select name="target_audience" id="targetAudience" class="form-control">
-                        <option value="">Select Target Audience</option>
-                        @foreach($target as $t)
-                            <option value="{{ $t }}" @if($notice->target_audience == $t) selected @endif>
-                                {{ $t }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- COURSE BOX --}}
-                <div class="mb-3 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
-                    <label class="form-label">Select Course</label>
-                    <select name="course_master_pk" id="courseSelect" class="form-control">
-                        <option value="">Select Course</option>
-                    </select>
-                </div>
-
-                <button class="btn btn-primary">Update</button>
-                <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary">Cancel</a>
-
             </form>
         </div>
     </div>
@@ -105,35 +117,36 @@
 <script>
 $(document).ready(function() {
 
-   $('#editor').summernote({
+    $('#editor').summernote({
         height: 200,
-      toolbar: [
-    ['style', ['style']],
-    ['font', ['bold', 'italic', 'underline', 'clear']],
-    ['font2', ['strikethrough', 'superscript', 'subscript']],
-    ['fontsize', ['fontsize']],
-    ['color', ['color']],
-    ['para', ['ul', 'ol', 'paragraph']],
-    ['height', ['height']],
-    ['table', ['table']],
-    ['insert', ['link', 'picture', 'video', 'hr', 'pdfUpload']],
-    ['view', ['fullscreen', 'codeview', 'help']]
-],
+        toolbar: [
+            ['style', ['style']],
+            ['font', ['bold', 'italic', 'underline', 'clear']],
+            ['font2', ['strikethrough', 'superscript', 'subscript']],
+            ['fontsize', ['fontsize']],
+            ['color', ['color']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['height', ['height']],
+            ['table', ['table']],
+            ['insert', ['link', 'picture', 'video', 'hr', 'pdfUpload']],
+            ['view', ['fullscreen', 'codeview', 'help']]
+        ],
 
         buttons: {
-            pdfUpload: function (context) {
+            pdfUpload: function(context) {
                 var ui = $.summernote.ui;
 
                 // create button
                 var button = ui.button({
                     contents: '<i class="note-icon-paperclip"></i> PDF',
                     tooltip: 'Upload PDF',
-                    click: function () {
+                    click: function() {
 
-                        let fileInput = $('<input type="file" accept="application/pdf">');
+                        let fileInput = $(
+                            '<input type="file" accept="application/pdf">');
                         fileInput.trigger('click');
 
-                        fileInput.on('change', function () {
+                        fileInput.on('change', function() {
 
                             let file = this.files[0];
                             let formData = new FormData();
@@ -148,14 +161,17 @@ $(document).ready(function() {
                                 headers: {
                                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                                 },
-                                success: function (data) {
+                                success: function(data) {
                                     let url = data.location;
 
                                     // Insert link inside editor
-                                    context.invoke('editor.insertText', url);
+                                    context.invoke(
+                                        'editor.insertText', url
+                                    );
                                 },
-                                error: function (xhr) {
-                                    alert("PDF Upload Failed: " + xhr.responseJSON.error);
+                                error: function(xhr) {
+                                    alert("PDF Upload Failed: " +
+                                        xhr.responseJSON.error);
                                 }
                             });
 
@@ -171,7 +187,7 @@ $(document).ready(function() {
     let selectedCourse = "{{ $notice->course_master_pk }}"; // Saved course in DB
 
     function loadCourses(preselect = null) {
-      
+
         $.ajax({
             url: "{{ route('admin.notice.getCourses') }}",
             type: "GET",
