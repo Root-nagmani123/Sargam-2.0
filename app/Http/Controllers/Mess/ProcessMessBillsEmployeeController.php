@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
-use App\Models\Mess\SellingVoucherDateRangeReport;
-use App\Models\Mess\SvDateRangePaymentDetail;
 use App\Models\KitchenIssueMaster;
 use App\Models\KitchenIssuePaymentDetail;
+use App\Models\Mess\ClientType;
+use App\Models\Mess\SellingVoucherDateRangeReport;
+use App\Models\Mess\SvDateRangePaymentDetail;
+use App\Models\FacultyMaster;
+use App\Models\EmployeeMaster;
+use App\Models\DepartmentMaster;
+use App\Models\CourseMaster;
 use App\Exports\ProcessMessBillsExport;
 use App\Services\NotificationService;
 use Carbon\Carbon;
@@ -136,7 +141,68 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $stats = $this->getSummaryStats($dateFrom, $dateTo, null, $clientType, $buyerName);
 
-        return view('admin.mess.process-mess-bills-employee.index', compact('bills', 'effectiveDateFrom', 'effectiveDateTo', 'effectiveDateFromYmd', 'effectiveDateToYmd', 'stats', 'clientType', 'buyerName'));
+        // Filters for Client Type / Buyer dropdowns (reuse Sale Voucher Report logic)
+        $clientTypes = ClientType::clientTypes();
+        $clientTypeCategories = ClientType::active()
+            ->orderBy('client_type')
+            ->orderBy('client_name')
+            ->get()
+            ->groupBy('client_type');
+
+        $faculties = FacultyMaster::whereNotNull('full_name')
+            ->where('full_name', '!=', '')
+            ->orderBy('full_name')
+            ->get(['pk', 'full_name']);
+
+        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+            ->map(function ($e) {
+                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+            })
+            ->filter(fn($e) => $e->full_name !== '—')
+            ->values();
+
+        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+        $messStaff = $officersMessDept
+            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+                ->where('department_master_pk', $officersMessDept->pk)
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                ->map(function ($e) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                })
+                ->filter(fn($e) => $e->full_name !== '—')
+                ->values()
+            : collect();
+
+        $otCourses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name']);
+
+        return view('admin.mess.process-mess-bills-employee.index', compact(
+            'bills',
+            'effectiveDateFrom',
+            'effectiveDateTo',
+            'effectiveDateFromYmd',
+            'effectiveDateToYmd',
+            'stats',
+            'clientType',
+            'buyerName',
+            'clientTypes',
+            'clientTypeCategories',
+            'faculties',
+            'employees',
+            'messStaff',
+            'otCourses'
+        ));
     }
 
     /**

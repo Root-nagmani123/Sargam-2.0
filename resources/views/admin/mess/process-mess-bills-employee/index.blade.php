@@ -111,20 +111,26 @@
                                data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                                placeholder="dd-mm-yyyy" autocomplete="off">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-semibold">Client Type</label>
-                        <select name="client_type" class="form-select form-select-sm choices-select" data-placeholder="All client types">
-                            <option value="">All</option>
-                            <option value="employee" {{ ($clientType ?? '') === 'employee' ? 'selected' : '' }}>Employee</option>
-                            <option value="ot" {{ ($clientType ?? '') === 'ot' ? 'selected' : '' }}>OT</option>
-                            <option value="course" {{ ($clientType ?? '') === 'course' ? 'selected' : '' }}>Course</option>
-                            <option value="other" {{ ($clientType ?? '') === 'other' ? 'selected' : '' }}>Other</option>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
+                        <select name="client_type" id="filterClientTypeSlug" class="form-select form-select-sm choices-select" data-placeholder="All client types">
+                            <option value="">All Client Types</option>
+                            @foreach($clientTypes ?? [] as $key => $label)
+                                <option value="{{ $key }}" {{ ($clientType ?? request('client_type')) === $key ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label fw-semibold">Buyer Name</label>
-                        <input type="text" name="buyer_name" class="form-control "
-                               value="{{ $buyerName ?? request('buyer_name') }}" placeholder="Filter by buyer name...">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Client Type</label>
+                        <select id="filterClientTypePk" class="form-select form-select-sm">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Buyer Name</label>
+                        <select name="buyer_name" id="filterBuyerName" class="form-select form-select-sm">
+                            <option value="">All Buyers</option>
+                        </select>
                     </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary  flex-grow-1">
@@ -485,20 +491,26 @@
                             <input type="text" name="modal_date_to" id="modal_date_to" class="form-control "
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-semibold">Client Type</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm choices-select" data-placeholder="All client types">
-                                <option value="">All</option>
-                                <option value="employee">Employee</option>
-                                <option value="ot">OT</option>
-                                <option value="course">Course</option>
-                                <option value="other">Other</option>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
+                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm">
+                                <option value="">All Client Types</option>
+                                @foreach($clientTypes ?? [] as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Client Type</label>
+                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select form-select-sm">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label small fw-semibold">Buyer Name</label>
-                            <input type="text" name="modal_buyer_name" id="modal_buyer_name" class="form-control "
-                                   placeholder="Filter by buyer name...">
+                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select form-select-sm">
+                                <option value="">All Buyers</option>
+                            </select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Invoice Date</label>
@@ -786,8 +798,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var ct = document.getElementById('modal_client_type');
         if (ct) ct.value = '';
+        var ctp = document.getElementById('modal_client_type_pk');
+        if (ctp) {
+            ctp.innerHTML = '<option value=\"\">All</option>';
+        }
         var bn = document.getElementById('modal_buyer_name');
-        if (bn) bn.value = '';
+        if (bn) {
+            bn.innerHTML = '<option value=\"\">All Buyers</option>';
+        }
         var mp = document.getElementById('modal_mode_of_payment');
         if (mp) mp.value = 'deduct_from_salary';
         var ms = document.getElementById('modalSearch');
@@ -801,6 +819,283 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
     document.getElementById('modalSearch').addEventListener('input', renderModalTable);
     document.getElementById('modalPerPage').addEventListener('change', renderModalTable);
+
+    // --- Client Type / Buyer dependent dropdowns in modal (similar to Sale Voucher Report) ---
+    (function initModalClientTypeFilters() {
+        var modalClientType = document.getElementById('modal_client_type');
+        var modalClientTypePk = document.getElementById('modal_client_type_pk');
+        var modalBuyerName = document.getElementById('modal_buyer_name');
+        var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+
+        if (!modalClientType || !modalClientTypePk || !modalBuyerName) {
+            return;
+        }
+
+        var clientTypeOptions = {
+@foreach($clientTypes ?? [] as $key => $label)
+    '{{ $key }}': [
+        @if(isset($clientTypeCategories[$key]))
+            @foreach($clientTypeCategories[$key] as $category)
+                { value: '{{ $category->id }}', text: '{{ addslashes($category->client_name) }}', dataClientName: '{{ strtolower($category->client_name ?? '') }}' },
+            @endforeach
+        @endif
+    ],
+@endforeach
+        };
+
+        var otCourseOptions = [
+@if(isset($otCourses))
+    @foreach($otCourses as $course)
+            { value: '{{ $course->pk }}', text: '{{ addslashes($course->course_name) }}' },
+    @endforeach
+@endif
+        ];
+
+        var employeeNames = {
+            'academy staff': [
+@foreach($employees ?? [] as $e)
+                { value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },
+@endforeach
+            ],
+            'faculty': [
+@foreach($faculties ?? [] as $f)
+                { value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },
+@endforeach
+            ],
+            'mess staff': [
+@foreach($messStaff ?? [] as $m)
+                { value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },
+@endforeach
+            ]
+        };
+
+        function fillModalClientTypePk() {
+            var slug = modalClientType.value;
+            modalClientTypePk.innerHTML = '<option value=\"\">All</option>';
+
+            if (slug === 'ot' && otCourseOptions.length) {
+                otCourseOptions.forEach(function (o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    modalClientTypePk.appendChild(opt);
+                });
+            } else if (slug && clientTypeOptions[slug]) {
+                clientTypeOptions[slug].forEach(function (o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    if (o.dataClientName) {
+                        opt.dataset.clientName = o.dataClientName;
+                    }
+                    modalClientTypePk.appendChild(opt);
+                });
+            }
+            fillModalBuyerNames();
+        }
+
+        function fillModalBuyerNames() {
+            var slug = modalClientType.value;
+            var selectedPk = modalClientTypePk.value;
+            modalBuyerName.innerHTML = '<option value=\"\">All Buyers</option>';
+
+            function addBuyerOptions(list) {
+                (list || []).forEach(function (o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    modalBuyerName.appendChild(opt);
+                });
+            }
+
+            if (slug === 'employee') {
+                var selectedOpt = modalClientTypePk.options[modalClientTypePk.selectedIndex];
+                var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
+                if (dataClientName && employeeNames[dataClientName]) {
+                    addBuyerOptions(employeeNames[dataClientName]);
+                }
+            } else if (slug === 'ot' && selectedPk) {
+                fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var students = (data.students || []).map(function (s) {
+                            return { value: s.display_name || '', text: s.display_name || '—' };
+                        });
+                        addBuyerOptions(students);
+                    })
+                    .catch(function () {
+                        // ignore error; keep only "All Buyers"
+                    });
+            } else if (slug === 'course') {
+                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
+                    var list = clientTypeOptions['course'].map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addBuyerOptions(list);
+                } else if (otCourseOptions.length) {
+                    var list2 = otCourseOptions.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addBuyerOptions(list2);
+                }
+            } else if (slug && clientTypeOptions[slug]) {
+                var list3 = clientTypeOptions[slug].map(function (o) {
+                    return { value: o.text, text: o.text };
+                });
+                addBuyerOptions(list3);
+            }
+        }
+
+        modalClientType.addEventListener('change', fillModalClientTypePk);
+        modalClientTypePk.addEventListener('change', fillModalBuyerNames);
+
+        // Initial fill
+        fillModalClientTypePk();
+    })();
+
+    // --- Main "Process Mess Bills" filters – Employee / OT / Course + Client Type + Buyer Name ---
+    (function initMainClientTypeFilters() {
+        var clientTypeSlug = document.getElementById('filterClientTypeSlug');
+        var clientTypePk = document.getElementById('filterClientTypePk');
+        var buyerSelect = document.getElementById('filterBuyerName');
+        var studentsByCourseUrl = "{{ url('/admin/mess/selling-voucher-date-range/students-by-course') }}";
+        var preservedBuyerName = {!! json_encode($buyerName ?? request('buyer_name', '')) !!};
+
+        if (!clientTypeSlug || !clientTypePk || !buyerSelect) {
+            return;
+        }
+
+        var clientTypeOptions = {
+@foreach($clientTypes ?? [] as $key => $label)
+    '{{ $key }}': [
+        @if(isset($clientTypeCategories[$key]))
+            @foreach($clientTypeCategories[$key] as $category)
+                { value: '{{ $category->id }}', text: '{{ addslashes($category->client_name) }}', dataClientName: '{{ strtolower($category->client_name ?? '') }}' },
+            @endforeach
+        @endif
+    ],
+@endforeach
+        };
+
+        var otCourseOptions = [
+@if(isset($otCourses))
+    @foreach($otCourses as $course)
+            { value: '{{ $course->pk }}', text: '{{ addslashes($course->course_name) }}' },
+    @endforeach
+@endif
+        ];
+
+        var employeeNames = {
+            'academy staff': [
+@foreach($employees ?? [] as $e)
+                { value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },
+@endforeach
+            ],
+            'faculty': [
+@foreach($faculties ?? [] as $f)
+                { value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },
+@endforeach
+            ],
+            'mess staff': [
+@foreach($messStaff ?? [] as $m)
+                { value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },
+@endforeach
+            ]
+        };
+
+        function fillClientTypePk() {
+            var slug = clientTypeSlug.value;
+            clientTypePk.innerHTML = '<option value=\"\">All</option>';
+
+            if (slug === 'ot' && otCourseOptions.length) {
+                otCourseOptions.forEach(function (o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    clientTypePk.appendChild(opt);
+                });
+            } else if (slug && clientTypeOptions[slug]) {
+                clientTypeOptions[slug].forEach(function (o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    if (o.dataClientName) {
+                        opt.dataset.clientName = o.dataClientName;
+                    }
+                    clientTypePk.appendChild(opt);
+                });
+            }
+            fillBuyerSelect(true);
+        }
+
+        function fillBuyerSelect(preserve) {
+            var slug = clientTypeSlug.value;
+            var selectedPk = clientTypePk.value;
+            var currentBuyer = preserve ? preservedBuyerName : '';
+            buyerSelect.innerHTML = '<option value=\"\">All Buyers</option>';
+
+            function addOptions(list) {
+                (list || []).forEach(function (o) {
+                    var opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    buyerSelect.appendChild(opt);
+                });
+                if (currentBuyer) {
+                    buyerSelect.value = currentBuyer;
+                }
+            }
+
+            if (slug === 'employee') {
+                var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
+                var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
+                if (dataClientName && employeeNames[dataClientName]) {
+                    addOptions(employeeNames[dataClientName]);
+                }
+            } else if (slug === 'ot' && selectedPk) {
+                fetch(studentsByCourseUrl + '/' + selectedPk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        var students = (data.students || []).map(function (s) {
+                            return { value: s.display_name || '', text: s.display_name || '—' };
+                        });
+                        addOptions(students);
+                    })
+                    .catch(function () {
+                        // ignore; leave All Buyers only
+                    });
+            } else if (slug === 'course') {
+                if (clientTypeOptions['course'] && clientTypeOptions['course'].length) {
+                    var list = clientTypeOptions['course'].map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addOptions(list);
+                } else if (otCourseOptions.length) {
+                    var list2 = otCourseOptions.map(function (o) {
+                        return { value: o.text, text: o.text };
+                    });
+                    addOptions(list2);
+                }
+            } else if (slug && clientTypeOptions[slug]) {
+                var list3 = clientTypeOptions[slug].map(function (o) {
+                    return { value: o.text, text: o.text };
+                });
+                addOptions(list3);
+            }
+        }
+
+        clientTypeSlug.addEventListener('change', function () {
+            preservedBuyerName = ''; // reset when main type changes
+            fillClientTypePk();
+        });
+        clientTypePk.addEventListener('change', function () {
+            preservedBuyerName = '';
+            fillBuyerSelect(false);
+        });
+
+        // Initial populate on page load
+        fillClientTypePk();
+    })();
 
     document.getElementById('modalSelectAll').addEventListener('change', function() {
         document.querySelectorAll('#addProcessMessBillsModal .modal-bill-check').forEach(function(cb) {
