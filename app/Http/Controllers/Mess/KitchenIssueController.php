@@ -317,57 +317,30 @@ class KitchenIssueController extends Controller
             $clientType = $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE;
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
 
-            // One bill per person: reuse existing unpaid selling voucher for same buyer (same store + client)
-            $master = KitchenIssueMaster::query()
-                ->where('store_id', $storeId)
-                ->where('store_type', $storeType)
-                ->where('client_type', $clientType)
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('status', '!=', KitchenIssueMaster::STATUS_APPROVED)
-                ->where(function ($q) use ($clientTypePk) {
-                    if ($clientTypePk !== null) {
-                        $q->where('client_type_pk', $clientTypePk);
-                    } else {
-                        $q->whereNull('client_type_pk');
-                    }
-                })
-                ->orderByDesc('pk')
-                ->first();
+            // Always create a fresh Selling Voucher entry.
+            // Earlier logic tried to "reuse" an existing pending voucher for the same
+            // buyer and store, which caused later items to appear in multiple
+            // entries and also updated the original voucher's date.
+            $master = KitchenIssueMaster::create([
+                'store_id' => $storeId,
+                'store_type' => $storeType,
+                'payment_type' => $request->payment_type,
+                'client_type' => $clientType,
+                'client_type_pk' => $clientTypePk,
+                'client_id' => $request->client_id,
+                'name_id' => $request->name_id,
+                'client_name' => $request->client_name,
+                'issue_date' => $request->issue_date,
+                'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
+                'status' => KitchenIssueMaster::STATUS_PENDING,
+                'remarks' => $request->remarks,
+                'reference_number' => $request->reference_number,
+                'order_by' => $request->order_by,
+            ]);
 
-            if (!$master) {
-                $master = KitchenIssueMaster::create([
-                    'store_id' => $storeId,
-                    'store_type' => $storeType,
-                    'payment_type' => $request->payment_type,
-                    'client_type' => $clientType,
-                    'client_type_pk' => $clientTypePk,
-                    'client_id' => $request->client_id,
-                    'name_id' => $request->name_id,
-                    'client_name' => $request->client_name,
-                    'issue_date' => $request->issue_date,
-                    'kitchen_issue_type' => KitchenIssueMaster::TYPE_SELLING_VOUCHER,
-                    'status' => KitchenIssueMaster::STATUS_PENDING,
-                    'remarks' => $request->remarks,
-                    'reference_number' => $request->reference_number,
-                    'order_by' => $request->order_by,
-                ]);
-
-                if ($request->hasFile('bill_file')) {
-                    $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
-                    $master->update(['bill_path' => $path]);
-                }
-            } else {
-                // Add to existing bill: update issue_date to latest purchase date
-                $newIssueDate = $request->issue_date instanceof Carbon
-                    ? $request->issue_date
-                    : Carbon::parse($request->issue_date);
-                if ($newIssueDate->gt($master->issue_date)) {
-                    $master->update(['issue_date' => $newIssueDate]);
-                }
-                if ($request->hasFile('bill_file')) {
-                    $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
-                    $master->update(['bill_path' => $path]);
-                }
+            if ($request->hasFile('bill_file')) {
+                $path = $request->file('bill_file')->store('mess/selling-voucher/bills', 'public');
+                $master->update(['bill_path' => $path]);
             }
 
             $subcategories = ItemSubcategory::whereIn('id', collect($request->items)->pluck('item_subcategory_id'))->get()->keyBy('id');
