@@ -225,6 +225,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
             statusEl.style.display = 'block';
             setTimeout(function () { statusEl.style.display = 'none'; }, 4000);
+        } else {
+            // Fallback so user always sees some feedback
+            window.alert(msg);
         }
     }
 

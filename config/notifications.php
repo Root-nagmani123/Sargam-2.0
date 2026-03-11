@@ -147,6 +147,14 @@ return [
         ],
     ],
 
+    // Estate Bill Notifications
+    'estate' => [
+        'EstateBill' => [
+            'route' => 'admin.estate.generate-estate-bill',
+            'params' => [],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

@@ -31,6 +31,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use App\Services\NotificationService;
 
 class EstateController extends Controller
 {
@@ -5809,7 +5810,57 @@ class EstateController extends Controller
             'pks.*' => 'integer|exists:estate_month_reading_details,pk',
         ]);
         $pks = array_map('intval', $validated['pks']);
-        $updated = DB::table('estate_month_reading_details')->whereIn('pk', $pks)->update(['notify_employee_status' => 1]);
+        $updated = DB::table('estate_month_reading_details')
+            ->whereIn('pk', $pks)
+            ->update(['notify_employee_status' => 1]);
+
+        // Create bell notifications for each employee whose bill was verified
+        try {
+            $rows = DB::table('estate_month_reading_details as emrd')
+                ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+                ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+                ->whereIn('emrd.pk', $pks)
+                ->select(
+                    'emrd.pk',
+                    'emrd.bill_no',
+                    'emrd.bill_month',
+                    'emrd.bill_year',
+                    'ehrd.employee_pk',
+                    'ehrd.emp_name'
+                )
+                ->get();
+
+            if ($rows->isNotEmpty()) {
+                /** @var NotificationService $notificationService */
+                $notificationService = app(NotificationService::class);
+
+                foreach ($rows as $row) {
+                    $receiverUserId = (int) ($row->employee_pk ?? 0);
+                    if ($receiverUserId <= 0) {
+                        continue;
+                    }
+
+                    $monthLabel = trim((string) ($row->bill_month ?? ''));
+                    $yearLabel = trim((string) ($row->bill_year ?? ''));
+                    $period = trim($monthLabel . ' ' . $yearLabel);
+                    $title = 'Estate Bill Generated';
+                    $message = $period !== ''
+                        ? "Your estate bill for {$period} has been generated. Please review it."
+                        : 'Your estate bill has been generated. Please review it.';
+
+                    $notificationService->create(
+                        $receiverUserId,
+                        'estate',
+                        'EstateBill',
+                        (int) $row->pk,
+                        $title,
+                        $message
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send estate bill notifications: ' . $e->getMessage());
+        }
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'status' => true,
