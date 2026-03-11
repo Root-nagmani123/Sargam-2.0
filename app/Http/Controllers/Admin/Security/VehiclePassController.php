@@ -477,12 +477,27 @@ class VehiclePassController extends Controller
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application deleted successfully');
     }
 
-    /** Returns numeric vehicle_req_id (int) per SQL column vehicle_req_id int(5). */
+    /**
+     * Generate next global vehicle_req_id.
+     *
+     * Requirement: vehicle_pass_tw_apply aur vehicle_pass_fw_apply
+     * dono tables me vehicle_req_id UNIQUE hona chahiye aur
+     * last row ke vehicle_req_id se +1 hokr next request banega.
+     */
     private function generateVehicleReqId($vehicleTypePk)
     {
-        $config = \App\Models\SecVehiclePassConfig::where('sec_vehicle_type_pk', $vehicleTypePk)->first();
-        $counter = $config ? (int) $config->start_counter : 1;
-        $existingCount = VehiclePassTWApply::where('vehicle_type', $vehicleTypePk)->count();
-        return $counter + $existingCount;
+        // Get max vehicle_req_id from two-wheeler table
+        $maxTw = (int) DB::table('vehicle_pass_tw_apply')->max('vehicle_req_id');
+
+        // Get max vehicle_req_id from four-wheeler table (if exists)
+        $maxFw = 0;
+        if (DB::getSchemaBuilder()->hasTable('vehicle_pass_fw_apply')) {
+            $maxFw = (int) DB::table('vehicle_pass_fw_apply')->max('vehicle_req_id');
+        }
+
+        $currentMax = max($maxTw, $maxFw);
+
+        // Start from 1 if no records yet
+        return $currentMax > 0 ? $currentMax + 1 : 1;
     }
 }

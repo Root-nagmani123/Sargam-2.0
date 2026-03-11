@@ -25,7 +25,7 @@
                             <option value="">--Select--</option>
                             <option value="Permanent" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Permanent' ? 'selected':'' }}>Permanent</option>
                             <option value="Contractual" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Contractual' ? 'selected':'' }}>Contractual</option>
-                            <option value="Family" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Family' ? 'selected':'' }}>Family</option>
+                            {{--<option value="Family" {{ old('id_card_type', $data['id_card_type'] ?? '')==='Family' ? 'selected':'' }}>Family</option> --}}
                         </select>
                         @error('id_card_type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -167,6 +167,17 @@
                             <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
                         @endif
                         @error('fir_doc')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <!-- Card Lost - Payment Receipt (optional) -->
+                    <div class="col-md-6" id="payment_receipt_section" style="display: none;">
+                        <label class="form-label">Upload Payment Receipt</label>
+                        @if(isset($edit_id) && !empty($existing_docs['payment_receipt'] ?? null))
+                            <a href="{{ asset('storage/idcard/dup_docs/' . $existing_docs['payment_receipt']) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Payment Receipt</a>
+                        @endif
+                        <input type="file" name="payment_receipt" class="form-control" accept=".pdf,.doc,.docx,.jpeg,.jpg,.png">
+                        <small class="text-muted d-block">Allowed: PDF, DOC, DOCX, JPG, PNG. Max size: 5 MB</small>
+                        @error('payment_receipt')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
                     <!-- Service Extended - Extension Proof -->
@@ -322,6 +333,7 @@
             const sections = {
                 'damage_doc_section': null,
                 'fir_doc_section': null,
+                'payment_receipt_section': null,
                 'service_ext_section': null,
                 'new_name_section': null,
                 'name_proof_section': null,
@@ -337,6 +349,7 @@
             // Clear required attribute from all conditional fields
             const damageDoc = document.querySelector('input[name="damage_doc"]');
             const firDoc = document.querySelector('input[name="fir_doc"]');
+            const paymentReceipt = document.querySelector('input[name="payment_receipt"]');
             const serviceExt = document.querySelector('input[name="service_ext"]');
             const newEmpName = document.querySelector('input[name="new_employee_name"]');
             const nameProof = document.querySelector('input[name="name_proof"]');
@@ -344,6 +357,7 @@
 
             if (damageDoc) damageDoc.removeAttribute('required');
             if (firDoc) firDoc.removeAttribute('required');
+            if (paymentReceipt) paymentReceipt.removeAttribute('required');
             if (serviceExt) serviceExt.removeAttribute('required');
             if (newEmpName) newEmpName.removeAttribute('required');
             if (nameProof) nameProof.removeAttribute('required');
@@ -368,7 +382,9 @@
             } else if (reason === 'Card Lost') {
                 console.log('🟠 Showing Card Lost section');
                 const el = document.getElementById('fir_doc_section');
+                const payEl = document.getElementById('payment_receipt_section');
                 if (el) el.style.display = 'block';
+                if (payEl) payEl.style.display = 'block';
                 if (firDoc) firDoc.setAttribute('required', 'required');
             } else if (reason === 'Service Extended') {
                 console.log('🟡 Showing Service Extended section');

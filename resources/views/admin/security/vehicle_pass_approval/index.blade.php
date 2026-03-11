@@ -3,13 +3,10 @@
 @section('setup_content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Pending Vehicle Pass Approvals']) 
-    <div class="card" style="border-left:4px solid #004a93;">
+    <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Pending Vehicle Pass Approvals</h4>
-                <a href="{{ route('admin.security.vehicle_pass_approval.all') }}" class="btn btn-secondary">
-                    View All Applications
-                </a>
             </div>
             
             @if(session('success'))
@@ -26,23 +23,27 @@
                 </div>
             @endif
 
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead>
-                        <tr>
-                            <th>Vehicle Number</th>
-                            <th>Request Type</th>
-                            <th>Employee Name</th>
-                            <th>Employee ID</th>
-                            <th>Vehicle Type</th>
-                            <th>Applied On</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
+            <div class="datatables">
+                <div class="table-responsive">
+                    <table id="vehicle-pass-approval-table" class="table text-nowrap align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Employee Name</th>
+                                <th scope="col">Vehicle Number</th>
+                                <th scope="col">Vehicle Type</th>
+                                <th scope="col">Request Type</th>
+                                <th scope="col">Vehicle Pass No</th>
+                                <th scope="col">Employee ID</th>
+                                <th scope="col">Applied On</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
                     <tbody>
                         @forelse($pendingApplications as $app)
                             <tr>
+                             <td>{{ $app->employee_name ?? '--' }}</td>
                                 <td><strong>{{ $app->vehicle_number ?? '--' }}</strong></td>
+                                 <td>{{ $app->vehicle_type ?? '--' }}</td>
                                 <td>
                                     @if(isset($app->request_type) && $app->request_type === 'duplicate')
                                         <span class="badge bg-warning">Duplicate</span>
@@ -50,9 +51,9 @@
                                         <span class="badge bg-info">Regular</span>
                                     @endif
                                 </td>
-                                <td>{{ $app->employee_name ?? '--' }}</td>
-                                <td><code>{{ $app->employee_id ?? '--' }}</code></td>
-                                <td>{{ $app->vehicle_type ?? '--' }}</td>
+                                <td>{{ $app->vehicle_pass_no ?? '--' }}</td>
+                                <td>{{ $app->employee_id ?? '--' }}</td>
+                               
                                 <td>{{ $app->created_date ? \Carbon\Carbon::parse($app->created_date)->format('d-m-Y H:i') : '--' }}</td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
@@ -62,30 +63,27 @@
                                                 : encrypt($app->id);
                                         @endphp
                                         <a href="{{ route('admin.security.vehicle_pass_approval.show', $encryptId) }}" 
-                                           class="btn btn-sm btn-info" title="View Details">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i> View
+                                           class="btn  btn-info bg-transparent border-0 text-primary p-0" title="View Details">
+                                            <i class="material-icons material-symbols-rounded">visibility</i>
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-success btn-veh-approve" 
+                                        <button type="button" class="btn  btn-success btn-veh-approve bg-transparent border-0 text-primary p-0" 
                                                 data-encrypted-id="{{ $encryptId }}" title="Approve">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">check_circle</i> Approve
+                                            <i class="material-icons material-symbols-rounded">check_circle</i>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-danger btn-veh-reject" 
-                                                data-encrypted-id="{{ $encryptId }}" title="Reject">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">cancel</i> Reject
-                                        </button>
-                                    </div>
+                                        <button type="button" class="btn  btn-danger btn-veh-reject bg-transparent border-0 text-primary p-0" 
+                                            data-encrypted-id="{{ $encryptId }}" title="Reject">
+                                        <i class="material-icons material-symbols-rounded">cancel</i>
+                                    </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted">No pending applications found.</td>
+                                <td colspan="8" class="text-center py-4 text-muted">No pending applications found.</td>
                             </tr>
                         @endforelse
                     </tbody>
-                </table>
-            </div>
-            <div class="mt-3">
-                {{ $pendingApplications->links() }}
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -172,6 +170,44 @@
         var url = rejectUrlTemplate.replace('__ID__', safeId);
         $('#rejectForm').attr('action', url);
         $('#rejectModal').modal('show');
+    });
+
+    // DataTables: sorting, search, pagination (page length 10)
+    $(document).ready(function () {
+        var $table = $('#vehicle-pass-approval-table');
+        if ($table.length && typeof $.fn.DataTable !== 'undefined' && !$.fn.DataTable.isDataTable($table)) {
+            $table.DataTable({
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50], [10, 25, 50]],
+                order: [[0, 'asc']],
+                ordering: true,
+                searching: true,
+                dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                language: {
+                    search: '',
+                    searchPlaceholder: 'Search applications...',
+                    lengthMenu: 'Show _MENU_ entries',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                    infoEmpty: 'No entries',
+                    infoFiltered: '(filtered from _MAX_ total)',
+                    paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' },
+                    zeroRecords: 'No matching applications found'
+                },
+                columnDefs: [{ orderable: false, targets: 7 }],
+                drawCallback: function () {
+                    if (typeof window.adjustAllDataTables === 'function') {
+                        try { window.adjustAllDataTables(); } catch (e) {}
+                    }
+                }
+            });
+            var wrapper = $table.closest('.datatables');
+            if (wrapper.length) {
+                wrapper.find('.dataTables_length select').addClass('form-select form-select-sm');
+                wrapper.find('.dataTables_filter input').addClass('form-control').attr('placeholder', 'Search applications...');
+                wrapper.find('.dataTables_info').addClass('small text-muted');
+                wrapper.find('.dataTables_paginate').addClass('small');
+            }
+        }
     });
 })();
 </script>
