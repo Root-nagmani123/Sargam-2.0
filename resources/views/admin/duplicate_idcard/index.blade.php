@@ -89,16 +89,20 @@
                                         $p = $r->photo_path;
                                         if ($p && strpos($p,'/') === false) { $p = 'idcard/photos/'.$p; }
                                         $photoExists = $p && \Storage::disk('public')->exists($p);
-                                        $photoUrl = $photoExists ? asset('storage/'.$p) : asset('images/dummypic.jpeg');
-                                    @endphp
-                                    <a href="{{ $photoUrl }}" target="_blank">Download</a>
+                                         @endphp
+                                     @if($photoExists)
+                                        <a href="{{ asset('storage/'.$p) }}" target="_blank">Download</a>
+                                    @else
+                                        --
+                                    @endif
                                 </td>
                                 <td>
                                     @php
                                         $d = $r->doc_path;
                                         if ($d && strpos($d,'/') === false) { $d = 'idcard/dup_docs/'.$d; }
+                                        $docExists = $d && \Storage::disk('public')->exists($d);
                                     @endphp
-                                    @if($d)
+                                    @if($docExists)
                                         <a href="{{ asset('storage/'.$d) }}" target="_blank">Download</a>
                                     @else
                                         --
