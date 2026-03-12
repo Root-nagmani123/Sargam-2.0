@@ -70,6 +70,10 @@
                     <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
                     <span>Print</span>
                 </button>
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger d-inline-flex align-items-center" title="Download PDF">
+                    <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                    <span>PDF</span>
+                </a>
                 <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
                     <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                     <span>Export Excel</span>

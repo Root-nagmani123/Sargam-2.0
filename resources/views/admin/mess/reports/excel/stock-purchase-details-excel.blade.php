@@ -20,7 +20,18 @@
     </tr>
     <tr>
         <td colspan="8" style="text-align:center;">
-            Vendor: {{ $selectedVendor ? $selectedVendor->name : 'All Vendors' }}
+            Vendor Details:
+            @if($selectedVendor)
+                {{ trim(implode(' | ', array_filter([
+                    'Name: ' . $selectedVendor->name,
+                    !empty($selectedVendor->contact_person) ? 'Contact: ' . $selectedVendor->contact_person : null,
+                    !empty($selectedVendor->phone) ? 'Phone: ' . $selectedVendor->phone : null,
+                    !empty($selectedVendor->email) ? 'Email: ' . $selectedVendor->email : null,
+                    !empty($selectedVendor->address) ? 'Address: ' . $selectedVendor->address : null,
+                ]))) }}
+            @else
+                All Vendors
+            @endif
         </td>
     </tr>
 

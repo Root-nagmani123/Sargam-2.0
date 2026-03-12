@@ -28,6 +28,7 @@ use App\Exports\Mess\PurchaseSaleQuantityExport;
 use App\Exports\Mess\SellingVoucherPrintSlipExport;
 use App\Exports\Mess\CategoryWisePrintSlipExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 use DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -39,14 +40,43 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetails(Request $request)
     {
+        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: false);
+
+        $stores = Store::where('status', 'active')->get();
+        $vendors = Vendor::all();
+
+        return view('admin.mess.reports.stock-purchase-details', [
+            'purchaseOrders' => $queryData['purchaseOrders'],
+            'grandTotal'     => $queryData['grandTotal'],
+            'stores'         => $stores,
+            'vendors'        => $vendors,
+            'selectedVendor' => $queryData['selectedVendor'],
+            'fromDate'       => $queryData['fromDate'],
+            'toDate'         => $queryData['toDate'],
+        ]);
+    }
+
+    /**
+     * Build base query and shared data for Stock Purchase Details (view, Excel, PDF).
+     *
+     * @return array{
+     *     purchaseOrders: \Illuminate\Contracts\Pagination\LengthAwarePaginator|\Illuminate\Support\Collection,
+     *     grandTotal: float|int,
+     *     fromDate: string,
+     *     toDate: string,
+     *     selectedVendor: \App\Models\Mess\Vendor|null
+     * }
+     */
+    private function buildStockPurchaseDetailsQuery(Request $request, bool $forExport = false): array
+    {
         // Use request dates when provided, otherwise default to today (so default filter applies on first load)
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
-        $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
 
-        $baseQuery = PurchaseOrder::with(['vendor', 'store', 'items.itemSubcategory']);
+        $baseQuery = PurchaseOrder::with(['vendor', 'store', 'items.itemSubcategory'])
+            ->whereDate('po_date', '>=', $fromDate)
+            ->whereDate('po_date', '<=', $toDate);
 
-        $baseQuery->whereDate('po_date', '>=', $fromDate);
-        $baseQuery->whereDate('po_date', '<=', $toDate);
         if ($request->filled('store_id')) {
             $baseQuery->where('store_id', $request->store_id);
         }
@@ -62,26 +92,23 @@ class ReportController extends Controller
             ->selectRaw('SUM(quantity * unit_price) as total')
             ->value('total') ?? 0;
 
-        // Paginate purchase orders (bills per page)
-        $purchaseOrders = $baseQuery->paginate(5)->withQueryString();
-
-        $stores = Store::where('status', 'active')->get();
-        $vendors = Vendor::all();
+        // For screen we paginate, for export (Excel/PDF) we take full collection
+        $purchaseOrders = $forExport
+            ? $baseQuery->get()
+            : $baseQuery->paginate(5)->withQueryString();
 
         $selectedVendor = null;
         if ($request->filled('vendor_id')) {
             $selectedVendor = Vendor::find($request->vendor_id);
         }
 
-        return view('admin.mess.reports.stock-purchase-details', compact(
-            'purchaseOrders',
-            'grandTotal',
-            'stores',
-            'vendors',
-            'selectedVendor',
-            'fromDate',
-            'toDate'
-        ));
+        return [
+            'purchaseOrders' => $purchaseOrders,
+            'grandTotal'     => $grandTotal,
+            'fromDate'       => $fromDate,
+            'toDate'         => $toDate,
+            'selectedVendor' => $selectedVendor,
+        ];
     }
 
     /**
@@ -118,8 +145,8 @@ class ReportController extends Controller
     public function stockSummaryExcel(Request $request)
     {
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
-        $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-        $storeId = $request->filled('store_id') ? $request->store_id : null;
+        $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $storeId  = $request->filled('store_id') ? $request->store_id : null;
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
 
         [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
@@ -132,44 +159,82 @@ class ReportController extends Controller
     }
 
     /**
+     * Stock Summary Report - PDF Export
+     */
+    public function stockSummaryPdf(Request $request)
+    {
+        $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
+        $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $storeId  = $request->filled('store_id') ? $request->store_id : null;
+        $storeType = $request->filled('store_type') ? $request->store_type : 'main';
+
+        [$reportData, $selectedStoreName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeId, $storeType);
+
+        $data = [
+            'reportData'        => $reportData,
+            'fromDate'          => $fromDate,
+            'toDate'            => $toDate,
+            'storeId'           => $storeId,
+            'storeType'         => $storeType,
+            'selectedStoreName' => $selectedStoreName,
+        ];
+
+        $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-summary-pdf', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont'           => 'DejaVu Sans',
+                'isHtml5ParserEnabled'  => true,
+                'isRemoteEnabled'       => true,
+                'dpi'                   => 96,
+            ]);
+
+        $fileName = 'stock-summary-report-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($fileName);
+    }
+
+    /**
      * Stock Purchase Details Report - Excel Export
      */
     public function stockPurchaseDetailsExcel(Request $request)
     {
-        $baseQuery = PurchaseOrder::with(['vendor', 'store', 'items.itemSubcategory']);
+        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: true);
 
-        if ($request->filled('from_date')) {
-            $baseQuery->whereDate('po_date', '>=', $request->from_date);
-        }
-        if ($request->filled('to_date')) {
-            $baseQuery->whereDate('po_date', '<=', $request->to_date);
-        }
-        if ($request->filled('store_id')) {
-            $baseQuery->where('store_id', $request->store_id);
-        }
-        if ($request->filled('vendor_id')) {
-            $baseQuery->where('vendor_id', $request->vendor_id);
-        }
-        $baseQuery->orderBy('po_date', 'asc')->orderBy('id', 'asc');
-        $purchaseOrders = $baseQuery->get();
-
-        // Match defaults with the main report
-        $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
-        $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
-
-        $selectedVendor = null;
-        if ($request->filled('vendor_id')) {
-            $selectedVendor = Vendor::find($request->vendor_id);
-        }
-
-        $fileName = 'stock-purchase-details-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
+        $fileName = 'stock-purchase-details-' . $queryData['fromDate'] . '-to-' . $queryData['toDate'] . '-' . now()->format('Y-m-d_His') . '.xlsx';
 
         return Excel::download(
-            new StockPurchaseDetailsExport($purchaseOrders, $fromDate, $toDate, $selectedVendor),
+            new StockPurchaseDetailsExport($queryData['purchaseOrders'], $queryData['fromDate'], $queryData['toDate'], $queryData['selectedVendor']),
             $fileName
         );
     }
 
+    /**
+     * Stock Purchase Details Report - PDF Export
+     */
+    public function stockPurchaseDetailsPdf(Request $request)
+    {
+        $queryData = $this->buildStockPurchaseDetailsQuery($request, forExport: true);
+
+        $data = [
+            'purchaseOrders' => $queryData['purchaseOrders'],
+            'fromDate'       => $queryData['fromDate'],
+            'toDate'         => $queryData['toDate'],
+            'selectedVendor' => $queryData['selectedVendor'],
+        ];
+
+        $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-purchase-details-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont'           => 'DejaVu Sans',
+                'isHtml5ParserEnabled'  => true,
+                'isRemoteEnabled'       => true,
+                'dpi'                   => 96,
+            ]);
+
+        $fileName = 'stock-purchase-details-' . $queryData['fromDate'] . '-to-' . $queryData['toDate'] . '-' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($fileName);
+    }
     /**
      * Stock Balance Till Date Report - Excel Export
      */
@@ -177,70 +242,43 @@ class ReportController extends Controller
     {
         $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
         $storeId  = $request->filled('store_id') ? $request->store_id : null;
-        $items = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
-        $reportData = [];
-
-        foreach ($items as $item) {
-            $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
-                    $q->where('status', 'approved')->whereDate('po_date', '<=', $tillDate);
-                    if ($storeId) {
-                        $q->where('store_id', $storeId);
-                    }
-                })
-                ->sum('quantity');
-            $totalIssuedKi = \DB::table('kitchen_issue_items as kii')
-                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                ->where('kii.item_subcategory_id', $item->id)
-                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('kim.store_type', 'store')
-                ->whereDate('kim.issue_date', '<=', $tillDate)
-                ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
-                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
-            $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->where('svi.item_subcategory_id', $item->id)
-                ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '<=', $tillDate)
-                ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
-                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
-            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
-            if ($remainingQty <= 0) {
-                continue;
-            }
-            $avgRate = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
-                    $q->where('status', 'approved')->whereDate('po_date', '<=', $tillDate);
-                    if ($storeId) {
-                        $q->where('store_id', $storeId);
-                    }
-                })
-                ->avg('unit_price');
-            $rate = $avgRate ?? $item->standard_cost ?? 0;
-            $reportData[] = [
-                'item_code' => $item->item_code ?? $item->subcategory_code ?? '—',
-                'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
-                'unit' => $item->unit_measurement ?? 'Unit',
-                'remaining_qty' => $remainingQty,
-                'remaining_quantity' => $remainingQty,
-                'rate' => $rate,
-                'amount' => $remainingQty * $rate,
-            ];
-        }
-
-        // Resolve selected store name for Excel header.
-        $selectedStoreName = null;
-        if ($storeId) {
-            $selectedStoreName = Store::find($storeId)?->store_name;
-        }
+        $reportData = $this->buildStockBalanceTillDateData($tillDate, $storeId);
+        $selectedStoreName = $this->resolveStoreName($storeId);
 
         $fileName = 'stock-balance-till-date-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
+
         return Excel::download(
             new StockBalanceTillDateExport($reportData, $tillDate, $selectedStoreName),
             $fileName
         );
+    }
+
+    /**
+     * Stock Balance Till Date Report - PDF Export
+     */
+    public function stockBalanceTillDatePdf(Request $request)
+    {
+        $tillDate = $request->filled('till_date') ? $request->till_date : now()->format('Y-m-d');
+        $storeId  = $request->filled('store_id') ? $request->store_id : null;
+
+        $data = [
+            'reportData' => $this->buildStockBalanceTillDateData($tillDate, $storeId),
+            'tillDate' => $tillDate,
+            'selectedStoreName' => $this->resolveStoreName($storeId),
+        ];
+
+        $pdf = Pdf::loadView('admin.mess.reports.pdf.stock-balance-till-date-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont'           => 'DejaVu Sans',
+                'isHtml5ParserEnabled'  => true,
+                'isRemoteEnabled'       => true,
+                'dpi'                   => 96,
+            ]);
+
+        $fileName = 'stock-balance-till-date-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($fileName);
     }
 
     /**
@@ -257,73 +295,72 @@ class ReportController extends Controller
         $categoryId = $request->filled('category_id') ? $request->category_id : null;
         $itemId = $request->filled('item_id') ? $request->item_id : null;
 
-        $itemsQuery = ItemSubcategory::where('status', 'active')->with('category')->orderBy('name');
-        if ($viewType === 'category_wise' && $categoryId) {
-            $itemsQuery->where('category_id', $categoryId);
-        } elseif ($viewType === 'category_wise') {
-            $itemsQuery->whereRaw('1 = 0');
-        }
-        if ($itemId) {
-            $itemsQuery->where('id', $itemId);
-        }
-        $items = $itemsQuery->get();
-
-        $reportData = [];
-        foreach ($items as $item) {
-            $purchaseAgg = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($fromDate, $toDate) {
-                    $q->where('status', 'approved')
-                        ->whereDate('po_date', '>=', $fromDate)
-                        ->whereDate('po_date', '<=', $toDate);
-                })
-                ->selectRaw('COALESCE(SUM(quantity), 0) as total_qty, COALESCE(SUM(quantity * unit_price), 0) as total_amount')
-                ->first();
-            $purchaseQty = (float) ($purchaseAgg->total_qty ?? 0);
-            $purchaseAmount = (float) ($purchaseAgg->total_amount ?? 0);
-            $avgPurchasePrice = $purchaseQty > 0 ? $purchaseAmount / $purchaseQty : null;
-
-            $saleKi = \DB::table('kitchen_issue_items as kii')
-                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                ->where('kii.item_subcategory_id', $item->id)
-                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('kim.store_type', 'store')
-                ->whereDate('kim.issue_date', '>=', $fromDate)
-                ->whereDate('kim.issue_date', '<=', $toDate)
-                ->selectRaw('COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, 0)), 0) as net_amount')
-                ->first();
-            $saleQtyKi = (float) ($saleKi->net_qty ?? 0);
-            $saleAmountKi = (float) ($saleKi->net_amount ?? 0);
-            $saleSv = \DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->where('svi.item_subcategory_id', $item->id)
-                ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '>=', $fromDate)
-                ->whereDate('svr.issue_date', '<=', $toDate)
-                ->selectRaw('COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, 0)), 0) as net_amount')
-                ->first();
-            $saleQtySv = (float) ($saleSv->net_qty ?? 0);
-            $saleAmountSv = (float) ($saleSv->net_amount ?? 0);
-            $saleQty = $saleQtyKi + $saleQtySv;
-            $saleAmount = $saleAmountKi + $saleAmountSv;
-            $avgSalePrice = $saleQty > 0 ? $saleAmount / $saleQty : null;
-
-            $reportData[] = [
-                'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name ?? '—',
-                'unit' => $item->unit_measurement ?? 'Unit',
-                'purchase_qty' => $purchaseQty,
-                'sale_qty' => $saleQty,
-                'avg_purchase_price' => $avgPurchasePrice,
-                'avg_sale_price' => $avgSalePrice,
-                'category_id' => $item->category_id,
-                'category_name' => $item->category ? $item->category->category_name : null,
-            ];
-        }
+        [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemId);
 
         $fileName = 'purchase-sale-quantity-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.xlsx';
         return Excel::download(
             new PurchaseSaleQuantityExport($reportData, $fromDate, $toDate, $viewType),
             $fileName
         );
+    }
+
+    /**
+     * Purchase Sale Quantity Report - PDF Export
+     */
+    public function purchaseSaleQuantityPdf(Request $request)
+    {
+        $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
+        $toDate   = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $viewType = $request->filled('view_type') ? $request->view_type : 'item_wise';
+        if (!in_array($viewType, ['item_wise', 'subcategory_wise', 'category_wise'], true)) {
+            $viewType = 'item_wise';
+        }
+        $categoryId = $request->filled('category_id') ? $request->category_id : null;
+        $itemId     = $request->filled('item_id') ? $request->item_id : null;
+
+        [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemId);
+
+        if ($viewType === 'item_wise') {
+            $groupedData = null;
+        } elseif ($viewType === 'subcategory_wise') {
+            $groupedData = collect($reportData)
+                ->groupBy(function ($r) {
+                    return $r['category_name'] ?? 'Uncategorized';
+                })
+                ->map(function ($rows, $catName) {
+                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
+                })
+                ->values()
+                ->all();
+        } else {
+            if ($items->isEmpty()) {
+                $groupedData = [];
+            } else {
+                $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
+                $groupedData = [['category_name' => $catName, 'items' => $reportData]];
+            }
+        }
+
+        $data = [
+            'reportData' => $reportData,
+            'groupedData' => $groupedData,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'viewType' => $viewType,
+        ];
+
+        $pdf = Pdf::loadView('admin.mess.reports.pdf.purchase-sale-quantity-pdf', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont'           => 'DejaVu Sans',
+                'isHtml5ParserEnabled'  => true,
+                'isRemoteEnabled'       => true,
+                'dpi'                   => 96,
+            ]);
+
+        $fileName = 'purchase-sale-quantity-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($fileName);
     }
 
     /**
@@ -375,9 +412,21 @@ class ReportController extends Controller
     /**
      * Category-wise Print Slip - Excel Export
      * Builds merged SV + KI vouchers with same filters and exports flattened rows.
+     * Export is allowed only when at least one filter has been applied.
      */
     public function categoryWisePrintSlipExcel(Request $request)
     {
+        $filtersApplied = $request->filled('from_date')
+            || $request->filled('to_date')
+            || $request->filled('client_type_slug')
+            || $request->filled('client_type_pk')
+            || $request->filled('course_master_pk')
+            || $request->filled('buyer_name');
+        if (! $filtersApplied) {
+            return redirect()->route('admin.mess.reports.category-wise-print-slip')
+                ->with('error', 'Please apply filters before exporting.');
+        }
+
         $clientTypeSlugToInt = array_flip([
             \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
@@ -453,6 +502,132 @@ class ReportController extends Controller
             ),
             $fileName
         );
+    }
+
+    /**
+     * Category-wise Print Slip - PDF Export
+     * Generates a downloadable PDF using the same filters as the main report.
+     * Export is allowed only when at least one filter has been applied.
+     */
+    public function categoryWisePrintSlipPdf(Request $request)
+    {
+        $filtersApplied = $request->filled('from_date')
+            || $request->filled('to_date')
+            || $request->filled('client_type_slug')
+            || $request->filled('client_type_pk')
+            || $request->filled('course_master_pk')
+            || $request->filled('buyer_name');
+        if (! $filtersApplied) {
+            return redirect()->route('admin.mess.reports.category-wise-print-slip')
+                ->with('error', 'Please apply filters before exporting.');
+        }
+
+        $clientTypeSlugToInt = array_flip([
+            \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
+            \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
+            \App\Models\Mess\ClientType::TYPE_COURSE  => KitchenIssueMaster::CLIENT_COURSE,
+            \App\Models\Mess\ClientType::TYPE_OTHER   => KitchenIssueMaster::CLIENT_OTHER,
+        ]);
+
+        $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
+            'store',
+            'clientTypeCategory',
+            'items.itemSubcategory',
+        ]);
+
+        if ($request->filled('from_date')) {
+            $svQuery->whereDate('issue_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $svQuery->whereDate('issue_date', '<=', $request->to_date);
+        }
+        if ($request->filled('client_type_slug')) {
+            $svQuery->where('client_type_slug', $request->client_type_slug);
+        }
+        if ($request->filled('client_type_pk')) {
+            $svQuery->where('client_type_pk', $request->client_type_pk);
+        }
+        if ($request->filled('buyer_name')) {
+            $svQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
+        }
+        $svQuery->whereIn('status', [
+            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_DRAFT,
+            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_FINAL,
+            \App\Models\Mess\SellingVoucherDateRangeReport::STATUS_APPROVED,
+        ]);
+        $svQuery->whereHas('items');
+        $svVouchers = $svQuery->orderBy('issue_date', 'desc')->get();
+        foreach ($svVouchers as $v) {
+            $v->request_no = 'SV-' . str_pad($v->id, 6, '0', STR_PAD_LEFT);
+        }
+
+        $kiQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items.itemSubcategory'])
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereHas('items');
+
+        if ($request->filled('from_date')) {
+            $kiQuery->whereDate('issue_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $kiQuery->whereDate('issue_date', '<=', $request->to_date);
+        }
+        if ($request->filled('client_type_slug') && isset($clientTypeSlugToInt[$request->client_type_slug])) {
+            $kiQuery->where('client_type', $clientTypeSlugToInt[$request->client_type_slug]);
+        }
+        if ($request->filled('client_type_pk')) {
+            $kiQuery->where('client_type_pk', $request->client_type_pk);
+        }
+        if ($request->filled('buyer_name')) {
+            $kiQuery->where('client_name', 'LIKE', '%' . trim($request->buyer_name) . '%');
+        }
+
+        $kiVouchers = $kiQuery->orderBy('issue_date', 'desc')->get();
+        $slugMap = self::kitchenIssueClientTypeToSlug();
+        foreach ($kiVouchers as $v) {
+            $v->request_no = 'KI-' . str_pad($v->pk, 6, '0', STR_PAD_LEFT);
+            $v->client_type_slug = $slugMap[$v->client_type] ?? 'other';
+            $v->id = $v->pk;
+        }
+
+        $vouchers = $svVouchers->concat($kiVouchers)
+            ->sortByDesc(function ($v) {
+                return $v->issue_date ? $v->issue_date->format('Y-m-d') : '';
+            })
+            ->values();
+
+        $groupedByBuyer = $vouchers->groupBy('client_type_pk');
+        $allBuyersSections = $groupedByBuyer->values()->map(function ($buyerVouchers) {
+            return $buyerVouchers->groupBy(function ($v) {
+                $pk = $v->client_type_pk ?? '';
+                $slug = $v->client_type_slug ?? '';
+                return $pk . '-' . $slug;
+            });
+        });
+
+        $fromDateFormatted = $request->from_date
+            ? \Carbon\Carbon::parse($request->from_date)->format('d-F-Y')
+            : null;
+        $toDateFormatted = $request->to_date
+            ? \Carbon\Carbon::parse($request->to_date)->format('d-F-Y')
+            : null;
+
+        $data = [
+            'sectionsToShow' => $allBuyersSections,
+            'fromDateFormatted' => $fromDateFormatted,
+            'toDateFormatted' => $toDateFormatted,
+        ];
+
+        $pdf = Pdf::loadView('admin.mess.reports.pdf.category-wise-print-slip-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'dpi' => 96,
+            ]);
+
+        $fileName = 'category-wise-print-slip-' . now()->format('Y-m-d_His') . '.pdf';
+        return $pdf->download($fileName);
     }
 
     /**
@@ -633,10 +808,74 @@ class ReportController extends Controller
 
     /**
      * Category-wise Print Slip
-     * Shows selling voucher details from both: Selling Voucher Date Range and Kitchen Issue (Selling Voucher type)
+     * Shows selling voucher details from both: Selling Voucher Date Range and Kitchen Issue (Selling Voucher type).
+     * Data is displayed only after the user applies at least one filter (from_date, to_date, client type, or buyer).
      */
     public function categoryWisePrintSlip(Request $request)
     {
+        $filtersApplied = $request->filled('from_date')
+            || $request->filled('to_date')
+            || $request->filled('client_type_slug')
+            || $request->filled('client_type_pk')
+            || $request->filled('course_master_pk')
+            || $request->filled('buyer_name');
+
+        if (! $filtersApplied) {
+            $groupedSections = collect();
+            $paginator = null;
+            $allBuyersSections = collect();
+            $printAll = false;
+            $clientTypes = ClientType::clientTypes();
+            $clientTypeCategories = ClientType::active()
+                ->orderBy('client_type')
+                ->orderBy('client_name')
+                ->get()
+                ->groupBy('client_type');
+            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+            $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                ->map(function ($e) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                })
+                ->filter(fn ($e) => $e->full_name !== '—')
+                ->values();
+            $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+            $messStaff = $officersMessDept
+                ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                    ->where('department_master_pk', $officersMessDept->pk)
+                    ->orderBy('first_name')->orderBy('last_name')
+                    ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                    ->map(function ($e) {
+                        $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                        return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    })
+                    ->filter(fn ($e) => $e->full_name !== '—')
+                    ->values()
+                : collect();
+            $otCourses = CourseMaster::where('active_inactive', 1)
+                ->where(function ($q) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
+                })
+                ->orderBy('course_name')
+                ->get(['pk', 'course_name']);
+
+            return view('admin.mess.reports.category-wise-print-slip', compact(
+                'groupedSections',
+                'paginator',
+                'allBuyersSections',
+                'printAll',
+                'clientTypes',
+                'clientTypeCategories',
+                'faculties',
+                'employees',
+                'messStaff',
+                'otCourses',
+                'filtersApplied'
+            ));
+        }
+
         $clientTypeSlugToInt = array_flip([
             \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
@@ -787,6 +1026,8 @@ class ReportController extends Controller
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
+        $filtersApplied = true;
+
         return view('admin.mess.reports.category-wise-print-slip', compact(
             'groupedSections',
             'paginator',
@@ -797,120 +1038,25 @@ class ReportController extends Controller
             'faculties',
             'employees',
             'messStaff',
-            'otCourses'
+            'otCourses',
+            'filtersApplied'
         ));
     }
-
     /**
      * Stock Balance as of Till Date
      * Shows current stock balance for items
      */
     public function stockBalanceTillDate(Request $request)
     {
-        $tillDate = $request->filled('till_date') 
-                    ? $request->till_date 
-                    : now()->format('Y-m-d');
-        
+        $tillDate = $request->filled('till_date')
+            ? $request->till_date
+            : now()->format('Y-m-d');
+
         $storeId = $request->filled('store_id') ? $request->store_id : null;
-        
-        // Get all items (subcategories) with their current stock
-        $itemsQuery = ItemSubcategory::where('status', 'active')
-            ->orderBy('name');
-        
-        $items = $itemsQuery->get();
-        
-        // Build report data
-        $reportData = [];
-        
-        foreach ($items as $item) {
-            // Calculate current stock based on purchases and sales till date
-            // Get total purchases till date
-            $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function($q) use ($tillDate, $storeId) {
-                    $q->where('status', 'approved')
-                      ->whereDate('po_date', '<=', $tillDate);
-                    if ($storeId) {
-                        $q->where('store_id', $storeId);
-                    }
-                })
-                ->sum('quantity');
-            
-            // Get total sales/issues till date from Selling Voucher (kitchen_issue)
-            $totalIssuedKi = \DB::table('kitchen_issue_items as kii')
-                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                ->where('kii.item_subcategory_id', $item->id)
-                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('kim.store_type', 'store')
-                ->whereDate('kim.issue_date', '<=', $tillDate)
-                ->when($storeId, function($q) use ($storeId) {
-                    return $q->where('kim.store_id', $storeId);
-                })
-                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
-
-            // Get total sales/issues from Selling Voucher with Date Range
-            $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->where('svi.item_subcategory_id', $item->id)
-                ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '<=', $tillDate)
-                ->when($storeId, function($q) use ($storeId) {
-                    return $q->where('svr.store_id', $storeId);
-                })
-                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
-
-            $totalIssued = $totalIssuedKi + $totalIssuedSv;
-
-            // Calculate remaining quantity
-            $remainingQty = $totalPurchased - $totalIssued;
-            
-            // Get average rate from purchases
-            $avgRate = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function($q) use ($tillDate, $storeId) {
-                    $q->where('status', 'approved')
-                      ->whereDate('po_date', '<=', $tillDate);
-                    if ($storeId) {
-                        $q->where('store_id', $storeId);
-                    }
-                })
-                ->avg('unit_price');
-            
-            // If no purchases, use standard cost
-            $rate = $avgRate ?? $item->standard_cost ?? 0;
-            
-            // Calculate amount
-            $amount = $remainingQty * $rate;
-            
-            // Only include items with remaining stock
-            if ($remainingQty > 0) {
-                $alertQty = null;
-                if (Schema::hasColumn('mess_item_subcategories', 'alert_quantity')) {
-                    $alertQty = $item->alert_quantity;
-                }
-                $reportData[] = [
-                    'item_code' => $item->item_code ?? $item->subcategory_code ?? '—',
-                    'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
-                    'unit' => $item->unit_measurement ?? 'Unit',
-                    'remaining_qty' => $remainingQty,
-                    'remaining_quantity' => $remainingQty,
-                    'alert_quantity' => $alertQty,
-                    'rate' => $rate,
-                    'amount' => $amount,
-                ];
-            }
-        }
-        
-        // Get filter options
+        $reportData = $this->buildStockBalanceTillDateData($tillDate, $storeId);
         $stores = Store::where('status', 'active')->get();
-        
-        // Get selected store name for heading
-        $selectedStoreName = null;
-        if ($storeId) {
-            $selectedStore = Store::find($storeId);
-            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
-        }
-        
+        $selectedStoreName = $this->resolveStoreName($storeId);
+
         return view('admin.mess.reports.stock-balance-till-date', compact(
             'reportData',
             'stores',
@@ -918,6 +1064,90 @@ class ReportController extends Controller
             'storeId',
             'selectedStoreName'
         ));
+    }
+
+    /**
+     * Shared stock balance data builder used by screen, Excel and PDF exports.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildStockBalanceTillDateData(string $tillDate, $storeId = null): array
+    {
+        $items = ItemSubcategory::where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
+        $reportData = [];
+        $hasAlertQtyColumn = Schema::hasColumn('mess_item_subcategories', 'alert_quantity');
+
+        foreach ($items as $item) {
+            $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
+                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
+                    $q->where('status', 'approved')
+                        ->whereDate('po_date', '<=', $tillDate);
+                    if ($storeId) {
+                        $q->where('store_id', $storeId);
+                    }
+                })
+                ->sum('quantity');
+
+            $totalIssuedKi = DB::table('kitchen_issue_items as kii')
+                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                ->where('kii.item_subcategory_id', $item->id)
+                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                ->where('kim.store_type', 'store')
+                ->whereDate('kim.issue_date', '<=', $tillDate)
+                ->when($storeId, fn ($q) => $q->where('kim.store_id', $storeId))
+                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+
+            $totalIssuedSv = DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->where('svi.item_subcategory_id', $item->id)
+                ->where('svr.store_type', 'store')
+                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->when($storeId, fn ($q) => $q->where('svr.store_id', $storeId))
+                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                ->value('net') ?? 0;
+
+            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
+            if ($remainingQty <= 0) {
+                continue;
+            }
+
+            $avgRate = PurchaseOrderItem::where('item_subcategory_id', $item->id)
+                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeId) {
+                    $q->where('status', 'approved')
+                        ->whereDate('po_date', '<=', $tillDate);
+                    if ($storeId) {
+                        $q->where('store_id', $storeId);
+                    }
+                })
+                ->avg('unit_price');
+
+            $rate = $avgRate ?? $item->standard_cost ?? 0;
+            $reportData[] = [
+                'item_code' => $item->item_code ?? $item->subcategory_code ?? '-',
+                'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
+                'unit' => $item->unit_measurement ?? 'Unit',
+                'remaining_qty' => $remainingQty,
+                'remaining_quantity' => $remainingQty,
+                'alert_quantity' => $hasAlertQtyColumn ? $item->alert_quantity : null,
+                'rate' => $rate,
+                'amount' => $remainingQty * $rate,
+            ];
+        }
+
+        return $reportData;
+    }
+
+    private function resolveStoreName($storeId): ?string
+    {
+        if (!$storeId) {
+            return null;
+        }
+
+        return Store::find($storeId)?->store_name;
     }
 
     /**
@@ -970,6 +1200,7 @@ class ReportController extends Controller
             }
             if ($remainingQty <= $alertQty) {
                 $out[] = [
+                    'item_id' => $item->id,
                     'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
                     'unit' => $item->unit_measurement ?? 'Unit',
                     'remaining_quantity' => $remainingQty,
@@ -978,6 +1209,74 @@ class ReportController extends Controller
             }
         }
         return $out;
+    }
+
+    /**
+     * Low Stock Report
+     * Lists items where remaining_quantity <= alert_quantity using the same logic as the login alert.
+     */
+    public function lowStockReport(Request $request)
+    {
+        $tillDate = $request->filled('till_date')
+            ? $request->till_date
+            : now()->format('Y-m-d');
+
+        $storeId = $request->filled('store_id') ? $request->store_id : null;
+
+        $items = self::getLowStockAlertItems($tillDate, $storeId);
+        $stores = Store::where('status', 'active')->get();
+
+        $selectedStoreName = null;
+        if ($storeId) {
+            $selectedStore = Store::find($storeId);
+            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
+        }
+
+        return view('admin.mess.reports.low-stock', compact(
+            'items',
+            'stores',
+            'tillDate',
+            'storeId',
+            'selectedStoreName'
+        ));
+    }
+
+    /**
+     * Low Stock Report - PDF Export
+     */
+    public function lowStockPdf(Request $request)
+    {
+        $tillDate = $request->filled('till_date')
+            ? $request->till_date
+            : now()->format('Y-m-d');
+
+        $storeId = $request->filled('store_id') ? $request->store_id : null;
+        $items = self::getLowStockAlertItems($tillDate, $storeId);
+
+        $selectedStoreName = null;
+        if ($storeId) {
+            $selectedStore = Store::find($storeId);
+            $selectedStoreName = $selectedStore ? $selectedStore->store_name : null;
+        }
+
+        $data = [
+            'items' => $items,
+            'tillDate' => $tillDate,
+            'selectedStoreName' => $selectedStoreName,
+        ];
+
+        $pdf = Pdf::loadView('admin.mess.reports.pdf.low-stock-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont'           => 'DejaVu Sans',
+                'isHtml5ParserEnabled'  => true,
+                'isRemoteEnabled'       => true,
+                'dpi'                   => 96,
+            ]);
+
+        $fileName = 'low-stock-report-' . $tillDate . '-' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($fileName);
     }
 
     /**
@@ -1067,6 +1366,52 @@ class ReportController extends Controller
         $categoryId = $request->filled('category_id') ? $request->category_id : null;
         $itemId = $request->filled('item_id') ? $request->item_id : null;
 
+        [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemId);
+
+        if ($viewType === 'item_wise') {
+            $groupedData = null;
+        } elseif ($viewType === 'subcategory_wise') {
+            $groupedData = collect($reportData)
+                ->groupBy(function ($r) {
+                    return $r['category_name'] ?? 'Uncategorized';
+                })
+                ->map(function ($rows, $catName) {
+                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
+                })
+                ->values()
+                ->all();
+        } else {
+            if ($items->isEmpty()) {
+                $groupedData = [];
+            } else {
+                $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
+                $groupedData = [['category_name' => $catName, 'items' => $reportData]];
+            }
+        }
+
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+        $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
+
+        return view('admin.mess.reports.purchase-sale-quantity', compact(
+            'reportData',
+            'groupedData',
+            'fromDate',
+            'toDate',
+            'viewType',
+            'categoryId',
+            'itemId',
+            'categories',
+            'allItems'
+        ));
+    }
+
+    /**
+     * Shared data builder for Purchase/Sale Quantity (view, Excel, PDF).
+     *
+     * @return array{\Illuminate\Support\Collection, array<int, array>}
+     */
+    private function buildPurchaseSaleQuantityData(string $fromDate, string $toDate, string $viewType, $categoryId, $itemId): array
+    {
         $itemsQuery = ItemSubcategory::where('status', 'active')->with('category')->orderBy('name');
         if ($viewType === 'category_wise') {
             if ($categoryId) {
@@ -1134,40 +1479,7 @@ class ReportController extends Controller
             $reportData[] = $row;
         }
 
-        if ($viewType === 'item_wise') {
-            $groupedData = null;
-        } elseif ($viewType === 'subcategory_wise') {
-            $groupedData = collect($reportData)
-                ->groupBy(function ($r) {
-                    return $r['category_name'] ?? 'Uncategorized';
-                })
-                ->map(function ($rows, $catName) {
-                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
-                })
-                ->values()
-                ->all();
-        } else {
-            if ($items->isEmpty()) {
-                $groupedData = [];
-            } else {
-                $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
-                $groupedData = [['category_name' => $catName, 'items' => $reportData]];
-            }
-        }
-
-        $categories = ItemCategory::active()->orderBy('category_name')->get();
-        $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
-
-        return view('admin.mess.reports.purchase-sale-quantity', compact(
-            'reportData',
-            'groupedData',
-            'fromDate',
-            'toDate',
-            'viewType',
-            'categoryId',
-            'itemId',
-            'categories',
-            'allItems'
-        ));
+        return [$items, $reportData];
     }
 }
+

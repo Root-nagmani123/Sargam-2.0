@@ -65,8 +65,13 @@
                     </a>
                     <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
-                        Print as PDF
+                        Print
                     </button>
+                    <a href="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" class="btn btn-outline-danger d-inline-flex align-items-center" title="Download PDF">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                        PDF
+                    </a>
+
                     <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                         Export Excel

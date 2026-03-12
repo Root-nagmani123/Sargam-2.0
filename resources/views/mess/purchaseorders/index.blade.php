@@ -4,12 +4,16 @@
 <div class="container-fluid">
     <x-breadcrum title="Purchase Orders"></x-breadcrum>
     <div class="datatables">
-        <div class="card">
+        <div class="card shadow-sm border-0">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-                    <h4 class="mb-0">Purchase Orders</h4>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                        Create Purchase Order
+                <div class="d-flex justify-content-between align-items-center mb-3 no-print flex-wrap gap-2">
+                    <div>
+                        <h4 class="mb-0">Purchase Orders</h4>
+                        <p class="mb-0 text-muted small">View, filter and manage mess purchase orders.</p>
+                    </div>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                        <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;">add</i>
+                        <span>Create Purchase Order</span>
                     </button>
                 </div>
                 @if(session('success'))
@@ -20,19 +24,19 @@
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 border rounded bg-light no-print">
-                    <div class="row g-2 align-items-end">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 border rounded-3 bg-body-tertiary no-print">
+                    <div class="row g-3 align-items-end">
                         <div class="col-md-2">
-                            <label class="form-label small mb-0">Date From</label>
+                            <label class="form-label small mb-1">Date From</label>
                             <input type="date" name="date_from" class="form-control " value="{{ $filterDateFrom }}">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label small mb-0">Date To</label>
+                            <label class="form-label small mb-1">Date To</label>
                             <input type="date" name="date_to" class="form-control " value="{{ $filterDateTo }}">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label small mb-0">Vendor</label>
-                            <select name="vendor_id" class="form-select form-select-sm">
+                            <label class="form-label small mb-1">Vendor</label>
+                            <select name="vendor_id" class="form-select ">
                                 <option value="">All Vendors</option>
                                 @foreach($vendors as $v)
                                     <option value="{{ $v->id }}" {{ (string)$filterVendorId === (string)$v->id ? 'selected' : '' }}>{{ $v->name }}</option>
@@ -40,19 +44,25 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label small mb-0">Store</label>
-                            <select name="store_id" class="form-select form-select-sm">
+                            <label class="form-label small mb-1">Store</label>
+                            <select name="store_id" class="form-select ">
                                 <option value="">All Stores</option>
                                 @foreach($stores as $s)
                                     <option value="{{ $s->id }}" {{ (string)$filterStoreId === (string)$s->id ? 'selected' : '' }}>{{ $s->store_name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-auto">
-                            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
-                            <button type="button" class="btn btn-sm btn-outline-primary ms-1" onclick="window.print()" title="Print list or Save as PDF">
-                                <i class="ti ti-printer"></i> Print
+                        <div class="col-md-auto d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn  btn-primary d-inline-flex align-items-center gap-1">
+                                <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
+                                <span>Apply</span>
+                            </button>
+                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn  btn-outline-secondary">
+                                Clear
+                            </a>
+                            <button type="button" class="btn  btn-outline-primary d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
+                                <i class="material-icons material-symbol-rounded">print</i>
+                                <span>Print</span>
                             </button>
                         </div>
                     </div>
@@ -60,13 +70,16 @@
 
                 {{-- Print header: standard format (shown only when printing) --}}
                 <div class="print-only report-header text-center mb-3" style="display: none;">
+                    <div class="logo-container mb-2" style="display: flex; justify-content: center; align-items: center; gap: 15px;">
+                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" style="height: 60px; width: auto;">
+                    </div>
                     <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
                     <div class="report-title-bar">Purchase Orders</div>
                     <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
                 </div>
 
                 <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table text-nowrap align-middle w-100">
+                    <table id="purchaseOrdersTable" class="table text-nowrap align-middle mb-0 w-100">
                         <thead>
                             <tr>
                                 <th>S.No</th>
@@ -85,18 +98,26 @@
                                 <td>{{ $po->vendor->name ?? 'N/A' }}</td>
                                 <td>{{ $po->store->store_name ?? 'N/A' }}</td>
                                 <td>
-                                    <span class="badge bg-{{ $po->status == 'approved' ? 'success' : ($po->status == 'rejected' ? 'danger' : ($po->status == 'completed' ? 'primary' : 'warning')) }}">
+                                    <span class="badge rounded-pill bg-{{ $po->status == 'approved' ? 'success' : ($po->status == 'rejected' ? 'danger' : ($po->status == 'completed' ? 'primary' : 'warning')) }}">
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
                                 <td>
-                                    <button type="button" class="text-primary btn-view-po bg-transparent border-0" data-po-id="{{ $po->id }}" title="View"><i class="material-icons material-symbol-rounded">visibility</i></button>
-                                    <button type="button" class="text-primary btn-edit-po bg-transparent border-0" data-po-id="{{ $po->id }}" title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
+                                    <div class="d-inline-flex align-items-center gap-2">
+                                    <button type="button" class="btn  btn-outline-primary btn-view-po bg-transparent border-0 p-0" data-po-id="{{ $po->id }}" title="View">
+                                        <i class="material-icons material-symbol-rounded">visibility</i>
+                                    </button>
+                                    <button type="button" class="btn  btn-outline-primary btn-edit-po bg-transparent border-0 p-0" data-po-id="{{ $po->id }}" title="Edit">
+                                        <i class="material-icons material-symbol-rounded">edit</i>
+                                    </button>
                                     <form action="{{ route('admin.mess.purchaseorders.destroy', $po->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this purchase order?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-primary bg-transparent border-0" title="Delete" style="display: none;"><i class="material-icons material-symbol-rounded">delete</i></button>
+                                        <button type="submit" class="btn  btn-outline-danger d-none" title="Delete">
+                                            <i class="material-icons material-symbol-rounded">delete</i>
+                                        </button>
                                     </form>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -116,10 +137,12 @@
         font-weight: bold;
     }
     .report-title-bar {
-        background-color: #495057;
+        background-color: #004a93;
         color: #fff;
-        padding: 8px 12px;
+        padding: 8px 16px;
         font-size: 0.95rem;
+        border-radius: 4px;
+        display: inline-block;
     }
     .report-print-date { color: #6c757d; }
 
@@ -129,10 +152,64 @@
         .dataTables_length, .dataTables_filter, .dataTables_info, .dataTables_paginate { display: none !important; }
         /* Hide layout header and sidebar so only report content prints */
         .topbar, header.topbar, .left-sidebar, .side-mini-panel, #sidebarTabContent, .navbar { display: none !important; }
+        body { margin: 0; padding: 15px; }
         body * { visibility: visible; }
-        .report-header { margin-top: 0; border-bottom: 2px solid #2c3e50; padding-bottom: 8px; }
-        .report-mess-title { font-size: 16px; font-weight: 700; }
-        .report-title-bar { font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .report-header { margin-top: 0; border-bottom: 2px solid #004a93; padding-bottom: 12px; margin-bottom: 20px; }
+        .logo-container { margin-bottom: 12px; }
+        .logo-container img { height: 60px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .report-mess-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+        .report-title-bar { font-size: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: inline-block; background-color: #004a93 !important; }
+        .report-print-date { font-size: 11px; color: #6c757d; margin-top: 8px; }
+        
+        /* Table styling for print */
+        .table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 12px;
+            page-break-inside: auto;
+        }
+        .table thead th {
+            background-color: #004a93 !important;
+            color: #fff !important;
+            font-weight: 600;
+            padding: 10px 8px;
+            border: 1px solid #003d7a;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .table tbody td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            color: #212529;
+        }
+        .table tbody tr:nth-child(even) {
+            background-color: #f8f9fa !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        /* Badge colors in print */
+        .badge {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+        }
+        .bg-success { background-color: #28a745 !important; color: #fff !important; }
+        .bg-danger { background-color: #dc3545 !important; color: #fff !important; }
+        .bg-warning { background-color: #ffc107 !important; color: #212529 !important; }
+        .bg-primary { background-color: #004a93 !important; color: #fff !important; }
+        
+        /* Hide unnecessary elements */
+        .card { box-shadow: none; border: none; }
+        .datatables { margin: 0; }
+        
+        /* Page breaks */
+        @page { 
+            size: A4; 
+            margin: 15mm; 
+        }
     }
 </style>
 
@@ -143,6 +220,12 @@
     'actionColumnIndex' => 5,
     'infoLabel' => 'purchase orders'
 ])
+
+{{-- Tom Select CSS --}}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+{{-- Tom Select JS --}}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 {{-- Create Purchase Order Modal --}}
 <style>
@@ -165,6 +248,46 @@
 #viewPurchaseOrderModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #viewPurchaseOrderModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
+
+/* Tom Select Dropdown Fix - Ensure dropdowns appear above everything */
+.ts-dropdown {
+    z-index: 10000 !important;
+}
+
+.ts-control {
+    z-index: 1;
+}
+
+/* Performance optimizations for Tom Select */
+.ts-dropdown .option {
+    will-change: auto;
+}
+
+.ts-dropdown-content {
+    contain: layout style paint;
+}
+
+/* Fix for table responsive container clipping dropdowns */
+.table-responsive {
+    overflow: visible !important;
+}
+
+/* Ensure modal allows dropdowns to overflow */
+.modal-body .table-responsive {
+    overflow-x: auto;
+    overflow-y: visible !important;
+}
+
+/* Fix table body overflow in modals */
+.modal .card-body {
+    overflow: visible !important;
+}
+
+/* Specific fix for item details table */
+#poItemsTable,
+#poItemsTable .table-responsive {
+    overflow: visible !important;
+}
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -222,16 +345,20 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" id="createContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" value="{{ old('contact_number') }}" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
-                                    @error('contact_number')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
+                                    <label class="form-label">Bill No./Invoice No</label>
+                                    <input type="text" name="bill_no" class="form-control" maxlength="100" placeholder="Bill number (optional)">
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
-                                    <textarea name="delivery_address" class="form-control" rows="2" placeholder="Delivery address"></textarea>
+                                <div class="col-md-4">
+                                    <label class="form-label">Bill Date</label>
+                                    <input type="date" name="bill_date" class="form-control" max="{{ date('Y-m-d') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan No./Reference</label>
+                                    <input type="text" name="challan_no" class="form-control" maxlength="100" placeholder="Challan number (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan Date</label>
+                                    <input type="date" name="challan_date" class="form-control" max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
@@ -246,7 +373,10 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <div class="input-group">
+                                        <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
+                                        <button type="button" class="btn btn-outline-secondary" id="createBillClearBtn">Remove</button>
+                                    </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
@@ -257,29 +387,29 @@
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addPoItemRow">
+                            <button type="button" class="btn  btn-outline-primary" id="addPoItemRow">
                                 + Add Item
                             </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0" id="poItemsTable">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table text-nowrap mb-0" id="poItemsTable">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Item Code</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Quantity <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Tax (%)</th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th style="min-width: 300px;">Item Name <span class="text-white">*</span></th>
+                                            <th>Unit</th>
+                                            <th>Item Code</th>
+                                            <th>Quantity <span class="text-white">*</span></th>
+                                            <th>Unit Price <span class="text-white">*</span></th>
+                                            <th>Tax (%)</th>
+                                            <th>Total Amount</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="poItemsBody">
                                         <tr class="po-item-row">
                                             <td>
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select" required>
+                                                <select name="items[0][item_subcategory_id]" class="form-select  po-item-select" required>
                                                     <option value="">Select Item</option>
                                                     @foreach($itemSubcategories as $sub)
                                                         <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
@@ -292,7 +422,7 @@
                                             <td><input type="number" name="items[0][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" required></td>
                                             <td><input type="number" name="items[0][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="0" placeholder="0"></td>
                                             <td><input type="text" name="items[0][total_display]" class="form-control  po-line-total bg-light" readonly placeholder="0.00"></td>
-                                            <td><button type="button" class="btn btn-sm btn-outline-danger po-remove-row" disabled title="Remove">×</button></td>
+                                            <td><button type="button" class="btn  btn-outline-danger po-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -369,16 +499,20 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Contact Number</label>
-                                    <input type="text" name="contact_number" id="editContactNumber" class="form-control {{ $errors->has('contact_number') ? 'is-invalid' : '' }}" placeholder="10 digits, numbers only" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel">
-                                    @error('contact_number')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">Optional. Enter 10-digit mobile number (numbers only)</small>
+                                    <label class="form-label">Bill No./Invoice No</label>
+                                    <input type="text" name="bill_no" id="editBillNo" class="form-control" maxlength="100" placeholder="Bill number (optional)">
                                 </div>
-                                <div class="col-md-12">
-                                    <label class="form-label">Delivery Address <small class="text-muted">(Optional)</small></label>
-                                    <textarea name="delivery_address" id="editDeliveryAddress" class="form-control" rows="2"></textarea>
+                                <div class="col-md-4">
+                                    <label class="form-label">Bill Date</label>
+                                    <input type="date" name="bill_date" id="editBillDate" class="form-control" max="{{ date('Y-m-d') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan No./Reference</label>
+                                    <input type="text" name="challan_no" id="editChallanNo" class="form-control" maxlength="100" placeholder="Challan number (optional)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Challan Date</label>
+                                    <input type="date" name="challan_date" id="editChallanDate" class="form-control" max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
@@ -392,12 +526,15 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
-                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
+                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white gap-2" style="min-height: 38px;">
                                         <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                        <label class="mb-0 btn  btn-outline-secondary py-1 px-2" style="cursor: pointer;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
                                         </label>
+                                        <button type="button" class="btn  btn-outline-secondary py-1 px-2" id="editBillClearBtn">
+                                            Remove
+                                        </button>
                                     </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                     <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
@@ -408,21 +545,21 @@
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addEditPoItemRow">+ Add Item</button>
+                            <button type="button" class="btn  btn-outline-primary" id="addEditPoItemRow">+ Add Item</button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table text-nowrap mb-0">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Item Code</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Quantity <span class="text-white">*</span></th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Unit Price <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Tax (%)</th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th>Item Name <span class="text-white">*</span></th>
+                                            <th>Unit</th>
+                                            <th>Item Code</th>
+                                            <th>Quantity <span class="text-white">*</span></th>
+                                            <th>Unit Price <span class="text-white">*</span></th>
+                                            <th>Tax (%)</th>
+                                            <th>Total Amount</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editPoItemsBody"></tbody>
@@ -491,8 +628,26 @@
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
                                 <div class="border rounded-3 p-3 h-100 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Contact Number</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewContactNumber">&mdash;</p>
+                                    <label class="form-label text-body-secondary small mb-1">Bill No./Invoice No</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewBillNo">&mdash;</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Bill Date</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewBillDate">&mdash;</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Challan No./Reference</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewChallanNo">&mdash;</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                                    <label class="form-label text-body-secondary small mb-1">Challan Date</label>
+                                    <p class="mb-0 fw-medium text-body" id="viewChallanDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
@@ -503,15 +658,9 @@
                             </div>
                             <div class="col-12">
                                 <div class="border rounded-3 p-3 bg-light-subtle">
-                                    <label class="form-label text-body-secondary small mb-1">Delivery Address</label>
-                                    <p class="mb-0 fw-medium text-body" id="viewDeliveryAddress">&mdash;</p>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="border rounded-3 p-3 bg-light-subtle">
                                     <label class="form-label text-body-secondary small mb-1">Bill</label>
                                     <p class="mb-0" id="viewBillWrap">
-                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" style="display: none;">View / Download Bill</a>
+                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn  btn-outline-primary" style="display: none;">View / Download Bill</a>
                                         <span id="viewBillNone" class="text-muted">No bill uploaded</span>
                                     </p>
                                 </div>
@@ -550,7 +699,7 @@
             </div>
             <div class="modal-footer border-top">
                 <button type="button" class="btn btn-outline-primary btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print">
-                    <i class="ti ti-printer"></i> Print
+                    <i class="material-icons material-symbol-rounded">print</i> Print
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
@@ -568,6 +717,136 @@
     let editItemRowIndex = 0;
     let currentVendorId = null;
     let editCurrentVendorId = null;
+    let hasInitialCreateErrors = {{ $errors->any() ? 'true' : 'false' }};
+
+    // Tom Select instances storage
+    let tomSelectInstances = {
+        filter: {},
+        create: {},
+        edit: {},
+        items: []
+    };
+
+    // Initialize Tom Select for a single element
+    function initTomSelect(element, options = {}) {
+        if (!element) return null;
+        if (element.tomselect) {
+            element.tomselect.destroy();
+        }
+        try {
+            const defaultOptions = {
+                allowEmptyOption: true,
+                create: false,
+                dropdownParent: 'body',
+                maxOptions: null,
+                closeAfterSelect: true,
+                hideSelected: false,
+                ...options
+            };
+            return new TomSelect(element, defaultOptions);
+        } catch (error) {
+            console.error('Tom Select initialization failed:', error);
+            return null;
+        }
+    }
+
+    // Destroy Tom Select instance
+    function destroyTomSelect(element) {
+        if (element && element.tomselect) {
+            element.tomselect.destroy();
+        }
+    }
+
+    // Initialize filter dropdowns
+    function initFilterDropdowns() {
+        const filterVendor = document.querySelector('form[method="GET"] select[name="vendor_id"]');
+        const filterStore = document.querySelector('form[method="GET"] select[name="store_id"]');
+        
+        if (filterVendor) {
+            tomSelectInstances.filter.vendor = initTomSelect(filterVendor, {
+                placeholder: 'All Vendors'
+            });
+        }
+        if (filterStore) {
+            tomSelectInstances.filter.store = initTomSelect(filterStore, {
+                placeholder: 'All Stores'
+            });
+        }
+    }
+
+    // Initialize create modal dropdowns
+    function initCreateModalDropdowns() {
+        const createStore = document.querySelector('#createPurchaseOrderModal select[name="store_id"]');
+        const createVendor = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
+        const createPayment = document.querySelector('#createPurchaseOrderModal select[name="payment_code"]');
+        
+        if (createStore) {
+            tomSelectInstances.create.store = initTomSelect(createStore, {
+                placeholder: 'Select Store'
+            });
+        }
+        if (createVendor) {
+            tomSelectInstances.create.vendor = initTomSelect(createVendor, {
+                placeholder: 'Select Vendor'
+            });
+        }
+        if (createPayment) {
+            tomSelectInstances.create.payment = initTomSelect(createPayment, {
+                placeholder: 'Select Payment Mode'
+            });
+        }
+    }
+
+    // Initialize edit modal dropdowns
+    function initEditModalDropdowns() {
+        const editStore = document.getElementById('editStoreId');
+        const editVendor = document.getElementById('editVendorId');
+        const editPayment = document.getElementById('editPaymentCode');
+        
+        if (editStore) {
+            tomSelectInstances.edit.store = initTomSelect(editStore, {
+                placeholder: 'Select Store'
+            });
+        }
+        if (editVendor) {
+            tomSelectInstances.edit.vendor = initTomSelect(editVendor, {
+                placeholder: 'Select Vendor'
+            });
+        }
+        if (editPayment) {
+            tomSelectInstances.edit.payment = initTomSelect(editPayment, {
+                placeholder: 'Select Payment Mode'
+            });
+        }
+    }
+
+    // Initialize item dropdown in a row
+    function initItemDropdownInRow(row) {
+        const select = row.querySelector('.po-item-select');
+        if (select && !select.tomselect) {
+            const instance = initTomSelect(select, {
+                placeholder: 'Select Item',
+                maxOptions: 200
+            });
+            if (instance) {
+                tomSelectInstances.items.push(instance);
+            }
+        }
+    }
+
+    // Initialize all item dropdowns in a tbody
+    function initAllItemDropdowns(tbody) {
+        const rows = tbody.querySelectorAll('.po-item-row');
+        rows.forEach(row => initItemDropdownInRow(row));
+    }
+
+    // Destroy all item dropdowns
+    function destroyAllItemDropdowns() {
+        tomSelectInstances.items.forEach(instance => {
+            if (instance) instance.destroy();
+        });
+        tomSelectInstances.items = [];
+    }
 
     function getItemRowHtml(index, editItem, isEditModal) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
@@ -584,7 +863,7 @@
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
             <td>
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select" required>
+                <select name="items[${index}][item_subcategory_id]" class="form-select  po-item-select" required>
                     <option value="">Select Item</option>
                     ${options}
                 </select>
@@ -595,7 +874,7 @@
             <td><input type="number" name="items[${index}][unit_price]" class="form-control  po-unit-price" step="0.01" min="0" placeholder="0" value="${price}" required></td>
             <td><input type="number" name="items[${index}][tax_percent]" class="form-control  po-tax" step="0.01" min="0" max="100" value="${tax}" placeholder="0"></td>
             <td><input type="text" class="form-control  po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
-            <td><button type="button" class="btn btn-sm btn-outline-danger po-remove-row" title="Remove">×</button></td>
+            <td><button type="button" class="btn  btn-outline-danger po-remove-row" title="Remove">×</button></td>
         </tr>`;
     }
 
@@ -629,20 +908,53 @@
             const select = row.querySelector('.po-item-select');
             if (!select) return;
             
-            const currentValue = select.value;
-            select.innerHTML = '<option value="">Select Item</option>';
+            const currentValue = select.tomselect ? select.tomselect.getValue() : select.value;
             
-            itemsToUse.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.item_name || '—';
-                option.setAttribute('data-unit', item.unit_measurement || '');
-                option.setAttribute('data-code', item.item_code || '');
-                if (item.id == currentValue) {
-                    option.selected = true;
+            // If Tom Select exists, use its API to update options (faster)
+            if (select.tomselect) {
+                select.tomselect.clearOptions();
+                select.tomselect.addOption({ value: '', text: 'Select Item' });
+                
+                itemsToUse.forEach(item => {
+                    select.tomselect.addOption({
+                        value: item.id,
+                        text: item.item_name || '—'
+                    });
+                    
+                    // Update the underlying option element's data attributes
+                    const opt = select.querySelector(`option[value="${item.id}"]`);
+                    if (opt) {
+                        opt.setAttribute('data-unit', item.unit_measurement || '');
+                        opt.setAttribute('data-code', item.item_code || '');
+                    }
+                });
+                
+                select.tomselect.setValue(currentValue, true);
+            } else {
+                // Fallback: rebuild select options manually
+                select.innerHTML = '<option value="">Select Item</option>';
+                
+                itemsToUse.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.item_name || '—';
+                    option.setAttribute('data-unit', item.unit_measurement || '');
+                    option.setAttribute('data-code', item.item_code || '');
+                    if (item.id == currentValue) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+                
+                // Initialize Tom Select
+                const instance = initTomSelect(select, {
+                    placeholder: 'Select Item',
+                    maxOptions: 200
+                });
+                if (instance) {
+                    tomSelectInstances.items.push(instance);
                 }
-                select.appendChild(option);
-            });
+            }
             
             // Update unit and code after dropdown refresh
             updateUnitAndCode(row);
@@ -651,11 +963,21 @@
 
     function updateUnitAndCode(row) {
         const select = row.querySelector('.po-item-select');
-        const opt = select && select.options[select.selectedIndex];
+        if (!select) return;
+        
+        // Get the selected option - works with both Tom Select and regular select
+        let selectedOption;
+        if (select.tomselect) {
+            const selectedValue = select.tomselect.getValue();
+            selectedOption = select.querySelector(`option[value="${selectedValue}"]`);
+        } else {
+            selectedOption = select.options[select.selectedIndex];
+        }
+        
         const unitInput = row.querySelector('.po-unit');
         const codeInput = row.querySelector('.po-item-code');
-        if (unitInput) unitInput.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
-        if (codeInput) codeInput.value = opt && opt.dataset.code ? opt.dataset.code : '';
+        if (unitInput) unitInput.value = selectedOption && selectedOption.dataset.unit ? selectedOption.dataset.unit : '';
+        if (codeInput) codeInput.value = selectedOption && selectedOption.dataset.code ? selectedOption.dataset.code : '';
     }
 
     function calcLineTotal(row) {
@@ -686,29 +1008,33 @@
     }
 
     // Vendor selection change in CREATE modal
-    const createVendorSelect = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
-    if (createVendorSelect) {
-        createVendorSelect.addEventListener('change', function() {
-            const vendorId = this.value;
-            currentVendorId = vendorId;
-            
-            if (!vendorId) {
-                filteredItems = itemSubcategories;
-                const tbody = document.getElementById('poItemsBody');
-                updateItemDropdowns(tbody, false);
-                return;
-            }
-            
-            fetchVendorItems(vendorId, function() {
-                const tbody = document.getElementById('poItemsBody');
-                updateItemDropdowns(tbody, false);
+    document.addEventListener('DOMContentLoaded', function() {
+        const createVendorSelect = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
+        if (createVendorSelect) {
+            createVendorSelect.addEventListener('change', function() {
+                const vendorId = this.value;
+                currentVendorId = vendorId;
+                
+                if (!vendorId) {
+                    filteredItems = itemSubcategories;
+                    const tbody = document.getElementById('poItemsBody');
+                    updateItemDropdowns(tbody, false);
+                    return;
+                }
+                
+                fetchVendorItems(vendorId, function() {
+                    const tbody = document.getElementById('poItemsBody');
+                    updateItemDropdowns(tbody, false);
+                });
             });
-        });
-    }
+        }
+    });
 
     document.getElementById('addPoItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('poItemsBody');
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(itemRowIndex, null, false));
+        const newRow = tbody.lastElementChild;
+        initItemDropdownInRow(newRow);
         itemRowIndex++;
         updateRemoveButtons();
     });
@@ -782,8 +1108,10 @@
                     document.getElementById('viewStoreName').textContent = po.store_name || '—';
                     document.getElementById('viewVendorName').textContent = po.vendor_name || '—';
                     document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
-                    document.getElementById('viewContactNumber').textContent = po.contact_number || '—';
-                    document.getElementById('viewDeliveryAddress').textContent = po.delivery_address || '—';
+                    document.getElementById('viewBillNo').textContent = po.bill_no || '—';
+                    document.getElementById('viewBillDate').textContent = po.bill_date ? new Date(po.bill_date).toLocaleDateString('en-IN') : '—';
+                    document.getElementById('viewChallanNo').textContent = po.challan_no || '—';
+                    document.getElementById('viewChallanDate').textContent = po.challan_date ? new Date(po.challan_date).toLocaleDateString('en-IN') : '—';
                     const billLink = document.getElementById('viewBillLink');
                     const billNone = document.getElementById('viewBillNone');
                     if (po.bill_url) {
@@ -827,37 +1155,39 @@
     }
 
     // Vendor selection change in EDIT modal: load vendor-mapped items and refresh dropdowns
-    const editVendorSelect = document.querySelector('#editPurchaseOrderModal select[name="vendor_id"]');
-    if (editVendorSelect) {
-        editVendorSelect.addEventListener('change', function() {
-            const vendorId = this.value;
-            editCurrentVendorId = vendorId;
-            const tbody = document.getElementById('editPoItemsBody');
+    document.addEventListener('DOMContentLoaded', function() {
+        const editVendorSelect = document.querySelector('#editPurchaseOrderModal select[name="vendor_id"]');
+        if (editVendorSelect) {
+            editVendorSelect.addEventListener('change', function() {
+                const vendorId = this.value;
+                editCurrentVendorId = vendorId;
+                const tbody = document.getElementById('editPoItemsBody');
 
-            if (!vendorId) {
-                editModalItems = itemSubcategories;
-                updateItemDropdowns(tbody, true);
-                return;
-            }
+                if (!vendorId) {
+                    editModalItems = itemSubcategories;
+                    updateItemDropdowns(tbody, true);
+                    return;
+                }
 
-            fetchVendorItems(vendorId, function() {
-                const currentIds = [];
-                tbody.querySelectorAll('.po-item-select').forEach(sel => {
-                    const v = sel.value;
-                    if (v) currentIds.push(v);
+                fetchVendorItems(vendorId, function() {
+                    const currentIds = [];
+                    tbody.querySelectorAll('.po-item-select').forEach(sel => {
+                        const v = sel.tomselect ? sel.tomselect.getValue() : sel.value;
+                        if (v) currentIds.push(v);
+                    });
+                    const merged = (filteredItems || []).slice();
+                    currentIds.forEach(id => {
+                        if (id && !merged.some(m => m.id == id)) {
+                            const fromAll = itemSubcategories.find(s => s.id == id);
+                            if (fromAll) merged.push(fromAll);
+                        }
+                    });
+                    editModalItems = merged.length ? merged : itemSubcategories;
+                    updateItemDropdowns(tbody, true);
                 });
-                const merged = (filteredItems || []).slice();
-                currentIds.forEach(id => {
-                    if (id && !merged.some(m => m.id == id)) {
-                        const fromAll = itemSubcategories.find(s => s.id == id);
-                        if (fromAll) merged.push(fromAll);
-                    }
-                });
-                editModalItems = merged.length ? merged : itemSubcategories;
-                updateItemDropdowns(tbody, true);
             });
-        });
-    }
+        }
+    });
 
     // Edit button: fetch PO and open modal (mousedown ensures single-tap works with DataTables)
     document.addEventListener('mousedown', function(e) {
@@ -877,8 +1207,12 @@
                     document.getElementById('editStoreId').value = po.store_id || '';
                     document.getElementById('editVendorId').value = po.vendor_id || '';
                     document.getElementById('editPaymentCode').value = po.payment_code || '';
-                    document.getElementById('editContactNumber').value = po.contact_number || '';
-                    document.getElementById('editDeliveryAddress').value = po.delivery_address || '';
+                    document.getElementById('editBillNo').value = po.bill_no || '';
+                    const editBillDateEl = document.getElementById('editBillDate');
+                    if (editBillDateEl) editBillDateEl.value = po.bill_date || '';
+                    document.getElementById('editChallanNo').value = po.challan_no || '';
+                    const editChallanDateEl = document.getElementById('editChallanDate');
+                    if (editChallanDateEl) editChallanDateEl.value = po.challan_date || '';
                     var editBillPathEl = document.getElementById('editCurrentBillPath');
                     if (editBillPathEl) {
                         editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po.bill_path) : 'No file chosen';
@@ -908,6 +1242,9 @@
                         });
                         editModalItems = merged.length ? merged : itemSubcategories;
 
+                        // Destroy existing item dropdowns
+                        destroyAllItemDropdowns();
+
                         const tbody = document.getElementById('editPoItemsBody');
                         tbody.innerHTML = '';
                         if (items.length === 0) {
@@ -919,6 +1256,10 @@
                             });
                             editItemRowIndex = items.length;
                         }
+                        
+                        // Initialize Tom Select for all item dropdowns
+                        initAllItemDropdowns(tbody);
+                        
                         updateEditGrandTotal();
                         updateEditRemoveButtons();
                         new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
@@ -939,15 +1280,34 @@
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('editPoItemsBody');
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editItemRowIndex, null, true));
+        const newRow = tbody.lastElementChild;
+        initItemDropdownInRow(newRow);
         editItemRowIndex++;
         updateEditRemoveButtons();
     });
+
+    var createBillFileInputEl = document.getElementById('createBillFileInput');
+    var createBillClearBtnEl = document.getElementById('createBillClearBtn');
+    if (createBillClearBtnEl && createBillFileInputEl) {
+        createBillClearBtnEl.addEventListener('click', function () {
+            createBillFileInputEl.value = '';
+        });
+    }
 
     var editBillFileInputEl = document.getElementById('editBillFileInput');
     if (editBillFileInputEl) {
         editBillFileInputEl.addEventListener('change', function() {
             var pathEl = document.getElementById('editCurrentBillPath');
             if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+        });
+    }
+
+    var editBillClearBtnEl = document.getElementById('editBillClearBtn');
+    if (editBillClearBtnEl && editBillFileInputEl) {
+        editBillClearBtnEl.addEventListener('click', function () {
+            editBillFileInputEl.value = '';
+            var pathEl = document.getElementById('editCurrentBillPath');
+            if (pathEl) pathEl.textContent = 'No file chosen';
         });
     }
 
@@ -1079,18 +1439,54 @@
     });
     @endif
 
-    // Reset create modal when opened
+    // Reset create modal when opened (except first open after validation errors)
     if (createPOModal) {
         createPOModal.addEventListener('show.bs.modal', function() {
+            if (hasInitialCreateErrors) {
+                // Preserve previously entered values on first open after validation error
+                hasInitialCreateErrors = false;
+                return;
+            }
+
             // Reset vendor selection
             currentVendorId = null;
             filteredItems = itemSubcategories;
-            
-            // Reset form
+
+            // Reset form fields and Tom Select instances
             const form = document.getElementById('createPOForm');
             if (form) {
-                const vendorSelect = form.querySelector('select[name="vendor_id"]');
-                if (vendorSelect) vendorSelect.value = '';
+                form.reset();
+                
+                // Reset Tom Select dropdowns
+                if (tomSelectInstances.create.vendor) {
+                    tomSelectInstances.create.vendor.clear();
+                }
+                if (tomSelectInstances.create.store) {
+                    tomSelectInstances.create.store.clear();
+                }
+                if (tomSelectInstances.create.payment) {
+                    tomSelectInstances.create.payment.clear();
+                }
+            }
+
+            // Clear selected bill file (if any)
+            if (createBillFileInputEl) {
+                createBillFileInputEl.value = '';
+            }
+
+            // Reset items table to a single fresh row
+            destroyAllItemDropdowns();
+            const tbody = document.getElementById('poItemsBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, false));
+                itemRowIndex = 1;
+                
+                // Initialize Tom Select for the first row
+                initAllItemDropdowns(tbody);
+                
+                updateGrandTotal();
+                updateRemoveButtons();
             }
         });
     }
@@ -1113,36 +1509,88 @@
         var bodyContent = content.innerHTML;
         bodyContent = bodyContent.replace(/<button[^>]*btn-close[^>]*>[\s\S]*?<\/button>/gi, '');
         bodyContent = bodyContent.replace(/<div class="modal-footer[^"]*"[^>]*>[\s\S]*?<\/div>\s*$/i, '');
-        var printHeader = '<div class="print-doc-header" style="text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
-            '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
-            '<div style="background:#495057;color:#fff;padding:6px 12px;font-size:13px;display:inline-block;margin:4px 0;">Purchase Order Details</div>' +
-            '<div style="font-size:11px;color:#6c757d;margin-top:6px;">Printed on ' + dateStr + '</div></div>';
+        var printHeader = '<div class="print-doc-header" style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
+            '<div style="margin-bottom:10px;"><img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" style="height:60px;width:auto;"></div>' +
+            '<div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
+            '<div style="background:#004a93;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Purchase Order Details</div>' +
+            '<div style="font-size:11px;color:#6c757d;margin-top:8px;">Printed on ' + dateStr + '</div></div>';
         var printCss = '<style>' +
             '@page { size: A4; margin: 14mm; }' +
             'body { font-family: Arial, sans-serif; font-size: 12px; color: #212529; padding: 0 12px; margin: 0; background: #fff; }' +
             '.print-doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.modal-header { border-bottom: 1px solid #dee2e6; padding-bottom: 8px; margin-bottom: 12px; }' +
+            '.print-doc-header img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.modal-header { border-bottom: 1px solid #dee2e6; padding-bottom: 8px; margin-bottom: 12px; display: none; }' +
             '.modal-header .modal-title { font-size: 14px; font-weight: 600; }' +
             '.modal-body { color: #212529; }' +
-            '.card { margin-bottom: 14px; page-break-inside: avoid; }' +
-            '.card-header { font-weight: 600; font-size: 12px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #dee2e6; }' +
+            '.card { margin-bottom: 14px; page-break-inside: avoid; border: 1px solid #dee2e6; border-radius: 4px; }' +
+            '.card-header { font-weight: 600; font-size: 13px; margin-bottom: 10px; padding: 8px 12px; background: #f8f9fa; border-bottom: 2px solid #004a93; color: #004a93; }' +
             '.card-body .row { display: flex; flex-wrap: wrap; margin: 0 -6px; }' +
-            '.card-body .col-md-4 { width: 33.33%; box-sizing: border-box; padding: 0 6px 10px; }' +
-            '.card-body .col-md-12 { width: 100%; box-sizing: border-box; padding: 0 6px 10px; }' +
-            '.card-body .form-label, .card-body label { font-size: 10px; color: #6c757d; display: block; margin-bottom: 2px; }' +
-            '.card-body p, .card-body .fw-medium { margin: 0; font-size: 12px; }' +
-            'table { width: 100%; border-collapse: collapse; font-size: 11px; }' +
+            '.card-body .col-md-4, .card-body .col-xl-4, .card-body .col-12 { width: 33.33%; box-sizing: border-box; padding: 0 6px 10px; }' +
+            '.card-body .col-md-12, .card-body .col-12 { width: 100%; }' +
+            '.card-body .form-label, .card-body label { font-size: 10px; color: #6c757d; display: block; margin-bottom: 2px; font-weight: 600; }' +
+            '.card-body p, .card-body .fw-medium { margin: 0; font-size: 12px; color: #212529; }' +
+            '.border { border: 1px solid #dee2e6 !important; }' +
+            '.rounded-3 { border-radius: 4px !important; }' +
+            '.bg-light-subtle { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            'table { width: 100%; border-collapse: collapse; font-size: 11px; page-break-inside: auto; }' +
             'th, td { border: 1px solid #adb5bd; padding: 6px 8px; text-align: left; }' +
-            'thead th { background: #af2910 !important; color: #fff !important; border-color: #8b2009; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
-            '.card-footer { font-weight: 600; padding-top: 8px; border-top: 1px solid #dee2e6; margin-top: 4px; font-size: 12px; }' +
-            '.badge { display: inline-block; padding: 2px 6px; font-size: 10px; border-radius: 4px; }' +
+            'thead th { background: #004a93 !important; color: #fff !important; border-color: #003d7a; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            'tbody tr:nth-child(even) { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.card-footer { font-weight: 600; padding: 10px 12px; border-top: 2px solid #004a93; margin-top: 4px; font-size: 13px; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.badge { display: inline-block; padding: 3px 8px; font-size: 10px; border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.bg-success { background-color: #28a745 !important; color: #fff !important; }' +
+            '.bg-danger { background-color: #dc3545 !important; color: #fff !important; }' +
+            '.bg-warning { background-color: #ffc107 !important; color: #212529 !important; }' +
+            '.bg-primary { background-color: #004a93 !important; color: #fff !important; }' +
             '.btn-close, .modal-footer { display: none !important; }' +
-            '@media print { body { padding: 0; } .print-doc-header { margin-bottom: 12px; } }' +
+            '.text-primary { color: #004a93 !important; }' +
+            '.fs-5 { font-size: 16px !important; }' +
+            '@media print { body { padding: 0; } .print-doc-header { margin-bottom: 16px; } }' +
             '</style>';
         win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader + '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
         win.document.close();
         win.focus();
         setTimeout(function() { win.print(); win.close(); }, 350);
+    });
+
+    // Initialize Tom Select on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize filter dropdowns only (always visible)
+        initFilterDropdowns();
+        
+        // Initialize create modal dropdowns immediately
+        initCreateModalDropdowns();
+        
+        // Initialize edit modal dropdowns immediately  
+        initEditModalDropdowns();
+        
+        // Initialize item dropdowns in create modal
+        const createTbody = document.getElementById('poItemsBody');
+        if (createTbody) {
+            initAllItemDropdowns(createTbody);
+        }
+        
+        // Setup modal event listeners
+        const createPOModal = document.getElementById('createPurchaseOrderModal');
+        if (createPOModal) {
+            createPOModal.addEventListener('show.bs.modal', function() {
+                // Ensure dropdowns are initialized when modal opens
+                if (!tomSelectInstances.create.vendor || !tomSelectInstances.create.vendor.input) {
+                    initCreateModalDropdowns();
+                }
+            });
+        }
+
+        // Setup edit modal event listeners
+        const editPOModal = document.getElementById('editPurchaseOrderModal');
+        if (editPOModal) {
+            editPOModal.addEventListener('shown.bs.modal', function() {
+                // Reinitialize edit modal dropdowns to ensure they work properly
+                if (!tomSelectInstances.edit.store || !tomSelectInstances.edit.store.input) {
+                    initEditModalDropdowns();
+                }
+            });
+        }
     });
 
 })();

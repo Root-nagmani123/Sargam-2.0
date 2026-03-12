@@ -9,14 +9,33 @@ class PurchaseOrder extends Model
     protected $table = 'mess_purchase_orders';
     
     protected $fillable = [
-        'po_number', 'vendor_id', 'store_id', 'po_date', 'delivery_date',
-        'total_amount', 'status', 'remarks', 'created_by', 'approved_by', 'approved_at',
-        'order_name', 'payment_code', 'delivery_address', 'contact_number', 'bill_path'
+        'po_number',
+        'vendor_id',
+        'store_id',
+        'po_date',
+        'delivery_date',
+        'total_amount',
+        'status',
+        'remarks',
+        'created_by',
+        'approved_by',
+        'approved_at',
+        'order_name',
+        'payment_code',
+        'delivery_address',
+        'contact_number',
+        'bill_path',
+        'bill_no',
+        'challan_no',
+        'bill_date',
+        'challan_date', 
     ];
     
     protected $casts = [
         'po_date' => 'date',
         'delivery_date' => 'date',
+        'bill_date' => 'date',
+        'challan_date' => 'date',
         'approved_at' => 'datetime',
     ];
     

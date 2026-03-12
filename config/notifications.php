@@ -147,6 +147,14 @@ return [
         ],
     ],
 
+    // Mess Stock / Low Stock Notifications
+    'mess_stock' => [
+        'LowStock' => [
+            'route' => 'admin.mess.reports.low-stock',
+            'params' => [],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

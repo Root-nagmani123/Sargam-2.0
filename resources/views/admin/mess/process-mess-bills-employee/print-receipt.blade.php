@@ -106,9 +106,9 @@
                 $itemAmount = $netQty * $rate;
             @endphp
             <tr>
-                <td>{{ $storeName }}</td>
+                <td>{{ $item->store_name ?? $storeName }}</td>
                 <td>{{ $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
-                <td>{{ $purchaseDate }}</td>
+                <td>{{ $item->purchase_date ?? $purchaseDate }}</td>
                 <td class="text-end">{{ number_format($rate, 2) }}</td>
                 <td class="text-end">{{ number_format($issueQty, 2) }}</td>
                 <td class="text-end">{{ number_format($returnQty, 2) }}</td>

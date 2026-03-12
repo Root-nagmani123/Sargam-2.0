@@ -423,6 +423,33 @@
     let createRowIndex = 1;
     let editRowIndex = 0;
 
+    function initChoices(root) {
+        if (typeof window.Choices === 'undefined') return;
+
+        const scope = root || document;
+        scope.querySelectorAll('select.choices-select').forEach(function(el) {
+            if (el.dataset.choicesInitialized === 'true') return;
+
+            const placeholder = el.getAttribute('data-placeholder') || 'Select';
+            el._choices = new Choices(el, {
+                shouldSort: false,
+                placeholder: true,
+                placeholderValue: placeholder,
+                searchPlaceholderValue: 'Search...',
+            });
+            el.dataset.choicesInitialized = 'true';
+        });
+    }
+
+    function destroyChoices(el) {
+        if (!el) return;
+        if (el._choices) {
+            el._choices.destroy();
+            el._choices = null;
+        }
+        delete el.dataset.choicesInitialized;
+    }
+
     function getItemRowHtml(index, editItem) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
         const options = itemSubcategories.map(s =>
@@ -482,6 +509,8 @@
     document.getElementById('addAllocationItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('allocationItemsBody');
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(createRowIndex, null));
+        const row = tbody.lastElementChild;
+        if (row) initChoices(row);
         createRowIndex++;
         updateCreateRemoveButtons();
     });
@@ -502,6 +531,7 @@
         if (e.target.classList.contains('alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#allocationItemsBody .allocation-item-row').length > 1) {
+                destroyChoices(row.querySelector('select.choices-select'));
                 row.remove();
                 updateCreateRemoveButtons();
             }
@@ -520,9 +550,16 @@
                 const a = data.allocation;
                 const items = data.items || [];
                 document.getElementById('editAllocationForm').action = editBaseUrl + '/' + id;
-                document.getElementById('editSubStoreId').value = a.sub_store_id || '';
+                const editSubStoreSelect = document.getElementById('editSubStoreId');
+                editSubStoreSelect.value = a.sub_store_id || '';
+                if (editSubStoreSelect._choices && a.sub_store_id) {
+                    editSubStoreSelect._choices.setChoiceByValue(String(a.sub_store_id));
+                } else {
+                    editSubStoreSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
                 document.getElementById('editAllocationDate').value = a.allocation_date || '';
                 const tbody = document.getElementById('editAllocationItemsBody');
+                tbody.querySelectorAll('select.choices-select').forEach(destroyChoices);
                 tbody.innerHTML = '';
                 if (items.length === 0) {
                     tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null));
@@ -533,6 +570,12 @@
                     });
                     editRowIndex = items.length;
                 }
+                initChoices(document.getElementById('editStoreAllocationModal'));
+                tbody.querySelectorAll('select.alloc-item-select').forEach(function(selectEl) {
+                    if (selectEl._choices && selectEl.value) {
+                        selectEl._choices.setChoiceByValue(String(selectEl.value));
+                    }
+                });
                 updateEditRemoveButtons();
                 new bootstrap.Modal(document.getElementById('editStoreAllocationModal')).show();
             })
@@ -542,6 +585,8 @@
     document.getElementById('addEditAllocationItemRow').addEventListener('click', function() {
         const tbody = document.getElementById('editAllocationItemsBody');
         tbody.insertAdjacentHTML('beforeend', getItemRowHtml(editRowIndex, null));
+        const row = tbody.lastElementChild;
+        if (row) initChoices(row);
         editRowIndex++;
         updateEditRemoveButtons();
     });
@@ -562,6 +607,7 @@
         if (e.target.classList.contains('alloc-remove-row')) {
             const row = e.target.closest('.allocation-item-row');
             if (row && document.querySelectorAll('#editAllocationItemsBody .allocation-item-row').length > 1) {
+                destroyChoices(row.querySelector('select.choices-select'));
                 row.remove();
                 updateEditRemoveButtons();
             }
@@ -579,26 +625,10 @@
         });
     }
 
-    // Initialize Choices.js for dropdowns within this page (both create & edit modals)
-    document.addEventListener('DOMContentLoaded', function () {
-        if (typeof window.Choices === 'undefined') return;
-
-        document
-            .querySelectorAll('.mess-store-allocation-page select.choices-select')
-            .forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
-
-                var placeholder = el.getAttribute('data-placeholder') || 'Select';
-
-                new Choices(el, {
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    searchPlaceholderValue: 'Search...',
-                });
-
-                el.dataset.choicesInitialized = 'true';
-            });
+    // Initialize Choices.js for all modal dropdowns, including dynamic rows
+    document.addEventListener('DOMContentLoaded', function() {
+        initChoices(document.getElementById('createStoreAllocationModal'));
+        initChoices(document.getElementById('editStoreAllocationModal'));
     });
 })();
 </script>

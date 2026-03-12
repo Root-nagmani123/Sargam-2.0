@@ -38,23 +38,27 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
             $clientType = $voucher->clientTypeCategory
                 ? ucfirst($voucher->clientTypeCategory->client_type ?? '')
                 : ucfirst($voucher->client_type_slug ?? 'N/A');
+            $remarks = $voucher->remarks ?? '';
 
             $items = $voucher->items ?? collect();
             foreach ($items as $item) {
                 $serialNo++;
                 $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                $qty = $item->quantity ?? 0;
-                $rate = $item->rate ?? 0;
-                $amount = $qty * $rate;
+                $issueQty = (float) ($item->quantity ?? 0);
+                $returnQty = (float) ($item->return_quantity ?? 0);
+                $netQty = max(0, $issueQty - $returnQty);
+                $rate = (float) ($item->rate ?? 0);
+                $amount = $netQty * $rate;
 
                 $rows[] = [
                     $serialNo,
                     $buyerName,
+                    $remarks,
                     $clientType,
                     $requestNo,
                     $issueDate,
                     $itemName,
-                    number_format($qty, 2),
+                    number_format($netQty, 2),
                     $item->unit ?? '—',
                     number_format($rate, 2),
                     number_format($amount, 2),
@@ -69,6 +73,7 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
         return [
             'S. No.',
             'Buyer Name',
+            'Remark',
             'Client Type',
             'Request No.',
             'Issue Date',
@@ -90,16 +95,16 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
 
     public function title(): string
     {
-        return 'Category Wise Print Slip';
+        return 'Sale Voucher Report';
     }
 
     public function styles(Worksheet $sheet)
     {
         // Merge header cells (rows 1–4 contain header text we set in AfterSheet)
-        $sheet->mergeCells('A1:J1');
-        $sheet->mergeCells('A2:J2');
-        $sheet->mergeCells('A3:J3');
-        $sheet->mergeCells('A4:J4');
+        $sheet->mergeCells('A1:K1');
+        $sheet->mergeCells('A2:K2');
+        $sheet->mergeCells('A3:K3');
+        $sheet->mergeCells('A4:K4');
 
         $sheet->getStyle('A1:A4')->getAlignment()->setHorizontal('center');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
@@ -107,13 +112,13 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
         $sheet->getStyle('A3:A4')->getFont()->setSize(10);
 
         // Table header (row 6 in the sheet)
-        $headerRange = 'A6:J6';
+        $headerRange = 'A6:K6';
         $sheet->getStyle($headerRange)->getFont()->setBold(true);
         $sheet->getStyle($headerRange)->getAlignment()->setHorizontal('center');
 
         // Borders for the table
         $lastRow    = $sheet->getHighestRow();
-        $tableRange = "A6:J{$lastRow}";
+        $tableRange = "A6:K{$lastRow}";
         $sheet->getStyle($tableRange)->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
             ->getColor()->setARGB('FFDEE2E6');
@@ -121,17 +126,18 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
         // Column widths
         $sheet->getColumnDimension('A')->setWidth(8);  // S. No.
         $sheet->getColumnDimension('B')->setWidth(26); // Buyer Name
-        $sheet->getColumnDimension('C')->setWidth(18); // Client Type
-        $sheet->getColumnDimension('D')->setWidth(18); // Request No.
-        $sheet->getColumnDimension('E')->setWidth(14); // Issue Date
-        $sheet->getColumnDimension('F')->setWidth(28); // Item Name
-        $sheet->getColumnDimension('G')->setWidth(10); // Quantity
-        $sheet->getColumnDimension('H')->setWidth(10); // Unit
-        $sheet->getColumnDimension('I')->setWidth(12); // Rate
-        $sheet->getColumnDimension('J')->setWidth(14); // Amount
+        $sheet->getColumnDimension('C')->setWidth(24); // Remark
+        $sheet->getColumnDimension('D')->setWidth(18); // Client Type
+        $sheet->getColumnDimension('E')->setWidth(18); // Request No.
+        $sheet->getColumnDimension('F')->setWidth(14); // Issue Date
+        $sheet->getColumnDimension('G')->setWidth(28); // Item Name
+        $sheet->getColumnDimension('H')->setWidth(10); // Quantity
+        $sheet->getColumnDimension('I')->setWidth(10); // Unit
+        $sheet->getColumnDimension('J')->setWidth(12); // Rate
+        $sheet->getColumnDimension('K')->setWidth(14); // Amount
 
-        // Right-align numeric columns (G to J)
-        $sheet->getStyle("G6:J{$lastRow}")
+        // Right-align numeric columns (H to K)
+        $sheet->getStyle("H6:K{$lastRow}")
             ->getAlignment()->setHorizontal('right');
 
         return [
@@ -153,8 +159,8 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
                     : 'End';
 
                 $sheet->setCellValue('A1', "OFFICER'S MESS LBSNAA MUSSOORIE");
-                $sheet->setCellValue('A2', 'Print Slip - Category Wise');
-                $sheet->setCellValue('A3', "Print Slip - Category Wise Between {$from} To {$to}");
+                $sheet->setCellValue('A2', 'Sale Voucher Report');
+                $sheet->setCellValue('A3', "Sale Voucher Report Between {$from} To {$to}");
                 $sheet->setCellValue('A4', 'Buyer-wise selling voucher details');
 
                 // Freeze header region (after header + column titles)
@@ -166,7 +172,7 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
                     ->setOrientation(
                         \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE
                     )
-                    ->setPrintArea("A1:J{$lastRow}");
+                    ->setPrintArea("A1:K{$lastRow}");
             },
         ];
     }
