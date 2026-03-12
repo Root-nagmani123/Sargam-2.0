@@ -569,14 +569,14 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <table class="table align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Available Qty</th>
-                                            <th>Issue Qty <span class="text-white">*</span></th>
-                                            <th>Left Qty</th>
-                                            <th>Rate <span class="text-white">*</span></th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="min-width: 280px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 100px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Left Qty</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Total Amount</th>
+                                            <th style="min-width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editModalItemsBody"></tbody>
@@ -779,38 +779,48 @@ document.addEventListener('DOMContentLoaded', function() {
                     searchField: ['text'],
                     controlInput: '<input>',
                     highlight: false,
-                    clearOnOpen: true,
                     onInitialize: function () {
                         this.activeOption = null;
                     },
-                onDropdownOpen: function (dropdown) {
-                    var self = this;
-                    var input = this.control_input || dropdown.querySelector('input');
-                    function clearInputAndCursor() {
-                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
-                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
-                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
-                        if (input) {
-                            input.value = '';
-                            input.focus();
-                            try { input.setSelectionRange(0, 0); } catch (e) {}
-                            input.scrollLeft = 0;
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
                         }
+                        // selection + search dono ko blank karo har open par
+                        self.clear(true);
+                        clearInputAndCursor();
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
                     }
-                    clearInputAndCursor();
-                    setTimeout(clearInputAndCursor, 0);
-                    setTimeout(clearInputAndCursor, 50);
-                    setTimeout(clearInputAndCursor, 100);
-                    setTimeout(function () {
-                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
-                        opts.forEach(function (opt) {
-                            opt.classList.remove('active');
-                            opt.classList.remove('selected');
-                            opt.setAttribute('aria-selected', 'false');
-                        });
-                    }, 0);
-                }
-            });
+                });
             } catch (e) {
                 console.error('Tom Select initialization failed for status filter:', e);
             }
@@ -828,14 +838,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     searchField: ['text'],
                     controlInput: '<input>',
                     highlight: false,
-                    clearOnOpen: true,
                     onInitialize: function () {
                         this.activeOption = null;
                     },
                     onDropdownOpen: function (dropdown) {
                         var self = this;
-                        var input = this.control_input || dropdown.querySelector('input');
                         function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
                             if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
                             if (typeof self.onSearchChange === 'function') self.onSearchChange('');
                             if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
@@ -846,10 +855,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
+                        // selection + search dono ko blank karo har open par
+                        self.clear(true);
                         clearInputAndCursor();
-                        setTimeout(clearInputAndCursor, 0);
-                        setTimeout(clearInputAndCursor, 50);
-                        setTimeout(clearInputAndCursor, 100);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
                         setTimeout(function () {
                             var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
                             opts.forEach(function (opt) {
@@ -2153,8 +2173,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     onInitialize: function () { this.activeOption = null; },
                     onDropdownOpen: function (dropdown) {
                         var self = this;
-                        var input = this.control_input || (dropdown && dropdown.querySelector('input'));
                         function clearInputAndCursor() {
+                            var input = self.control_input || (dropdown && dropdown.querySelector('input'));
                             if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
                             if (typeof self.onSearchChange === 'function') self.onSearchChange('');
                             if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
@@ -2165,10 +2185,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 input.scrollLeft = 0;
                             }
                         }
+                        // Edit modal: click karte hi blank state, isliye selection bhi clear
+                        self.clear(true);
                         clearInputAndCursor();
-                        setTimeout(clearInputAndCursor, 0);
-                        setTimeout(clearInputAndCursor, 50);
-                        setTimeout(clearInputAndCursor, 100);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 0);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 50);
+                        setTimeout(function () {
+                            self.clear(true);
+                            clearInputAndCursor();
+                        }, 100);
                         if (dropdown) setTimeout(function () {
                             var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
                             opts.forEach(function (opt) {
@@ -2539,8 +2570,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         onInitialize: function () { this.activeOption = null; },
                         onDropdownOpen: function (dropdown) {
                             var self = this;
-                            var input = this.control_input || (dropdown && dropdown.querySelector('input'));
                             function clearInputAndCursor() {
+                                var input = self.control_input || (dropdown && dropdown.querySelector('input'));
                                 if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
                                 if (typeof self.onSearchChange === 'function') self.onSearchChange('');
                                 if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
@@ -2551,10 +2582,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                     input.scrollLeft = 0;
                                 }
                             }
+                            // Edit modal new row: open par bhi blank state
+                            self.clear(true);
                             clearInputAndCursor();
-                            setTimeout(clearInputAndCursor, 0);
-                            setTimeout(clearInputAndCursor, 50);
-                            setTimeout(clearInputAndCursor, 100);
+                            setTimeout(function () {
+                                self.clear(true);
+                                clearInputAndCursor();
+                            }, 0);
+                            setTimeout(function () {
+                                self.clear(true);
+                                clearInputAndCursor();
+                            }, 50);
+                            setTimeout(function () {
+                                self.clear(true);
+                                clearInputAndCursor();
+                            }, 100);
                             if (dropdown) setTimeout(function () {
                                 var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
                                 opts.forEach(function (opt) {

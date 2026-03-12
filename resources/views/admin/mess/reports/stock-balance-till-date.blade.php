@@ -14,13 +14,13 @@
         <div class="card-body pt-3">
             <form method="GET" action="{{ route('admin.mess.reports.stock-balance-till-date') }}">
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label">Till Date</label>
                         <input type="date" name="till_date" class="form-control" value="{{ $tillDate }}">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label">Select Store Name</label>
-                        <select name="store_id" class="form-select choices-select" data-placeholder="All Stores">
+                        <select name="store_id" class="form-select" data-placeholder="All Stores">
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id ? 'selected' : '' }}>
@@ -29,7 +29,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-8">
                         <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
                             <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
                                 <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
@@ -181,29 +181,33 @@
     }
 </style>
 
-{{-- Choices.js (enhanced dropdowns) --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{{-- Tom Select (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     (function () {
         document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.Choices === 'undefined') return;
+            if (typeof window.TomSelect === 'undefined') return;
 
             document
-                .querySelectorAll('.stock-balance-report select.choices-select')
+                .querySelectorAll('.stock-balance-report select')
                 .forEach(function (el) {
-                    if (el.dataset.choicesInitialized === 'true') return;
+                        if (el.dataset.tomselectInitialized === 'true') return;
 
                     var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                    new Choices(el, {
-                        shouldSort: false,
-                        placeholder: true,
-                        placeholderValue: placeholder,
-                        searchPlaceholderValue: 'Search...',
+                    new TomSelect(el, {
+                        placeholder: placeholder,
+                        allowEmptyOption: true,
+                        maxOptions: 500,
+                        plugins: ['dropdown_input'],
+                        sortField: {
+                            field: 'text',
+                            direction: 'asc'
+                        }
                     });
 
-                    el.dataset.choicesInitialized = 'true';
+                    el.dataset.tomselectInitialized = 'true';
                 });
         });
     })();

@@ -37,7 +37,7 @@
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select form-select-sm">
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -48,7 +48,7 @@
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
-                        <select id="clientTypePk" class="form-select form-select-sm" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
+                        <select id="clientTypePk" class="form-select" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -71,7 +71,7 @@
                     </div>
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select form-select-sm">
+                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php
@@ -283,7 +283,7 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 
 <style>
     /* Report header – same on screen and print */
@@ -411,7 +411,7 @@ window.addEventListener('load', function() {
 </script>
 @endif
 
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 <script>
 function printCategoryWiseSlip() {
@@ -564,61 +564,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const employeeNames = { 'academy staff': [ @foreach($employees ?? [] as $e){ value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },@endforeach ], 'faculty': [ @foreach($faculties ?? [] as $f){ value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },@endforeach ], 'mess staff': [ @foreach($messStaff ?? [] as $m){ value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },@endforeach ] };
 
     if (clientTypeSlug && clientTypePk && clientTypePkBuyer) {
-        // Enhance dropdowns with Choices.js if available
-        let clientTypeSlugChoices = null;
-        let clientTypePkChoices = null;
-        let clientTypePkBuyerChoices = null;
+        const tomSelectConfig = {
+            create: false,
+            allowEmptyOption: true,
+            sortField: { field: 'text', direction: 'asc' },
+            plugins: ['dropdown_input']
+        };
 
-        if (window.Choices) {
-            const baseConfig = {
-                searchEnabled: true,
-                shouldSort: false,
-                itemSelectText: '',
-                removeItemButton: false
-            };
-            clientTypeSlugChoices = new Choices(clientTypeSlug, baseConfig);
-            clientTypePkChoices = new Choices(clientTypePk, baseConfig);
-            clientTypePkBuyerChoices = new Choices(clientTypePkBuyer, baseConfig);
+        function initTomSelect(el) {
+            if (typeof window.TomSelect === 'undefined') return;
+            if (el.tomselect) {
+                el.tomselect.destroy();
+            }
+            return new TomSelect(el, tomSelectConfig);
         }
+
+        initTomSelect(clientTypeSlug);
+        initTomSelect(clientTypePk);
+        initTomSelect(clientTypePkBuyer);
 
         function fillClientTypeSelect() {
             const slug = clientTypeSlug.value;
-            const useChoices = !!clientTypePkChoices;
 
             clientTypePk.name = (slug === 'ot') ? 'course_master_pk' : 'client_type_pk';
 
-            if (useChoices) {
-                let choicesData = [{ value: '', label: 'All', selected: true }];
-                if (slug === 'ot' && otCourseOptions.length) {
-                    otCourseOptions.forEach(function(o) {
-                        choicesData.push({ value: o.value, label: o.text });
-                    });
-                } else if (slug && clientTypeOptions[slug]) {
-                    clientTypeOptions[slug].forEach(function(o) {
-                        choicesData.push({ value: o.value, label: o.text, customProperties: { clientName: o.dataClientName || '' } });
-                    });
-                }
-                clientTypePkChoices.clearChoices();
-                clientTypePkChoices.setChoices(choicesData, 'value', 'label', true);
-            } else {
-                clientTypePk.innerHTML = '<option value="">All</option>';
-                if (slug === 'ot' && otCourseOptions.length) {
-                    otCourseOptions.forEach(function(o) {
-                        const opt = document.createElement('option');
-                        opt.value = o.value;
-                        opt.textContent = o.text;
-                        clientTypePk.appendChild(opt);
-                    });
-                } else if (slug && clientTypeOptions[slug]) {
-                    clientTypeOptions[slug].forEach(function(o) {
-                        const opt = document.createElement('option');
-                        opt.value = o.value;
-                        opt.textContent = o.text;
-                        opt.dataset.clientName = o.dataClientName || '';
-                        clientTypePk.appendChild(opt);
-                    });
-                }
+            clientTypePk.innerHTML = '<option value="">All</option>';
+            if (slug === 'ot' && otCourseOptions.length) {
+                otCourseOptions.forEach(function(o) {
+                    const opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    clientTypePk.appendChild(opt);
+                });
+            } else if (slug && clientTypeOptions[slug]) {
+                clientTypeOptions[slug].forEach(function(o) {
+                    const opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    opt.dataset.clientName = o.dataClientName || '';
+                    clientTypePk.appendChild(opt);
+                });
             }
+
+            initTomSelect(clientTypePk);
             fillBuyerNameSelect();
         }
 
@@ -631,7 +619,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function fillBuyerNameSelect() {
             const slug = clientTypeSlug.value;
-            const useChoices = !!clientTypePkBuyerChoices;
             const selectedValue = clientTypePk.value;
 
             let dataClientName = '';
@@ -645,36 +632,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             function setBuyerChoices(list, preserveValue) {
-                if (useChoices) {
-                    let choicesData = [{ value: '', label: 'All Buyers', selected: !preserveValue }];
-                    (list || []).forEach(function(o) {
-                        choicesData.push({ value: o.value, label: o.text });
-                    });
-                    clientTypePkBuyerChoices.clearChoices();
-                    clientTypePkBuyerChoices.setChoices(choicesData, 'value', 'label', true);
-                    if (preserveValue) {
-                        clientTypePkBuyerChoices.setChoiceByValue(preserveValue);
-                    }
-                } else {
-                    clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
-                    (list || []).forEach(function(o) {
-                        const opt = document.createElement('option');
-                        opt.value = o.value;
-                        opt.textContent = o.text;
-                        clientTypePkBuyer.appendChild(opt);
-                    });
-                    if (preserveValue) {
-                        clientTypePkBuyer.value = preserveValue;
-                    }
+                clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
+                (list || []).forEach(function(o) {
+                    const opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    clientTypePkBuyer.appendChild(opt);
+                });
+                if (preserveValue) {
+                    clientTypePkBuyer.value = preserveValue;
                 }
+                initTomSelect(clientTypePkBuyer);
             }
 
             if (slug === 'employee' && dataClientName && employeeNames[dataClientName]) {
                 setBuyerChoices(employeeNames[dataClientName], preservedBuyerName);
             } else if (slug === 'ot' && selectedValue) {
-                if (!useChoices) {
-                    clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
-                }
+                clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
                 fetch(studentsByCourseUrl + '/' + selectedValue, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
