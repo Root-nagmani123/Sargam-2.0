@@ -59,11 +59,11 @@
             @php $sn = 0; @endphp
             @foreach($allocations as $allocation)
                 @foreach($allocation->items as $item)
-                <tr class="store-allocation-row" data-store="{{ strtolower($allocation->subStore->sub_store_name ?? '') }}" data-item="{{ strtolower($item->itemSubcategory->item_name ?? '') }}" data-type="{{ strtolower(optional($item->itemSubcategory->category)->category_name ?? '') }}" data-quantity="{{ $item->quantity }}" data-date="{{ $allocation->allocation_date ? $allocation->allocation_date->format('Y-m-d') : '' }}">
+                <tr class="store-allocation-row" data-store="{{ strtolower($allocation->subStore->sub_store_name ?? '') }}" data-item="{{ strtolower($item->itemSubcategory->item_name ?? '') }}" data-type="{{ strtolower(optional(optional($item->itemSubcategory)->category)->category_name ?? '') }}" data-quantity="{{ $item->quantity }}" data-date="{{ $allocation->allocation_date ? $allocation->allocation_date->format('Y-m-d') : '' }}">
                     <td class="col-sno">{{ ++$sn }}</td>
                     <td>{{ $allocation->subStore->sub_store_name ?? 'N/A' }}</td>
                     <td>{{ $item->itemSubcategory->item_name ?? 'N/A' }}</td>
-                    <td>{{ optional($item->itemSubcategory->category)->category_name ?? 'N/A' }}</td>
+                    <td>{{ optional(optional($item->itemSubcategory)->category)->category_name ?? 'N/A' }}</td>
                     <td class="text-end">{{ $item->quantity }}</td>
                     <td>{{ $allocation->allocation_date ? $allocation->allocation_date->format('d-m-Y') : '—' }}</td>
                     <td class="text-center">
