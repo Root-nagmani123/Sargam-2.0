@@ -223,7 +223,13 @@ class EstateReturnHouseDataTable extends DataTable
                 " . (Schema::hasColumn('estate_possession_other', 'remarks') ? 'epo.remarks' : 'NULL') . " as remarks
             ");
 
-        return $lbsnaa->unionAll($other);
+        // Default ordering: latest returned should appear first.
+        // We must wrap UNION in a subquery to apply ORDER BY reliably.
+        $union = $lbsnaa->unionAll($other);
+        return DB::query()
+            ->fromSub($union, 'rh')
+            ->orderByDesc('returning_date')
+            ->orderByDesc('pk');
     }
 
     public function html(): HtmlBuilder
@@ -240,7 +246,8 @@ class EstateReturnHouseDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[0, 'desc']],
+                // Default sort by Returning Date (desc). Column index is 0-based in DataTables config.
+                'order' => [[11, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',

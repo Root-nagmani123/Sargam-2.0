@@ -324,9 +324,38 @@ class EstateController extends Controller
         $selfEmployeeIds = [];
         if ($user && ! $isEstateAuthority) {
             $selfEmployeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+            // Normalize possible pk_old values to canonical employee_master.pk
+            if (!empty($selfEmployeeIds)) {
+                $selfEmployeeIds = DB::table('employee_master')
+                    ->whereIn('pk', $selfEmployeeIds)
+                    ->orWhere(function ($q) use ($selfEmployeeIds) {
+                        if (Schema::hasColumn('employee_master', 'pk_old')) {
+                            $q->whereIn('pk_old', $selfEmployeeIds);
+                        }
+                    })
+                    ->pluck('pk')
+                    ->filter()
+                    ->map(fn ($v) => (string) $v)
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
             if ($isEdit) {
                 $existingReq = EstateHomeRequestDetails::findOrFail($request->id);
-                if (! in_array((string) $existingReq->employee_pk, array_map('strval', $selfEmployeeIds), true)) {
+                // Existing rows may store employee_pk as pk_old; normalize before compare
+                $existingEmpPkRaw = (int) ($existingReq->employee_pk ?? 0);
+                $existingEmpPk = $existingEmpPkRaw;
+                if ($existingEmpPkRaw > 0) {
+                    $existingEmpPk = (int) DB::table('employee_master')
+                        ->where('pk', $existingEmpPkRaw)
+                        ->orWhere(function ($q) use ($existingEmpPkRaw) {
+                            if (Schema::hasColumn('employee_master', 'pk_old')) {
+                                $q->where('pk_old', $existingEmpPkRaw);
+                            }
+                        })
+                        ->value('pk') ?: $existingEmpPkRaw;
+                }
+                if (! in_array((string) $existingEmpPk, array_map('strval', $selfEmployeeIds), true)) {
                     abort(403, 'You cannot modify estate requests of other employees.');
                 }
             }
@@ -466,7 +495,9 @@ class EstateController extends Controller
      */
     public function getRequestForEstateEmployees(Request $request)
     {
-        $empPkCol = $this->estateEmployeePkColumn();
+        // IMPORTANT: UI + estate_home_request_details.employee_pk should use employee_master.pk (canonical).
+        // payroll_salary_master may still reference employee_master.pk_old, so we keep a separate column for joins.
+        $empPkColForPayrollJoin = $this->estateEmployeePkColumn();
         $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
         $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
         $salaryGradeCol = \Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')
@@ -523,15 +554,61 @@ class EstateController extends Controller
 
         // Employees jinke paas *pending* estate request (status = 0) hai,
         // unhe bhi dropdown se block karna hai — chahe abhi allotment/possession na hua ho.
-        $pendingRequestEmployeePks = EstateHomeRequestDetails::where('employee_pk', '>', 0)
-            ->where('status', 0)
-            ->pluck('employee_pk')
-            ->filter()
-            ->map(fn ($v) => (int) $v)
-            ->all();
+        // IMPORTANT: legacy data me kuch requests "Returned" effectively ho sakte hain (possession returned),
+        // but status still 0. Aise cases ko pending block me include nahi karna chahiye.
+        $pendingRequestEmployeePks = [];
+        if (Schema::hasTable('estate_possession_details')) {
+            $hasReturnStatus = Schema::hasColumn('estate_possession_details', 'return_home_status');
+            $pendingQuery = DB::table('estate_home_request_details as ehrd')
+                ->where('ehrd.employee_pk', '>', 0)
+                ->where('ehrd.status', 0);
 
-        // Blocked set = active possession wale + pending request wale.
-        $blockedEmployeePks = array_values(array_unique(array_merge($activeEmployeePks, $pendingRequestEmployeePks)));
+            // "Effectively returned" requests ko exclude karo:
+            // request ke against at least one possession row jiska house set ho aur return_home_status=1 (ya column absent ho to can't infer).
+            if ($hasReturnStatus) {
+                $pendingQuery->whereNotExists(function ($sub) {
+                    $sub->from('estate_possession_details as epd')
+                        ->whereColumn('epd.estate_home_request_details', 'ehrd.pk')
+                        ->whereNotNull('epd.estate_house_master_pk')
+                        ->where('epd.return_home_status', 1);
+                });
+            }
+
+            $pendingRequestEmployeePks = $pendingQuery
+                ->pluck('ehrd.employee_pk')
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->all();
+        } else {
+            $pendingRequestEmployeePks = EstateHomeRequestDetails::where('employee_pk', '>', 0)
+                ->where('status', 0)
+                ->pluck('employee_pk')
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->all();
+        }
+
+        // Blocked set (raw ids from existing data) = active possession wale + pending request wale.
+        // These values may be mixed (employee_master.pk OR employee_master.pk_old) depending on legacy/migration.
+        $blockedEmployeePksRaw = array_values(array_unique(array_merge($activeEmployeePks, $pendingRequestEmployeePks)));
+
+        // Normalize any legacy pk_old values to canonical employee_master.pk for dropdown filtering.
+        $blockedEmployeePks = [];
+        if (!empty($blockedEmployeePksRaw)) {
+            $blockedEmployeePks = DB::table('employee_master')
+                ->whereIn('pk', $blockedEmployeePksRaw)
+                ->orWhere(function ($q) use ($blockedEmployeePksRaw) {
+                    if (Schema::hasColumn('employee_master', 'pk_old')) {
+                        $q->whereIn('pk_old', $blockedEmployeePksRaw);
+                    }
+                })
+                ->pluck('pk')
+                ->filter()
+                ->map(fn ($v) => (int) $v)
+                ->unique()
+                ->values()
+                ->all();
+        }
 
         $query = DB::table('estate_house_master as h')
             ->join('estate_block_master as b', 'h.estate_block_master_pk', '=', 'b.pk')
@@ -539,10 +616,11 @@ class EstateController extends Controller
             ->join('estate_eligibility_mapping as e', 'h.estate_unit_sub_type_master_pk', '=', 'e.estate_unit_sub_type_master_pk')
             ->join('salary_grade_master as sg', 'e.salary_grade_master_pk', '=', 'sg.pk')
             ->join('payroll_salary_master as ps', "sg.pk", '=', "ps.$salaryGradeCol")
-            ->join('employee_master as em', 'ps.employee_master_pk', '=', 'em.' . $empPkCol)
+            // payroll_salary_master.employee_master_pk may point to employee_master.pk_old in this system
+            ->join('employee_master as em', 'ps.employee_master_pk', '=', 'em.' . $empPkColForPayrollJoin)
             ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
             ->select(
-                'em.' . $empPkCol . ' as pk',
+                'em.pk as pk',
                 DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                 DB::raw($employeeIdSelect . ' as employee_id'),
                 DB::raw("COALESCE(d.designation_name, '') as emp_designation")
@@ -551,7 +629,7 @@ class EstateController extends Controller
             ->where('em.payroll', 0)
             ->distinct()
             ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
-            ->orderBy('em.' . $empPkCol);
+            ->orderBy('em.pk');
 
         // Self-service: non-estate/admin users should only see themselves in employee dropdown.
         // Sirf Admin / Estate ko full employee list milegi; baaki sab (HAC Person, Staff, etc.) ko sirf apna naam.
@@ -559,6 +637,22 @@ class EstateController extends Controller
         $employeeIds = [];
         if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+            // Normalize possible pk_old values to canonical employee_master.pk
+            if (!empty($employeeIds)) {
+                $employeeIds = DB::table('employee_master')
+                    ->whereIn('pk', $employeeIds)
+                    ->orWhere(function ($q) use ($employeeIds) {
+                        if (Schema::hasColumn('employee_master', 'pk_old')) {
+                            $q->whereIn('pk_old', $employeeIds);
+                        }
+                    })
+                    ->pluck('pk')
+                    ->filter()
+                    ->map(fn ($v) => (string) $v)
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
             if (empty($employeeIds) && ($user->user_id || $user->pk)) {
                 $tryIds = array_filter([$user->user_id, $user->pk], fn ($v) => $v !== null && $v !== '');
                 if (!empty($tryIds)) {
@@ -569,22 +663,22 @@ class EstateController extends Controller
                                 $q->whereIn('pk_old', $tryIds);
                             }
                         })
-                        ->get([$empPkCol]);
-                    $found = $foundRows->pluck($empPkCol)->filter()->map(fn ($v) => (string) $v)->unique()->values()->toArray();
+                        ->get(['pk']);
+                    $found = $foundRows->pluck('pk')->filter()->map(fn ($v) => (string) $v)->unique()->values()->toArray();
                     if (!empty($found)) {
                         $employeeIds = $found;
                     }
                 }
             }
             if (!empty($employeeIds)) {
-                $query->whereIn('em.' . $empPkCol, $employeeIds);
+                $query->whereIn('em.pk', $employeeIds);
             } else {
                 $query->whereRaw('1 = 0');
             }
         }
 
         if (!empty($blockedEmployeePks)) {
-            $query->whereNotIn('em.' . $empPkCol, $blockedEmployeePks);
+            $query->whereNotIn('em.pk', $blockedEmployeePks);
         }
 
         $rows = $query->get();
@@ -594,16 +688,16 @@ class EstateController extends Controller
             $fallbackQuery = DB::table('employee_master as em')
                 ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
                 ->select(
-                    'em.' . $empPkCol . ' as pk',
+                    'em.pk as pk',
                     DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                     DB::raw($employeeIdSelect . ' as employee_id'),
                     DB::raw("COALESCE(d.designation_name, '') as emp_designation")
                 )
                 ->where('em.status', 1)
                 ->orderByRaw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) asc")
-                ->orderBy('em.' . $empPkCol);
+                ->orderBy('em.pk');
             if (!empty($blockedEmployeePks)) {
-                $fallbackQuery->whereNotIn('em.' . $empPkCol, $blockedEmployeePks);
+                $fallbackQuery->whereNotIn('em.pk', $blockedEmployeePks);
             }
             if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
                 $fallbackEmployeeIds = $employeeIds;
@@ -620,15 +714,15 @@ class EstateController extends Controller
                                     $q->whereIn('pk_old', $tryIds);
                                 }
                             })
-                            ->get([$empPkCol]);
-                        $found = $foundRows->pluck($empPkCol)->filter()->map(fn ($v) => (string) $v)->unique()->values()->toArray();
+                            ->get(['pk']);
+                        $found = $foundRows->pluck('pk')->filter()->map(fn ($v) => (string) $v)->unique()->values()->toArray();
                         if (!empty($found)) {
                             $fallbackEmployeeIds = $found;
                         }
                     }
                 }
                 if (!empty($fallbackEmployeeIds)) {
-                    $fallbackQuery->whereIn('em.' . $empPkCol, $fallbackEmployeeIds);
+                    $fallbackQuery->whereIn('em.pk', $fallbackEmployeeIds);
                 } else {
                     $fallbackQuery->whereRaw('1 = 0');
                 }
@@ -645,27 +739,44 @@ class EstateController extends Controller
             $returnedOnlyEmployeePks = array_diff($allPossessionEmployeePks, $activeEmployeePks);
 
             if (!empty($returnedOnlyEmployeePks)) {
+                // Normalize returnedOnly list to canonical employee_master.pk
+                $returnedOnlyCanonical = DB::table('employee_master')
+                    ->whereIn('pk', $returnedOnlyEmployeePks)
+                    ->orWhere(function ($q) use ($returnedOnlyEmployeePks) {
+                        if (Schema::hasColumn('employee_master', 'pk_old')) {
+                            $q->whereIn('pk_old', $returnedOnlyEmployeePks);
+                        }
+                    })
+                    ->pluck('pk')
+                    ->filter()
+                    ->map(fn ($v) => (int) $v)
+                    ->unique()
+                    ->values()
+                    ->all();
+
                 $existingPks = $rows->pluck('pk')->map(fn ($v) => (int) $v)->all();
                 // Dropdown me sirf un returned employees ko add karein
                 // jo abhi kisi active possession ya pending request ki wajah se blocked nahi hain.
-                $missingReturnedPks = array_diff($returnedOnlyEmployeePks, $existingPks, $blockedEmployeePks);
+                $missingReturnedPks = array_diff($returnedOnlyCanonical, $existingPks, $blockedEmployeePks);
 
                 if (!empty($missingReturnedPks)) {
                     $extraReturnedQuery = DB::table('employee_master as em')
                         ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
                         ->select(
-                            'em.' . $empPkCol . ' as pk',
+                            'em.pk as pk',
                             DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                             DB::raw($employeeIdSelect . ' as employee_id'),
                             DB::raw("COALESCE(d.designation_name, '') as emp_designation")
                         )
-                        ->whereIn('em.' . $empPkCol, $missingReturnedPks)
-                        ->where('em.status', 1);
+                        ->whereIn('em.pk', $missingReturnedPks);
+
+                    // Only show active employees in dropdown (even for returned backfill)
+                    $extraReturnedQuery->where('em.status', 1)->where('em.payroll', 0);
 
                     // Self-service restriction: non-estate/admin users should still only see themselves
                     if ($user && ! (hasRole('Estate') || hasRole('Admin'))) {
                         if (!empty($employeeIds)) {
-                            $extraReturnedQuery->whereIn('em.' . $empPkCol, $employeeIds);
+                            $extraReturnedQuery->whereIn('em.pk', $employeeIds);
                         } else {
                             $extraReturnedQuery->whereRaw('1 = 0');
                         }
@@ -680,24 +791,35 @@ class EstateController extends Controller
         }
 
         $includePk = (int) $request->query('include_pk', 0);
-        $empPkCol = $this->estateEmployeePkColumn();
-        $hasEmpId = Schema::hasColumn('employee_master', 'emp_id');
-        $hasEmployeeId = Schema::hasColumn('employee_master', 'employee_id');
-        $employeeIdSelect = $hasEmpId ? 'em.emp_id' : ($hasEmployeeId ? 'em.employee_id' : 'NULL');
         if ($includePk > 0) {
             $currentReq = EstateHomeRequestDetails::find($includePk);
             if ($currentReq) {
-                $currentEmployeePk = (int) ($currentReq->employee_pk ?? 0);
+                $currentEmployeePkRaw = (int) ($currentReq->employee_pk ?? 0);
+                // Normalize stored employee_pk (may be pk_old) to canonical employee_master.pk
+                $currentEmployeePk = 0;
+                if ($currentEmployeePkRaw > 0) {
+                    $currentEmployeePk = (int) DB::table('employee_master')
+                        ->where('pk', $currentEmployeePkRaw)
+                        ->orWhere(function ($q) use ($currentEmployeePkRaw) {
+                            if (Schema::hasColumn('employee_master', 'pk_old')) {
+                                $q->where('pk_old', $currentEmployeePkRaw);
+                            }
+                        })
+                        ->value('pk');
+                }
+
                 if ($currentEmployeePk > 0 && ! $rows->contains(fn ($r) => (int) $r->pk === $currentEmployeePk)) {
                     $extra = DB::table('employee_master as em')
                         ->leftJoin('designation_master as d', 'em.designation_master_pk', '=', 'd.pk')
                         ->select(
-                            'em.' . $empPkCol . ' as pk',
+                            'em.pk as pk',
                             DB::raw("TRIM(CONCAT(COALESCE(em.first_name, ''), ' ', COALESCE(em.middle_name, ''), ' ', COALESCE(em.last_name, ''))) as emp_name"),
                             DB::raw($employeeIdSelect . ' as employee_id'),
                             DB::raw("COALESCE(d.designation_name, '') as emp_designation")
                         )
-                        ->where('em.' . $empPkCol, $currentEmployeePk)
+                        ->where('em.pk', $currentEmployeePk)
+                        ->where('em.status', 1)
+                        ->where('em.payroll', 0)
                         ->first();
                     if ($extra) {
                         $rows->prepend($extra);
@@ -717,7 +839,11 @@ class EstateController extends Controller
             ];
         })->values()->all();
 
-        return response()->json($list);
+        // Prevent stale browser/proxy cache for dropdown list
+        return response()
+            ->json($list)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
     }
 
     /**
@@ -727,7 +853,8 @@ class EstateController extends Controller
     public function getRequestForEstateEmployeeDetails($pk)
     {
         $pk = (int) $pk;
-        $empPkCol = $this->estateEmployeePkColumn();
+        // Accept both employee_master.pk (canonical) and employee_master.pk_old (legacy)
+        $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
         $hasEmpId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'emp_id');
         $hasEmployeeId = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'employee_id');
         $salaryGradeCol = \Illuminate\Support\Facades\Schema::hasColumn('payroll_salary_master', 'salary_grade_pk')
@@ -744,6 +871,22 @@ class EstateController extends Controller
         $user = Auth::user();
         if ($user && ! (hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'))) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
+            // Normalize possible pk_old values to canonical employee_master.pk for correct comparison
+            if (!empty($employeeIds)) {
+                $employeeIds = DB::table('employee_master')
+                    ->whereIn('pk', $employeeIds)
+                    ->orWhere(function ($q) use ($employeeIds, $hasPkOld) {
+                        if ($hasPkOld) {
+                            $q->whereIn('pk_old', $employeeIds);
+                        }
+                    })
+                    ->pluck('pk')
+                    ->filter()
+                    ->map(fn ($v) => (string) $v)
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
             if (empty($employeeIds) || ! in_array((string) $pk, array_map('strval', $employeeIds), true)) {
                 abort(403, 'You cannot view details of other employees.');
             }
@@ -759,7 +902,12 @@ class EstateController extends Controller
                 'e.doj',
                 'e.payroll_date'
             )
-            ->where('e.' . $empPkCol, $pk)
+            ->where(function ($q) use ($pk, $hasPkOld) {
+                $q->where('e.pk', $pk);
+                if ($hasPkOld) {
+                    $q->orWhere('e.pk_old', $pk);
+                }
+            })
             ->first();
 
         if ($employee) {
@@ -2473,7 +2621,10 @@ class EstateController extends Controller
             $epdQuery = DB::table('estate_possession_details as epd')
                 ->where('epd.estate_home_request_details', $homeReqPk)
                 ->whereNotNull('epd.estate_house_master_pk')
-                ->where('epd.estate_change_id', -1);
+                ->where(function ($q) {
+                    $q->whereNull('epd.estate_change_id')
+                        ->orWhere('epd.estate_change_id', -1);
+                });
 
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $epdQuery->where(function ($q) {

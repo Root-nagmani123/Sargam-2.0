@@ -21,9 +21,22 @@
                     </div>
                     <small class="text-muted d-block">Select Bill Month</small>
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-8 d-flex flex-wrap gap-2 align-items-center">
                     <button type="submit" class="btn btn-primary" id="btnShow">
                         <i class="bi bi-search me-1"></i> Show
+                    </button>
+
+                    <div class="btn-group ms-md-auto" role="group">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="btnBillReportColumns" title="Show / hide columns" disabled>
+                            <i class="bi bi-columns-gap"></i>
+                            <span class="d-none d-md-inline ms-1">Show / hide columns</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" id="billReportColumnToggleMenu"></ul>
+                    </div>
+
+                    <button type="button" class="btn btn-outline-secondary" id="btnBillReportPrint" title="Print" disabled>
+                        <i class="bi bi-printer me-1"></i>
+                        <span class="d-none d-md-inline">Print</span>
                     </button>
                 </div>
             </form>
@@ -83,10 +96,129 @@
 $(document).ready(function() {
     var billReportDt = null;
     var dataUrl = "{{ route('admin.estate.reports.bill-report-grid.data') }}";
+    var columnStorageKey = 'estateBillReportGrid:columns:v1';
 
     function formatMoney(n) {
         if (n == null || n === '' || isNaN(n)) return '—';
         return '₹ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    }
+
+    function buildColumnToggle() {
+        if (!billReportDt) return;
+        var menu = $('#billReportColumnToggleMenu');
+        menu.empty();
+        billReportDt.columns().every(function(i) {
+            var col = this;
+            var header = ($(col.header()).text() || '').trim();
+            if (!header) return;
+            var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 cursor-pointer mb-0"><input type="checkbox" class="form-check-input bill-report-column-toggle" data-column="' + i + '"> ' + header + '</label></li>');
+            $li.find('input').prop('checked', col.visible());
+            menu.append($li);
+        });
+    }
+
+    function persistColumnVisibility() {
+        if (!billReportDt) return;
+        var state = {};
+        billReportDt.columns().every(function(i) {
+            state[i] = this.visible();
+        });
+        try { localStorage.setItem(columnStorageKey, JSON.stringify(state)); } catch (e) {}
+    }
+
+    function restoreColumnVisibility() {
+        if (!billReportDt) return;
+        var raw = null;
+        try { raw = localStorage.getItem(columnStorageKey); } catch (e) { raw = null; }
+        if (!raw) return;
+        var state = null;
+        try { state = JSON.parse(raw); } catch (e) { state = null; }
+        if (!state || typeof state !== 'object') return;
+        Object.keys(state).forEach(function(k) {
+            var idx = parseInt(k, 10);
+            if (isNaN(idx)) return;
+            billReportDt.column(idx).visible(!!state[k], false);
+        });
+        billReportDt.columns.adjust().draw(false);
+    }
+
+    $(document).on('change', '.bill-report-column-toggle', function() {
+        if (!billReportDt) return;
+        var colIdx = $(this).data('column');
+        billReportDt.column(colIdx).visible($(this).prop('checked'));
+        persistColumnVisibility();
+    });
+
+    function buildPrintableTableHtml() {
+        if (!billReportDt) return '';
+        var visibleIndexes = [];
+        billReportDt.columns().every(function(i) {
+            if (this.visible()) visibleIndexes.push(i);
+        });
+
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead><tr>';
+        visibleIndexes.forEach(function(colIdx) {
+            var h = ($(billReportDt.column(colIdx).header()).text() || '').trim();
+            html += '<th>' + h + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        billReportDt.rows({ search: 'applied' }).nodes().each(function(rowNode) {
+            var $row = $(rowNode);
+            if ($row.hasClass('child')) return;
+            html += '<tr>';
+            visibleIndexes.forEach(function(colIdx) {
+                var cellNode = billReportDt.cell(rowNode, colIdx).node();
+                var cellHtml = '';
+                if (cellNode) {
+                    var $cell = $(cellNode).clone();
+                    $cell.find('input, button, select, textarea').remove();
+                    $cell.find('a.btn, .btn, .form-check-input').remove();
+                    cellHtml = ($cell.html() || '').trim();
+                }
+                html += '<td>' + cellHtml + '</td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function openPrintWindow(tableHtml) {
+        var billMonth = ($('#bill_month').val() || '').trim();
+        var title = 'Estate Bill Report - Grid View' + (billMonth ? (' (' + billMonth + ')') : '');
+        var win = window.open('', '_blank');
+        if (!win) {
+            window.print();
+            return;
+        }
+
+        win.document.open();
+        win.document.write(
+            '<!doctype html><html><head><meta charset="utf-8">' +
+            '<title>' + title + '</title>' +
+            '<style>' +
+            '@page{size:A4 landscape;margin:8mm;}' +
+            'body{font-family:Arial, sans-serif;font-size:11px;color:#111;}' +
+            'h2{margin:0 0 8px 0;font-size:14px;}' +
+            'table{width:100%;border-collapse:collapse;}' +
+            'th,td{border:1px solid #333;padding:4px 6px;vertical-align:top;word-break:break-word;white-space:normal;}' +
+            'thead{display:table-header-group;}' +
+            'tr{page-break-inside:avoid;}' +
+            '</style></head><body>' +
+            '<h2>' + title + '</h2>' +
+            tableHtml +
+            '</body></html>'
+        );
+        win.document.close();
+
+        setTimeout(function() {
+            win.focus();
+            win.print();
+            win.close();
+        }, 250);
     }
 
     function initOrReloadBillReportGrid() {
@@ -131,6 +263,13 @@ $(document).ready(function() {
                 scrollX: true,
                 dom: '<"row flex-nowrap align-items-center py-2"<"col-12 col-sm-6 col-md-6 mb-2 mb-md-0"l><"col-12 col-sm-6 col-md-6"f>>rt<"row align-items-center py-2"<"col-12 col-sm-5 col-md-5"i><"col-12 col-sm-7 col-md-7"p>>'
             });
+
+            billReportDt.on('draw', function() { buildColumnToggle(); });
+            restoreColumnVisibility();
+            buildColumnToggle();
+
+            $('#btnBillReportColumns').prop('disabled', false);
+            $('#btnBillReportPrint').prop('disabled', false);
         } else {
             billReportDt.ajax.reload(null, true);
         }
@@ -139,6 +278,36 @@ $(document).ready(function() {
     $('#billReportGridFilterForm').on('submit', function(e) {
         e.preventDefault();
         initOrReloadBillReportGrid();
+    });
+
+    $('#btnBillReportPrint').on('click', function() {
+        if (!billReportDt) {
+            window.print();
+            return;
+        }
+
+        // Try to print all rows (server-side must support length=-1 for "All")
+        var originalLen = billReportDt.page.len();
+        var originalPage = billReportDt.page();
+        var restored = false;
+
+        var restore = function() {
+            if (restored) return;
+            restored = true;
+            billReportDt.page.len(originalLen);
+            billReportDt.page(originalPage);
+            billReportDt.draw(false);
+        };
+
+        billReportDt.one('draw', function() {
+            setTimeout(function() {
+                var tableHtml = buildPrintableTableHtml();
+                openPrintWindow(tableHtml);
+                setTimeout(restore, 800);
+            }, 250);
+        });
+
+        billReportDt.page.len(-1).draw();
     });
 });
 </script>
