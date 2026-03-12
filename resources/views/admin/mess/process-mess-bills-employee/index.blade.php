@@ -185,40 +185,31 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
-                        @endphp
-                        @forelse($bills as $index => $bill)
-                            @php
-                                $billId = $bill->id ?? $bill->pk ?? 0;
-                                $isDateRange = ($bill->source_type ?? '') === 'date_range';
-                                $slipNo = $isDateRange ? 'DR-' . str_pad($bill->id, 6, '0', STR_PAD_LEFT) : 'SV-' . str_pad($bill->pk ?? $bill->id ?? 0, 6, '0', STR_PAD_LEFT);
-                                $receiptId = $isDateRange ? 'dr-' . $bill->id : 'ki-' . ($bill->pk ?? $bill->id);
-                            @endphp
-                            <tr class="{{ ($bill->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
+                        @forelse($combinedBills ?? [] as $index => $cb)
+                            <tr class="{{ ($cb->status ?? 0) == 2 ? '' : 'table-warning table-warning-subtle' }}">
                                 <td>
-                                    {{ (method_exists($bills, 'firstItem') && !is_null($bills->firstItem()))
-                                        ? $bills->firstItem() + $index
+                                    {{ (method_exists($combinedBills, 'firstItem') && !is_null($combinedBills->firstItem()))
+                                        ? $combinedBills->firstItem() + $index
                                         : $index + 1 }}
                                 </td>
-                                <td>{{ $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—') }}</td>
-                                <td>{{ $slipNo }}</td>
-                                <td>{{ $bill->issue_date ? $bill->issue_date->format('d-m-Y') : (isset($bill->date_from) && $bill->date_from ? $bill->date_from->format('d-m-Y') : '—') }}</td>
-                                <td>{{ $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—'))) }}</td>
-                                <td class="text-end fw-semibold">₹ {{ number_format($bill->net_total, 2) }}</td>
-                                <td>{{ $paymentTypeMap[$bill->payment_type ?? 1] ?? '—' }}</td>
+                                <td>{{ $cb->buyer_name ?? '—' }}</td>
+                                <td>{{ $cb->combined_invoice_no ?? '—' }}</td>
+                                <td>{{ $cb->invoice_date_range ?? '—' }}</td>
+                                <td>{{ $cb->client_type_display ?? '—' }}</td>
+                                <td class="text-end fw-semibold">₹ {{ number_format($cb->total ?? 0, 2) }}</td>
+                                <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
-                                    @if(($bill->status ?? 0) == 2)
+                                    @if(($cb->status ?? 0) == 2)
                                         <span class="badge bg-success">Paid</span>
-                                    @elseif(($bill->status ?? 0) == 1)
+                                    @elseif(($cb->status ?? 0) == 1)
                                         <span class="badge bg-warning text-dark">Partial</span>
                                     @else
                                         <span class="badge bg-secondary">Unpaid</span>
                                     @endif
                                 </td>
                                 <td class="text-center no-print">
-                                    <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', $receiptId) }}" target="_blank"
-                                       class="btn  btn-outline-primary text-primary bg-transparent border-0" title="Print receipt">
+                                    <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id]) }}?date_from={{ urlencode($effectiveDateFromYmd ?? '') }}&date_to={{ urlencode($effectiveDateToYmd ?? '') }}" target="_blank"
+                                       class="btn  btn-outline-primary text-primary bg-transparent border-0" title="Print receipt ({{ $cb->combined_invoice_no ?? 'Invoice' }})">
                                         <i class="material-symbols-rounded">receipt</i>
                                     </a>
                                 </td>
@@ -670,6 +661,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var modalBillsData = [];
     var paymentDetailsBillId = null;
+    var paymentDetailsDateFrom = null;
+    var paymentDetailsDateTo = null;
     var paymentDetailsUrl = '{{ route("admin.mess.process-mess-bills-employee.payment-details", ["id" => "__ID__"]) }}';
     var printReceiptBaseUrl = '{{ route("admin.mess.process-mess-bills-employee.print-receipt", ["id" => "__ID__"]) }}';
     var generateInvoiceBaseUrl = '{{ url("admin/mess/process-mess-bills-employee") }}';
@@ -1114,10 +1107,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function doGenerateInvoice(billId, buyerName, btnEl) {
         if (!billId) { showToast('Bill ID not found.', 'error'); return; }
         if (btnEl) { btnEl.disabled = true; btnEl.textContent = '…'; }
-        fetch(generateInvoiceBaseUrl + '/' + billId + '/generate-invoice', {
+        var body = {};
+        if (String(billId).indexOf('combined-') === 0) {
+            var mFrom = document.getElementById('modal_date_from');
+            var mTo = document.getElementById('modal_date_to');
+            if (mFrom && mFrom.value) body.date_from = toYmd(mFrom.value);
+            if (mTo && mTo.value) body.date_to = toYmd(mTo.value);
+        }
+        fetch(generateInvoiceBaseUrl + '/' + encodeURIComponent(billId) + '/generate-invoice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-            body: JSON.stringify({})
+            body: JSON.stringify(body)
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -1142,7 +1142,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var body = paymentPayload && (paymentPayload.amount || paymentPayload.payment_mode || paymentPayload.payment_date)
             ? JSON.stringify(paymentPayload)
             : JSON.stringify({});
-        fetch(generateInvoiceBaseUrl + '/' + billId + '/generate-payment', {
+        fetch(generateInvoiceBaseUrl + '/' + encodeURIComponent(billId) + '/generate-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
             body: body
@@ -1204,15 +1204,30 @@ document.addEventListener('DOMContentLoaded', function() {
         return html;
     }
 
-    function openPaymentDetailsModal(billId) {
+    function openPaymentDetailsModal(billId, dateFromYmd, dateToYmd) {
         paymentDetailsBillId = billId;
+        paymentDetailsDateFrom = dateFromYmd || null;
+        paymentDetailsDateTo = dateToYmd || null;
         var content = document.getElementById('paymentDetailsContent');
         if (content) content.innerHTML = '<div class="text-center py-4 text-muted">Loading...</div>';
-        var url = paymentDetailsUrl.replace('__ID__', billId);
+        var url = paymentDetailsUrl.replace('__ID__', encodeURIComponent(billId));
+        if (String(billId).indexOf('combined-') === 0 && (paymentDetailsDateFrom || paymentDetailsDateTo)) {
+            var params = [];
+            if (paymentDetailsDateFrom) params.push('date_from=' + encodeURIComponent(paymentDetailsDateFrom));
+            if (paymentDetailsDateTo) params.push('date_to=' + encodeURIComponent(paymentDetailsDateTo));
+            if (params.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
+        }
         fetch(url).then(function(r) { return r.json(); })
             .then(function(data) {
+                if (data.error) {
+                    content.innerHTML = '<div class="text-danger py-4 text-center">' + (data.error || 'Failed to load.') + '</div>';
+                    showToast(data.error || 'Failed to load payment details.', 'error');
+                    return;
+                }
                 content.innerHTML = renderPaymentDetailsContent(data);
                 content.setAttribute('data-due-amount-raw', data.due_amount_raw != null ? data.due_amount_raw : data.due_amount || 0);
+                if (data.first_receipt_id) content.setAttribute('data-first-receipt-id', data.first_receipt_id);
+                else content.removeAttribute('data-first-receipt-id');
                 var pdModal = document.getElementById('paymentDetailsModal');
                 var addModalEl = document.getElementById('addProcessMessBillsModal');
                 var addModalInstance = addModalEl && typeof bootstrap !== 'undefined' ? bootstrap.Modal.getInstance(addModalEl) : null;
@@ -1256,8 +1271,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('paymentDetailsPrintBtn').addEventListener('click', function() {
-        if (paymentDetailsBillId) {
-            var printUrl = printReceiptBaseUrl.replace('__ID__', paymentDetailsBillId);
+        var content = document.getElementById('paymentDetailsContent');
+        var receiptId = paymentDetailsBillId;
+        if (String(receiptId || '').indexOf('combined-') === 0) {
+            receiptId = receiptId;
+        } else {
+            receiptId = (content && content.getAttribute('data-first-receipt-id')) || receiptId;
+        }
+        if (receiptId) {
+            var printUrl = printReceiptBaseUrl.replace('__ID__', encodeURIComponent(receiptId));
+            if (String(receiptId).indexOf('combined-') === 0 && (paymentDetailsDateFrom || paymentDetailsDateTo)) {
+                printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(paymentDetailsDateFrom || '') + '&date_to=' + encodeURIComponent(paymentDetailsDateTo || '');
+            }
             window.open(printUrl, '_blank');
         }
     });
@@ -1289,6 +1314,8 @@ document.addEventListener('DOMContentLoaded', function() {
             payload.cheque_number = (document.getElementById('payNowChequeNumber') || {}).value || '';
             payload.cheque_date = (document.getElementById('payNowChequeDate') || {}).value || '';
         }
+        if (String(billId).indexOf('combined-') === 0 && paymentDetailsDateFrom) payload.date_from = paymentDetailsDateFrom;
+        if (String(billId).indexOf('combined-') === 0 && paymentDetailsDateTo) payload.date_to = paymentDetailsDateTo;
         var btn = this;
         btn.disabled = true;
         doGeneratePayment(billId, '', btn, payload);
@@ -1312,7 +1339,15 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             var billId = paymentBtn.getAttribute('data-bill-id');
-            openPaymentDetailsModal(billId);
+            var dateFromYmd = null;
+            var dateToYmd = null;
+            if (String(billId).indexOf('combined-') === 0) {
+                var mFrom = document.getElementById('modal_date_from');
+                var mTo = document.getElementById('modal_date_to');
+                if (mFrom && mFrom.value) dateFromYmd = toYmd(mFrom.value);
+                if (mTo && mTo.value) dateToYmd = toYmd(mTo.value);
+            }
+            openPaymentDetailsModal(billId, dateFromYmd, dateToYmd);
             return;
         }
     }, true);

@@ -412,9 +412,21 @@ class ReportController extends Controller
     /**
      * Category-wise Print Slip - Excel Export
      * Builds merged SV + KI vouchers with same filters and exports flattened rows.
+     * Export is allowed only when at least one filter has been applied.
      */
     public function categoryWisePrintSlipExcel(Request $request)
     {
+        $filtersApplied = $request->filled('from_date')
+            || $request->filled('to_date')
+            || $request->filled('client_type_slug')
+            || $request->filled('client_type_pk')
+            || $request->filled('course_master_pk')
+            || $request->filled('buyer_name');
+        if (! $filtersApplied) {
+            return redirect()->route('admin.mess.reports.category-wise-print-slip')
+                ->with('error', 'Please apply filters before exporting.');
+        }
+
         $clientTypeSlugToInt = array_flip([
             \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
@@ -495,9 +507,21 @@ class ReportController extends Controller
     /**
      * Category-wise Print Slip - PDF Export
      * Generates a downloadable PDF using the same filters as the main report.
+     * Export is allowed only when at least one filter has been applied.
      */
     public function categoryWisePrintSlipPdf(Request $request)
     {
+        $filtersApplied = $request->filled('from_date')
+            || $request->filled('to_date')
+            || $request->filled('client_type_slug')
+            || $request->filled('client_type_pk')
+            || $request->filled('course_master_pk')
+            || $request->filled('buyer_name');
+        if (! $filtersApplied) {
+            return redirect()->route('admin.mess.reports.category-wise-print-slip')
+                ->with('error', 'Please apply filters before exporting.');
+        }
+
         $clientTypeSlugToInt = array_flip([
             \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
@@ -784,10 +808,74 @@ class ReportController extends Controller
 
     /**
      * Category-wise Print Slip
-     * Shows selling voucher details from both: Selling Voucher Date Range and Kitchen Issue (Selling Voucher type)
+     * Shows selling voucher details from both: Selling Voucher Date Range and Kitchen Issue (Selling Voucher type).
+     * Data is displayed only after the user applies at least one filter (from_date, to_date, client type, or buyer).
      */
     public function categoryWisePrintSlip(Request $request)
     {
+        $filtersApplied = $request->filled('from_date')
+            || $request->filled('to_date')
+            || $request->filled('client_type_slug')
+            || $request->filled('client_type_pk')
+            || $request->filled('course_master_pk')
+            || $request->filled('buyer_name');
+
+        if (! $filtersApplied) {
+            $groupedSections = collect();
+            $paginator = null;
+            $allBuyersSections = collect();
+            $printAll = false;
+            $clientTypes = ClientType::clientTypes();
+            $clientTypeCategories = ClientType::active()
+                ->orderBy('client_type')
+                ->orderBy('client_name')
+                ->get()
+                ->groupBy('client_type');
+            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+            $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                ->orderBy('first_name')->orderBy('last_name')
+                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                ->map(function ($e) {
+                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                })
+                ->filter(fn ($e) => $e->full_name !== '—')
+                ->values();
+            $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
+            $messStaff = $officersMessDept
+                ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
+                    ->where('department_master_pk', $officersMessDept->pk)
+                    ->orderBy('first_name')->orderBy('last_name')
+                    ->get(['pk', 'first_name', 'middle_name', 'last_name'])
+                    ->map(function ($e) {
+                        $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
+                        return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    })
+                    ->filter(fn ($e) => $e->full_name !== '—')
+                    ->values()
+                : collect();
+            $otCourses = CourseMaster::where('active_inactive', 1)
+                ->where(function ($q) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', now()->toDateString());
+                })
+                ->orderBy('course_name')
+                ->get(['pk', 'course_name']);
+
+            return view('admin.mess.reports.category-wise-print-slip', compact(
+                'groupedSections',
+                'paginator',
+                'allBuyersSections',
+                'printAll',
+                'clientTypes',
+                'clientTypeCategories',
+                'faculties',
+                'employees',
+                'messStaff',
+                'otCourses',
+                'filtersApplied'
+            ));
+        }
+
         $clientTypeSlugToInt = array_flip([
             \App\Models\Mess\ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
             \App\Models\Mess\ClientType::TYPE_OT      => KitchenIssueMaster::CLIENT_OT,
@@ -938,6 +1026,8 @@ class ReportController extends Controller
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
+        $filtersApplied = true;
+
         return view('admin.mess.reports.category-wise-print-slip', compact(
             'groupedSections',
             'paginator',
@@ -948,7 +1038,8 @@ class ReportController extends Controller
             'faculties',
             'employees',
             'messStaff',
-            'otCourses'
+            'otCourses',
+            'filtersApplied'
         ));
     }
     /**
