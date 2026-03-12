@@ -1294,11 +1294,48 @@
         });
     }
 
+    // Bill file client-side validation (extension & size)
+    function validateBillFileInput(fileInput, pathLabelEl) {
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+            if (pathLabelEl) pathLabelEl.textContent = 'No file chosen';
+            return;
+        }
+        var file = fileInput.files[0];
+        var allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+        var nameParts = file.name.split('.');
+        var ext = nameParts.length > 1 ? nameParts.pop().toLowerCase() : '';
+        var maxBytes = 5 * 1024 * 1024; // 5 MB
+
+        if (!allowedExt.includes(ext)) {
+            alert('Only PDF, JPG, JPEG, PNG or WEBP files are allowed for Bill.');
+            fileInput.value = '';
+            if (pathLabelEl) pathLabelEl.textContent = 'No file chosen';
+            return;
+        }
+        if (file.size > maxBytes) {
+            alert('Bill file size must not exceed 5 MB.');
+            fileInput.value = '';
+            if (pathLabelEl) pathLabelEl.textContent = 'No file chosen';
+            return;
+        }
+
+        if (pathLabelEl) {
+            pathLabelEl.textContent = file.name;
+        }
+    }
+
+    if (createBillFileInputEl) {
+        createBillFileInputEl.addEventListener('change', function () {
+            // For create modal we don't show a file-name label; just validate
+            validateBillFileInput(createBillFileInputEl, null);
+        });
+    }
+
     var editBillFileInputEl = document.getElementById('editBillFileInput');
     if (editBillFileInputEl) {
         editBillFileInputEl.addEventListener('change', function() {
             var pathEl = document.getElementById('editCurrentBillPath');
-            if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+            validateBillFileInput(editBillFileInputEl, pathEl);
         });
     }
 
