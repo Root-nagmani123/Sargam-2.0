@@ -892,16 +892,21 @@ class EstateController extends Controller
             }
         }
 
+        $employeeSelect = [
+            'e.pk',
+            DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as emp_name"),
+            DB::raw($employeeIdSelect . ' as employee_id'),
+            DB::raw("COALESCE(d.designation_name, '') as emp_designation"),
+            'e.doj',
+            'e.payroll_date',
+        ];
+        if ($hasPkOld) {
+            $employeeSelect[] = 'e.pk_old';
+        }
+
         $employee = DB::table('employee_master as e')
             ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
-            ->select(
-                'e.pk',
-                DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as emp_name"),
-                DB::raw($employeeIdSelect . ' as employee_id'),
-                DB::raw("COALESCE(d.designation_name, '') as emp_designation"),
-                'e.doj',
-                'e.payroll_date'
-            )
+            ->select($employeeSelect)
             ->where(function ($q) use ($pk, $hasPkOld) {
                 $q->where('e.pk', $pk);
                 if ($hasPkOld) {
@@ -911,10 +916,23 @@ class EstateController extends Controller
             ->first();
 
         if ($employee) {
-            $salary = DB::table('payroll_salary_master as p')
+            $empPkCandidates = [(int) ($employee->pk ?? 0)];
+            if ($hasPkOld && !empty($employee->pk_old)) {
+                $empPkCandidates[] = (int) $employee->pk_old;
+            }
+            $empPkCandidates = array_values(array_unique(array_filter($empPkCandidates)));
+
+            $salaryQuery = DB::table('payroll_salary_master as p')
                 ->join('salary_grade_master as s', "p.$salaryGradeCol", '=', 's.pk')
-                ->select("p.$salaryGradeCol as salary_grade_pk", 's.salary_grade', 'p.modified_date')
-                ->where('p.employee_master_pk', $pk)
+                ->select("p.$salaryGradeCol as salary_grade_pk", 's.salary_grade', 'p.modified_date');
+
+            if (count($empPkCandidates) === 1) {
+                $salaryQuery->where('p.employee_master_pk', $empPkCandidates[0]);
+            } elseif (!empty($empPkCandidates)) {
+                $salaryQuery->whereIn('p.employee_master_pk', $empPkCandidates);
+            }
+
+            $salary = $salaryQuery
                 ->orderByDesc('p.pk')
                 ->first();
 
