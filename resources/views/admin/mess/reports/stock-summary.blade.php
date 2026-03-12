@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-
+@section('title', 'Stock Summary Report')
 @section('setup_content')
 <div class="container-fluid stock-summary-report">
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
@@ -101,24 +101,54 @@
 
     <!-- Report Table -->
     <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-            <span class="fw-semibold text-dark">Stock Movement Summary</span>
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="fw-semibold text-dark">Stock Movement Summary</span>
+                <span class="badge bg-primary-subtle text-primary-emphasis d-inline-flex align-items-center gap-1" 
+                      style="font-size: 0.7rem; padding: 0.25rem 0.5rem;"
+                      title="First 4 columns stay fixed while scrolling horizontally">
+                    <i class="material-symbols-rounded" style="font-size: 0.875rem;">push_pin</i>
+                    Fixed Columns
+                </span>
+                <span class="badge bg-info-subtle text-info-emphasis d-inline-flex align-items-center gap-1" 
+                      style="font-size: 0.7rem; padding: 0.25rem 0.5rem;"
+                      title="Scroll horizontally to view all columns">
+                    <i class="material-symbols-rounded" style="font-size: 0.875rem;">swipe_left</i>
+                    Scroll to view more
+                </span>
+            </div>
             <span class="text-muted small">
                 Total items: {{ count($reportData) }}
             </span>
         </div>
-        <div class="table-responsive">
-        <table class="table text-nowrap align-middle mb-0">
+        <div class="table-responsive stock-table-wrapper">
+        <table class="table text-nowrap align-middle mb-0 stock-fixed-columns-table">
             <thead>
                 <tr>
-                    <th rowspan="2" class="text-center align-middle" style="width: 60px;">SR.<br>No</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 150px;">Item Name</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 100px;">Item Code</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 80px;">Unit</th>
-                    <th colspan="3" class="text-center">Opening</th>
-                    <th colspan="3" class="text-center">Purchase</th>
-                    <th colspan="3" class="text-center">Sale</th>
-                    <th colspan="3" class="text-center">Closing</th>
+                    <th rowspan="2" class="sticky-col sticky-col-1">
+                        SR. No
+                    </th>
+                    <th rowspan="2" class="sticky-col sticky-col-2">Item Name
+                    </th>
+                    <th rowspan="2" class="sticky-col sticky-col-3">
+                        Item Code
+                    </th>
+                    <th rowspan="2" class="sticky-col sticky-col-4">
+                        Unit
+                    </th>
+                    <th colspan="3">
+                        Opening
+                    </th>
+                    <th colspan="3">
+                        Purchase
+                    </th>
+                    <th colspan="3">
+                        Sale
+                    </th>
+                    <th colspan="3">
+                        <i class="material-symbols-rounded d-inline-block me-1" style="font-size: 1rem; vertical-align: -2px;">inventory</i>
+                        Closing
+                    </th>
                 </tr>
                 <tr>
                     <!-- Opening -->
@@ -142,10 +172,10 @@
             <tbody>
                 @forelse($reportData as $index => $item)
                     <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $item['item_name'] }}</td>
-                        <td>{{ $item['item_code'] ?? '—' }}</td>
-                        <td>{{ $item['unit'] ?? '—' }}</td>
+                        <td class="text-center sticky-col sticky-col-1">{{ $index + 1 }}</td>
+                        <td class="sticky-col sticky-col-2">{{ $item['item_name'] }}</td>
+                        <td class="sticky-col sticky-col-3">{{ $item['item_code'] ?? '—' }}</td>
+                        <td class="sticky-col sticky-col-4">{{ $item['unit'] ?? '—' }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
                         <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
@@ -165,8 +195,14 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="16" class="text-center text-muted py-4">
-                            No stock movement found for the selected period
+                        <td colspan="16" class="text-center py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                            <div class="d-flex flex-column align-items-center gap-3">
+                                <i class="material-symbols-rounded" style="font-size: 4rem; color: #adb5bd; opacity: 0.5;">inbox</i>
+                                <div>
+                                    <h6 class="text-muted mb-1">No Stock Movement Found</h6>
+                                    <p class="text-muted small mb-0">No transactions recorded for the selected period</p>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 @endforelse
@@ -180,7 +216,10 @@
                         ];
                     @endphp
                     <tr class="table-secondary fw-bold">
-                        <td colspan="4" class="text-end">Total</td>
+                        <td colspan="4" class="text-end sticky-col sticky-col-total" style="font-size: 1rem; letter-spacing: 0.02em;">
+                            <i class="material-symbols-rounded align-middle me-1" style="font-size: 1.125rem; vertical-align: -2px;">calculate</i>
+                            Total
+                        </td>
                         <td class="text-end">—</td>
                         <td class="text-end">—</td>
                         <td class="text-end">₹{{ number_format($totals['opening_amount'], 2) }}</td>
@@ -197,6 +236,14 @@
                 @endif
             </tbody>
         </table>
+        </div>
+        
+        {{-- Scroll Hint --}}
+        <div class="card-footer bg-light border-0 py-2 px-3 no-print">
+            <div class="d-flex align-items-center gap-2 text-muted small">
+                <i class="material-symbols-rounded" style="font-size: 1rem; opacity: 0.7;">info</i>
+                <span>Tip: Scroll horizontally to view all columns. First 4 columns (SR No, Item Name, Code, Unit) remain fixed.</span>
+            </div>
         </div>
     </div>
     </div>
@@ -312,6 +359,301 @@ function printStockSummary() {
 </script>
 
 <style>
+    /* Enhanced Sticky Column Styles */
+    .stock-table-wrapper {
+        position: relative;
+        overflow-x: auto;
+        overflow-y: visible;
+        border-radius: 8px;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+        /* Force horizontal scroll when needed */
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        scroll-behavior: smooth; /* Smooth scrolling */
+        will-change: scroll-position; /* Optimize for scrolling */
+    }
+    
+    /* Ensure table is wide enough to trigger scrolling */
+    .stock-fixed-columns-table {
+        position: relative;
+        margin-bottom: 0;
+        min-width: 1200px; /* Force minimum width to enable scrolling */
+        width: max-content; /* Table takes full content width */
+        border-collapse: separate; /* Required for sticky positioning */
+        border-spacing: 0; /* No spacing between cells */
+        table-layout: auto; /* Allow natural column sizing */
+    }
+    
+    /* Ensure non-sticky columns don't have position styles */
+    .stock-fixed-columns-table th:not(.sticky-col),
+    .stock-fixed-columns-table td:not(.sticky-col) {
+        position: relative; /* Default positioning */
+        min-width: 100px; /* Minimum width for data columns */
+    }
+    
+    /* Scroll indicator shadows */
+    .stock-table-wrapper::before,
+    .stock-table-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 20px;
+        pointer-events: none;
+        z-index: 15;
+        transition: opacity 0.3s ease;
+    }
+    
+    .stock-table-wrapper::before {
+        left: 460px;
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.12), transparent);
+    }
+    
+    .stock-table-wrapper::after {
+        right: 0;
+        background: linear-gradient(to left, rgba(0, 0, 0, 0.08), transparent);
+        opacity: 0;
+    }
+    
+    .stock-table-wrapper.scrolled::after {
+        opacity: 1;
+    }
+    
+    /* Enhanced sticky columns with gradient background */
+    .sticky-col {
+        position: sticky !important; /* Force sticky */
+        position: -webkit-sticky !important; /* Safari support */
+        background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+        z-index: 10;
+        border-right: 2px solid #e9ecef !important;
+        transition: all 0.2s ease;
+    }
+    
+    /* Individual column positions with optimized widths */
+    .sticky-col-1 {
+        left: 0 !important;
+        min-width: 70px;
+        max-width: 70px;
+        width: 70px;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .sticky-col-2 {
+        left: 70px !important;
+        min-width: 200px;
+        max-width: 200px;
+        width: 200px;
+        font-weight: 500;
+    }
+    
+    .sticky-col-3 {
+        left: 270px !important;
+        min-width: 110px;
+        max-width: 110px;
+        width: 110px;
+    }
+    
+    .sticky-col-4 {
+        left: 380px !important;
+        min-width: 80px;
+        max-width: 80px;
+        width: 80px;
+        text-align: center;
+    }
+    
+    /* Total row enhanced sticky column */
+    .sticky-col-total {
+        position: sticky !important;
+        position: -webkit-sticky !important;
+        left: 0 !important;
+        width: 460px !important;
+        min-width: 460px;
+        max-width: 460px;
+        background: linear-gradient(135deg, #e2e3e5 0%, #d3d4d6 100%) !important;
+        z-index: 10;
+        font-weight: 700;
+        border-right: 3px solid #adb5bd !important;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Enhanced header sticky columns */
+    thead .sticky-col {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+        z-index: 20;
+        z-index: 20;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.8125rem;
+        letter-spacing: 0.02em;
+        color: #495057;
+        vertical-align: middle;
+        padding: 12px 8px !important;
+    }
+    
+    /* Premium shadow effect for visual separation */
+    .sticky-col::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: -2px;
+        bottom: 0;
+        width: 8px;
+        background: linear-gradient(to right, 
+            rgba(0, 0, 0, 0.15) 0%, 
+            rgba(0, 0, 0, 0.08) 50%, 
+            transparent 100%);
+        pointer-events: none;
+        opacity: 0.8;
+    }
+    
+    .sticky-col-4::after {
+        width: 12px;
+        background: linear-gradient(to right, 
+            rgba(13, 110, 253, 0.15) 0%, 
+            rgba(13, 110, 253, 0.08) 30%, 
+            rgba(0, 0, 0, 0.06) 60%, 
+            transparent 100%);
+    }
+    
+    /* Enhanced borders */
+    .stock-fixed-columns-table th,
+    .stock-fixed-columns-table td {
+        border: 1px solid #dee2e6;
+        padding: 10px 8px;
+        background-clip: padding-box; /* Prevent background from showing through borders */
+    }
+    
+    .stock-fixed-columns-table thead th {
+        border-bottom: 2px solid #adb5bd;
+        position: sticky; /* Make all header rows sticky if needed */
+        top: 0;
+        vertical-align: middle;
+    }
+    
+    /* Override Bootstrap table styles that might interfere */
+    .stock-table-wrapper .table {
+        margin-bottom: 0;
+    }
+    
+    .stock-table-wrapper .table > :not(caption) > * > * {
+        background-color: transparent; /* Prevent Bootstrap default backgrounds */
+    }
+    
+    /* Premium hover effects */
+    .stock-fixed-columns-table tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .stock-fixed-columns-table tbody tr:hover {
+        background-color: #f8f9fa;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transform: translateY(-1px);
+    }
+    
+    .stock-fixed-columns-table tbody tr:hover .sticky-col {
+        background: linear-gradient(135deg, #f0f7ff 0%, #e7f3ff 100%);
+        border-right-color: #0d6efd !important;
+    }
+    
+    .stock-fixed-columns-table tbody tr:hover td:not(.sticky-col) {
+        background-color: transparent;
+    }
+    
+    /* Striped rows enhancement */
+    .stock-fixed-columns-table tbody tr:nth-child(even) .sticky-col {
+        background: linear-gradient(135deg, #fafbfc 0%, #f1f3f5 100%);
+    }
+    
+    /* Active/Focus state */
+    .stock-fixed-columns-table tbody tr:active {
+        transform: translateY(0);
+    }
+    
+    /* Column group headers styling */
+    .stock-fixed-columns-table thead tr:first-child th:not(.sticky-col) {
+        background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);
+        color: #084298;
+        font-weight: 700;
+        border-bottom: 2px solid #0d6efd;
+    }
+    
+    /* Enhanced scrollbar styling */
+    .stock-table-wrapper::-webkit-scrollbar {
+        height: 12px;
+    }
+    
+    .stock-table-wrapper::-webkit-scrollbar-track {
+        background: #f1f3f5;
+        border-radius: 6px;
+    }
+    
+    .stock-table-wrapper::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        border-radius: 6px;
+        border: 2px solid #f1f3f5;
+    }
+    
+    .stock-table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+    }
+    
+    /* Text truncation for long item names */
+    .sticky-col-2 {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .sticky-col-2:hover {
+        overflow: visible;
+        white-space: normal;
+        word-wrap: break-word;
+        z-index: 25;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Loading state (optional) */
+    @keyframes shimmer {
+        0% { background-position: -468px 0; }
+        100% { background-position: 468px 0; }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 991.98px) {
+        .sticky-col-1 { min-width: 50px !important; max-width: 50px !important; width: 50px !important; left: 0 !important; }
+        .sticky-col-2 { min-width: 150px !important; max-width: 150px !important; width: 150px !important; left: 50px !important; }
+        .sticky-col-3 { min-width: 90px !important; max-width: 90px !important; width: 90px !important; left: 200px !important; }
+        .sticky-col-4 { min-width: 60px !important; max-width: 60px !important; width: 60px !important; left: 290px !important; }
+        .sticky-col-total { width: 350px !important; min-width: 350px !important; max-width: 350px !important; }
+        .stock-table-wrapper::before { left: 350px !important; }
+    }
+    
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .sticky-col {
+            background: linear-gradient(135deg, #1a1d23 0%, #23262d 100%) !important;
+            border-right-color: #3a3d45 !important;
+        }
+        
+        thead .sticky-col {
+            background: linear-gradient(135deg, #2a2d35 0%, #343740 100%) !important;
+            color: #e9ecef !important;
+        }
+        
+        .sticky-col-total {
+            background: linear-gradient(135deg, #3a3d45 0%, #4a4d55 100%) !important;
+        }
+        
+        .stock-fixed-columns-table tbody tr:hover .sticky-col {
+            background: linear-gradient(135deg, #2a3f5f 0%, #1e2d48 100%) !important;
+        }
+        
+        .stock-table-wrapper::before {
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.1), transparent);
+        }
+    }
+    
     @media print {
         .no-print { 
             display: none !important; 
@@ -341,6 +683,24 @@ function printStockSummary() {
         @page {
             margin: 1cm;
             size: A4 landscape;
+        }
+        
+        /* Remove sticky positioning and effects for print */
+        .sticky-col {
+            position: static !important;
+            background: #fff !important;
+            border-right: 1px solid #dee2e6 !important;
+        }
+        
+        .sticky-col::after,
+        .stock-table-wrapper::before,
+        .stock-table-wrapper::after {
+            display: none !important;
+        }
+        
+        .stock-table-wrapper {
+            overflow: visible !important;
+            box-shadow: none !important;
         }
     }
     
@@ -394,6 +754,22 @@ function printStockSummary() {
         }
     }
 </style>
+
+<script>
+    // Enhanced scroll indicator for table
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableWrapper = document.querySelector('.stock-table-wrapper');
+        if (tableWrapper) {
+            tableWrapper.addEventListener('scroll', function() {
+                if (this.scrollLeft > 10) {
+                    this.classList.add('scrolled');
+                } else {
+                    this.classList.remove('scrolled');
+                }
+            });
+        }
+    });
+</script>
 
 <script>
     // Store Type Selection Handler

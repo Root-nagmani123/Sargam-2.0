@@ -280,7 +280,7 @@
                     <div class="payment-detail-grid">
                         <div class="payment-detail-row">
                             <label class="payment-detail-label">Payment Mode</label>
-                            <select name="payment_mode" id="payNowPaymentMode" class="payment-detail-input form-select form-select-sm choices-select" data-placeholder="Select mode">
+                            <select name="payment_mode" id="payNowPaymentMode" class="payment-detail-input form-select form-select-sm choices-select" data-placeholder="Select mode" autocomplete="off">
                                 <option value="cash">Cash</option>
                                 <option value="cheque">Cheque</option>
                                 <option value="deduct_from_salary">Deduct From Salary</option>
@@ -484,7 +484,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold">Employee / OT / Course Employee</label>
-                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm">
+                            <select name="modal_client_type" id="modal_client_type" class="form-select form-select-sm choices-select" data-placeholder="All Client Types">
                                 <option value="">All Client Types</option>
                                 @foreach($clientTypes ?? [] as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
@@ -493,13 +493,13 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold">Client Type</label>
-                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select form-select-sm">
+                            <select name="modal_client_type_pk" id="modal_client_type_pk" class="form-select form-select-sm choices-select" data-placeholder="All">
                                 <option value="">All</option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold">Buyer Name</label>
-                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select form-select-sm">
+                            <select name="modal_buyer_name" id="modal_buyer_name" class="form-select form-select-sm choices-select" data-placeholder="All Buyers">
                                 <option value="">All Buyers</option>
                             </select>
                         </div>
@@ -510,7 +510,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold">Mode of Payment</label>
-                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm choices-select" data-placeholder="Select mode">
+                            <select name="mode_of_payment" id="modal_mode_of_payment" class="form-select form-select-sm choices-select" data-placeholder="Select mode" autocomplete="off">
                                 <option value="deduct_from_salary" selected>Deduct From Salary</option>
                                 <option value="cash">Cash</option>
                                 <option value="online">Online</option>
@@ -541,7 +541,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                     <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted">Show</span>
-                        <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
+                        <select id="modalPerPage" class="form-select form-select-sm choices-select" style="width: auto;">
                             <option value="10" selected>10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
@@ -599,8 +599,8 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css"/>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof flatpickr !== 'undefined') {
@@ -638,24 +638,27 @@ document.addEventListener('DOMContentLoaded', function() {
         flatpickr('#payNowChequeDate', { dateFormat: 'd-m-Y', allowInput: true });
     }
 
-    // Initialize Choices.js on all dropdowns within this report
-    if (typeof window.Choices !== 'undefined') {
+    // Initialize Tom Select on all dropdowns within this report
+    if (typeof TomSelect !== 'undefined') {
         document
             .querySelectorAll('.process-mess-bills-employee-report select.choices-select')
             .forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
+                if (el.tomselect || el.dataset.tomselectInitialized === 'true') return;
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                new Choices(el, {
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    searchPlaceholderValue: 'Search...',
-                    itemSelectText: '',
+                new TomSelect(el, {
+                    allowEmptyOption: true,
+                    placeholder: placeholder,
+                    plugins: ['dropdown_input'],
+                    render: {
+                        no_results: function(data, escape) {
+                            return '<div class="no-results">No results found</div>';
+                        }
+                    }
                 });
 
-                el.dataset.choicesInitialized = 'true';
+                el.dataset.tomselectInitialized = 'true';
             });
     }
 

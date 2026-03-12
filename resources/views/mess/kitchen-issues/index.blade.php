@@ -26,7 +26,7 @@
                 <div class="row g-2">
                     <div class="col-md-2">
                         <label class="form-label small">Status</label>
-                        <select name="status" class="form-select">
+                        <select name="status" id="filter_status" class="form-select">
                             <option value="">All</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                             <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
@@ -35,7 +35,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">Store</label>
-                        <select name="store" class="form-select">
+                        <select name="store" id="filter_store" class="form-select">
                             <option value="">All</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store['id'] }}" {{ request('store') == $store['id'] ? 'selected' : '' }}>{{ $store['store_name'] }}</option>
@@ -68,7 +68,7 @@
    <div class="card">
     <div class="card-body">
     <div class="table-responsive">
-        <table class="table align-middle" id="sellingVouchersTable">
+        <table class="table text-nowrap align-middle" id="sellingVouchersTable">
             <thead>
                 <tr>
                     <th>S. No.</th>
@@ -106,13 +106,13 @@
                                 @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
                                 @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
                             </td>
-                            <td class="d-flex gap-2">
+                            <td>
                                 @if(($item->return_quantity ?? 0) > 0)
                                     <span class="badge bg-info">Returned</span>
                                 @endif
                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
-                            <td class="d-flex gap-2">
+                            <td>
                                 <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
                                 <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
@@ -176,12 +176,27 @@
 {{-- Tom Select JS --}}
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.TomSelect) return;
+    // Filter dropdowns aur Selling Voucher JS niche main script block me initialize ho raha hai.
+});
+</script>
+
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
 #addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); position: relative; }
 .ts-dropdown { z-index: 2000; }
+
+/* Visually remove default first-option highlight in Tom Select dropdowns */
+.ts-dropdown .option.active,
+.ts-dropdown .option.selected,
+.ts-dropdown .option[aria-selected="true"] {
+    background-color: transparent !important;
+    color: inherit !important;
+}
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
@@ -347,14 +362,14 @@
                                 <table class="table align-middle mb-0" id="svItemsTable">
                                     <thead>
                                         <tr>
-                                            <th>Item Name <span class="text-white">*</span></th>
-                                            <th>Unit</th>
-                                            <th>Available Qty</th>
-                                            <th>Issue Qty <span class="text-white">*</span></th>
-                                            <th>Left Qty</th>
-                                            <th>Rate <span class="text-white">*</span></th>
-                                            <th>Total Amount</th>
-                                            <th></th>
+                                            <th style="min-width: 280px;">Item Name <span class="text-white">*</span></th>
+                                            <th style="min-width: 80px;">Unit</th>
+                                            <th style="min-width: 100px;">Available Qty</th>
+                                            <th style="min-width: 100px;">Issue Qty <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Left Qty</th>
+                                            <th style="min-width: 100px;">Rate <span class="text-white">*</span></th>
+                                            <th style="min-width: 100px;">Total Amount</th>
+                                            <th style="min-width: 50px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="modalItemsBody">
@@ -368,13 +383,13 @@
                                                 </select>
                                             </td>
                                             <td><input type="text" name="items[0][unit]" class="form-control  sv-unit" readonly placeholder="—"></td>
-                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="0" placeholder="0" readonly></td>
+                                            <td><input type="number" name="items[0][available_quantity]" class="form-control  sv-avail bg-light" value="0" placeholder="0" readonly></td>
                                             <td>
-                                                <input type="number" name="items[0][quantity]" class="form-control  sv-qty" step="0.01" min="0.01" placeholder="0" required>
+                                                <input type="number" name="items[0][quantity]" class="form-control  sv-qty" placeholder="0" required>
                                                 <div class="invalid-feedback">Issue Qty cannot exceed Available Qty.</div>
                                             </td>
                                             <td><input type="text" class="form-control  sv-left bg-light" readonly placeholder="0"></td>
-                                            <td><input type="number" name="items[0][rate]" class="form-control  sv-rate" step="0.01" min="0" placeholder="0" required></td>
+                                            <td><input type="number" name="items[0][rate]" class="form-control  sv-rate" placeholder="0" required></td>
                                             <td><input type="text" class="form-control  sv-total bg-light" readonly placeholder="0.00"></td>
                                             <td><button type="button" class="btn btn-sm btn-outline-danger sv-remove-row" disabled title="Remove">×</button></td>
                                         </tr>
@@ -760,8 +775,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 new TomSelect(filterStatus, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
-                    placeholder: 'All Status'
-                });
+                    placeholder: 'All Status',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    clearOnOpen: true,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || dropdown.querySelector('input');
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    setTimeout(function () {
+                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                        opts.forEach(function (opt) {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+                }
+            });
             } catch (e) {
                 console.error('Tom Select initialization failed for status filter:', e);
             }
@@ -775,7 +824,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 new TomSelect(filterStore, {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
-                    placeholder: 'All Stores'
+                    placeholder: 'All Stores',
+                    searchField: ['text'],
+                    controlInput: '<input>',
+                    highlight: false,
+                    clearOnOpen: true,
+                    onInitialize: function () {
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        var input = this.control_input || dropdown.querySelector('input');
+                        function clearInputAndCursor() {
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        clearInputAndCursor();
+                        setTimeout(clearInputAndCursor, 0);
+                        setTimeout(clearInputAndCursor, 50);
+                        setTimeout(clearInputAndCursor, 100);
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             } catch (e) {
                 console.error('Tom Select initialization failed for store filter:', e);
@@ -846,34 +929,136 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof TomSelect === 'undefined') return;
         var modal = document.getElementById('addSellingVoucherModal');
         if (!modal) return;
+
+        function createBlankSearchConfig(extra) {
+            return Object.assign({
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    // dropdown open होते ही selection bhi clear karni hai (blank state)
+                    if (self.settings && self.settings.clearOnOpen) {
+                        self.clear(true);
+                    }
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            }, extra || {});
+        }
+
         var paymentSel = modal.querySelector('select[name="payment_type"]');
         if (paymentSel && !paymentSel.tomselect) {
-            addModalTomSelectInstances.payment = new TomSelect(paymentSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Payment Type' });
+            addModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                placeholder: 'Payment Type',
+                clearOnOpen: true
+            }));
         }
         var clientSel = document.getElementById('modalClientNameSelect');
         if (clientSel && !clientSel.tomselect) {
-            addModalTomSelectInstances.client = new TomSelect(clientSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+            addModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                placeholder: 'Select Client Name',
+                clearOnOpen: true
+            }));
         }
         var storeSel = modal.querySelector('select[name="store_id"]');
         if (storeSel && !storeSel.tomselect) {
-            addModalTomSelectInstances.store = new TomSelect(storeSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Store' });
+            addModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                placeholder: 'Select Store',
+                clearOnOpen: true
+            }));
         }
         // Name-related dropdowns: Tom Select with search; visibility controlled by setSelectVisible
         var nameSelectIds = ['modalFacultySelect', 'modalAcademyStaffSelect', 'modalMessStaffSelect', 'modalOtStudentSelect', 'modalOtCourseSelect', 'modalCourseSelect', 'modalCourseNameSelect'];
         nameSelectIds.forEach(function(id) {
             var sel = document.getElementById(id);
             if (sel && !sel.tomselect) {
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: sel.id.indexOf('Faculty') !== -1 ? 'Select Faculty' : sel.id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : sel.id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : sel.id.indexOf('OtStudent') !== -1 ? 'Select Student' : 'Select Course' });
+                new TomSelect(sel, createBlankSearchConfig({
+                    placeholder: sel.id.indexOf('Faculty') !== -1 ? 'Select Faculty'
+                        : sel.id.indexOf('Academy') !== -1 ? 'Select Academy Staff'
+                        : sel.id.indexOf('Mess') !== -1 ? 'Select Mess Staff'
+                        : sel.id.indexOf('OtStudent') !== -1 ? 'Select Student'
+                        : 'Select Course',
+                    clearOnOpen: true
+                }));
             }
         });
         modal.querySelectorAll('#modalItemsBody .sv-item-select').forEach(function(select) {
             if (select.tomselect) return;
-            new TomSelect(select, {
+            var hadValue = !!select.value;
+            var ts = new TomSelect(select, {
                 allowEmptyOption: true,
                 dropdownParent: 'body',
                 placeholder: 'Select Item',
-                maxOptions: null
+                maxOptions: null,
+                highlight: false,
+                searchField: ['text'],
+                controlInput: '<input>',
+                onInitialize: function () {
+                    // prevent first option from being auto-highlighted
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || dropdown.querySelector('input');
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    setTimeout(function () {
+                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                        opts.forEach(function (opt) {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+                }
             });
+            // agar pehle koi value nahi thi to ensure fresh blank state
+            if (!hadValue) {
+                ts.clear(true);
+            }
         });
         // Client Name & Name columns: hide until a Client Type is selected
         var clientNameWrap = document.getElementById('modalClientNameWrap');
@@ -898,34 +1083,77 @@ document.addEventListener('DOMContentLoaded', function() {
         var modal = document.getElementById('editSellingVoucherModal');
         if (!modal) return;
 
+        function createBlankSearchConfig(extra) {
+            return Object.assign({
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                searchField: ['text'],
+                controlInput: '<input>',
+                highlight: false,
+                onInitialize: function () {
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function (dropdown) {
+                    var self = this;
+                    var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                    function clearInputAndCursor() {
+                        if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                        if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                        if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                        if (input) {
+                            input.value = '';
+                            input.focus();
+                            try { input.setSelectionRange(0, 0); } catch (e) {}
+                            input.scrollLeft = 0;
+                        }
+                    }
+                    clearInputAndCursor();
+                    setTimeout(clearInputAndCursor, 0);
+                    setTimeout(clearInputAndCursor, 50);
+                    setTimeout(clearInputAndCursor, 100);
+                    // dropdown open होते ही selection bhi clear karni hai (blank state)
+                    if (self.settings && self.settings.clearOnOpen) {
+                        self.clear(true);
+                    }
+                    if (dropdown) {
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                }
+            }, extra || {});
+        }
+
         // Payment Type
         var paymentSel = modal.querySelector('select.edit-payment-type');
         if (paymentSel && !paymentSel.tomselect) {
-            editModalTomSelectInstances.payment = new TomSelect(paymentSel, {
-                allowEmptyOption: true,
-                dropdownParent: 'body',
-                placeholder: 'Payment Type'
-            });
+            editModalTomSelectInstances.payment = new TomSelect(paymentSel, createBlankSearchConfig({
+                placeholder: 'Payment Type',
+                clearOnOpen: true
+            }));
         }
 
         // Client Name
         var clientSel = document.getElementById('editClientNameSelect');
         if (clientSel && !clientSel.tomselect) {
-            editModalTomSelectInstances.client = new TomSelect(clientSel, {
-                allowEmptyOption: true,
-                dropdownParent: 'body',
-                placeholder: 'Select Client Name'
-            });
+            editModalTomSelectInstances.client = new TomSelect(clientSel, createBlankSearchConfig({
+                placeholder: 'Select Client Name',
+                clearOnOpen: true
+            }));
         }
 
         // Store
         var storeSel = modal.querySelector('select.edit-store');
         if (storeSel && !storeSel.tomselect) {
-            editModalTomSelectInstances.store = new TomSelect(storeSel, {
-                allowEmptyOption: true,
-                dropdownParent: 'body',
-                placeholder: 'Select Store'
-            });
+            editModalTomSelectInstances.store = new TomSelect(storeSel, createBlankSearchConfig({
+                placeholder: 'Select Store',
+                clearOnOpen: true
+            }));
         }
 
         // Name-related dropdowns (Faculty, Academy Staff, Mess Staff, OT Course, Course, Course Name)
@@ -933,8 +1161,11 @@ document.addEventListener('DOMContentLoaded', function() {
         editNameSelectIds.forEach(function(id) {
             var sel = document.getElementById(id);
             if (sel && !sel.tomselect) {
-                var placeholder = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : 'Select Course';
-                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: placeholder });
+                var placeholder = id.indexOf('Faculty') !== -1 ? 'Select Faculty'
+                    : id.indexOf('Academy') !== -1 ? 'Select Academy Staff'
+                    : id.indexOf('Mess') !== -1 ? 'Select Mess Staff'
+                    : 'Select Course';
+                new TomSelect(sel, createBlankSearchConfig({ placeholder: placeholder, clearOnOpen: true }));
             }
         });
     }
@@ -1140,7 +1371,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowEmptyOption: true,
                     dropdownParent: 'body',
                     placeholder: 'Select Item',
-                    maxOptions: null
+                    maxOptions: null,
+                    highlight: false,
+                    controlInput: '<input>',
+                    onInitialize: function () { this.activeOption = null; },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                        function clearInputAndCursor() {
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        clearInputAndCursor();
+                        setTimeout(clearInputAndCursor, 0);
+                        setTimeout(clearInputAndCursor, 50);
+                        setTimeout(clearInputAndCursor, 100);
+                        if (dropdown) setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             }
             updateUnit(row);
@@ -1280,7 +1541,37 @@ document.addEventListener('DOMContentLoaded', function() {
                         allowEmptyOption: true,
                         dropdownParent: 'body',
                         placeholder: 'Select Item',
-                        maxOptions: null
+                        maxOptions: null,
+                        highlight: false,
+                        controlInput: '<input>',
+                        onInitialize: function () { this.activeOption = null; },
+                        onDropdownOpen: function (dropdown) {
+                            var self = this;
+                            var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                            function clearInputAndCursor() {
+                                if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                                if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                                if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                                if (input) {
+                                    input.value = '';
+                                    input.focus();
+                                    try { input.setSelectionRange(0, 0); } catch (e) {}
+                                    input.scrollLeft = 0;
+                                }
+                            }
+                            clearInputAndCursor();
+                            setTimeout(clearInputAndCursor, 0);
+                            setTimeout(clearInputAndCursor, 50);
+                            setTimeout(clearInputAndCursor, 100);
+                            if (dropdown) setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
                     });
                 }
             }
@@ -1795,7 +2086,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowEmptyOption: true,
                     dropdownParent: '#editSellingVoucherModal .modal-body',
                     placeholder: 'Select Item',
-                    maxOptions: null
+                    maxOptions: null,
+                    highlight: false,
+                    controlInput: '<input>',
+                    onInitialize: function () { this.activeOption = null; },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                        function clearInputAndCursor() {
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        clearInputAndCursor();
+                        setTimeout(clearInputAndCursor, 0);
+                        setTimeout(clearInputAndCursor, 50);
+                        setTimeout(clearInputAndCursor, 100);
+                        if (dropdown) setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             }
             updateUnit(row);
@@ -1826,7 +2147,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowEmptyOption: true,
                     dropdownParent: '#editSellingVoucherModal .modal-body',
                     placeholder: 'Select Item',
-                    maxOptions: null
+                    maxOptions: null,
+                    highlight: false,
+                    controlInput: '<input>',
+                    onInitialize: function () { this.activeOption = null; },
+                    onDropdownOpen: function (dropdown) {
+                        var self = this;
+                        var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                        function clearInputAndCursor() {
+                            if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                            if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                            if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                            if (input) {
+                                input.value = '';
+                                input.focus();
+                                try { input.setSelectionRange(0, 0); } catch (e) {}
+                                input.scrollLeft = 0;
+                            }
+                        }
+                        clearInputAndCursor();
+                        setTimeout(clearInputAndCursor, 0);
+                        setTimeout(clearInputAndCursor, 50);
+                        setTimeout(clearInputAndCursor, 100);
+                        if (dropdown) setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
                 });
             });
         }
@@ -2182,7 +2533,37 @@ document.addEventListener('DOMContentLoaded', function() {
                         allowEmptyOption: true,
                         dropdownParent: '#editSellingVoucherModal .modal-body',
                         placeholder: 'Select Item',
-                        maxOptions: null
+                        maxOptions: null,
+                        highlight: false,
+                        controlInput: '<input>',
+                        onInitialize: function () { this.activeOption = null; },
+                        onDropdownOpen: function (dropdown) {
+                            var self = this;
+                            var input = this.control_input || (dropdown && dropdown.querySelector('input'));
+                            function clearInputAndCursor() {
+                                if (typeof self.setTextboxValue === 'function') self.setTextboxValue('');
+                                if (typeof self.onSearchChange === 'function') self.onSearchChange('');
+                                if (typeof self.refreshOptions === 'function') self.refreshOptions(false);
+                                if (input) {
+                                    input.value = '';
+                                    input.focus();
+                                    try { input.setSelectionRange(0, 0); } catch (e) {}
+                                    input.scrollLeft = 0;
+                                }
+                            }
+                            clearInputAndCursor();
+                            setTimeout(clearInputAndCursor, 0);
+                            setTimeout(clearInputAndCursor, 50);
+                            setTimeout(clearInputAndCursor, 100);
+                            if (dropdown) setTimeout(function () {
+                                var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                                opts.forEach(function (opt) {
+                                    opt.classList.remove('active');
+                                    opt.classList.remove('selected');
+                                    opt.setAttribute('aria-selected', 'false');
+                                });
+                            }, 0);
+                        }
                     });
                 }
                 updateEditRemoveButtons();
