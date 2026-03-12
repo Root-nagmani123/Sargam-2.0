@@ -517,6 +517,10 @@ class ProcessMessBillsEmployeeController extends Controller
             $paidAmount = 0.0;
             $storeNames = [];
             $dateMin = $dateMax = null;
+            $referenceNumbers = [];
+            $orderBys = [];
+            $remarksList = [];
+            $courseName = null;
             foreach ($bills as $b) {
                 $isDr = $b instanceof SellingVoucherDateRangeReport;
                 $totalAmount += (float) $b->net_total;
@@ -524,6 +528,15 @@ class ProcessMessBillsEmployeeController extends Controller
                 $storeName = $b->resolved_store_name ?? '—';
                 $storeNames[$storeName] = true;
                 $purchaseDateStr = $b->issue_date ? $b->issue_date->format('d-m-Y') : '—';
+                if (!empty($b->reference_number)) {
+                    $referenceNumbers[] = (string) $b->reference_number;
+                }
+                if (!empty($b->order_by)) {
+                    $orderBys[] = (string) $b->order_by;
+                }
+                if (!empty($b->remarks)) {
+                    $remarksList[] = trim((string) $b->remarks);
+                }
                 foreach ($b->items ?? [] as $item) {
                     $items[] = (object) [
                         'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—'),
@@ -541,7 +554,26 @@ class ProcessMessBillsEmployeeController extends Controller
                     if ($dateMin === null || $d < $dateMin) $dateMin = $d;
                     if ($dateMax === null || $d > $dateMax) $dateMax = $d;
                 }
+                // Capture course name once (for OT / Course types)
+                if ($courseName === null) {
+                    try {
+                        if ($b instanceof SellingVoucherDateRangeReport) {
+                            if (in_array($b->client_type_slug ?? '', ['ot', 'course'], true)) {
+                                $courseName = optional($b->course)->course_name;
+                            }
+                        } elseif ($b instanceof KitchenIssueMaster) {
+                            if (in_array((int) ($b->client_type ?? 0), [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE], true)) {
+                                $courseName = optional($b->course)->course_name;
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore – optional enhancement only
+                    }
+                }
             }
+            $referenceNumber = collect($referenceNumbers)->filter()->unique()->implode(', ');
+            $orderBy = collect($orderBys)->filter()->unique()->implode(', ');
+            $remarks = collect($remarksList)->filter()->unique()->implode(' | ');
             $dueAmount = max(0, $totalAmount - $paidAmount);
             $paymentStatusLabel = $paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
             $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
@@ -549,9 +581,11 @@ class ProcessMessBillsEmployeeController extends Controller
                 ? (string) ($bills[0]->client_type_slug ?? 'employee')
                 : $this->getBillClientTypeSlug($bills[0]);
             $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
+            $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
             $bill = (object) [
                 'items' => collect($items),
                 'client_name' => $buyerName,
+                'client_name_course' => $clientNameCourse,
                 'client_type_display' => $bills[0]->client_type_display ?? ($bills[0]->client_type_label ?? '—'),
                 'clientTypeCategory' => $bills[0]->clientTypeCategory ?? null,
                 'client_type_label' => $bills[0]->client_type_label ?? null,
@@ -561,6 +595,10 @@ class ProcessMessBillsEmployeeController extends Controller
                 'date_to' => $dateMax ? Carbon::parse($dateMax) : null,
                 'issue_date' => $dateMin ? Carbon::parse($dateMin) : null,
                 'net_total' => $totalAmount,
+                'reference_number' => $referenceNumber ?: null,
+                'order_by' => $orderBy ?: null,
+                'remarks' => $remarks ?: null,
+                'course_name' => $courseName,
             ];
             return view('admin.mess.process-mess-bills-employee.print-receipt', [
                 'bill' => $bill,
@@ -580,12 +618,12 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         if ($isDateRange === true) {
-            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
+            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                 ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
                 ->findOrFail($numericId);
             $isDateRange = true;
         } elseif ($isDateRange === false) {
-            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
+            $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                 ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                 ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                 ->where('pk', $numericId)
@@ -593,12 +631,12 @@ class ProcessMessBillsEmployeeController extends Controller
             $isDateRange = false;
         } else {
             // Legacy: numeric id – try date range first, then kitchen
-            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
+            $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                 ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
                 ->find($id);
             $isDateRange = (bool) $bill;
             if (!$bill) {
-                $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'items.itemSubcategory'])
+                $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                     ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                     ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
                     ->where('pk', $id)
@@ -638,7 +676,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $dateFrom = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
         $dateTo = $request->filled('date_to') ? $this->parseDate($request->date_to) : now()->endOfMonth()->format('Y-m-d');
 
-        $dateRangeBills = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'items'])
+            $dateRangeBills = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items'])
             ->where('client_type_slug', $clientTypeSlug)
             ->where('client_name', $buyerName)
             ->where(function ($q) use ($dateFrom) {
@@ -650,7 +688,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ->orderBy('issue_date')
             ->get();
 
-        $kitchenBills = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'items'])
+        $kitchenBills = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'course', 'items'])
             ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
             ->where('client_type', $this->clientTypeSlugToKitchenId($clientTypeSlug))
             ->where('client_name', $buyerName)
@@ -716,6 +754,31 @@ class ProcessMessBillsEmployeeController extends Controller
                 : $this->getBillClientTypeSlug($bills[0]);
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
+            // Collect header-level meta fields
+            $referenceNumbers = collect($bills)->pluck('reference_number')->filter()->unique()->values();
+            $orderBys = collect($bills)->pluck('order_by')->filter()->unique()->values();
+            $remarksList = collect($bills)->pluck('remarks')->filter()->unique()->values();
+            $referenceNumber = $referenceNumbers->implode(', ');
+            $orderBy = $orderBys->implode(', ');
+            $remarks = $remarksList->implode(' | ');
+
+            $courseName = null;
+            try {
+                $first = $bills[0];
+                if ($first instanceof SellingVoucherDateRangeReport) {
+                    if (in_array($first->client_type_slug ?? '', ['ot', 'course'], true)) {
+                        $courseName = optional($first->course)->course_name;
+                    }
+                } elseif ($first instanceof KitchenIssueMaster) {
+                    if (in_array((int) ($first->client_type ?? 0), [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE], true)) {
+                        $courseName = optional($first->course)->course_name;
+                    }
+                }
+            } catch (\Throwable $e) {
+                $courseName = null;
+            }
+            $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
+
             $firstReceiptId = $bills[0] instanceof SellingVoucherDateRangeReport
                 ? 'dr-' . $bills[0]->id
                 : 'ki-' . ($bills[0]->pk ?? $bills[0]->id);
@@ -725,6 +788,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'receipt_no' => $combinedInvoiceNo,
                 'invoice_no' => $combinedInvoiceNo,
                 'client_name' => $buyerName,
+                'client_name_course' => $clientNameCourse,
                 'client_type' => $clientTypeDisplay,
                 'date_from' => $dateFromStr,
                 'date_to' => $dateToStr,
@@ -735,12 +799,32 @@ class ProcessMessBillsEmployeeController extends Controller
                 'due_amount' => number_format($dueAmount, 1),
                 'due_amount_raw' => $dueAmount,
                 'first_receipt_id' => $firstReceiptId,
+                'reference_number' => $referenceNumber ?: null,
+                'order_by' => $orderBy ?: null,
+                'remarks' => $remarks ?: null,
+                'course_name' => $courseName,
             ]);
         }
 
         [$bill, $isDateRange] = $this->resolveBillById($id);
 
         $storeName = $bill->resolved_store_name ?? '—';
+        $rawClientName = $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—');
+        $courseName = null;
+        try {
+            if ($isDateRange) {
+                if (in_array($bill->client_type_slug ?? '', ['ot', 'course'], true)) {
+                    $courseName = optional($bill->course)->course_name;
+                }
+            } else {
+                if (in_array((int) ($bill->client_type ?? 0), [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE], true)) {
+                    $courseName = optional($bill->course)->course_name;
+                }
+            }
+        } catch (\Throwable $e) {
+            $courseName = null;
+        }
+        $clientNameCourse = $courseName ? trim($rawClientName . ' – ' . $courseName) : $rawClientName;
 
         $dateFrom = isset($bill->date_from) && $bill->date_from
             ? Carbon::parse($bill->date_from)->format('d-m-Y')
@@ -778,6 +862,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'receipt_no' => $receiptNo,
             'invoice_no' => $invoiceNo,
             'client_name' => $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—'),
+            'client_name_course' => $clientNameCourse,
             'client_type' => $clientTypeDisplay,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
@@ -787,6 +872,9 @@ class ProcessMessBillsEmployeeController extends Controller
             'paid_amount' => number_format($paidAmount, 1),
             'due_amount' => number_format($dueAmount, 1),
             'due_amount_raw' => $dueAmount,
+            'reference_number' => $bill->reference_number ?? null,
+            'order_by' => $bill->order_by ?? null,
+            'remarks' => $bill->remarks ?? null,
         ]);
     }
 

@@ -1173,6 +1173,13 @@ document.addEventListener('DOMContentLoaded', function() {
         var rows = (data.items || []).map(function(item) {
             return '<tr><td>' + (item.store_name || '—') + '</td><td>' + (item.item_name || '—') + '</td><td>' + (item.purchase_date || '—') + '</td><td class="text-end">' + (item.price || '0') + '</td><td class="text-end">' + (item.quantity || '0') + '</td><td class="text-end">' + (item.amount || '0') + '</td></tr>';
         }).join('');
+        var clientNameCourse = data.client_name_course || (function () {
+            if (data.course_name) {
+                return (data.client_name || '—') + ' – ' + data.course_name;
+            }
+            return data.client_name || '—';
+        })();
+        var hasRefOrOrder = !!(data.reference_number || data.order_by);
         var html = '<div class="receipt-top">' +
             '<div class="receipt-logo"><span class="receipt-logo-icon"></span><span class="receipt-logo-text">Sargam</span></div>' +
             '<span class="receipt-date">Date ' + dateStr + ' ' + timeStr + '</span>' +
@@ -1188,9 +1195,18 @@ document.addEventListener('DOMContentLoaded', function() {
             '<span><span class="client-label">Invoice No</span>: <span class="client-value">' + (data.invoice_no || '—') + '</span></span>' +
             '</div>' +
             '<div class="client-row">' +
-            '<span><span class="client-label">Client Name</span>: <span class="client-value">' + (data.client_name || '—') + '</span></span>' +
+            '<span><span class="client-label">Client Name</span>: <span class="client-value">' + clientNameCourse + '</span></span>' +
             '<span><span class="client-label">Client Type</span>: <span class="client-value">' + (data.client_type || '—') + '</span></span>' +
             '</div>' +
+            (hasRefOrOrder
+                ? ('<div class="client-row">' +
+                   (data.reference_number ? '<span><span class="client-label">Reference Number</span>: <span class="client-value">' + data.reference_number + '</span></span>' : '') +
+                   (data.order_by ? '<span><span class="client-label">Order By</span>: <span class="client-value">' + data.order_by + '</span></span>' : '') +
+                   '</div>')
+                : '') +
+            (data.remarks
+                ? ('<div class="client-row"><span><span class="client-label">Remarks</span>: <span class="client-value">' + data.remarks + '</span></span></div>')
+                : '') +
             '<hr/>' +
             '<table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Purchase Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
             '<div class="receipt-bottom">' +
