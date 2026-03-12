@@ -1,16 +1,12 @@
 @extends('admin.layouts.master')
 @section('title', 'Subcategory Item Master')
-@push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-@endpush
 @section('setup_content')
 @php
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Subcategory Item Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card shadow-sm border-0">
+    <div class="card shadow-sm border-0">
             <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
@@ -26,7 +22,7 @@
             <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="mb-3 row g-3 align-items-end">
                 <div class="col-sm-6 col-md-4 col-lg-3">
                     <label for="filter_category_id" class="form-label mb-1 small fw-semibold">Category name</label>
-                    <select name="category_id" id="filter_category_id" class="form-select form-select-sm">
+                    <select name="category_id" id="filter_category_id" class="form-select">
                         <option value="">All</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" {{ (string) $selectedCategoryId === (string) $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -34,12 +30,12 @@
                     </select>
                 </div>
                 <div class="col-sm-6 col-md-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+                    <button type="submit" class="btn  btn-primary d-inline-flex align-items-center gap-1">
                         <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
                         <span>Filter</span>
                     </button>
                     @if($selectedCategoryId !== '')
-                        <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-sm btn-outline-secondary">
+                        <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn  btn-outline-secondary">
                             Clear
                         </a>
                     @endif
@@ -53,8 +49,8 @@
                 </div>
             @endif
 
-            <div class="table-responsive rounded-3 border bg-white">
-                <table id="itemSubcategoriesTable" class="table table-striped table-hover align-middle mb-0 w-100">
+            <div class="table-responsive">
+                <table id="itemSubcategoriesTable" class="table text-nowrap align-middle mb-0 w-100">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -107,13 +103,17 @@
                 </table>
             </div>
         </div>
-        </div>
-    </div>
 </div>
+
+{{-- Tom Select CSS --}}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+{{-- Tom Select JS --}}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 {{-- Create Item Modal --}}
 <div class="modal fade" id="createItemSubcategoryModal" tabindex="-1" aria-labelledby="createItemSubcategoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable rounded-1">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.itemsubcategories.store') }}">
                 @csrf
@@ -125,7 +125,7 @@
                     <div class="row g-3">
                         <div class="col-6">
                             <label class="form-label">Category <span class="text-danger">*</span></label>
-                            <select name="category_id" id="create_category_id" class="form-select js-choices" required>
+                            <select name="category_id" id="create_category_id" class="form-select" required>
                                 <option value="">Select Category</option>
                                 @foreach($categories as $cat)
                                     <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
@@ -159,7 +159,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" id="create_status" class="form-select js-choices">
+                            <select name="status" id="create_status" class="form-select">
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
@@ -196,7 +196,7 @@
                     <div class="row g-3">
                         <div class="col-6">
                             <label class="form-label">Category <span class="text-danger">*</span></label>
-                            <select name="category_id" id="edit_category_id" class="form-select js-choices" required>
+                            <select name="category_id" id="edit_category_id" class="form-select" required>
                                 <option value="">Select Category</option>
                                 @foreach($categories as $cat)
                                     <option value="{{ $cat->id }}">{{ $cat->category_name }}</option>
@@ -227,7 +227,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
-                            <select name="status" id="edit_status" class="form-select js-choices">
+                            <select name="status" id="edit_status" class="form-select">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
@@ -249,7 +249,6 @@
 
 @include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search subcategory items...', 'orderColumn' => 2, 'actionColumnIndex' => 7, 'infoLabel' => 'subcategory items'])
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 (function () {
 function initItemSubcategoryScripts() {
@@ -258,6 +257,82 @@ function initItemSubcategoryScripts() {
     var unitMeasurementRegex = /^[a-zA-Z0-9\s\-\/\.]+$/;
     var itemNameMessage = 'Item name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.';
     var unitMeasurementMessage = 'Unit measurement may only contain letters, numbers, spaces, hyphens, slashes and periods. Special characters are not allowed.';
+
+    // Initialize Tom Select on all dropdowns (filter + create + edit)
+    if (window.TomSelect) {
+        var dropdowns = [
+            // Filter dropdown: keep value on open
+            { id: 'filter_category_id', placeholder: 'All categories', clearOnInit: false, clearOnOpen: false },
+            // Create dropdowns: blank on init + every open
+            { id: 'create_category_id', placeholder: 'Select category', clearOnInit: true, clearOnOpen: true },
+            { id: 'create_status', placeholder: 'Select status', clearOnInit: true, clearOnOpen: true },
+            // Edit dropdowns: show saved value initially, but clear when user opens to pick new
+            { id: 'edit_category_id', placeholder: 'Select category', clearOnInit: false, clearOnOpen: true },
+            { id: 'edit_status', placeholder: 'Select status', clearOnInit: false, clearOnOpen: true }
+        ];
+
+        dropdowns.forEach(function (cfg) {
+            var el = document.getElementById(cfg.id);
+            if (!el) return;
+            if (el.tomselect) {
+                el.tomselect.destroy();
+            }
+            try {
+                var hadValue = !!el.value;
+                var clearOnOpen = !!cfg.clearOnOpen;
+                var ts = new TomSelect(el, {
+                    allowEmptyOption: true,
+                    create: false,
+                    dropdownParent: 'body',
+                    placeholder: cfg.placeholder,
+                    maxOptions: null,
+                    hideSelected: false,
+                    highlight: false,
+                    onInitialize: function () {
+                        // Dont auto-highlight first option
+                        this.activeOption = null;
+                    },
+                    onDropdownOpen: function (dropdown) {
+                        // Search input cursor always at start
+                        var input = this.control_input || dropdown.querySelector('input');
+                        if (input) {
+                            input.value = '';
+                            setTimeout(function () {
+                                input.focus();
+                                try {
+                                    input.setSelectionRange(0, 0);
+                                } catch (e) {}
+                                input.scrollLeft = 0;
+                            }, 0);
+                        }
+
+                        // User ne dropdown open kiya hai: agar is config me clearOnOpen true hai
+                        // to pehle se selected value hata do taaki fresh selection mile
+                        if (clearOnOpen) {
+                            this.clear(true);
+                        }
+
+                        // Remove visual active/selected option in dropdown list
+                        setTimeout(function () {
+                            var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                            opts.forEach(function (opt) {
+                                opt.classList.remove('active');
+                                opt.classList.remove('selected');
+                                opt.setAttribute('aria-selected', 'false');
+                            });
+                        }, 0);
+                    }
+                });
+
+                // Sirf jahan clearOnInit true ho aur koi value na ho, wahan hi init par clear karein
+                if (cfg.clearOnInit && !hadValue) {
+                    ts.clear(true);
+                }
+            } catch (e) {
+                console.error('Tom Select init failed for', cfg.id, e);
+            }
+        });
+    }
 
     function validateItemName(value) {
         if (typeof value !== 'string') return { valid: true };
@@ -370,25 +445,6 @@ function initItemSubcategoryScripts() {
         });
     }
 
-    // Initialize Choices.js on create & edit modal selects
-    var choicesInstances = {};
-    function createChoicesInstance(selectEl, key) {
-        if (!window.Choices || !selectEl) return null;
-        if (choicesInstances[key]) {
-            choicesInstances[key].destroy();
-        }
-        choicesInstances[key] = new Choices(selectEl, {
-            searchEnabled: true,
-            itemSelectText: '',
-            shouldSort: false
-        });
-        return choicesInstances[key];
-    }
-
-    // Initial setup for create modal selects
-    createChoicesInstance(document.getElementById('create_category_id'), 'createCategory');
-    createChoicesInstance(document.getElementById('create_status'), 'createStatus');
-
     document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemsubcategory');
         if (!btn) return;
@@ -403,8 +459,9 @@ function initItemSubcategoryScripts() {
 
         if (editCategorySelect) {
             editCategorySelect.value = categoryId;
-            // Recreate Choices instance so it picks up the selected option
-            createChoicesInstance(editCategorySelect, 'editCategory');
+            if (editCategorySelect.tomselect) {
+                editCategorySelect.tomselect.setValue(categoryId || '', true);
+            }
         }
         document.getElementById('edit_item_name').value = btn.getAttribute('data-item-name') || '';
         document.getElementById('edit_item_code_display').value = btn.getAttribute('data-item-code') || '-';
@@ -414,7 +471,9 @@ function initItemSubcategoryScripts() {
 
         if (editStatusSelect) {
             editStatusSelect.value = statusVal;
-            createChoicesInstance(editStatusSelect, 'editStatus');
+            if (editStatusSelect.tomselect) {
+                editStatusSelect.tomselect.setValue(statusVal || '', true);
+            }
         }
         new bootstrap.Modal(document.getElementById('editItemSubcategoryModal')).show();
     }, true);
@@ -431,5 +490,13 @@ if (document.readyState === 'loading') {
 
 <style>
 .table thead th { background-color: #004a93 !important; color: #fff !important; }
+
+/* Ensure Tom Select dropdowns appear above modals/backdrop */
+.ts-dropdown {
+    z-index: 10000 !important;
+}
+.ts-control {
+    z-index: 1;
+}
 </style>
 @endsection

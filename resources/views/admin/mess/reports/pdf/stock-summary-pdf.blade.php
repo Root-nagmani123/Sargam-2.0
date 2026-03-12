@@ -9,16 +9,31 @@
     <meta charset="utf-8">
     <title>Stock Summary Report</title>
     <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm 10mm;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+        
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
             font-size: 9px;
             margin: 16px 18px;
             color: #222;
+            max-width: 297mm;
+            background: white;
         }
         .page-header {
             border-bottom: 2px solid #004a93;
             padding-bottom: 6px;
             margin-bottom: 10px;
+            page-break-after: avoid;
         }
         .page-header-top {
             display: table;
@@ -61,6 +76,17 @@
             border-collapse: collapse;
             font-size: 7.5px;
             margin-top: 6px;
+            page-break-inside: auto;
+        }
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        thead {
+            display: table-header-group;
+        }
+        tfoot {
+            display: table-footer-group;
         }
         th, td {
             padding: 2px 3px;
@@ -79,8 +105,6 @@
         tbody tr:nth-child(even) td {
             background: #fafbfc;
         }
-        thead { display: table-header-group; }
-        tfoot { display: table-footer-group; }
         .footer {
             border-top: 1px solid #dde2ea;
             font-size: 7px;

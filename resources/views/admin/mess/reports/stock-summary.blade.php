@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-
+@section('title', 'Stock Summary Report')
 @section('setup_content')
 <div class="container-fluid stock-summary-report">
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
@@ -11,29 +11,29 @@
                 <span class="text-muted small">Refine results by date, store type &amp; store</span>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}">
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label class="form-label">From Date</label>
-                        <input type="date" name="from_date" class="form-control" 
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">From Date</label>
+                        <input type="date" name="from_date" class="form-control form-control-sm" 
                                value="{{ $fromDate }}" required>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">To Date</label>
-                        <input type="date" name="to_date" class="form-control" 
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">To Date</label>
+                        <input type="date" name="to_date" class="form-control form-control-sm" 
                                value="{{ $toDate }}" required>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select choices-select" data-placeholder="Select Store Type">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Store Type</label>
+                        <select name="store_type" id="store_type" class="form-select" data-placeholder="Select Store Type">
                             <option value="main" {{ $storeType == 'main' ? 'selected' : '' }}>Main Store</option>
                             <option value="sub" {{ $storeType == 'sub' ? 'selected' : '' }}>Sub Store</option>
                         </select>
                     </div>
-                    <div class="col-md-4" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
-                        <label class="form-label">Main Store</label>
-                        <select name="store_id" class="form-select choices-select" data-placeholder="All Main Stores">
+                    <div class="col-md-3" id="main_store_div" style="display: {{ $storeType == 'main' ? 'block' : 'none' }};">
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Main Store</label>
+                        <select name="store_id" class="form-select form-select-sm" data-placeholder="All Main Stores">
                             <option value="">All Main Stores</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}" {{ $storeId == $store->id && $storeType == 'main' ? 'selected' : '' }}>
@@ -43,8 +43,8 @@
                         </select>
                     </div>
                     <div class="col-md-4" id="sub_store_div" style="display: {{ $storeType == 'sub' ? 'block' : 'none' }};">
-                        <label class="form-label">Sub Store</label>
-                        <select name="store_id" class="form-select choices-select" data-placeholder="All Sub Stores">
+                        <label class="form-label small fw-semibold text-uppercase mb-1 text-muted">Sub Store</label>
+                        <select name="store_id" class="form-select form-select-sm" data-placeholder="All Sub Stores">
                             <option value="">All Sub Stores</option>
                             @foreach($subStores as $subStore)
                                 <option value="{{ $subStore->id }}" {{ $storeId == $subStore->id && $storeType == 'sub' ? 'selected' : '' }}>
@@ -55,24 +55,24 @@
                     </div>
                 </div>
                 <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
+                    <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">filter_list</span>
                         Apply Filters
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
+                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">refresh</span>
                         Reset
                     </a>
-                    <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
+                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
                         Print
                     </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" class="btn btn-outline-danger d-inline-flex align-items-center" title="Download PDF">
+                    <a href="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" title="Download PDF">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
                         PDF
                     </a>
 
-                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
+                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                         Export Excel
                     </a>
@@ -81,8 +81,8 @@
         </div>
     </div>
 
-<div class="card">
-    <div class="card-body">
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-3 p-lg-4">
             <!-- Report Header -->
     <div class="report-header text-center mb-4">
         <h4 class="fw-bold text-uppercase mb-1">Stock Summary Report</h4>
@@ -101,24 +101,41 @@
 
     <!-- Report Table -->
     <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-            <span class="fw-semibold text-dark">Stock Movement Summary</span>
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="fw-semibold text-dark">Stock Movement Summary</span>
+            </div>
             <span class="text-muted small">
                 Total items: {{ count($reportData) }}
             </span>
         </div>
-        <div class="table-responsive">
-        <table class="table text-nowrap align-middle mb-0">
+        <div class="stock-table-wrapper">
+        <table class="table text-nowrap align-middle mb-0 stock-fixed-columns-table">
             <thead>
                 <tr>
-                    <th rowspan="2" class="text-center align-middle" style="width: 60px;">SR.<br>No</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 150px;">Item Name</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 100px;">Item Code</th>
-                    <th rowspan="2" class="text-center align-middle" style="min-width: 80px;">Unit</th>
-                    <th colspan="3" class="text-center">Opening</th>
-                    <th colspan="3" class="text-center">Purchase</th>
-                    <th colspan="3" class="text-center">Sale</th>
-                    <th colspan="3" class="text-center">Closing</th>
+                    <th rowspan="2" class="sticky-col sticky-col-1">
+                        SR. No
+                    </th>
+                    <th rowspan="2" class="sticky-col sticky-col-2">Item Name
+                    </th>
+                    <th rowspan="2" class="sticky-col sticky-col-3">
+                        Item Code
+                    </th>
+                    <th rowspan="2" class="sticky-col sticky-col-4">
+                        Unit
+                    </th>
+                    <th colspan="3">
+                        Opening
+                    </th>
+                    <th colspan="3">
+                        Purchase
+                    </th>
+                    <th colspan="3">
+                        Sale
+                    </th>
+                    <th colspan="3">
+                        Closing
+                    </th>
                 </tr>
                 <tr>
                     <!-- Opening -->
@@ -142,10 +159,10 @@
             <tbody>
                 @forelse($reportData as $index => $item)
                     <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $item['item_name'] }}</td>
-                        <td>{{ $item['item_code'] ?? '—' }}</td>
-                        <td>{{ $item['unit'] ?? '—' }}</td>
+                        <td class="text-center sticky-col sticky-col-1">{{ $index + 1 }}</td>
+                        <td class="sticky-col sticky-col-2 text-nowrap">{{ $item['item_name'] }}</td>
+                        <td class="sticky-col sticky-col-3 text-nowrap">{{ $item['item_code'] ?? '—' }}</td>
+                        <td class="sticky-col sticky-col-4 text-nowrap">{{ $item['unit'] ?? '—' }}</td>
                         <!-- Opening -->
                         <td class="text-end">{{ number_format($item['opening_qty'], 2) }}</td>
                         <td class="text-end">₹{{ number_format($item['opening_rate'], 2) }}</td>
@@ -165,8 +182,13 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="16" class="text-center text-muted py-4">
-                            No stock movement found for the selected period
+                        <td colspan="16" class="text-center py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                            <div class="d-flex flex-column align-items-center gap-3">
+                                <div>
+                                    <h6 class="text-muted mb-1">No Stock Movement Found</h6>
+                                    <p class="text-muted small mb-0">No transactions recorded for the selected period</p>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 @endforelse
@@ -179,8 +201,10 @@
                             'closing_amount' => collect($reportData)->sum('closing_amount'),
                         ];
                     @endphp
-                    <tr class="table-secondary fw-bold">
-                        <td colspan="4" class="text-end">Total</td>
+                    <tr class="table-primary fw-bold">
+                        <td colspan="4" class="text-end sticky-col sticky-col-total" style="font-size: 1rem; letter-spacing: 0.02em;">
+                            Total
+                        </td>
                         <td class="text-end">—</td>
                         <td class="text-end">—</td>
                         <td class="text-end">₹{{ number_format($totals['opening_amount'], 2) }}</td>
@@ -202,6 +226,64 @@
     </div>
 </div>
 </div>
+
+<style>
+    .stock-table-wrapper {
+        position: relative;
+        overflow: auto; /* allow both horizontal and vertical scroll inside */
+        max-height: 70vh;
+    }
+
+    .stock-fixed-columns-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .stock-fixed-columns-table th,
+    .stock-fixed-columns-table td {
+        white-space: nowrap;
+    }
+
+    .stock-fixed-columns-table .sticky-col {
+        position: -webkit-sticky;
+        position: sticky;
+        background-color: #ffffff;
+        z-index: 2;
+    }
+
+    .stock-fixed-columns-table thead .sticky-col {
+        z-index: 3;
+        top: 0;
+    }
+
+    /* Column widths and offsets (tune these values as per your design) */
+    .stock-table-wrapper {
+        --col-1-width: 60px;
+        --col-2-width: 220px;
+        --col-3-width: 120px;
+        --col-4-width: 80px;
+    }
+
+    .stock-fixed-columns-table .sticky-col-1 {
+        left: 0;
+        min-width: var(--col-1-width);
+    }
+
+    .stock-fixed-columns-table .sticky-col-2 {
+        left: var(--col-1-width);
+        min-width: var(--col-2-width);
+    }
+
+    .stock-fixed-columns-table .sticky-col-3 {
+        left: calc(var(--col-1-width) + var(--col-2-width));
+        min-width: var(--col-3-width);
+    }
+
+    .stock-fixed-columns-table .sticky-col-4 {
+        left: calc(var(--col-1-width) + var(--col-2-width) + var(--col-3-width));
+        min-width: var(--col-4-width);
+    }
+</style>
 
 <script>
 function printStockSummary() {
@@ -311,89 +393,21 @@ function printStockSummary() {
 }
 </script>
 
-<style>
-    @media print {
-        .no-print { 
-            display: none !important; 
+<script>
+    // Enhanced scroll indicator for table
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableWrapper = document.querySelector('.stock-table-wrapper');
+        if (tableWrapper) {
+            tableWrapper.addEventListener('scroll', function() {
+                if (this.scrollLeft > 10) {
+                    this.classList.add('scrolled');
+                } else {
+                    this.classList.remove('scrolled');
+                }
+            });
         }
-        .report-header { 
-            display: block !important;
-            margin-top: 20px;
-            margin-bottom: 30px;
-        }
-        body { 
-            font-size: 12px; 
-        }
-        table { 
-            font-size: 11px;
-            page-break-inside: auto;
-        }
-        table tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-        }
-        table thead {
-            display: table-header-group;
-        }
-        th, td { 
-            padding: 6px !important; 
-        }
-        @page {
-            margin: 1cm;
-            size: A4 landscape;
-        }
-    }
-    
-    .report-header h4 {
-        margin-bottom: 10px;
-        color: #000;
-        font-weight: bold;
-    }
-    
-    .report-header p {
-        color: #333;
-        font-size: 14px;
-    }
-
-    /* Table styling for better visibility */
-    .table th {
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .table td {
-        white-space: nowrap;
-    }
-
-    /* Error highlighting */
-    .table-danger {
-        background-color: #f8d7da !important;
-    }
-
-    .table-danger:hover {
-        background-color: #f5c2c7 !important;
-    }
-
-    .text-danger {
-        color: #dc3545 !important;
-    }
-
-    .fw-bold {
-        font-weight: 700 !important;
-    }
-
-    /* Alert styling */
-    .alert-danger {
-        border-left: 4px solid #dc3545;
-    }
-
-    @media print {
-        .table-danger {
-            background-color: #ffcccc !important;
-            border: 2px solid #ff0000 !important;
-        }
-    }
-</style>
+    });
+</script>
 
 <script>
     // Store Type Selection Handler
@@ -416,31 +430,31 @@ function printStockSummary() {
     });
 </script>
 
-{{-- Choices.js (enhanced dropdowns) --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{{-- Tom Select (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
-    (function () {
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.Choices === 'undefined') return;
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.TomSelect === 'undefined') return;
 
-            document
-                .querySelectorAll('.stock-summary-report select.choices-select')
-                .forEach(function (el) {
-                    if (el.dataset.choicesInitialized === 'true') return;
+        document
+            .querySelectorAll('.stock-summary-report select')
+            .forEach(function (el) {
+                if (el.tomselect) return;
 
-                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
+                var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                    new Choices(el, {
-                        shouldSort: false,
-                        placeholder: true,
-                        placeholderValue: placeholder,
-                        searchPlaceholderValue: 'Search...',
-                    });
-
-                    el.dataset.choicesInitialized = 'true';
+                new TomSelect(el, {
+                    create: false,
+                    allowEmptyOption: true,
+                    placeholder: placeholder,
+                    plugins: ['dropdown_input'],
+                    sortField: {
+                        field: 'text',
+                        direction: 'asc'
+                    }
                 });
-        });
-    })();
+            });
+    });
 </script>
 @endsection

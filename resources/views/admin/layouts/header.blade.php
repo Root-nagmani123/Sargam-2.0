@@ -153,44 +153,6 @@
                                 </a>
                             </li>
 
-                            <!-- Material Management -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-material-management"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
-                                    aria-controls="material-management-panel" id="material-management-tab">
-                                    <span>Material Management</span>
-                                </a>
-                            </li>
-
-                            <!-- Financial Dropdown -->
-                            <li class="nav-item dropdown" role="none">
-                                <a class="nav-link header-nav-link px-3 py-2 d-flex align-items-center gap-1 dropdown-toggle-custom"
-                                    href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
-                                    aria-expanded="false" data-bs-toggle="dropdown">
-                                    <span>Financial</span>
-                                    <i class="material-icons material-symbols-rounded fs-6 dropdown-arrow transition-all"
-                                        aria-hidden="true">expand_more</i>
-                                </a>
-
-                                <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
-                                    style="min-width: 180px; border: 1px solid rgba(0, 0, 0, 0.08);"
-                                    aria-labelledby="financialDropdown" role="menu">
-                                    <li role="none">
-                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                            href="#" role="menuitem">
-                                            <span>Budget</span>
-                                        </a>
-                                    </li>
-                                    <li role="none">
-                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                            href="#" role="menuitem">
-                                            <span>Accounts</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-
                             <!-- Search -->
                             <li class="nav-item" role="none">
                                 <button type="button" class="nav-link header-search-btn search-trigger"
@@ -295,30 +257,6 @@
             <span class="small fw-medium">Logout</span>
         </button>
     </form>
-
-    <!-- Last Login -->
-    <div class="d-flex align-items-center gap-1 small">
-        <i class="material-icons material-symbols-rounded fs-6">
-            history
-        </i>
-        <span class="fw-semibold">Last login:</span>
-
-        @php
-            $lastLogin = Auth::user()->last_login ?? null;
-            if ($lastLogin) {
-                $date = \Carbon\Carbon::parse($lastLogin);
-                $formattedDate = $date->format('Y-m-d H:i:s');
-                $isoDate = $date->toIso8601String();
-            } else {
-                $formattedDate = 'Never';
-                $isoDate = '';
-            }
-        @endphp
-
-        <time datetime="{{ $isoDate }}" title="{{ $formattedDate }}" class="fw-medium">
-            {{ $formattedDate }}
-        </time>
-    </div>
 </div>
 
             </div>
