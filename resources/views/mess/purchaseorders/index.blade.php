@@ -1,21 +1,24 @@
 @extends('admin.layouts.master')
 @section('title', 'Purchase Orders')
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-3 py-md-4">
     <x-breadcrum title="Purchase Orders"></x-breadcrum>
     <div class="datatables">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3 no-print flex-wrap gap-2">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 no-print">
                     <div>
-                        <h4 class="mb-0">Purchase Orders</h4>
+                        <h4 class="mb-1 fw-semibold">Purchase Orders</h4>
                         <p class="mb-0 text-muted small">View, filter and manage mess purchase orders.</p>
                     </div>
-                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
                         <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;">add</i>
-                        <span>Create Purchase Order</span>
+                        <span class="d-none d-sm-inline">Create Purchase Order</span>
+                        <span class="d-inline d-sm-none">New</span>
                     </button>
                 </div>
+            </div>
+            <div class="card-body">
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         {{ session('success') }}
@@ -24,44 +27,44 @@
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 border rounded-3 bg-body-tertiary no-print">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-2">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="mb-4 p-3 p-md-4 border rounded-3 bg-body-tertiary no-print">
+                    <div class="row g-3 g-md-4 align-items-end mb-3">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Date From</label>
-                            <input type="date" name="date_from" class="form-control " value="{{ $filterDateFrom }}">
+                            <input type="date" name="date_from" class="form-control" value="{{ $filterDateFrom }}">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Date To</label>
-                            <input type="date" name="date_to" class="form-control " value="{{ $filterDateTo }}">
+                            <input type="date" name="date_to" class="form-control" value="{{ $filterDateTo }}">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Vendor</label>
-                            <select name="vendor_id" class="form-select ">
+                            <select name="vendor_id" class="form-select form-select-sm js-filter-select">
                                 <option value="">All Vendors</option>
                                 @foreach($vendors as $v)
                                     <option value="{{ $v->id }}" {{ (string)$filterVendorId === (string)$v->id ? 'selected' : '' }}>{{ $v->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label small mb-1">Store</label>
-                            <select name="store_id" class="form-select ">
+                            <select name="store_id" class="form-select form-select-sm js-filter-select">
                                 <option value="">All Stores</option>
                                 @foreach($stores as $s)
                                     <option value="{{ $s->id }}" {{ (string)$filterStoreId === (string)$s->id ? 'selected' : '' }}>{{ $s->store_name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-auto d-flex flex-wrap gap-2">
-                            <button type="submit" class="btn  btn-primary d-inline-flex align-items-center gap-1">
+                        <div class="col-12 d-flex flex-wrap gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
                                 <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
                                 <span>Apply</span>
                             </button>
-                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn  btn-outline-secondary">
+                            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary btn-sm">
                                 Clear
                             </a>
-                            <button type="button" class="btn  btn-outline-primary d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
-                                <i class="material-icons material-symbol-rounded">print</i>
+                            <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print list or Save as PDF">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1rem;">print</i>
                                 <span>Print</span>
                             </button>
                         </div>
@@ -79,7 +82,7 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table text-nowrap align-middle mb-0 w-100">
+                    <table id="purchaseOrdersTable" class="table table-hover align-middle mb-0 w-100">
                         <thead>
                             <tr>
                                 <th>S.No</th>
@@ -288,9 +291,199 @@
 #poItemsTable .table-responsive {
     overflow: visible !important;
 }
+
+/* ========================================
+   Choices.js-like Styling for Tom Select
+   ======================================== */
+
+/* Control (Input Container) - Choices.js style */
+.ts-wrapper .ts-control {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    min-height: 38px;
+    box-shadow: none;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.ts-wrapper.single .ts-control {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.25rem;
+}
+
+/* Focus state - Choices.js style */
+.ts-wrapper.focus .ts-control {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Dropdown container - Choices.js style */
+.ts-dropdown {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    background-color: #fff;
+    margin-top: 4px;
+}
+
+/* Search input inside dropdown - Choices.js style */
+.ts-dropdown .ts-dropdown-content {
+    padding: 0;
+}
+
+.ts-control > input {
+    color: #333;
+    font-size: 14px;
+    padding: 4px 0;
+}
+
+/* Dropdown input (search field) - Choices.js style */
+.ts-dropdown-content input {
+    border: 1px solid #ddd !important;
+    border-radius: 4px;
+    padding: 8px 12px !important;
+    margin: 8px 8px 4px 8px;
+    width: calc(100% - 16px) !important;
+    font-size: 14px;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+}
+
+.ts-dropdown-content input:focus {
+    outline: none;
+    border-color: #80bdff !important;
+    background-color: #fff;
+}
+
+/* Options list - Choices.js style */
+.ts-dropdown .option {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s ease;
+    background-color: transparent;
+}
+
+.ts-dropdown .option:last-child {
+    border-bottom: none;
+}
+
+/* Option hover state - Choices.js style */
+.ts-dropdown .option:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Prevent default active state highlighting */
+.ts-dropdown .option.active {
+    background-color: transparent;
+    color: #333;
+}
+
+/* Only show active state on hover */
+.ts-dropdown .option.active:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Selected option highlight - Choices.js style */
+.ts-dropdown .option.selected {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+/* Aria-selected ko bhi visually normal rakho (auto selected highlight hide) */
+.ts-dropdown .option[aria-selected="true"] {
+    background-color: transparent;
+    color: #333;
+}
+
+/* No results message - Choices.js style */
+.ts-dropdown .no-results {
+    padding: 12px;
+    color: #999;
+    font-size: 14px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+/* Selected item (for single select) - Choices.js style */
+.ts-wrapper.single .ts-control .item {
+    color: #333;
+    padding: 2px 0;
+    font-size: 14px;
+}
+
+/* Placeholder styling - Choices.js style */
+.ts-wrapper .ts-control input::placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+/* Disabled state - Choices.js style */
+.ts-wrapper.disabled .ts-control {
+    background-color: #f3f3f3;
+    border-color: #ddd;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Scrollbar styling for dropdown */
+.ts-dropdown .ts-dropdown-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.ts-dropdown .ts-dropdown-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Remove default arrow for cleaner look */
+.ts-wrapper.single.input-active .ts-control {
+    background-image: none;
+}
+
+/* Optgroup styling - Choices.js style */
+.ts-dropdown .optgroup {
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #666;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.ts-dropdown .optgroup-header {
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #666;
+    background-color: #f9f9f9;
+}
 </style>
 <div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
                 @csrf
@@ -447,7 +640,7 @@
 
 {{-- Edit Purchase Order Modal --}}
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
@@ -741,6 +934,97 @@
                 maxOptions: null,
                 closeAfterSelect: true,
                 hideSelected: false,
+                highlight: false, // Disable auto-highlighting first item
+                // Searchable dropdown input (is par hi typing se filter hota hai)
+                controlInput: '<input>',
+                searchField: ['text'],
+                openOnFocus: true,
+                selectOnTab: false, // Changed to false to prevent accidental selection
+                render: {
+                    no_results: function(data, escape) {
+                        return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
+                    }
+                },
+                onInitialize: function() {
+                    // Remove any active option on initialize
+                    this.activeOption = null;
+                },
+                onDropdownOpen: function(dropdown) {
+                    // Dropdown ke andar jo actual search input hai usko pakdo
+                    const searchInput = dropdown.querySelector('.ts-dropdown-content input') || this.control_input;
+
+                    // Kis original <select> par ye dropdown laga hai
+                    const originalSelect = this.input || this.original_input || this.select;
+                    // Filters (Vendor/Store) + Item Name dropdowns par selection clear rakhni hai
+                    const shouldClearOnOpen =
+                        originalSelect &&
+                        originalSelect.classList &&
+                        (originalSelect.classList.contains('js-filter-select') ||
+                         originalSelect.classList.contains('js-item-select'));
+                    if (shouldClearOnOpen) {
+                        this.clear(true);
+                    }
+
+                    // Clear any previous search text so box is blank
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    if (typeof this.setTextboxValue === 'function') {
+                        this.setTextboxValue('');
+                    }
+                    if (typeof this.onSearchChange === 'function') {
+                        this.onSearchChange('');
+                    }
+                    if (typeof this.refreshOptions === 'function') {
+                        this.refreshOptions(false);
+                    }
+
+                    // TomSelect apni taraf se selected/active class dobara lagata hai,
+                    // isliye thoda delay dekar unhe hata rahe hain
+                    setTimeout(() => {
+                        this.activeOption = null;
+                        if (typeof this.setActiveOption === 'function') {
+                            this.setActiveOption(null);
+                        }
+                        if (typeof this.clearActiveItems === 'function') {
+                            this.clearActiveItems();
+                        }
+
+                        const options = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"]');
+                        options.forEach(opt => {
+                            opt.classList.remove('active');
+                            opt.classList.remove('selected');
+                            opt.setAttribute('aria-selected', 'false');
+                        });
+                    }, 0);
+
+                    // Cursor ko hamesha input ke starting me le jao
+                    if (searchInput) {
+                        setTimeout(() => {
+                            searchInput.focus();
+                            try {
+                                searchInput.setSelectionRange(0, 0);
+                            } catch (e) {}
+                            searchInput.scrollLeft = 0;
+                        }, 0);
+                    }
+                },
+                onFocus: function() {
+                    // Position cursor at start when field is focused
+                    const input = this.control_input;
+                    if (input) {
+                        setTimeout(() => {
+                            input.setSelectionRange(0, 0);
+                            input.scrollLeft = 0;
+                        }, 0);
+                    }
+                },
+                onType: function(str) {
+                    // Clear active option when user starts typing
+                    if (str.length === 0) {
+                        this.setActiveOption(null);
+                    }
+                },
                 ...options
             };
             return new TomSelect(element, defaultOptions);
@@ -824,12 +1108,19 @@
     function initItemDropdownInRow(row) {
         const select = row.querySelector('.po-item-select');
         if (select && !select.tomselect) {
+            // Pehle se koi value set hai ya nahi (edit mode me hogi)
+            const hadValueBefore = !!select.value;
             const instance = initTomSelect(select, {
                 placeholder: 'Select Item',
                 maxOptions: 200
             });
             if (instance) {
                 tomSelectInstances.items.push(instance);
+                // Agar pehle koi value nahi thi (naya row / blank item),
+                // to TomSelect ke first-item auto select ko turant clear kar do
+                if (!hadValueBefore) {
+                    instance.clear(true);
+                }
             }
         }
     }
