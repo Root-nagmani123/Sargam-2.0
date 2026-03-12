@@ -58,6 +58,10 @@
                             <span class="material-symbols-rounded" style="font-size: 1rem;">print</span>
                             <span>Print</span>
                         </button>
+                        <a href="{{ route('admin.mess.reports.stock-purchase-details.pdf', request()->query()) }}" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1" title="Download PDF">
+                             <span class="material-symbols-rounded" style="font-size: 1rem;">picture_as_pdf</span>
+                             <span>PDF</span>
+                        </a>
                         <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" title="Export to Excel">
                              <span class="material-symbols-rounded" style="font-size: 1rem;">table_view</span>
                              <span>Export Excel</span>
@@ -119,13 +123,14 @@
                                     <th>Item Code</th>
                                     <th class="text-end">Unit</th>
                                     <th class="text-end">Quantity</th>
-                                    <th class="text-end">Purchase</th>
+                                    <th class="text-end">Rate</th>
                                     <th class="text-end">Tax %</th>
                                     <th class="text-end">Tax Amount</th>
                                     <th class="text-end">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
+                                @php $grandTotalAmount = 0; @endphp
                                 @forelse($purchaseOrders as $order)
                                     @php
                                         $storeName = $order->store ? $order->store->store_name : 'N/A';
@@ -146,6 +151,7 @@
                                             $total = $subtotal + $taxAmount;
                                             $billSubtotal += $subtotal;
                                             $billTaxTotal += $taxAmount;
+                                            $grandTotalAmount += $total;
                                         @endphp
                                         <tr>
                                             <td>{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
@@ -168,6 +174,12 @@
                                         <td colspan="8" class="text-center text-muted py-4">No purchase details found</td>
                                     </tr>
                                 @endforelse
+                                @if($grandTotalAmount > 0)
+                                    <tr class="grand-total-row bg-secondary text-white fw-bold">
+                                        <td colspan="7" class="text-end">Grand Total:</td>
+                                        <td class="text-end">₹{{ number_format($grandTotalAmount, 2) }}</td>
+                                    </tr>
+                                @endif
                             </tbody>
                         </table>
                     </div>
@@ -225,7 +237,17 @@ function printStockPurchaseTable() {
 
     var title = 'Stock Purchase Details';
     var dateRange = 'Stock Purchase Details Report Between {{ date('d-F-Y', strtotime($fromDate)) }} To {{ date('d-F-Y', strtotime($toDate)) }}';
-    var vendor = '{{ $selectedVendor ? $selectedVendor->name : 'All Vendors' }}';
+    var vendorDetails = {!! json_encode(
+        $selectedVendor
+            ? trim(implode(' | ', array_filter([
+                'Name: ' . $selectedVendor->name,
+                !empty($selectedVendor->contact_person) ? 'Contact: ' . $selectedVendor->contact_person : null,
+                !empty($selectedVendor->phone) ? 'Phone: ' . $selectedVendor->phone : null,
+                !empty($selectedVendor->email) ? 'Email: ' . $selectedVendor->email : null,
+                !empty($selectedVendor->address) ? 'Address: ' . $selectedVendor->address : null,
+            ])))
+            : 'All Vendors'
+    ) !!};
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>
@@ -316,7 +338,7 @@ function printStockPurchaseTable() {
             <h5 class="mb-1">${title}</h5>
             <div class="report-meta">
                 <span><strong>Period:</strong> ${dateRange}</span>
-                <span><strong>Vendor:</strong> ${vendor}</span>
+                <span><strong>Vendor Details:</strong> ${vendorDetails}</span>
                 <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
             </div>
         </div>
@@ -342,6 +364,7 @@ function printStockPurchaseTable() {
 .stock-purchase-report .bill-header-row .bill-header { background-color: #5a6268; color: #fff; font-weight: bold; padding: 0.5rem 0.75rem; }
 .stock-purchase-report .bill-total-row { background-color: #fff; }
 .stock-purchase-report .bill-total-row td { padding: 0.35rem 0.75rem; border-top: 1px solid #dee2e6; }
+.stock-purchase-report .grand-total-row td { padding: 0.45rem 0.75rem; border-top: 2px solid #343a40; }
 .stock-purchase-report .stock-purchase-table td { padding: 0.35rem 0.75rem; vertical-align: middle; }
 .stock-purchase-report .page-input { display: inline-block; }
 .report-date-bar { background: #5a6268; color: #fff; font-size: 0.9rem; text-align: center; }

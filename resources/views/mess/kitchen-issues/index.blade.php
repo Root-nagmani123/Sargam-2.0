@@ -2,7 +2,7 @@
 @section('title', 'Selling Voucher')
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Kitchen Issues" />
+    <x-breadcrum title="Selling Voucher" />
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
@@ -68,7 +68,7 @@
    <div class="card">
     <div class="card-body">
     <div class="table-responsive">
-        <table class="table text-nowrap align-middle" id="sellingVouchersTable">
+        <table class="table align-middle" id="sellingVouchersTable">
             <thead>
                 <tr>
                     <th>S. No.</th>
@@ -98,7 +98,7 @@
                             <td>{{ $voucher->client_type_label ?? '—' }}</td>
                             <td>{{ $voucher->display_client_name }}</td>
                             <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'Online' : '—')) }}</td>
+                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'UPI' : '—')) }}</td>
                             <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
                             <td>
                                 @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
@@ -106,13 +106,13 @@
                                 @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
                                 @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
                             </td>
-                            <td>
+                            <td class="d-flex gap-2">
                                 @if(($item->return_quantity ?? 0) > 0)
                                     <span class="badge bg-info">Returned</span>
                                 @endif
                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
                             </td>
-                            <td>
+                            <td class="d-flex gap-2">
                                 <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
                                 <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="{{ $voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED ? 'Edit is disabled for approved voucher' : 'Edit' }}" @if($voucher->status == \App\Models\KitchenIssueMaster::STATUS_APPROVED) disabled @endif>Edit</button>
                                 <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
@@ -170,14 +170,21 @@
     ])
 </div>
 
+{{-- Tom Select CSS --}}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+{{-- Tom Select JS --}}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
 {{-- Add Selling Voucher Modal (same UI/UX as Create Purchase Order) --}}
 <style>
 #addSellingVoucherModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #addSellingVoucherModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
-#addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
+#addSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); position: relative; }
+.ts-dropdown { z-index: 2000; }
 </style>
 <div class="modal fade" id="addSellingVoucherModal" tabindex="-1" aria-labelledby="addSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form action="{{ route('admin.mess.material-management.store') }}" method="POST" id="sellingVoucherModalForm" enctype="multipart/form-data">
                 @csrf
@@ -220,9 +227,9 @@
                                     <select name="payment_type" class="form-select" required>
                                         <option value="1" {{ old('payment_type', '1') == '1' ? 'selected' : '' }}>Credit</option>
                                         <option value="0" {{ old('payment_type') == '0' ? 'selected' : '' }}>Cash</option>
-                                        <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>Online</option>
+                                        <option value="2" {{ old('payment_type') == '2' ? 'selected' : '' }}>UPI</option>
                                     </select>
-                                    <small class="text-muted" id="modalPaymentTypeHint">Employee / OT / Course: Credit only</small>
+                                    <small class="text-muted" id="modalPaymentTypeHint">Cash / UPI / Credit</small>
                                 </div>
                                 <div class="col-md-4" id="modalClientNameWrap">
                                     <label class="form-label">Client Name <span class="text-danger">*</span></label>
@@ -316,7 +323,11 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="addSvBillFileInput">
+                                    <div id="addSvBillFileChosenWrap" class="d-flex align-items-center gap-2 mt-1 d-none">
+                                        <span id="addSvBillFileChosenName" class="text-muted small"></span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="addSvBillFileRemove">Remove</button>
+                                    </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                 </div>
                             </div>
@@ -333,17 +344,17 @@
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0" id="svItemsTable">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table align-middle mb-0" id="svItemsTable">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th>Item Name <span class="text-white">*</span></th>
+                                            <th>Unit</th>
+                                            <th>Available Qty</th>
+                                            <th>Issue Qty <span class="text-white">*</span></th>
+                                            <th>Left Qty</th>
+                                            <th>Rate <span class="text-white">*</span></th>
+                                            <th>Total Amount</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="modalItemsBody">
@@ -395,7 +406,7 @@
 #editSellingVoucherModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
 </style>
 <div class="modal fade" id="editSellingVoucherModal" tabindex="-1" aria-labelledby="editSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form id="editSellingVoucherForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
@@ -427,7 +438,7 @@
                                     <select name="payment_type" class="form-select edit-payment-type" required>
                                         <option value="1">Credit</option>
                                         <option value="0">Cash</option>
-                                        <option value="2">Online</option>
+                                        <option value="2">UPI</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4" id="editModalClientNameWrap">
@@ -518,12 +529,14 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
+                                    <input type="hidden" name="remove_bill" id="editRemoveBillFlag" value="0">
                                     <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
                                         <span id="editBillCurrentFileName" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2" style="cursor: pointer;">
+                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2 me-1" style="cursor: pointer;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
                                         </label>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" id="editSvBillFileRemove">Remove</button>
                                     </div>
                                     <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
                                     <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
@@ -538,17 +551,17 @@
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-bordered mb-0">
-                                    <thead style="background-color: #af2910;">
+                                <table class="table align-middle mb-0">
+                                    <thead>
                                         <tr>
-                                            <th style="min-width: 180px; color: #fff; border-color: #af2910;">Item Name <span class="text-white">*</span></th>
-                                            <th style="min-width: 80px; color: #fff; border-color: #af2910;">Unit</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Available Qty</th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Issue Qty <span class="text-white">*</span></th>
-                                            <th style="min-width: 90px; color: #fff; border-color: #af2910;">Left Qty</th>
-                                            <th style="min-width: 100px; color: #fff; border-color: #af2910;">Rate <span class="text-white">*</span></th>
-                                            <th style="min-width: 110px; color: #fff; border-color: #af2910;">Total Amount</th>
-                                            <th style="width: 50px; color: #fff; border-color: #af2910;"></th>
+                                            <th>Item Name <span class="text-white">*</span></th>
+                                            <th>Unit</th>
+                                            <th>Available Qty</th>
+                                            <th>Issue Qty <span class="text-white">*</span></th>
+                                            <th>Left Qty</th>
+                                            <th>Rate <span class="text-white">*</span></th>
+                                            <th>Total Amount</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="editModalItemsBody"></tbody>
@@ -599,7 +612,7 @@
 #viewSellingVoucherModal .modal-footer { background: #fff; border-color: #dee2e6; }
 </style>
 <div class="modal fade" id="viewSellingVoucherModal" tabindex="-1" aria-labelledby="viewSellingVoucherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header border-bottom bg-light">
                 <h5 class="modal-title fw-semibold" id="viewSellingVoucherModalLabel" style="color: #212529;">View Selling Voucher</h5>
@@ -640,15 +653,15 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-bordered mb-0">
-                                <thead style="background-color: #af2910;">
+                            <table class="table align-middle mb-0">
+                                <thead>
                                     <tr>
-                                        <th style="color: #fff !important; border-color: #af2910;">Item Name</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Unit</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Issue Qty</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Return Qty</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Rate</th>
-                                        <th style="color: #fff !important; border-color: #af2910;">Total</th>
+                                        <th>Item Name</th>
+                                        <th>Unit</th>
+                                        <th>Issue Qty</th>
+                                        <th>Return Qty</th>
+                                        <th>Rate</th>
+                                        <th>Total</th>
                                     </tr>
                                 </thead>
                                 <tbody id="viewModalItemsBody"></tbody>
@@ -676,7 +689,7 @@
 
 {{-- Return Item Modal (Transfer To) --}}
 <div class="modal fade" id="returnItemModal" tabindex="-1" aria-labelledby="returnItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content">
             <form id="returnItemForm" method="POST" action="">
                 @csrf
@@ -725,6 +738,230 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Selling Voucher script loaded');
     console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+
+    // When user clicks any Cancel/Close button in a modal (secondary button),
+    // close the modal and refresh the page to reset all filters/state (only for Add/Edit Selling Voucher modals).
+    document.querySelectorAll('#addSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"], #editSellingVoucherModal button.btn-secondary[data-bs-dismiss="modal"]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            window.location.reload();
+        });
+    });
+
+    // Initialize Tom Select for filter dropdowns
+    if (typeof TomSelect !== 'undefined') {
+        var filterStatus = document.querySelector('form[method="GET"] select[name="status"]');
+        var filterStore = document.querySelector('form[method="GET"] select[name="store"]');
+
+        if (filterStatus) {
+            try {
+                if (filterStatus.tomselect) {
+                    filterStatus.tomselect.destroy();
+                }
+                new TomSelect(filterStatus, {
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'All Status'
+                });
+            } catch (e) {
+                console.error('Tom Select initialization failed for status filter:', e);
+            }
+        }
+
+        if (filterStore) {
+            try {
+                if (filterStore.tomselect) {
+                    filterStore.tomselect.destroy();
+                }
+                new TomSelect(filterStore, {
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'All Stores'
+                });
+            } catch (e) {
+                console.error('Tom Select initialization failed for store filter:', e);
+            }
+        }
+    } else {
+        console.warn('TomSelect library not loaded on Selling Voucher page');
+    }
+
+    // Add / Edit Selling Voucher modals: Tom Select instances (payment, client, store)
+    var addModalTomSelectInstances = { payment: null, client: null, store: null };
+    var editModalTomSelectInstances = { payment: null, client: null, store: null };
+
+    function destroyAddModalTomSelects() {
+        // Destroy tracked instances (payment, client, store, item selects only)
+        if (addModalTomSelectInstances.payment) {
+            try { addModalTomSelectInstances.payment.destroy(); } catch (e) {}
+            addModalTomSelectInstances.payment = null;
+        }
+        if (addModalTomSelectInstances.client) {
+            try { addModalTomSelectInstances.client.destroy(); } catch (e) {}
+            addModalTomSelectInstances.client = null;
+        }
+        if (addModalTomSelectInstances.store) {
+            try { addModalTomSelectInstances.store.destroy(); } catch (e) {}
+            addModalTomSelectInstances.store = null;
+        }
+        document.querySelectorAll('#addSellingVoucherModal select').forEach(function(el) {
+            if (el.tomselect) {
+                try { el.tomselect.destroy(); } catch (e) {}
+            }
+        });
+    }
+
+    function destroyEditModalTomSelects() {
+        // Destroy tracked instances for Edit modal
+        if (editModalTomSelectInstances.payment) {
+            try { editModalTomSelectInstances.payment.destroy(); } catch (e) {}
+            editModalTomSelectInstances.payment = null;
+        }
+        if (editModalTomSelectInstances.client) {
+            try { editModalTomSelectInstances.client.destroy(); } catch (e) {}
+            editModalTomSelectInstances.client = null;
+        }
+        if (editModalTomSelectInstances.store) {
+            try { editModalTomSelectInstances.store.destroy(); } catch (e) {}
+            editModalTomSelectInstances.store = null;
+        }
+        document.querySelectorAll('#editSellingVoucherModal select').forEach(function(el) {
+            if (el.tomselect) {
+                try { el.tomselect.destroy(); } catch (e) {}
+            }
+        });
+    }
+
+    // Show/hide select (or its Tom Select wrapper) so only one Name dropdown is visible at a time
+    function setSelectVisible(select, visible) {
+        if (!select) return;
+        var wrapper = (select.tomselect && select.tomselect.wrapper) || (select.parentElement && select.parentElement.classList && select.parentElement.classList.contains('ts-wrapper') ? select.parentElement : null);
+        if (wrapper) {
+            wrapper.style.display = visible ? '' : 'none';
+        } else {
+            select.style.display = visible ? 'block' : 'none';
+        }
+    }
+
+    function initAddModalTomSelects() {
+        if (typeof TomSelect === 'undefined') return;
+        var modal = document.getElementById('addSellingVoucherModal');
+        if (!modal) return;
+        var paymentSel = modal.querySelector('select[name="payment_type"]');
+        if (paymentSel && !paymentSel.tomselect) {
+            addModalTomSelectInstances.payment = new TomSelect(paymentSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Payment Type' });
+        }
+        var clientSel = document.getElementById('modalClientNameSelect');
+        if (clientSel && !clientSel.tomselect) {
+            addModalTomSelectInstances.client = new TomSelect(clientSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Client Name' });
+        }
+        var storeSel = modal.querySelector('select[name="store_id"]');
+        if (storeSel && !storeSel.tomselect) {
+            addModalTomSelectInstances.store = new TomSelect(storeSel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: 'Select Store' });
+        }
+        // Name-related dropdowns: Tom Select with search; visibility controlled by setSelectVisible
+        var nameSelectIds = ['modalFacultySelect', 'modalAcademyStaffSelect', 'modalMessStaffSelect', 'modalOtStudentSelect', 'modalOtCourseSelect', 'modalCourseSelect', 'modalCourseNameSelect'];
+        nameSelectIds.forEach(function(id) {
+            var sel = document.getElementById(id);
+            if (sel && !sel.tomselect) {
+                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: sel.id.indexOf('Faculty') !== -1 ? 'Select Faculty' : sel.id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : sel.id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : sel.id.indexOf('OtStudent') !== -1 ? 'Select Student' : 'Select Course' });
+            }
+        });
+        modal.querySelectorAll('#modalItemsBody .sv-item-select').forEach(function(select) {
+            if (select.tomselect) return;
+            new TomSelect(select, {
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                placeholder: 'Select Item',
+                maxOptions: null
+            });
+        });
+        // Client Name & Name columns: hide until a Client Type is selected
+        var clientNameWrap = document.getElementById('modalClientNameWrap');
+        var nameFieldWrap = document.getElementById('modalNameFieldWrap');
+        var clientTypeChecked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
+        if (clientNameWrap && nameFieldWrap) {
+            if (clientTypeChecked) {
+                clientNameWrap.style.display = '';
+                nameFieldWrap.style.display = '';
+                if (typeof updateModalNameField === 'function') updateModalNameField();
+            } else {
+                clientNameWrap.style.display = 'none';
+                nameFieldWrap.style.display = 'none';
+            }
+        } else if (typeof updateModalNameField === 'function') {
+            updateModalNameField();
+        }
+    }
+
+    function initEditModalTomSelects() {
+        if (typeof TomSelect === 'undefined') return;
+        var modal = document.getElementById('editSellingVoucherModal');
+        if (!modal) return;
+
+        // Payment Type
+        var paymentSel = modal.querySelector('select.edit-payment-type');
+        if (paymentSel && !paymentSel.tomselect) {
+            editModalTomSelectInstances.payment = new TomSelect(paymentSel, {
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                placeholder: 'Payment Type'
+            });
+        }
+
+        // Client Name
+        var clientSel = document.getElementById('editClientNameSelect');
+        if (clientSel && !clientSel.tomselect) {
+            editModalTomSelectInstances.client = new TomSelect(clientSel, {
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                placeholder: 'Select Client Name'
+            });
+        }
+
+        // Store
+        var storeSel = modal.querySelector('select.edit-store');
+        if (storeSel && !storeSel.tomselect) {
+            editModalTomSelectInstances.store = new TomSelect(storeSel, {
+                allowEmptyOption: true,
+                dropdownParent: 'body',
+                placeholder: 'Select Store'
+            });
+        }
+
+        // Name-related dropdowns (Faculty, Academy Staff, Mess Staff, OT Course, Course, Course Name)
+        var editNameSelectIds = ['editModalFacultySelect', 'editModalAcademyStaffSelect', 'editModalMessStaffSelect', 'editModalOtCourseSelect', 'editModalCourseSelect', 'editModalCourseNameSelect'];
+        editNameSelectIds.forEach(function(id) {
+            var sel = document.getElementById(id);
+            if (sel && !sel.tomselect) {
+                var placeholder = id.indexOf('Faculty') !== -1 ? 'Select Faculty' : id.indexOf('Academy') !== -1 ? 'Select Academy Staff' : id.indexOf('Mess') !== -1 ? 'Select Mess Staff' : 'Select Course';
+                new TomSelect(sel, { allowEmptyOption: true, dropdownParent: 'body', placeholder: placeholder });
+            }
+        });
+    }
+
+    // After Tom Select init in Edit modal: show only the active dropdown in Client Name column (hide OT Course / Course when Client Name is active, and vice versa)
+    function applyEditModalClientNameColumnVisibility() {
+        var radio = document.querySelector('#editSellingVoucherModal .edit-client-type-radio:checked');
+        var clientSelect = document.getElementById('editClientNameSelect');
+        var otCourseSelect = document.getElementById('editModalOtCourseSelect');
+        var editCourseSelect = document.getElementById('editModalCourseSelect');
+        if (!radio || !clientSelect) return;
+        var isOt = (radio.value || '').toLowerCase() === 'ot';
+        var isCourse = (radio.value || '').toLowerCase() === 'course';
+        if (isOt) {
+            setSelectVisible(clientSelect, false);
+            if (otCourseSelect) setSelectVisible(otCourseSelect, true);
+            if (editCourseSelect) setSelectVisible(editCourseSelect, false);
+        } else if (isCourse) {
+            setSelectVisible(clientSelect, false);
+            if (otCourseSelect) setSelectVisible(otCourseSelect, false);
+            if (editCourseSelect) setSelectVisible(editCourseSelect, true);
+        } else {
+            setSelectVisible(clientSelect, true);
+            if (otCourseSelect) setSelectVisible(otCourseSelect, false);
+            if (editCourseSelect) setSelectVisible(editCourseSelect, false);
+        }
+    }
 
     // Filter: End Date must not be before Start Date
     var filterStart = document.getElementById('filter_start_date');
@@ -788,12 +1025,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const qtyEl = row.querySelector('.sv-qty');
         if (!availEl || !qtyEl) return;
 
-        const avail = parseFloat(availEl.value) || 0;
+        let avail = parseFloat(availEl.value) || 0;
         const qtyRaw = qtyEl.value;
         const qty = parseFloat(qtyRaw);
 
+        // In edit modal: effective available = current stock + this row's original issue qty
+        // (so saving without changes does not fail when current stock already reflects the voucher)
+        const isEditRow = row.closest('#editModalItemsBody') !== null;
+        const originalQty = isEditRow ? (parseFloat(row.getAttribute('data-original-qty')) || 0) : 0;
+        const effectiveAvail = isEditRow ? (avail + originalQty) : avail;
+
         // Keep browser constraint in sync
-        qtyEl.max = String(avail);
+        qtyEl.max = String(effectiveAvail);
 
         // If empty, don't force an error yet
         if (qtyRaw === '' || Number.isNaN(qty)) {
@@ -802,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (qty > avail) {
+        if (qty > effectiveAvail) {
             qtyEl.setCustomValidity('Issue Qty cannot exceed Available Qty.');
             qtyEl.classList.add('is-invalid');
         } else {
@@ -872,10 +1115,11 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.forEach(row => {
             const select = row.querySelector('.sv-item-select');
             if (!select) return;
-            
+            if (select.tomselect) {
+                select.tomselect.destroy();
+            }
             const currentValue = select.value;
             select.innerHTML = '<option value="">Select Item</option>';
-            
             filteredItems.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item.id;
@@ -891,7 +1135,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 select.appendChild(option);
             });
-            
+            if (typeof TomSelect !== 'undefined') {
+                new TomSelect(select, {
+                    allowEmptyOption: true,
+                    dropdownParent: 'body',
+                    placeholder: 'Select Item',
+                    maxOptions: null
+                });
+            }
             updateUnit(row);
         });
     }
@@ -926,7 +1177,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (rateInp && opt && opt.dataset.rate) rateInp.value = opt.dataset.rate;
         if (availInp && opt && opt.dataset.available) availInp.value = opt.dataset.available;
         if (availInp) availInp.readOnly = true;
-        refreshAllAvailable();
+        if (row.closest('#editModalItemsBody')) {
+            refreshEditAllAvailable();
+        } else {
+            refreshAllAvailable();
+        }
         enforceQtyWithinAvailable(row);
     }
 
@@ -1018,6 +1273,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 tbody.insertAdjacentHTML('beforeend', getRowHtml(rowIndex));
                 rowIndex++;
                 updateRemoveButtons();
+                var newRow = tbody.querySelector('.sv-item-row:last-child');
+                var newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
+                if (newSelect && typeof TomSelect !== 'undefined') {
+                    new TomSelect(newSelect, {
+                        allowEmptyOption: true,
+                        dropdownParent: 'body',
+                        placeholder: 'Select Item',
+                        maxOptions: null
+                    });
+                }
             }
         });
     }
@@ -1086,7 +1351,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const creditOnly = ['employee', 'ot', 'course'];
     function updateModalNameField() {
         const clientTypeRadio = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
         const clientNameSelect = document.getElementById('modalClientNameSelect');
@@ -1113,49 +1377,41 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isOt) {
             nameInput.style.display = 'none';
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'block'; }
-            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, true); }
+            if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
         } else if (isCourse) {
-            // Course: Name field is manual text input (like Section), not dropdown
             nameInput.style.display = 'block';
             nameInput.placeholder = 'Course name';
             nameInput.setAttribute('required', 'required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { courseSelect.style.display = 'block'; }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            if (courseSelect) { setSelectVisible(courseSelect, true); }
+            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (!sel) return;
                 const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
+                setSelectVisible(sel, show);
                 sel.removeAttribute('required');
                 if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
             });
-            if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
-            if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.value = ''; courseSelect.removeAttribute('required'); }
-            if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
+            if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.value = ''; otStudentSelect.removeAttribute('required'); }
+            if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.value = ''; courseSelect.removeAttribute('required'); }
+            if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.value = ''; courseNameSelect.removeAttribute('required'); }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
     document.querySelectorAll('#addSellingVoucherModal .client-type-radio').forEach(function(radio) {
         radio.addEventListener('change', function() {
-            const paymentSelect = document.querySelector('#addSellingVoucherModal select[name="payment_type"]');
-            const hint = document.getElementById('modalPaymentTypeHint');
-            if (creditOnly.indexOf(this.value) !== -1) {
-                if (paymentSelect) paymentSelect.value = '1';
-                paymentSelect && paymentSelect.querySelectorAll('option').forEach(function(opt) {
-                    opt.disabled = (opt.value !== '' && opt.value !== '1');
-                });
-                if (hint) hint.textContent = 'Credit only for this client type';
-            } else {
-                paymentSelect && paymentSelect.querySelectorAll('option').forEach(function(opt) { opt.disabled = false; });
-                if (hint) hint.textContent = 'Cash / Online / Credit';
-            }
+            // Show Client Name & Name columns as soon as a Client Type is selected
+            var clientNameWrap = document.getElementById('modalClientNameWrap');
+            var nameFieldWrap = document.getElementById('modalNameFieldWrap');
+            if (clientNameWrap) clientNameWrap.style.display = '';
+            if (nameFieldWrap) nameFieldWrap.style.display = '';
             const isOt = (this.value || '').toLowerCase() === 'ot';
             const isCourse = (this.value || '').toLowerCase() === 'course';
             const clientSelect = document.getElementById('modalClientNameSelect');
@@ -1165,25 +1421,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const courseNameSelect = document.getElementById('modalCourseNameSelect');
             const nameInput = document.getElementById('modalClientNameInput');
             if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'block'; otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (clientSelect) { setSelectVisible(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { setSelectVisible(otCourseSelect, true); otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { setSelectVisible(otStudentSelect, true); otStudentSelect.innerHTML = '<option value="">Select course first</option>'; otStudentSelect.setAttribute('required', 'required'); otStudentSelect.value = ''; }
+                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.removeAttribute('name'); courseSelect.value = ''; }
+                if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'none'; nameInput.value = ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'block'; courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (clientSelect) { setSelectVisible(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                if (courseSelect) { setSelectVisible(courseSelect, true); courseSelect.setAttribute('required', 'required'); courseSelect.setAttribute('name', 'client_type_pk'); courseSelect.value = ''; }
+                if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.value = ''; nameInput.placeholder = 'Course name'; nameInput.setAttribute('required', 'required'); }
             } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (otStudentSelect) { otStudentSelect.style.display = 'none'; otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
-                if (courseSelect) { courseSelect.style.display = 'none'; courseSelect.removeAttribute('required'); courseSelect.value = ''; }
-                if (courseNameSelect) { courseNameSelect.style.display = 'none'; courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
+                if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
+                if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (otStudentSelect) { setSelectVisible(otStudentSelect, false); otStudentSelect.removeAttribute('required'); otStudentSelect.innerHTML = '<option value="">Select Student</option>'; otStudentSelect.value = ''; }
+                if (courseSelect) { setSelectVisible(courseSelect, false); courseSelect.removeAttribute('required'); courseSelect.value = ''; }
+                if (courseNameSelect) { setSelectVisible(courseNameSelect, false); courseNameSelect.removeAttribute('required'); courseNameSelect.value = ''; }
                 if (clientSelect) {
                     clientSelect.querySelectorAll('option').forEach(function(opt) {
                         if (opt.value === '') { opt.hidden = false; return; }
@@ -1195,6 +1451,13 @@ document.addEventListener('DOMContentLoaded', function() {
             updateModalNameField();
         });
     });
+    function reinitNameSelectTomSelect(select, placeholder) {
+        if (!select || typeof TomSelect === 'undefined') return;
+        if (select.tomselect) {
+            try { select.tomselect.destroy(); } catch (e) {}
+        }
+        new TomSelect(select, { allowEmptyOption: true, dropdownParent: 'body', placeholder: placeholder || 'Select' });
+    }
     const modalOtCourseSelect = document.getElementById('modalOtCourseSelect');
     if (modalOtCourseSelect) {
         modalOtCourseSelect.addEventListener('change', function() {
@@ -1202,12 +1465,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const otStudentSelect = document.getElementById('modalOtStudentSelect');
             const nameInput = document.getElementById('modalClientNameInput');
             if (!otStudentSelect || !nameInput) return;
+            if (otStudentSelect.tomselect) { try { otStudentSelect.tomselect.destroy(); } catch (e) {} }
             otStudentSelect.innerHTML = '<option value="">Loading...</option>';
             otStudentSelect.value = '';
             const selectedOpt = this.options[this.selectedIndex];
             nameInput.value = (selectedOpt && selectedOpt.dataset.courseName) ? selectedOpt.dataset.courseName : '';
             if (!coursePk) {
                 otStudentSelect.innerHTML = '<option value="">Select course first</option>';
+                reinitNameSelectTomSelect(otStudentSelect, 'Select Student');
+                setSelectVisible(otStudentSelect, true);
                 return;
             }
             fetch(editSvBaseUrl + '/students-by-course/' + coursePk, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
@@ -1220,8 +1486,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         opt.textContent = s.display_name || '—';
                         otStudentSelect.appendChild(opt);
                     });
+                    reinitNameSelectTomSelect(otStudentSelect, 'Select Student');
+                    setSelectVisible(otStudentSelect, true);
                 })
-                .catch(function() { otStudentSelect.innerHTML = '<option value="">Error loading students</option>'; });
+                .catch(function() {
+                    otStudentSelect.innerHTML = '<option value="">Error loading students</option>';
+                    reinitNameSelectTomSelect(otStudentSelect, 'Select Student');
+                    setSelectVisible(otStudentSelect, true);
+                });
         });
     }
     
@@ -1294,30 +1566,30 @@ document.addEventListener('DOMContentLoaded', function() {
             nameInput.style.display = 'block';
             nameInput.readOnly = true;
             nameInput.removeAttribute('required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
-            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (editCourseSelect) { setSelectVisible(editCourseSelect, false); editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
+            if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
         } else if (isCourse) {
             nameInput.style.display = 'block';
             nameInput.placeholder = 'Course name';
             nameInput.removeAttribute('readonly');
             nameInput.readOnly = false;
             nameInput.setAttribute('required', 'required');
-            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { sel.style.display = 'none'; sel.value = ''; sel.removeAttribute('required'); } });
-            if (editCourseSelect) { editCourseSelect.style.display = 'block'; }
-            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+            [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) { if (sel) { setSelectVisible(sel, false); sel.value = ''; sel.removeAttribute('required'); } });
+            if (editCourseSelect) { setSelectVisible(editCourseSelect, true); }
+            if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
         } else {
             nameInput.style.display = showAny ? 'none' : 'block';
             nameInput.removeAttribute('required');
             [facultySelect, academyStaffSelect, messStaffSelect].forEach(function(sel) {
                 if (!sel) return;
                 const show = sel === facultySelect ? showFaculty : (sel === academyStaffSelect ? showAcademyStaff : showMessStaff);
-                sel.style.display = show ? 'block' : 'none';
+                setSelectVisible(sel, show);
                 sel.removeAttribute('required');
                 if (show) { sel.setAttribute('required', 'required'); sel.value = nameInput.value || ''; if (sel.value) nameInput.value = sel.value; } else sel.value = '';
             });
-            if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
-            if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.value = ''; editCourseNameSelect.removeAttribute('required'); }
+            if (editCourseSelect) { setSelectVisible(editCourseSelect, false); editCourseSelect.value = ''; editCourseSelect.removeAttribute('required'); }
+            if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.value = ''; editCourseNameSelect.removeAttribute('required'); }
             if (!showAny) nameInput.setAttribute('required', 'required');
         }
     }
@@ -1331,22 +1603,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const editCourseNameSelect = document.getElementById('editModalCourseNameSelect');
             const nameInput = document.getElementById('editModalClientNameInput');
             if (isOt) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'block'; otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
-                if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (clientSelect) { setSelectVisible(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { setSelectVisible(otCourseSelect, true); otCourseSelect.setAttribute('required', 'required'); otCourseSelect.setAttribute('name', 'client_type_pk'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { setSelectVisible(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = true; nameInput.placeholder = 'Select course above'; nameInput.value = nameInput.value || ''; nameInput.removeAttribute('required'); }
             } else if (isCourse) {
-                if (clientSelect) { clientSelect.style.display = 'none'; clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (editCourseSelect) { editCourseSelect.style.display = 'block'; editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
-                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (clientSelect) { setSelectVisible(clientSelect, false); clientSelect.removeAttribute('required'); clientSelect.value = ''; clientSelect.removeAttribute('name'); }
+                if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { setSelectVisible(editCourseSelect, true); editCourseSelect.setAttribute('required', 'required'); editCourseSelect.setAttribute('name', 'client_type_pk'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                 if (nameInput) { nameInput.style.display = 'block'; nameInput.readOnly = false; nameInput.placeholder = 'Course name'; nameInput.value = nameInput.value || ''; nameInput.setAttribute('required', 'required'); }
             } else {
-                if (clientSelect) { clientSelect.style.display = 'block'; clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
-                if (otCourseSelect) { otCourseSelect.style.display = 'none'; otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
-                if (editCourseSelect) { editCourseSelect.style.display = 'none'; editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
-                if (editCourseNameSelect) { editCourseNameSelect.style.display = 'none'; editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
+                if (clientSelect) { setSelectVisible(clientSelect, true); clientSelect.setAttribute('required', 'required'); clientSelect.setAttribute('name', 'client_type_pk'); }
+                if (otCourseSelect) { setSelectVisible(otCourseSelect, false); otCourseSelect.removeAttribute('required'); otCourseSelect.removeAttribute('name'); otCourseSelect.value = ''; }
+                if (editCourseSelect) { setSelectVisible(editCourseSelect, false); editCourseSelect.removeAttribute('required'); editCourseSelect.removeAttribute('name'); editCourseSelect.value = ''; }
+                if (editCourseNameSelect) { setSelectVisible(editCourseNameSelect, false); editCourseNameSelect.removeAttribute('required'); editCourseNameSelect.value = ''; }
                 if (clientSelect) {
                     clientSelect.querySelectorAll('option').forEach(function(opt) {
                         if (opt.value === '') { opt.hidden = false; return; }
@@ -1414,7 +1686,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const total = item ? item.amount : '';
         const unit = item ? (item.unit || '') : '';
         const left = item && (avail - qty) >= 0 ? (avail - qty) : 0;
-        return '<tr class="sv-item-row edit-sv-item-row">' +
+        const originalQtyAttr = item ? (' data-original-qty="' + (parseFloat(item.quantity) || 0) + '"') : '';
+        return '<tr class="sv-item-row edit-sv-item-row"' + originalQtyAttr + '>' +
             '<td><select name="items[' + index + '][item_subcategory_id]" class="form-select form-select-sm sv-item-select" required><option value="">Select Item</option>' + options + '</select></td>' +
             '<td><input type="text" name="items[' + index + '][unit]" class="form-control  sv-unit" readonly placeholder="—" value="' + (unit || '') + '"></td>' +
             '<td><input type="number" name="items[' + index + '][available_quantity]" class="form-control  sv-avail bg-light" step="0.01" min="0" value="' + avail + '" placeholder="0" readonly></td>' +
@@ -1444,6 +1717,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    /**
+     * Recalculate Available Qty and Left Qty for all rows in the Edit modal.
+     * Effective base per item = current stock + sum of original qtys (from this voucher) for that item.
+     * Then each row gets available = base - already used in previous rows (same logic as Add mode).
+     */
+    function refreshEditAllAvailable() {
+        const rows = document.querySelectorAll('#editModalItemsBody .sv-item-row');
+        if (!rows.length) return;
+
+        const effectiveBaseByItem = {};
+        rows.forEach(function(row) {
+            const select = row.querySelector('.sv-item-select');
+            const itemId = select ? select.value : '';
+            if (!itemId) return;
+            const originalQty = parseFloat(row.getAttribute('data-original-qty')) || 0;
+            if (!effectiveBaseByItem.hasOwnProperty(itemId)) {
+                effectiveBaseByItem[itemId] = getBaseAvailableForItem(itemId);
+            }
+            effectiveBaseByItem[itemId] += originalQty;
+        });
+
+        const usedByItem = {};
+        rows.forEach(function(row) {
+            const select = row.querySelector('.sv-item-select');
+            const itemId = select ? select.value : '';
+            const availInp = row.querySelector('.sv-avail');
+            const leftInp = row.querySelector('.sv-left');
+            if (!itemId || !availInp) return;
+
+            const effectiveBase = effectiveBaseByItem[itemId] != null ? effectiveBaseByItem[itemId] : getBaseAvailableForItem(itemId);
+            const alreadyUsed = usedByItem[itemId] || 0;
+            const availableForRow = Math.max(0, effectiveBase - alreadyUsed);
+
+            availInp.value = availableForRow.toFixed(2);
+
+            const qty = parseFloat(row.querySelector('.sv-qty').value) || 0;
+            if (leftInp) {
+                leftInp.value = Math.max(0, availableForRow - qty).toFixed(2);
+            }
+
+            usedByItem[itemId] = alreadyUsed + qty;
+            enforceQtyWithinAvailable(row);
+        });
+    }
+
     function updateEditItemDropdowns() {
         const rows = document.querySelectorAll('#editModalItemsBody .sv-item-row');
         rows.forEach(row => {
@@ -1469,7 +1787,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 select.appendChild(option);
             });
-
+            if (typeof TomSelect !== 'undefined') {
+                if (select.tomselect) {
+                    try { select.tomselect.destroy(); } catch (e) {}
+                }
+                new TomSelect(select, {
+                    allowEmptyOption: true,
+                    dropdownParent: '#editSellingVoucherModal .modal-body',
+                    placeholder: 'Select Item',
+                    maxOptions: null
+                });
+            }
             updateUnit(row);
         });
         updateEditGrandTotal();
@@ -1488,7 +1816,22 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             editRowIndex = items.length;
         }
+        // Initialize Tom Select on Edit modal item selects
+        if (typeof TomSelect !== 'undefined') {
+            tbody.querySelectorAll('.sv-item-select').forEach(function(select) {
+                if (select.tomselect) {
+                    try { select.tomselect.destroy(); } catch (e) {}
+                }
+                new TomSelect(select, {
+                    allowEmptyOption: true,
+                    dropdownParent: '#editSellingVoucherModal .modal-body',
+                    placeholder: 'Select Item',
+                    maxOptions: null
+                });
+            });
+        }
         updateEditRemoveButtons();
+        refreshEditAllAvailable();
         updateEditGrandTotal();
     }
 
@@ -1751,6 +2094,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     var editSvBillFileInputEl = document.getElementById('editSvBillFileInput');
                     if (editSvBillFileInputEl) editSvBillFileInputEl.value = '';
+                    var editRemoveBillFlagEl = document.getElementById('editRemoveBillFlag');
+                    if (editRemoveBillFlagEl) editRemoveBillFlagEl.value = '0';
                     var editBillLinkEl = document.getElementById('editCurrentBillLink');
                     if (editBillLinkEl) {
                         if (v.bill_url) {
@@ -1762,6 +2107,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     editCurrentStoreId = storeSelect ? storeSelect.value || '' : null;
                     const openEditModalWithItems = function() {
                         buildEditItemsTable(items);
+                        // Initialize Tom Select in Edit modal (payment, client, store, name dropdowns, item selects)
+                        if (typeof initEditModalTomSelects === 'function') {
+                            initEditModalTomSelects();
+                        }
+                        // After Tom Select init, show only the active dropdowns in Client Name column and Name column
+                        if (typeof applyEditModalClientNameColumnVisibility === 'function') {
+                            applyEditModalClientNameColumnVisibility();
+                        }
+                        if (typeof updateEditModalNameField === 'function') {
+                            updateEditModalNameField();
+                        }
                         const modal = new bootstrap.Modal(document.getElementById('editSellingVoucherModal'));
                         modal.show();
                     };
@@ -1816,9 +2172,52 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tbody) {
                 tbody.insertAdjacentHTML('beforeend', getEditRowHtml(editRowIndex, null));
                 editRowIndex++;
+                const newRow = tbody.querySelector('.sv-item-row:last-child');
+                const newSelect = newRow ? newRow.querySelector('.sv-item-select') : null;
+                if (newSelect && typeof TomSelect !== 'undefined') {
+                    if (newSelect.tomselect) {
+                        try { newSelect.tomselect.destroy(); } catch (e) {}
+                    }
+                    new TomSelect(newSelect, {
+                        allowEmptyOption: true,
+                        dropdownParent: '#editSellingVoucherModal .modal-body',
+                        placeholder: 'Select Item',
+                        maxOptions: null
+                    });
+                }
                 updateEditRemoveButtons();
+                refreshEditAllAvailable();
                 updateEditGrandTotal();
             }
+        });
+    }
+
+    // Add modal: show selected bill file name and Remove button
+    var addSvBillFileInputEl = document.getElementById('addSvBillFileInput');
+    if (addSvBillFileInputEl) {
+        addSvBillFileInputEl.addEventListener('change', function() {
+            var wrap = document.getElementById('addSvBillFileChosenWrap');
+            var nameEl = document.getElementById('addSvBillFileChosenName');
+            if (wrap && nameEl) {
+                if (this.files && this.files[0]) {
+                    nameEl.textContent = this.files[0].name;
+                    wrap.classList.remove('d-none');
+                } else {
+                    nameEl.textContent = '';
+                    wrap.classList.add('d-none');
+                }
+            }
+        });
+    }
+    var addSvBillFileRemoveEl = document.getElementById('addSvBillFileRemove');
+    if (addSvBillFileRemoveEl) {
+        addSvBillFileRemoveEl.addEventListener('click', function() {
+            var input = document.getElementById('addSvBillFileInput');
+            var wrap = document.getElementById('addSvBillFileChosenWrap');
+            var nameEl = document.getElementById('addSvBillFileChosenName');
+            if (input) input.value = '';
+            if (nameEl) nameEl.textContent = '';
+            if (wrap) wrap.classList.add('d-none');
         });
     }
 
@@ -1827,7 +2226,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editSvBillFileInputEl) {
         editSvBillFileInputEl.addEventListener('change', function() {
             var pathEl = document.getElementById('editBillCurrentFileName');
+            var removeFlag = document.getElementById('editRemoveBillFlag');
             if (pathEl) pathEl.textContent = this.files && this.files[0] ? this.files[0].name : 'No file chosen';
+            if (removeFlag) removeFlag.value = '0';
+        });
+    }
+    var editSvBillFileRemoveEl = document.getElementById('editSvBillFileRemove');
+    if (editSvBillFileRemoveEl) {
+        editSvBillFileRemoveEl.addEventListener('click', function() {
+            var input = document.getElementById('editSvBillFileInput');
+            var pathEl = document.getElementById('editBillCurrentFileName');
+            var removeFlag = document.getElementById('editRemoveBillFlag');
+            if (input) input.value = '';
+            if (pathEl) pathEl.textContent = 'No file chosen';
+            if (removeFlag) removeFlag.value = '1';
         });
     }
 
@@ -1843,7 +2255,11 @@ document.addEventListener('DOMContentLoaded', function() {
         editModalItemsBody.addEventListener('input', function(e) {
             if (e.target.classList.contains('sv-avail') || e.target.classList.contains('sv-qty') || e.target.classList.contains('sv-rate')) {
                 const row = e.target.closest('.sv-item-row');
-                if (row) { enforceQtyWithinAvailable(row); calcRow(row); updateEditGrandTotal(); }
+                if (row) {
+                    refreshEditAllAvailable();
+                    calcRow(row);
+                    updateEditGrandTotal();
+                }
             }
         });
         
@@ -1852,6 +2268,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const row = e.target.closest('.sv-item-row');
                 if (row && document.querySelectorAll('#editModalItemsBody .sv-item-row').length > 1) {
                     row.remove();
+                    refreshEditAllAvailable();
                     updateEditGrandTotal();
                     updateEditRemoveButtons();
                 }
@@ -1876,9 +2293,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Reset add selling voucher modal when opened
+    // Reset add selling voucher modal when closed (so next open starts fresh)
     const addSellingVoucherModal = document.getElementById('addSellingVoucherModal');
     if (addSellingVoucherModal) {
+        addSellingVoucherModal.addEventListener('hidden.bs.modal', function() {
+            destroyAddModalTomSelects();
+            const form = document.getElementById('sellingVoucherModalForm');
+            if (form) {
+                form.reset();
+                form.classList.remove('was-validated');
+                form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+            }
+            const storeSel = addSellingVoucherModal.querySelector('select[name="store_id"]');
+            if (storeSel) storeSel.value = '';
+            const issueDateInp = addSellingVoucherModal.querySelector('input[name="issue_date"]');
+            if (issueDateInp) issueDateInp.value = new Date().toISOString().slice(0, 10);
+            const paymentSel = addSellingVoucherModal.querySelector('select[name="payment_type"]');
+            if (paymentSel) paymentSel.value = '1';
+            const empRadio = addSellingVoucherModal.querySelector('.client-type-radio[value="employee"]');
+            if (empRadio) { empRadio.checked = true; empRadio.dispatchEvent(new Event('change')); }
+            const clientPkSel = addSellingVoucherModal.querySelector('#modalClientNameSelect');
+            if (clientPkSel) clientPkSel.value = '';
+            const clientNameInp = document.getElementById('modalClientNameInput');
+            if (clientNameInp) clientNameInp.value = '';
+            addSellingVoucherModal.querySelectorAll('#modalClientNameWrap select, #modalNameFieldWrap select').forEach(function(s) { if (s.value !== undefined) s.value = ''; });
+            const billInput = document.getElementById('addSvBillFileInput');
+            if (billInput) billInput.value = '';
+            const billWrap = document.getElementById('addSvBillFileChosenWrap');
+            const billName = document.getElementById('addSvBillFileChosenName');
+            if (billWrap) billWrap.classList.add('d-none');
+            if (billName) billName.textContent = '';
+            const tbody = document.getElementById('modalItemsBody');
+            if (tbody) {
+                tbody.innerHTML = getRowHtml(0);
+                rowIndex = 1;
+                updateRemoveButtons();
+            }
+            const grandTotalEl = document.getElementById('modalGrandTotal');
+            if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+        });
+
         addSellingVoucherModal.addEventListener('show.bs.modal', function() {
             const storeSelect = addSellingVoucherModal.querySelector('select[name="store_id"]');
             const preSelectedStore = storeSelect ? storeSelect.value : null;
@@ -1902,6 +2356,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         addSellingVoucherModal.addEventListener('shown.bs.modal', function() {
+            initAddModalTomSelects();
             refreshAllAvailable();
             document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });
             updateGrandTotal();

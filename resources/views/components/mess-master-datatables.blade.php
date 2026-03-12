@@ -28,6 +28,24 @@ document.addEventListener('DOMContentLoaded', function() {
     var $table = $('#{{ $tableId }}');
     if (!$table.length || $.fn.DataTable.isDataTable($table)) return;
 
+    // DataTables does not support colspan/rowspan cells inside <tbody>.
+    // Many mess tables render a single "no data" row with colspan when empty,
+    // which causes "Incorrect column count" / "Requested unknown parameter" warnings.
+    // Strip such rows (or any row whose cell count doesn't match header columns)
+    // before initializing, so DataTables works cleanly with empty tables.
+    var $firstHeaderRow = $table.find('thead tr').first();
+    var expectedCols = $firstHeaderRow.children('th,td').length || 0;
+    if (expectedCols > 0) {
+        $table.find('tbody tr').each(function () {
+            var $cells = $(this).children('th,td');
+            if (!$cells.length) return;
+            var hasSpan = $cells.is('[colspan],[rowspan]');
+            if (hasSpan || (expectedCols && $cells.length !== expectedCols)) {
+                $(this).remove();
+            }
+        });
+    }
+
     var order = {!! json_encode($ordering ? (is_array($orderColumn) ? $orderColumn : [[$orderColumn, $orderDir]]) : []) !!};
     var columnDefs = {!! json_encode($columnDefs) !!};
     var lengthMenu = {!! json_encode($lengthMenu) !!};
@@ -46,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
             lengthMenu: 'Show _MENU_ entries',
             info: 'Showing _START_ to _END_ of _TOTAL_ {{ $infoLabel }}',
             infoEmpty: 'No {{ $infoLabel }}',
+            emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
             paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
         },
