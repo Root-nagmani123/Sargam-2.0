@@ -160,7 +160,7 @@ $(document).on('mousedown', 'select[data-readonly]', function (e) {
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
-    
+
     let column = $checkbox.data('column');
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
@@ -312,17 +312,23 @@ document.addEventListener('DOMContentLoaded', function () {
         this.value = this.value.replace(/\D/g, '');
     });
 
+
     function updateFullName() {
+        // Get the display name (text) of the selected appellation, not the value (pk)
+        let appellation = $('select[name="appellation"] option:selected').text().trim();
         const first = $('input[name="firstName"]').val().trim();
         const middle = $('input[name="middlename"]').val().trim();
         const last = $('input[name="lastname"]').val().trim();
 
         // Construct full name, skipping empty values
-        const fullName = [first, middle, last].filter(Boolean).join(' ');
-        $('input[name="fullname"]').val(fullName);
+        let fullname = [appellation, first, middle, last].filter(Boolean).join(' ');
+        $('input[name="fullname"]').val(fullname);
     }
 
-    $('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
+    //$('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
+
+    $('select[name="appellation"], input[name="firstName"], input[name="middlename"], input[name="lastname"]')
+.on('keyup change', updateFullName);
 
     $('#saveFacultyForm').click(function (e) {
         const $btn = $(this);
@@ -336,6 +342,14 @@ document.addEventListener('DOMContentLoaded', function () {
         $('span.text-danger').remove();
 
         let facultyType = $('select[name="facultytype"]').val();
+        let appellation = $('select[name="appellation"]').val();
+        // Validate appellation
+        if (!appellation) {
+            toastr.error('Please select an Appellation.');
+            $btn.prop('disabled', false);
+            $('select[name="appellation"]').addClass('is-invalid');
+            return;
+        }
         let firstName = $('input[name="firstName"]').val();
         let middleName = $('input[name="middlename"]').val();
         let lastName = $('input[name="lastname"]').val();
@@ -359,7 +373,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         let faculty_pa = $('input[name="faculty_pa"]').val();
 
-        formData.append('facultyType', facultyType);
+        formData.append('facultytype', facultyType);
+        formData.append('appellation', appellation);
         formData.append('firstName', firstName);
         formData.append('middlename', middleName);
         formData.append('lastname', lastName);
@@ -513,8 +528,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // current_sector
+       /* let currentSector = $('input[name="current_sector"]:checked').val();
+        formData.append('current_sector', currentSector);*/
+
         let currentSector = $('input[name="current_sector"]:checked').val();
-        formData.append('current_sector', currentSector);
+        if (typeof currentSector !== 'undefined' && currentSector !== null) {
+            formData.append('current_sector', currentSector);
+        }
 
         // append csrf token
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
@@ -1665,7 +1685,7 @@ $(document).on('change', '#from_date, #to_date', function () {
     // Only trigger if at least one date is selected
     let fromDate = $('#from_date').val();
     let toDate = $('#to_date').val();
-    
+
     if (fromDate || toDate) {
         performAttendanceSearch();
     }
@@ -1676,44 +1696,44 @@ $(document).on('click', '#resetAttendance', function () {
     // Clear date fields
     $('#from_date').val('');
     $('#to_date').val('');
-    
+
     // Reset course dropdown - if select2 is initialized, use select2 method
     if ($('#programme').hasClass('select2-hidden-accessible')) {
         $('#programme').val('').trigger('change.select2');
     } else {
         $('#programme').val('');
     }
-    
+
     // Reset attendance type to 'full_day'
     $('#full_day').prop('checked', true);
     $('input[name="attendance_type"]').trigger('change');
-    
+
     // Clear and hide session dropdowns
     if ($('#session').hasClass('select2-hidden-accessible')) {
         $('#session').val('').trigger('change.select2');
     } else {
         $('#session').val('');
     }
-    
+
     if ($('#manual_session').hasClass('select2-hidden-accessible')) {
         $('#manual_session').val('').trigger('change.select2');
     } else {
         $('#manual_session').val('');
     }
-    
+
     // Hide session containers
     $('#normal_session_container').hide();
     $('#manual_session_container').hide();
-    
+
     // Destroy DataTable if it exists
     if ($.fn.DataTable.isDataTable('#attendanceTable')) {
         attendanceTable.destroy();
         attendanceTable = null;
     }
-    
+
     // Restore default message row - show all elements with this ID
     $('#defaultMessageRow').show();
-    
+
     // If no default message row exists, the table body should be empty after destroy
     // DataTable destroy should restore original HTML, but ensure default message is visible
     if ($('#attendanceTable tbody tr').length === 0) {

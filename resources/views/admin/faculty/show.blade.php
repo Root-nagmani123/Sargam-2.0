@@ -80,7 +80,7 @@ width: 170px;
 
             <div class="col-md-10">
                 <div class="label-sm">Full Name:</div>
-                <div class="data-line">{{ $faculty->full_name }} ( {{ $faculty->faculty_code }} )</div>
+                <div class="data-line">{{-- {{ $faculty->appellation ? $faculty->appellation . ' ' : '' }} --}}{{ $faculty->full_name }} ( {{ $faculty->faculty_code }} )</div>
 
                 <div class="label-sm mt-3">Faculty Type:</div>
                 <div class="data-line">{{ $faculty->facultyTypeMaster->faculty_type_name }}</div>

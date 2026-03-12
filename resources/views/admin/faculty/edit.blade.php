@@ -132,6 +132,17 @@ $(document).ready(function() {
     $('select[name="facultytype"]').on('change', function() {
         toggleFacultyPaField();
     });
+
+    // Autofill logic for edit form (simulate what is in create)
+    window.fillFacultyForm = function(faculty) {
+        $("select[name='facultytype']").val(faculty.faculty_type ? String(faculty.faculty_type) : '').trigger('change');
+        $("select[name='appellation']").val(faculty.appellation ?? '').trigger('change');
+        $("input[name='faculty_pa']").val(faculty.faculty_pa ?? '');
+        $("input[name='faculty_code']").val(faculty.faculty_code);
+        $("input[name='landline']").val(faculty.landline_no);
+        $("input[name='mobile']").val(faculty.mobile_no);
+        // ...add more fields as needed
+    }
 });
 </script>
 @endsection

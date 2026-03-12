@@ -74,4 +74,10 @@ class FacultyMaster extends Model
     {
         $this->attributes['current_department_name'] = $value;
     }*/
+
+    public function appellation()
+    {
+        return $this->belongsTo(App\Models\AppellationMaster::class, 'appellation', 'pk');
+    }
+
 }

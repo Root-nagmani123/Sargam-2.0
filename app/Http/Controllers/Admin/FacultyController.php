@@ -1,5 +1,7 @@
 <?php
 
+
+
 namespace App\Http\Controllers\Admin;
 
 use Auth;
@@ -14,6 +16,7 @@ use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificat
 use App\DataTables\FacultyDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
+use App\Models\AppellationMaster;
 
 class FacultyController extends Controller
 {
@@ -31,12 +34,16 @@ class FacultyController extends Controller
         $district           = District::pluck('district_name', 'pk')->toArray();
         $city               = City::pluck('city_name', 'pk')->toArray();
 
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
         $years = [];
         for ($i = date('Y'); $i >= 1950; $i--) {
             $years[$i] = $i;
         }
 
-        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
+        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years', 'appellationMasterList'));
     }
 
     /**
@@ -49,15 +56,24 @@ class FacultyController extends Controller
     public function store(FacultyRequest $request)
     {
         try {
+            //dd($request->all());
             DB::beginTransaction();
-
+            Log::info('Faculty Store Request', $request->all());
             // Step 1: Prepare Faculty Details
+            // Get the display name for the appellation
+            $appellationName = null;
+            if ($request->appellation) {
+                $appellationName = AppellationMaster::where('pk', $request->appellation)->value('appettation_name');
+            }
+
             $facultyDetails = [
-                'faculty_type' => $request->facultyType,
+                'faculty_type' => $request->facultytype,
+                'appellation' => $request->appellation,
                 'first_name' => $request->firstName,
                 'middle_name' => $request->middlename,
                 'last_name' => $request->lastname,
                 'full_name' => trim(
+                    ($appellationName ? $appellationName . ' ' : '') .
                     $request->firstName . ' ' .
                     ($request->middlename ? $request->middlename . ' ' : '') .
                     $request->lastname
@@ -79,7 +95,8 @@ class FacultyController extends Controller
                 'IFSC_Code' => $request->ifsccode,
                 'PAN_No' => $request->pannumber,
                 'faculty_sector' => $request->current_sector,
-                'faculty_pa' => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
+                //'faculty_pa' => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
+                'faculty_pa' => $request->facultytype == '1' ? $request->faculty_pa : null,
                 'created_by' => Auth::id(),
                 'last_update' => now(),
                 'active_inactive' => 1,
@@ -141,7 +158,7 @@ class FacultyController extends Controller
                 $faculty->save();
             } else {
                 $faculty = FacultyMaster::create($facultyDetails);
-                $this->generateFacultyCode($faculty, $request->facultyType);
+                $this->generateFacultyCode($faculty, $request->facultytype);
             }
 
             // Step 2: Handle Qualification Details
@@ -523,13 +540,16 @@ class FacultyController extends Controller
         $state      = State::pluck('state_name', 'pk')->toArray();
         $district   = District::pluck('district_name', 'pk')->toArray();
         $city       = City::pluck('city_name', 'pk')->toArray();
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
         $years = [];
         for ($i = date('Y'); $i >= 1950; $i--) {
             $years[$i] = $i;
         }
 
         $facultExpertise = $faculty->facultyExpertiseMap->isNotEmpty() ? $faculty->facultyExpertiseMap->pluck('faculty_expertise_pk')->toArray() : [];
-        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years'));
+        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years', 'appellationMasterList'));
     }
 
     public function update(Request $request)
@@ -544,17 +564,29 @@ class FacultyController extends Controller
             # Step : 1
             // Store Faculty Details
 
+            // Get the display name for the appellation
+            $appellationName = null;
+            if ($request->appellation) {
+                $appellationName = AppellationMaster::where('pk', $request->appellation)->value('appettation_name');
+            }
+
             $facultyDetails = [
-                'faculty_type'  => $request->facultyType,
+                'faculty_type'  => $request->facultytype, // fixed: use correct key
+                'appellation'   => $request->appellation,
                 'first_name'    => $request->firstName,
                 'middle_name'   => $request->middlename,
                 'last_name'     => $request->lastname,
-                'full_name'     => $request->fullname,
+                'full_name'     => trim(
+                    ($appellationName ? $appellationName . ' ' : '') .
+                    $request->firstName . ' ' .
+                    ($request->middlename ? $request->middlename . ' ' : '') .
+                    $request->lastname
+                ),
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
-                'mobile_no'        => $request->mobile,
-              //  'current_designation'        => $request->current_designation,
-				//'current_department'        => $request->current_department,
+                'mobile_no'     => $request->mobile,
+                // 'current_designation'        => $request->current_designation,
+                // 'current_department'        => $request->current_department,
                 'country_master_pk' => $request->country,
                 'state_master_pk'   => $request->state,
                 'state_district_mapping_pk' => $request->district,
@@ -569,7 +601,7 @@ class FacultyController extends Controller
                 'Account_No'            => $request->accountnumber,
                 'IFSC_Code'             => $request->ifsccode,
                 'PAN_No'                => $request->pannumber,
-                'faculty_pa'            => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
+                'faculty_pa'            => $request->facultytype == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
             ];
 
             if(!empty($request->other_city)) {
@@ -630,7 +662,7 @@ class FacultyController extends Controller
 
             $faculty->save();
 
-            $this->generateFacultyCode($faculty, $request->facultyType);
+            $this->generateFacultyCode($faculty, $request->facultytype);
 
             if ($faculty) {
 

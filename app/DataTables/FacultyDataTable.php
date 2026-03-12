@@ -28,6 +28,9 @@ class FacultyDataTable extends DataTable
             ->addColumn('faculty_code', function($row) {
                 return $row->faculty_code ?? '';
             })
+           /* ->addColumn('full_name', function($row) {
+                return $row->full_name ?? '';
+            })*/
             ->addColumn('full_name', function($row) {
                 return $row->full_name ?? '';
             })
@@ -72,10 +75,10 @@ class FacultyDataTable extends DataTable
                     <a href="'.$viewUrl.'" class="btn btn-info btn-sm" title="View">
                         <i class="material-icons" style="font-size:14px;">visibility</i>
                     </a>
-                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn" 
-                        data-url="'.$deleteUrl.'" 
-                        data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'" 
-                        data-token="'.$csrf.'" 
+                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn"
+                        data-url="'.$deleteUrl.'"
+                        data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'"
+                        data-token="'.$csrf.'"
                         title="Delete">
                         <i class="material-icons" style="font-size:14px;">delete</i>
                     </button>

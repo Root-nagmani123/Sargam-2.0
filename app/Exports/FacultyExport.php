@@ -22,6 +22,7 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
             'Sr. No.',
             'Faculty Code',
             'Faculty Type',
+            //'Appellation',
             'First Name',
             'Middle Name',
             'Last Name',
@@ -89,9 +90,9 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
             'countryMaster:pk,country_name',
             'districtMaster:pk,district_name',
             'facultyTypeMaster:pk,faculty_type_name',
-            'facultyExpertiseMap.facultyExpertise:pk,expertise_name', 
+            'facultyExpertiseMap.facultyExpertise:pk,expertise_name',
             'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
-            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk', 
+            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
             'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA'
         ])->get();
     }
@@ -125,6 +126,7 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
             ++$this->index,
             $faculty->faculty_code ?? '',
             optional($faculty->facultyTypeMaster)->faculty_type_name,
+           // $faculty->appellation ?? '',
             $faculty->first_name ?? '',
             $faculty->middle_name ?? '',
             $faculty->last_name ?? '',

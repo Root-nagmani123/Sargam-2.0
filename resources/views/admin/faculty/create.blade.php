@@ -85,6 +85,20 @@ input.is-invalid {
                                         />
                                 </div>
                             </div>
+                            <div class="col-md-6">
+    <div class="mb-3">
+
+<x-select
+    name="appellation"
+    label="Appellation :"
+    placeholder="Select Appellation"
+    formLabelClass="form-label"
+    :options="$appellationMasterList"
+    value="{{ old('appellation', $faculty->appellation ?? '') }}"
+/>
+
+    </div>
+</div>
                             <div class="col-md-6 d-none" id="facultyPaContainer">
                                 <div class="mb-3">
                                     <x-input
@@ -1071,7 +1085,8 @@ function fillFacultyForm(faculty) {
             );
 
             // Auto-fill remaining fields
-           $("select[name='facultytype']").val(faculty.faculty_type).trigger('change');
+           $("select[name='facultytype']").val(faculty.faculty_type ? String(faculty.faculty_type) : '').trigger('change');
+           $("select[name='appellation']").val(faculty.appellation ?? '').trigger('change');
            $("input[name='faculty_pa']").val(faculty.faculty_pa ?? '');
            $("input[name='faculty_code']").val(faculty.faculty_code);
            $("input[name='landline']").val(faculty.landline_no);
