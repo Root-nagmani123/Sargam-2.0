@@ -214,6 +214,12 @@
                                     $itemAmount = $netQty * $rate;
                                     $sectionTotal += $itemAmount;
                                     $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
+                                    $itemIssueDate = $item->issue_date ?? null;
+                                    $itemIssueDateFormatted = $itemIssueDate
+                                        ? ($itemIssueDate instanceof \Carbon\Carbon
+                                            ? $itemIssueDate->format('d-m-Y')
+                                            : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y'))
+                                        : $requestDate;
                                 @endphp
                                 <tr>
                                     @if($itemIndex === 0)
@@ -222,7 +228,7 @@
                                         <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                     @endif
                                     <td>{{ $itemName }}</td>
-                                    <td class="text-center">{{ $requestDate }}</td>
+                                    <td class="text-center">{{ $itemIssueDateFormatted }}</td>
                                     <td class="text-end">{{ number_format($netQty, 2) }}</td>
                                     <td class="text-end">{{ number_format($rate, 2) }}</td>
                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>

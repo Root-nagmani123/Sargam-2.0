@@ -329,25 +329,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                     </div>
 
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp" id="addSvBillFileInput">
-                                    <div id="addSvBillFileChosenWrap" class="d-flex align-items-center gap-2 mt-1 d-none">
-                                        <span id="addSvBillFileChosenName" class="text-muted small"></span>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" id="addSvBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
 
                     {{-- Item Details (same pattern as Purchase Order Item Details) --}}
                     <div class="card mb-4">
@@ -535,30 +517,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>
                         </div>
                     </div>
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-light py-2">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
-                                    <input type="hidden" name="remove_bill" id="editRemoveBillFlag" value="0">
-                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
-                                        <span id="editBillCurrentFileName" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-sm btn-outline-secondary py-1 px-2 me-1" style="cursor: pointer;">
-                                            Choose file
-                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
-                                        </label>
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" id="editSvBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
                     <div class="card mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
@@ -659,7 +618,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             </div>
                         </div>
                         <p class="mb-0 mt-2" id="viewRemarksWrap" style="display:none; color: #212529;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
-                        <p class="mb-0 mt-2" style="color: #212529;"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
                 <div class="card mb-4" id="viewItemsCard">
@@ -1819,9 +1777,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalCourseSelect = document.getElementById('modalCourseSelect');
     if (modalCourseSelect) {
         modalCourseSelect.addEventListener('change', function() {
-            const inp = document.getElementById('modalClientNameInput');
-            const courseName = (this.options[this.selectedIndex] && this.options[this.selectedIndex].textContent) ? this.options[this.selectedIndex].textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            // Do not auto-fill Name with course value
         });
     }
     
@@ -2255,16 +2211,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         document.getElementById('viewRemarksWrap').style.display = 'none';
                     }
-                    var viewBillLink = document.getElementById('viewBillLink');
-                    var viewBillNone = document.getElementById('viewBillNone');
-                    if (v.bill_url) {
-                        viewBillLink.href = v.bill_url;
-                        viewBillLink.style.display = 'inline-block';
-                        viewBillNone.style.display = 'none';
-                    } else {
-                        viewBillLink.style.display = 'none';
-                        viewBillNone.style.display = 'inline';
-                    }
+                    // Bill display removed; keep view logic resilient if elements are absent
                     const tbody = document.getElementById('viewModalItemsBody');
                     tbody.innerHTML = '';
                     if (data.has_items && items.length > 0) {
