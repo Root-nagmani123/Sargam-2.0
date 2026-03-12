@@ -1348,6 +1348,15 @@
         });
     }
 
+    var editBillClearBtnEl = document.getElementById('editBillClearBtn');
+    if (editBillClearBtnEl && editBillFileInputEl) {
+        editBillClearBtnEl.addEventListener('click', function () {
+            editBillFileInputEl.value = '';
+            var pathEl = document.getElementById('editCurrentBillPath');
+            if (pathEl) pathEl.textContent = 'No file chosen';
+        });
+    }
+
     document.getElementById('editPoItemsBody').addEventListener('change', function(e) {
         if (
             e.target.classList.contains('po-item-select') ||
