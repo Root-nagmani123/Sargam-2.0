@@ -64,6 +64,8 @@
         </div>
     </div>
 
+    <div id="status-msg" class="mb-3" style="display: none;" aria-live="polite"></div>
+
     @if($billMonth)
     <!-- Section title and print actions -->
     <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center justify-content-sm-between gap-3 mb-4">
@@ -273,7 +275,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 btnNotify.disabled = false;
                 if (res.status && res.message) {
                     showStatusMessage(res.message, 'success');
-                    if (form && billMonth && billMonth.value) form.submit();
                 }
             }).catch(function () {
                 btnNotify.disabled = false;

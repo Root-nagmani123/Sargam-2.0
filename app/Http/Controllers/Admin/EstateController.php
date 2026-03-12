@@ -27,8 +27,10 @@ use App\Models\EstateMonthReadingDetails;
 use Illuminate\Support\Collection;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 
@@ -5984,6 +5986,51 @@ class EstateController extends Controller
         ]);
         $pks = array_map('intval', $validated['pks']);
         $updated = DB::table('estate_month_reading_details')->whereIn('pk', $pks)->update(['notify_employee_status' => 1]);
+
+        // Send in-app notification to each employee whose bill was notified.
+        // Bell icon loads notifications by receiver_user_id = Auth::user()->user_id (user_credentials.user_id).
+        // Resolve employee_pk to that user_id so the correct user sees the notification.
+        $rows = DB::table('estate_month_reading_details as emrd')
+            ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
+            ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
+            ->whereIn('emrd.pk', $pks)
+            ->select('emrd.pk as reading_pk', 'ehrd.employee_pk', 'emrd.bill_no', 'emrd.bill_month', 'emrd.bill_year')
+            ->get();
+        try {
+            $notificationService = app(NotificationService::class);
+            foreach ($rows as $row) {
+                $employeePk = (int) ($row->employee_pk ?? 0);
+                if ($employeePk <= 0) {
+                    continue;
+                }
+                $receiverUserId = $this->resolveReceiverUserIdForEmployee($employeePk);
+                if ($receiverUserId <= 0) {
+                    continue;
+                }
+                $billNo = isset($row->bill_no) ? trim((string) $row->bill_no) : '';
+                $billMonth = isset($row->bill_month) ? trim((string) $row->bill_month) : '';
+                $billYear = isset($row->bill_year) ? trim((string) $row->bill_year) : '';
+                $monthYear = trim($billMonth . ' ' . $billYear);
+                if ((int) $billNo > 0) {
+                    $billLabel = $monthYear ? "Bill no. {$billNo} for {$monthYear}" : "Bill no. {$billNo}";
+                } else {
+                    $billLabel = $monthYear ?: '';
+                }
+                $billText = $billLabel ? "Your estate bill {$billLabel} is ready. You can view it in the Bill Report." : 'Your estate bill has been generated and is ready to view. You can view it in the Bill Report.';
+                $notificationService->create(
+                    $receiverUserId,
+                    'estate',
+                    'EstateBill',
+                    (int) $row->reading_pk,
+                    'Estate bill ready',
+                    $billText,
+                    null
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Estate: failed to send in-app notifications for verified bills.', ['pks' => $pks, 'error' => $e->getMessage()]);
+        }
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'status' => true,
@@ -5993,6 +6040,49 @@ class EstateController extends Controller
         }
         return redirect()->route('admin.estate.generate-estate-bill')
             ->with('success', count($pks) . ' bill(s) verified successfully.');
+    }
+
+    /**
+     * Resolve employee_master pk (from estate) to user_credentials.user_id so notifications show in bell.
+     * Bell loads by receiver_user_id = Auth::user()->user_id (user_credentials.user_id).
+     */
+    private function resolveReceiverUserIdForEmployee(int $employeePk): int
+    {
+        if ($employeePk <= 0) {
+            return 0;
+        }
+        if (! Schema::hasTable('user_credentials') || ! Schema::hasColumn('user_credentials', 'user_id')) {
+            return $employeePk;
+        }
+        $uc = DB::table('user_credentials')
+            ->where('user_id', $employeePk)
+            ->when(Schema::hasColumn('user_credentials', 'user_category'), function ($q) {
+                $q->where('user_category', '!=', 'S');
+            })
+            ->value('user_id');
+        if ($uc !== null) {
+            return (int) $uc;
+        }
+        if (Schema::hasTable('employee_master')) {
+            $empQuery = DB::table('employee_master')->where('pk', $employeePk);
+            if (Schema::hasColumn('employee_master', 'pk_old')) {
+                $empQuery->orWhere('pk_old', $employeePk);
+            }
+            $emp = $empQuery->select('pk')->addSelect(Schema::hasColumn('employee_master', 'pk_old') ? 'pk_old' : DB::raw('pk as pk_old'))->first();
+            if ($emp) {
+                $ids = array_filter(array_unique([(int) ($emp->pk ?? 0), (int) ($emp->pk_old ?? 0)]));
+                $uid = DB::table('user_credentials')
+                    ->whereIn('user_id', $ids)
+                    ->when(Schema::hasColumn('user_credentials', 'user_category'), function ($q) {
+                        $q->where('user_category', '!=', 'S');
+                    })
+                    ->value('user_id');
+                if ($uid !== null) {
+                    return (int) $uid;
+                }
+            }
+        }
+        return 0;
     }
 
     /**
