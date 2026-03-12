@@ -14,6 +14,14 @@
         $paidAmount = (float) ($paidAmount ?? 0);
         $dueAmount = (float) ($dueAmount ?? max(0, $totalAmount - $paidAmount));
         $paymentStatusLabel = $paymentStatusLabel ?? ($paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid'));
+
+        $rawClientName = $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—');
+        $courseName = $bill->course_name ?? optional($bill->course ?? null)->course_name;
+        $clientNameCourse = $courseName ? trim($rawClientName . ' – ' . $courseName) : $rawClientName;
+
+        $referenceNumber = $bill->reference_number ?? null;
+        $orderBy = $bill->order_by ?? null;
+        $remarks = $bill->remarks ?? null;
     @endphp
     <title>Bill Receipt {{ $receiptNo }}</title>
     <style>
@@ -77,9 +85,24 @@
         <span><span class="client-label">Invoice No</span>: <span class="client-value">{{ $invoiceNo }}</span></span>
     </div>
     <div class="client-row">
-        <span><span class="client-label">Client Name</span>: <span class="client-value">{{ $bill->client_name ?? ($bill->clientTypeCategory?->client_name ?? '—') }}</span></span>
+        <span><span class="client-label">Client Name</span>: <span class="client-value">{{ $clientNameCourse }}</span></span>
         <span><span class="client-label">Client Type</span>: <span class="client-value">{{ $bill->client_type_display ?? ($bill->client_type_label ?? ($bill->clientTypeCategory ? ucfirst($bill->clientTypeCategory->client_type ?? '') : ucfirst($bill->client_type_slug ?? '—'))) }}</span></span>
     </div>
+    @if($referenceNumber || $orderBy)
+        <div class="client-row">
+            @if($referenceNumber)
+                <span><span class="client-label">Reference Number</span>: <span class="client-value">{{ $referenceNumber }}</span></span>
+            @endif
+            @if($orderBy)
+                <span><span class="client-label">Order By</span>: <span class="client-value">{{ $orderBy }}</span></span>
+            @endif
+        </div>
+    @endif
+    @if($remarks)
+        <div class="client-row">
+            <span><span class="client-label">Remarks</span>: <span class="client-value">{{ $remarks }}</span></span>
+        </div>
+    @endif
 
     <hr>
 

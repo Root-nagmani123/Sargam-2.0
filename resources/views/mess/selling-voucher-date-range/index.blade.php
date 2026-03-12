@@ -454,25 +454,7 @@
                         </div>
                     </div>
 
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 voucher-section-card border-primary-subtle">
-                        <div class="card-header py-3">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label voucher-label">Bill / Attachment <small class="text-muted">(Optional)</small></label>
-                                    <input type="file" name="bill_file" class="form-control " accept=".pdf,.jpg,.jpeg,.png,.webp" id="addDrBillFileInput">
-                                    <div id="addDrBillFileChosenWrap" class="d-flex align-items-center gap-2 mt-1 d-none">
-                                        <span id="addDrBillFileChosenName" class="text-muted small"></span>
-                                        <button type="button" class="btn  btn-outline-danger" id="addDrBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
 
                     {{-- Item Details (exactly same as Add Selling Voucher) --}}
                     <div class="card mb-4 voucher-section-card">
@@ -717,7 +699,6 @@
                             </div>
                         </div>
                         <p class="mb-0 mt-3" id="viewRemarksWrap" style="display:none;"><strong>Remarks:</strong> <span id="viewRemarks"></span></p>
-                        <p class="mb-0 mt-2"><strong>Bill:</strong> <span id="viewBillWrap"><a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn  btn-outline-primary ms-1" style="display: none;">View / Download Bill</a><span id="viewBillNone" class="text-muted">No bill uploaded</span></span></p>
                     </div>
                 </div>
                 {{-- Item Details (same as Selling Voucher view modal + one extra column Issue Date) --}}
@@ -945,30 +926,7 @@
                             </div>
                         </div>
                     </div>
-                    {{-- Bill / Attachment (Upload) --}}
-                    <div class="card mb-4 voucher-section-card border-primary-subtle">
-                        <div class="card-header py-3">
-                            <h6 class="mb-0 fw-semibold text-primary">Upload Bill (PDF / Image)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <label class="form-label voucher-label">Bill / Attachment <small class="text-muted">(Optional – leave empty to keep existing)</small></label>
-                                    <input type="hidden" name="remove_bill" id="editDrRemoveBillFlag" value="0">
-                                    <div class="d-flex align-items-center border rounded px-2 py-1 bg-white" style="min-height: 38px;">
-                                        <span id="editSvCurrentBillPath" class="flex-grow-1 text-muted small text-break me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn  btn-outline-secondary py-1 px-2 me-1" style="cursor: pointer;">
-                                            Choose file
-                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editSvBillFileInput">
-                                        </label>
-                                        <button type="button" class="btn  btn-outline-danger py-1 px-2" id="editDrBillFileRemove">Remove</button>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">PDF, JPG, JPEG, PNG or WEBP. Max 5 MB.</small>
-                                    <p class="mb-0 mt-2 small" id="editCurrentBillLink"></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {{-- Bill upload removed as per requirement --}}
                     <div class="card mb-4 voucher-section-card">
                         <div class="card-header d-flex justify-content-between align-items-center py-3">
                             <h6 class="mb-0 fw-semibold text-primary">Item Details</h6>
@@ -1954,10 +1912,7 @@
             if (inp) inp.value = getSelectValue(this) || '';
         });
         document.getElementById('drCourseSelect').addEventListener('change', function() {
-            const inp = document.getElementById('drClientNameInput');
-            const opt = getSelectSelectedOption(this);
-            const courseName = (opt && opt.textContent) ? opt.textContent.trim() : '';
-            if (inp) inp.value = courseName;
+            // Do not auto-fill Name with course value
         });
         document.getElementById('drClientNameSelect').addEventListener('change', updateDrNameField);
         document.getElementById('drFacultySelect').addEventListener('change', function() {
@@ -2450,17 +2405,7 @@
                     } else {
                         document.getElementById('viewRemarksWrap').style.display = 'none';
                     }
-                    var viewBillLink = document.getElementById('viewBillLink');
-                    var viewBillNone = document.getElementById('viewBillNone');
-                    if (v.bill_url) {
-                        viewBillLink.href = v.bill_url;
-                        viewBillLink.style.display = '';
-                        if (viewBillNone) viewBillNone.style.display = 'none';
-                    } else {
-                        viewBillLink.href = '#';
-                        viewBillLink.style.display = 'none';
-                        if (viewBillNone) viewBillNone.style.display = '';
-                    }
+                    // Bill display removed; keep view logic resilient if elements are absent
                     const tbody = document.getElementById('viewReportItemsBody');
                     tbody.innerHTML = '';
                     if (data.has_items && data.items && data.items.length > 0) {
