@@ -207,7 +207,11 @@
                             @endphp
                             @foreach($voucher->items as $itemIndex => $item)
                                 @php
-                                    $itemAmount = ($item->quantity ?? 0) * ($item->rate ?? 0);
+                                    $issueQty = (float) ($item->quantity ?? 0);
+                                    $returnQty = (float) ($item->return_quantity ?? 0);
+                                    $netQty = max(0, $issueQty - $returnQty);
+                                    $rate = (float) ($item->rate ?? 0);
+                                    $itemAmount = $netQty * $rate;
                                     $sectionTotal += $itemAmount;
                                     $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
                                 @endphp
@@ -219,8 +223,8 @@
                                     @endif
                                     <td>{{ $itemName }}</td>
                                     <td class="text-center">{{ $requestDate }}</td>
-                                    <td class="text-end">{{ number_format($item->quantity ?? 0, 2) }}</td>
-                                    <td class="text-end">{{ number_format($item->rate ?? 0, 2) }}</td>
+                                    <td class="text-end">{{ number_format($netQty, 2) }}</td>
+                                    <td class="text-end">{{ number_format($rate, 2) }}</td>
                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
                                 </tr>
                             @endforeach

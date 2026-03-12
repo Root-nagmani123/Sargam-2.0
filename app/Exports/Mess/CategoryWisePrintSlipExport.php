@@ -44,9 +44,11 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
             foreach ($items as $item) {
                 $serialNo++;
                 $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                $qty = $item->quantity ?? 0;
-                $rate = $item->rate ?? 0;
-                $amount = $qty * $rate;
+                $issueQty = (float) ($item->quantity ?? 0);
+                $returnQty = (float) ($item->return_quantity ?? 0);
+                $netQty = max(0, $issueQty - $returnQty);
+                $rate = (float) ($item->rate ?? 0);
+                $amount = $netQty * $rate;
 
                 $rows[] = [
                     $serialNo,
@@ -56,7 +58,7 @@ class CategoryWisePrintSlipExport implements FromCollection, WithHeadings, WithS
                     $requestNo,
                     $issueDate,
                     $itemName,
-                    number_format($qty, 2),
+                    number_format($netQty, 2),
                     $item->unit ?? '—',
                     number_format($rate, 2),
                     number_format($amount, 2),
