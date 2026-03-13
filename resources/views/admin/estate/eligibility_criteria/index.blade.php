@@ -15,9 +15,9 @@
                     <h1 class="h4 fw-bold text-body-emphasis mb-2">Eligibility - Criteria</h1>
                     <p class="text-body-secondary small mb-0 lh-sm">This page displays all the Estate Eligibility Block Mapping added in the system and provides options such as add, edit, delete, excel upload, print etc.</p>
                 </div>
-                <div class="flex-shrink-0 d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.eligibility-criteria.create') }}" class="btn btn-success px-3" title="Add New"><i class="bi bi-plus-lg me-1"></i> Add New</a>
-                    <button type="button" class="btn btn-outline-secondary px-3" id="btnPrintEligibilityCriteria" title="Print"><i class="bi bi-printer"></i></button>
+                <div class="flex-shrink-0 d-flex flex-wrap gap-2 eligibility-criteria-header-buttons">
+                    <a href="{{ route('admin.estate.eligibility-criteria.create') }}" class="btn btn-primary rounded-1 px-3 d-inline-flex align-items-center gap-2 eligibility-criteria-add-btn" title="Add New"><i class="material-icons material-symbols-rounded">add</i> Add New</a>
+                    <button type="button" class="btn btn-outline-secondary rounded-1 px-3 d-inline-flex align-items-center eligibility-criteria-print-btn" id="btnPrintEligibilityCriteria" title="Print"><i class="material-icons material-symbols-rounded">print</i></button>
                 </div>
             </div>
 
@@ -35,6 +35,32 @@
 
 @push('scripts')
     {!! $dataTable->scripts(attributes: ['type' => 'module']) !!}
+    <script>
+        (function() {
+            function moveButtonsNextToSearch() {
+                var wrapper = document.querySelector('#eligibilityCriteriaTable');
+                if (!wrapper) return false;
+                wrapper = wrapper.closest('.dataTables_wrapper');
+                if (!wrapper) return false;
+                var filter = wrapper.querySelector('.dataTables_filter');
+                var addBtn = document.querySelector('.eligibility-criteria-add-btn');
+                var printBtn = document.querySelector('.eligibility-criteria-print-btn');
+                if (!filter || !addBtn) return false;
+                addBtn.classList.add('ms-2');
+                if (printBtn) {
+                    printBtn.classList.add('ms-1');
+                    filter.appendChild(printBtn);
+                }
+                filter.appendChild(addBtn);
+                filter.classList.add('d-flex', 'align-items-center', 'justify-content-end', 'gap-2');
+                return true;
+            }
+            var attempts = 0;
+            var t = setInterval(function() {
+                if (moveButtonsNextToSearch() || ++attempts > 50) clearInterval(t);
+            }, 100);
+        })();
+    </script>
     <script>
         (function() {
             function buildPrintableTableHtml(tableElement) {

@@ -35,6 +35,15 @@
                         <label for="unit_name" class="form-label">Unit Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
                             <option value="">---Select---</option>
+                            @foreach($unitTypes ?? [] as $ut)
+                                <option value="{{ $ut->pk }}"
+                                    @if(isset($prefill['estate_unit_type_master_pk']) && (int)$prefill['estate_unit_type_master_pk'] === (int)$ut->pk)
+                                        selected
+                                    @elseif(!isset($prefill) && ($ut->unit_type ?? '') === 'Residential')
+                                        selected
+                                    @endif
+                                >{{ $ut->unit_type }}</option>
+                            @endforeach
                         </select>
                         <div class="form-text">Select Unit</div>
                     </div>
@@ -112,7 +121,13 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
     const listUrl = "{{ route('admin.estate.update-meter-reading-of-other.list') }}";
@@ -120,12 +135,27 @@ $(document).ready(function() {
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading-of-other.unit-sub-types') }}";
     const meterReadingDatesUrl = "{{ route('admin.estate.update-meter-reading-of-other.meter-reading-dates') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
+    const allUnitTypes = @json($unitTypes ?? []);
     const possessionPks = @json($possessionPks ?? '');
     const prefill = @json($prefill ?? null);
 
-    // For this grid we avoid DataTables to prevent focus issues while typing.
     let dataTable = null;
     window.otherMeterRowData = window.otherMeterRowData || {};
+
+    var tsOpts = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, onInitialize: function() { this.activeOption = null; } };
+    function initTs(el, placeholder) {
+        if (!el || typeof TomSelect === 'undefined') return null;
+        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+        return new TomSelect(el, Object.assign({}, tsOpts, { placeholder: placeholder || '---Select---' }));
+    }
+    function getSelVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
+
+    var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null, tsMeterDate = null;
+    if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), '---Select---');
+    if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), '---Select---');
+    if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), '---Select---');
+    if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), '---Select---');
+    if (document.getElementById('meter_reading_date')) tsMeterDate = initTs(document.getElementById('meter_reading_date'), 'Select');
 
     function parseBillMonthInput(val) {
         if (!val || val.length < 7) return { bill_month: null, bill_year: null };
@@ -138,58 +168,72 @@ $(document).ready(function() {
     $('#bill_month').on('change', function() {
         const val = $(this).val();
         const { bill_month, bill_year } = parseBillMonthInput(val);
+        var el = document.getElementById('meter_reading_date');
+        if (tsMeterDate) { try { tsMeterDate.destroy(); } catch (e) {} tsMeterDate = null; }
         $('#meter_reading_date').html('<option value="">Select</option>');
-        if (!bill_month || !bill_year) return;
+        if (!bill_month || !bill_year) {
+            if (el) tsMeterDate = initTs(el, 'Select');
+            return;
+        }
         $.get(meterReadingDatesUrl, { bill_month: bill_month, bill_year: bill_year }, function(res) {
             if (res.status && res.data && res.data.length) {
                 res.data.forEach(function(d) {
                     $('#meter_reading_date').append('<option value="'+d.value+'">'+d.label+'</option>');
                 });
-                if (res.data.length === 1) $('#meter_reading_date').val(res.data[0].value);
+            }
+            if (el) tsMeterDate = initTs(el, 'Select');
+            if (res.status && res.data && res.data.length === 1) {
+                if (tsMeterDate) tsMeterDate.setValue(res.data[0].value, true);
+                else $('#meter_reading_date').val(res.data[0].value);
             }
         });
     });
 
-    $('#estate_name').on('change', function() {
-        const campusId = $(this).val();
-        $('#unit_name').html('<option value="">Select</option>');
+    $(document).on('change', '#estate_name', function() {
+        const campusId = getSelVal(this);
+        var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
+        if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
+        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
         $('#building').html('<option value="">All</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
+        if (elB) tsBuilding = initTs(elB, 'All');
+        if (elSub) tsUnitSub = initTs(elSub, 'All');
         if (!campusId) return;
-        var unitList = unitTypesByCampus[campusId] || [];
-        unitList.forEach(function(ut) {
-            var sel = (ut.unit_type === 'Residential') ? ' selected' : '';
-            $('#unit_name').append('<option value="'+ut.pk+'"'+sel+'>'+ut.unit_type+'</option>');
-        });
-        if (prefill && String(prefill.estate_campus_master_pk) === String(campusId)) {
-            $('#unit_name').val(prefill.estate_unit_type_master_pk || '');
-        }
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
+                if (tsBuilding) { try { tsBuilding.destroy(); } catch (e) {} tsBuilding = null; }
                 $('#building').html('<option value="">All</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
-                if (prefill && String(prefill.estate_campus_master_pk) === String(campusId)) {
-                    $('#building').val(prefill.estate_block_master_pk || '').trigger('change');
+                if (elB) tsBuilding = initTs(elB, 'All');
+                if (prefill && String(prefill.estate_campus_master_pk) === String(campusId) && tsBuilding) {
+                    tsBuilding.setValue(String(prefill.estate_block_master_pk || ''), true);
+                    $('#building').trigger('change');
                 }
             }
         });
     });
 
-    $('#building').on('change', function() {
-        const campusId = $('#estate_name').val();
-        const blockId = $(this).val();
+    $(document).on('change', '#building', function() {
+        const campusId = getSelVal(document.getElementById('estate_name'));
+        const blockId = getSelVal(this);
+        var elSub = document.getElementById('unit_sub_type');
+        if (tsUnitSub) { try { tsUnitSub.destroy(); } catch (e) {} tsUnitSub = null; }
         $('#unit_sub_type').html('<option value="">All</option>');
-        if (!campusId || !blockId) return;
+        if (!campusId || !blockId) {
+            if (elSub) tsUnitSub = initTs(elSub, 'All');
+            return;
+        }
         $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId }, function(res) {
             if (res.status && res.data) {
                 $.each(res.data, function(i, u) {
                     $('#unit_sub_type').append('<option value="'+u.pk+'">'+u.unit_sub_type+'</option>');
                 });
-                if (prefill && String(prefill.estate_campus_master_pk) === String(campusId) && String(prefill.estate_block_master_pk) === String(blockId) && prefill.estate_unit_sub_type_master_pk) {
-                    $('#unit_sub_type').val(prefill.estate_unit_sub_type_master_pk);
-                }
+            }
+            if (elSub) tsUnitSub = initTs(elSub, 'All');
+            if (prefill && String(prefill.estate_campus_master_pk) === String(campusId) && String(prefill.estate_block_master_pk) === String(blockId) && prefill.estate_unit_sub_type_master_pk && tsUnitSub) {
+                tsUnitSub.setValue(String(prefill.estate_unit_sub_type_master_pk), true);
             }
         });
     });
@@ -214,11 +258,11 @@ $(document).ready(function() {
         const params = {
             bill_month: billMonth,
             bill_year: billYear,
-            meter_reading_date: $('#meter_reading_date').val() || '',
-            campus_id: $('#estate_name').val() || '',
-            block_id: $('#building').val() || '',
-            unit_type_id: $('#unit_name').val() || '',
-            unit_sub_type_id: $('#unit_sub_type').val() || ''
+            meter_reading_date: getSelVal(document.getElementById('meter_reading_date')) || '',
+            campus_id: getSelVal(document.getElementById('estate_name')) || '',
+            block_id: getSelVal(document.getElementById('building')) || '',
+            unit_type_id: getSelVal(document.getElementById('unit_name')) || '',
+            unit_sub_type_id: getSelVal(document.getElementById('unit_sub_type')) || ''
         };
         if (possessionPks) {
             params.possession_pks = typeof possessionPks === 'string' ? possessionPks : (Array.isArray(possessionPks) ? possessionPks.join(',') : '');
@@ -241,9 +285,9 @@ $(document).ready(function() {
             res.data.forEach(function(row, idx) {
                 const lastReading = typeof row.last_month_reading === 'number' ? row.last_month_reading : (parseInt(row.last_month_reading, 10) || null);
                 const currVal = (row.curr_month_reading !== null && row.curr_month_reading !== '' ? row.curr_month_reading : '');
-                const rowKey = row.pk;
+                const rowKey = row.pk + '_' + (row.meter_slot || 1);
                 window.otherMeterRowData[rowKey] = { curr_month_elec_red: currVal };
-                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ (currVal !== '' ? currVal : '') +'" data-pk="'+ row.pk +'">' +
+                const tr = '<tr data-last-reading="'+ (lastReading !== null ? lastReading : '') +'" data-existing-curr="'+ (currVal !== '' ? currVal : '') +'" data-pk="'+ row.pk +'" data-meter-slot="'+ (row.meter_slot || 1) +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check" name="readings['+idx+'][selected]" value="1" aria-label="Select row"></td>' +
                     '<td>'+ (row.house_no || 'N/A') +'</td>' +
                     '<td>'+ (row.name || 'N/A') +'</td>' +
@@ -251,7 +295,8 @@ $(document).ready(function() {
                     '<td>'+ (row.meter_no || 'N/A') +'</td>' +
                     '<td>'+ (row.last_month_reading || 'N/A') +'</td>' +
                     '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ String(currVal).replace(/"/g, '&quot;') +'" min="0" step="1" placeholder="Enter">' +
-                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'"></td>' +
+                    '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
+                    '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+(row.meter_slot || 1)+'"></td>' +
                     '<td class="unit-cell">'+ (row.unit || 'N/A') +'</td>' +
                     '</tr>';
                 tbody.append(tr);
@@ -269,12 +314,14 @@ $(document).ready(function() {
 
     function syncOtherRowDataFromInputs($row) {
         var pk = $row.data('pk');
+        var meterSlot = $row.data('meter-slot') || 1;
         if (!pk) return;
         window.otherMeterRowData = window.otherMeterRowData || {};
-        if (!window.otherMeterRowData[pk]) {
-            window.otherMeterRowData[pk] = { curr_month_elec_red: '' };
+        var key = pk + '_' + meterSlot;
+        if (!window.otherMeterRowData[key]) {
+            window.otherMeterRowData[key] = { curr_month_elec_red: '' };
         }
-        window.otherMeterRowData[pk].curr_month_elec_red = $row.find('.curr-reading').val() || '';
+        window.otherMeterRowData[key].curr_month_elec_red = $row.find('.curr-reading').val() || '';
     }
 
     $(document).on('input change', '.curr-reading', function() {
@@ -334,7 +381,9 @@ $(document).ready(function() {
         if (prefill.bill_month) {
             $('#bill_month').val(prefill.bill_month).trigger('change');
         }
-        $('#estate_name').val(prefill.estate_campus_master_pk || '').trigger('change');
+        if (tsEstate) tsEstate.setValue(String(prefill.estate_campus_master_pk || ''), true);
+        else $('#estate_name').val(prefill.estate_campus_master_pk || '');
+        $('#estate_name').trigger('change');
     }
 });
 </script>

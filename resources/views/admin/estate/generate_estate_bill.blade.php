@@ -58,7 +58,7 @@
                         Print Selected
                     </button>
                     <button type="button" id="btn_notify_selected" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">Notify Selected</button>
-                    <button type="button" id="btn_save_as_draft" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">Save As Draft</button>
+                    <!-- <button type="button" id="btn_save_as_draft" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">Save As Draft</button> -->
                 </div>
             </form>
         </div>
@@ -176,9 +176,30 @@
     @endif
 </div>
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    if (typeof TomSelect !== 'undefined') {
+        var unitSubEl = document.getElementById('unit_sub_type_pk');
+        if (unitSubEl && !unitSubEl.tomselect) {
+            new TomSelect(unitSubEl, {
+                allowEmptyOption: true,
+                create: false,
+                dropdownParent: 'body',
+                placeholder: '— Select Unit Sub Type —',
+                maxOptions: null,
+                hideSelected: false,
+                onInitialize: function () { this.activeOption = null; }
+            });
+        }
+    }
+
     var checkAll = document.getElementById('check_all');
     var boxes = document.querySelectorAll('.bill-checkbox');
     if (checkAll) {

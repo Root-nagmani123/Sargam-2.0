@@ -14,11 +14,23 @@
     </nav>
 
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row flex-md-nowrap justify-content-between align-items-start align-items-md-center gap-3 mb-4 no-print">
         <h2 class="mb-0">Define House</h2>
-        <div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEstateHouseModal">
-                <i class="bi bi-plus-circle me-2"></i>Add Define House
+        <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+            <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addEstateHouseModal">
+                <i class="bi bi-plus-circle"></i>
+                <span>Add Define House</span>
+            </button>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Show / hide columns">
+                    <i class="bi bi-columns-gap"></i>
+                    <span class="d-none d-md-inline ms-1">Show / hide columns</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="defineHouseColumnToggleMenu"></ul>
+            </div>
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="btnDefineHousePrint" title="Print">
+                <i class="bi bi-printer"></i>
+                <span class="d-none d-md-inline">Print</span>
             </button>
         </div>
     </div>
@@ -37,7 +49,7 @@
             <h5 class="mb-0">Estate House List</h5>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
+            <div class="define-house-table-wrapper table-responsive">
                 <table class="table table-bordered table-hover" id="defineHouseTable">
                     <thead class="table-primary">
                         <tr>
@@ -195,7 +207,33 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+<style>
+@media print {
+    @page { size: A4 landscape; margin: 8mm; }
+    .no-print { display: none !important; }
+    #defineHouseTable_wrapper .dataTables_length,
+    #defineHouseTable_wrapper .dataTables_filter,
+    #defineHouseTable_wrapper .dataTables_paginate { display: none !important; }
+    .define-house-table-wrapper,
+    #defineHouseTable_wrapper .dataTables_scroll,
+    #defineHouseTable_wrapper .dataTables_scrollBody,
+    #defineHouseTable_wrapper .dataTables_scrollHead { overflow: visible !important; }
+    #defineHouseTable_wrapper .dataTables_scrollBody { height: auto !important; max-height: none !important; }
+    #defineHouseTable_wrapper .dataTables_scrollHead { display: none !important; }
+    #defineHouseTable_wrapper table, #defineHouseTable_wrapper table.dataTable { width: 100% !important; }
+    body { zoom: 0.78; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #defineHouseTable_wrapper th, #defineHouseTable_wrapper td { white-space: normal !important; word-break: break-word; font-size: 11px; padding: 0.35rem 0.4rem !important; }
+    #defineHouseTable_wrapper thead { display: table-header-group; }
+}
+.define-house-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.define-house.blocks') }}";
@@ -203,8 +241,7 @@ $(document).ready(function() {
     const dataUrl = "{{ route('admin.estate.define-house.data') }}";
     const editUrlBase = "{{ route('admin.estate.define-house.show', ['id' => '__ID__']) }}".replace('__ID__', '');
     const updateUrlBase = "{{ route('admin.estate.define-house.update', ['id' => '__ID__']) }}".replace('__ID__', '');
-    // Delete disabled for Define House (safety)
-    const deleteUrlBase = "";
+    const deleteUrlBase = "{{ route('admin.estate.define-house.destroy', ['id' => '__ID__']) }}".replace('__ID__', '');
 
     function escapeHtml(str) {
         return String(str || '')
@@ -250,18 +287,43 @@ $(document).ready(function() {
         }
     });
 
+    var estateTsOpts = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, placeholder: '--Select--', onInitialize: function() { this.activeOption = null; } };
+    function initDefineHouseTs(el, placeholder) {
+        if (!el || typeof TomSelect === 'undefined') return null;
+        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+        return new TomSelect(el, $.extend(true, {}, estateTsOpts, { placeholder: placeholder || '--Select--' }));
+    }
+    function getSelVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
+
+    var tsCampus = null, tsUnitType = null, tsBlock = null, tsUnitSub = null;
+    var elCampus = document.getElementById('estate_campus_master_pk');
+    var elUnitType = document.getElementById('estate_unit_type_master_pk');
+    var elBlock = document.getElementById('estate_block_master_pk');
+    var elUnitSub = document.getElementById('estate_unit_sub_type_master_pk');
+    if (elCampus) tsCampus = initDefineHouseTs(elCampus, '--Select--');
+    if (elUnitType) tsUnitType = initDefineHouseTs(elUnitType, '--Select--');
+    if (elBlock) tsBlock = initDefineHouseTs(elBlock, '--Select--');
+    if (elUnitSub) tsUnitSub = initDefineHouseTs(elUnitSub, '--Select--');
+
     // Load buildings when estate (campus) changes
-    $('#estate_campus_master_pk').on('change', function() {
-        var campusId = $(this).val();
-        var $building = $('#estate_block_master_pk');
-        $building.html('<option value="">--Select--</option>');
-        if (!campusId) return;
+    $(document).on('change', '#estate_campus_master_pk', function() {
+        var campusId = getSelVal(this);
+        var buildingEl = document.getElementById('estate_block_master_pk');
+        if (tsBlock) { try { tsBlock.destroy(); } catch (e) {} tsBlock = null; }
+        $(buildingEl).html('<option value="">--Select--</option>');
+        if (!campusId) {
+            if (buildingEl) tsBlock = initDefineHouseTs(buildingEl, '--Select--');
+            return;
+        }
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
+                var $b = $(buildingEl);
+                $b.find('option:not(:first)').remove();
                 $.each(res.data, function(i, b) {
-                    $building.append('<option value="'+b.pk+'">'+b.block_name+'</option>');
+                    $b.append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
             }
+            if (buildingEl) tsBlock = initDefineHouseTs(buildingEl, '--Select--');
         });
     });
 
@@ -299,8 +361,10 @@ $(document).ready(function() {
                 }
             },
             { data: 'pk', orderable: false, searchable: false, render: function(pk) {
+                var deleteUrl = (deleteUrlBase.slice(-1) === '/' ? deleteUrlBase : deleteUrlBase + '/') + pk;
                 return '<div class="d-flex flex-nowrap gap-1 justify-content-center">' +
                        '<button type="button" class="btn btn-sm btn-warning btn-edit-house" title="Edit" data-pk="'+pk+'"><i class="bi bi-pencil"></i></button>' +
+                       '<button type="button" class="btn btn-sm btn-danger btn-delete-house" title="Delete" data-url="'+deleteUrl+'"><i class="bi bi-trash"></i></button>' +
                        '</div>';
             }}
         ],
@@ -317,6 +381,96 @@ $(document).ready(function() {
         },
         responsive: true,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    });
+
+    // Show / hide columns
+    function buildDefineHouseColumnToggle() {
+        var menu = $('#defineHouseColumnToggleMenu');
+        menu.empty();
+        table.columns().every(function(i) {
+            var col = this;
+            var header = $(col.header()).text().trim();
+            if (!header || header === 'Actions') return;
+            var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 cursor-pointer mb-0"><input type="checkbox" class="form-check-input column-toggle-define-house" data-column="' + i + '"> ' + header + '</label></li>');
+            $li.find('input').prop('checked', col.visible());
+            menu.append($li);
+        });
+    }
+    $(document).on('change', '.column-toggle-define-house', function() {
+        var colIdx = $(this).data('column');
+        table.column(colIdx).visible($(this).prop('checked'));
+    });
+    table.on('draw', function() { buildDefineHouseColumnToggle(); });
+    buildDefineHouseColumnToggle();
+
+    // Print: build HTML from visible columns (excluding Actions) and open print window
+    function buildDefineHousePrintableHtml() {
+        var visibleIndexes = [];
+        table.columns().every(function(i) {
+            var header = ($(this.header()).text() || '').trim();
+            if (!header || header === 'Actions') return;
+            if (this.visible()) visibleIndexes.push(i);
+        });
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead><tr>';
+        visibleIndexes.forEach(function(colIdx) {
+            var h = ($(table.column(colIdx).header()).text() || '').trim();
+            html += '<th>' + h + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+        table.rows({ search: 'applied' }).nodes().each(function(rowNode) {
+            var $row = $(rowNode);
+            if ($row.hasClass('child')) return;
+            html += '<tr>';
+            visibleIndexes.forEach(function(colIdx) {
+                var cellNode = table.cell(rowNode, colIdx).node();
+                var cellHtml = '';
+                if (cellNode) {
+                    var $cell = $(cellNode).clone();
+                    $cell.find('input, button, select, textarea').remove();
+                    $cell.find('a.btn, .btn, .form-check-input').remove();
+                    cellHtml = ($cell.html() || '').trim();
+                }
+                html += '<td>' + cellHtml + '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        return html;
+    }
+    function openDefineHousePrintWindow(tableHtml) {
+        var title = 'Define House';
+        var win = window.open('', '_blank');
+        if (!win) { window.print(); return; }
+        win.document.open();
+        win.document.write(
+            '<!doctype html><html><head><meta charset="utf-8">' +
+            '<title>' + title + '</title>' +
+            '<style>@page{size:A4 landscape;margin:8mm;}body{font-family:Arial,sans-serif;font-size:11px;}h2{margin:0 0 8px 0;font-size:14px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:4px 6px;}thead{display:table-header-group;}tr{page-break-inside:avoid;}</style></head><body><h2>' + title + '</h2>' + tableHtml + '</body></html>'
+        );
+        win.document.close();
+        setTimeout(function() { win.focus(); win.print(); win.close(); }, 250);
+    }
+    $('#btnDefineHousePrint').on('click', function() {
+        if (!$.fn.DataTable.isDataTable('#defineHouseTable')) { window.print(); return; }
+        var originalLen = table.page.len();
+        var originalPage = table.page();
+        var restored = false;
+        var safeRestore = function() {
+            if (restored) return;
+            restored = true;
+            table.page.len(originalLen);
+            table.page(originalPage);
+            table.draw(false);
+        };
+        table.one('draw', function() {
+            setTimeout(function() {
+                var tableHtml = buildDefineHousePrintableHtml();
+                openDefineHousePrintWindow(tableHtml);
+                setTimeout(safeRestore, 800);
+            }, 250);
+        });
+        table.page.len(-1).draw();
     });
 
     // Save Estate House (AJAX) - add multiple or edit single
@@ -404,7 +558,12 @@ $(document).ready(function() {
         $('#addHouseRowBtn, #removeHouseRowBtn').show();
         $('#addEstateHouseForm')[0].reset();
         $('#water_charge, #electric_charge').val('0.00');
+        if (tsCampus) tsCampus.setValue('', true);
+        if (tsUnitType) tsUnitType.setValue('', true);
+        if (tsUnitSub) tsUnitSub.setValue('', true);
+        if (tsBlock) { try { tsBlock.destroy(); } catch (e) {} tsBlock = null; }
         $('#estate_block_master_pk').html('<option value="">--Select--</option>');
+        if (elBlock) tsBlock = initDefineHouseTs(elBlock, '--Select--');
         $('#houseRowsContainer .house-row:gt(0)').remove();
         $('#houseRowsContainer .house-row').first().find('.licence_fee').val('0.00');
         $('#houseRowsContainer .house-row').first().find('.vacant_renovation_status').val('1');
@@ -491,10 +650,16 @@ $(document).ready(function() {
             if (!res || !res.pk) { showPageAlert('danger', 'Could not load house.'); return; }
             $('#edit_house_pk').val(res.pk);
             $('#addEstateHouseModalLabel').text('Edit Estate House');
-            $('#estate_campus_master_pk').val(res.estate_campus_master_pk);
-            $('#estate_unit_type_master_pk').val(res.estate_unit_master_pk);
-            $('#estate_block_master_pk').html('<option value="'+res.estate_block_master_pk+'" selected>'+res.building_name+'</option>');
-            $('#estate_unit_sub_type_master_pk').val(res.estate_unit_sub_type_master_pk);
+            if (tsCampus) tsCampus.setValue(String(res.estate_campus_master_pk || ''), true);
+            else $('#estate_campus_master_pk').val(res.estate_campus_master_pk);
+            if (tsUnitType) tsUnitType.setValue(String(res.estate_unit_master_pk || ''), true);
+            else $('#estate_unit_type_master_pk').val(res.estate_unit_master_pk);
+            if (tsBlock) { try { tsBlock.destroy(); } catch (e) {} tsBlock = null; }
+            $('#estate_block_master_pk').html('<option value="">--Select--</option><option value="'+res.estate_block_master_pk+'" selected>'+escapeHtml(res.building_name || '')+'</option>');
+            if (elBlock) tsBlock = initDefineHouseTs(elBlock, '--Select--');
+            if (tsBlock) tsBlock.setValue(String(res.estate_block_master_pk || ''), true);
+            if (tsUnitSub) tsUnitSub.setValue(String(res.estate_unit_sub_type_master_pk || ''), true);
+            else $('#estate_unit_sub_type_master_pk').val(res.estate_unit_sub_type_master_pk);
             $('#water_charge').val(res.water_charge);
             $('#electric_charge').val(res.electric_charge);
             $('#remarks').val(res.remarks || '');
@@ -524,6 +689,36 @@ $(document).ready(function() {
             $('#addHouseRowBtn').show();
             $('#removeHouseRowBtn').show();
         }
+    });
+
+    // Delete Estate House - simple confirm + alert
+    $(document).on('click', '.btn-delete-house', function(e) {
+        e.preventDefault();
+        var url = $(this).data('url');
+        if (!url) return;
+        if (!confirm('Are you sure you want to delete this house? This action cannot be undone.')) {
+            return;
+        }
+        $.ajax({
+            url: url,
+            type: 'DELETE',
+            data: {
+                _token: '{{ csrf_token() }}',
+            },
+            success: function(res) {
+                if (res && res.success) {
+                    table.ajax.reload(null, false);
+                    showPageAlert('success', res.message || 'Estate house deleted successfully.');
+                } else {
+                    var msg = (res && res.message) ? res.message : 'Failed to delete.';
+                    showPageAlert('danger', msg);
+                }
+            },
+            error: function(xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete.';
+                showPageAlert('danger', msg);
+            }
+        });
     });
 });
 </script>

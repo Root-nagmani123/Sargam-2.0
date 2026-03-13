@@ -939,6 +939,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
+    Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
+    
 
 
     Route::get('/upcoming-events', function () {
@@ -1254,8 +1256,7 @@ Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, '
                 return view('admin.estate.estate_bill_report_grid');
             })->name('bill-report-grid');
 
-            Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
-            
+            Route::get('bill-report-print/employees', [EstateController::class, 'getBillReportPrintEmployees'])->name('bill-report-print.employees');
             Route::get('bill-report-print', [EstateController::class, 'estateBillReportPrint'])->name('bill-report-print');
             Route::get('bill-report-print-all', [EstateController::class, 'estateBillReportPrintAll'])->name('bill-report-print-all');
             Route::get('bill-report-print-all-pdf', [EstateController::class, 'estateBillReportPrintAllPdf'])->name('bill-report-print-all-pdf');

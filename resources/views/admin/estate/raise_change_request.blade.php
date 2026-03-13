@@ -108,12 +108,37 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 (function() {
     var blocksUrl = '{{ route("admin.estate.possession.blocks") }}';
     var unitSubTypesUrl = '{{ route("admin.estate.possession.unit-sub-types") }}';
     var vacantHousesUrl = '{{ route("admin.estate.change-request.vacant-houses") }}';
+
+    if (window.TomSelect) {
+        var commonCfg = {
+            allowEmptyOption: true,
+            create: false,
+            dropdownParent: 'body',
+            maxOptions: null,
+            hideSelected: false,
+            onInitialize: function () { this.activeOption = null; }
+        };
+        var estateEl = document.getElementById('raise_estate_name');
+        var unitTypeEl = document.getElementById('raise_unit_type');
+        if (estateEl && !estateEl.tomselect) {
+            new TomSelect(estateEl, Object.assign({}, commonCfg, { placeholder: '— Select —' }));
+        }
+        if (unitTypeEl && !unitTypeEl.tomselect) {
+            new TomSelect(unitTypeEl, Object.assign({}, commonCfg, { placeholder: '— Select —' }));
+        }
+    }
 
     function resetBuildingUnitHouse() {
         $('#raise_building_name').html('<option value="">— Select —</option>');

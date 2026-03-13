@@ -110,9 +110,38 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
+    if (typeof TomSelect !== 'undefined') {
+        var commonCfg = {
+            allowEmptyOption: true,
+            create: false,
+            dropdownParent: 'body',
+            maxOptions: null,
+            hideSelected: false,
+            onInitialize: function () { this.activeOption = null; }
+        };
+        [
+            'filter_allotment_year',
+            'filter_campus_name',
+            'filter_building_name',
+            'filter_type_of_building',
+            'filter_department_name',
+            'filter_employee_type'
+        ].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+            new TomSelect(el, Object.assign({}, commonCfg, {}));
+        });
+    }
     var table = $('#estateMigrationReportTable').DataTable({
         processing: true,
         serverSide: true,

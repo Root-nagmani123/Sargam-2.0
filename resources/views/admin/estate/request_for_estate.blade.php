@@ -168,6 +168,8 @@
 @endsection
 
 @push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
 <style>
     /* Responsive table: horizontal scroll */
     .request-for-estate-table-wrap {
@@ -246,21 +248,39 @@
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     $(function() {
         var deleteRequestEstateUrl = '';
         var $requestForEstateTable = $('#requestForEstateTable');
+
+        var tsFilter = null, tsModalEmployee = null, tsModalStatus = null, tsModalEligibility = null;
+        var tsCommon = { allowEmptyOption: true, create: false, dropdownParent: 'body', maxOptions: null, hideSelected: false, onInitialize: function() { this.activeOption = null; } };
+        function getSelectVal(el) { return (el && el.tomselect) ? el.tomselect.getValue() : $(el).val(); }
+        function initTs(el, opts) {
+            if (!el || typeof TomSelect === 'undefined') return null;
+            if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+            return new TomSelect(el, Object.assign({}, tsCommon, opts || {}));
+        }
+
+        if (typeof TomSelect !== 'undefined') {
+            var filterEl = document.getElementById('estateStatusFilter');
+            if (filterEl) tsFilter = initTs(filterEl, { placeholder: 'All' });
+        }
+
         if ($requestForEstateTable.length && $.fn.DataTable && $requestForEstateTable.DataTable) {
             $requestForEstateTable.on('preXhr.dt', function(e, settings, data) {
-                var val = $('#estateStatusFilter').val();
+                var el = document.getElementById('estateStatusFilter');
+                var val = el ? getSelectVal(el) : '';
                 data.status_filter = (val !== undefined && val !== null) ? val : '';
             });
-            $('#estateStatusFilter').on('change', function() {
-                $requestForEstateTable.DataTable().ajax.reload(null, false);
+            $(document).on('change', '#estateStatusFilter', function() {
+                if ($requestForEstateTable.DataTable) $requestForEstateTable.DataTable().ajax.reload(null, false);
             });
             $('#estateStatusClear').on('click', function() {
-                $('#estateStatusFilter').val('');
-                $requestForEstateTable.DataTable().ajax.reload(null, false);
+                var el = document.getElementById('estateStatusFilter');
+                if (el && el.tomselect) el.tomselect.setValue('', true); else $(el).val('');
+                if ($requestForEstateTable.DataTable) $requestForEstateTable.DataTable().ajax.reload(null, false);
             });
         }
         var addEditModalEl = document.getElementById('addEditRequestEstateModal');
@@ -268,35 +288,51 @@
         var deleteModalEl = document.getElementById('deleteRequestEstateModal');
         var deleteModal = deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
 
+        if (typeof TomSelect !== 'undefined') {
+            var statusEl = document.getElementById('modal_status');
+            var eligEl = document.getElementById('modal_eligibility_type_pk');
+            if (statusEl) tsModalStatus = initTs(statusEl, { placeholder: 'Pending' });
+            if (eligEl) tsModalEligibility = initTs(eligEl, { placeholder: '— Select eligibility type —' });
+        }
+
         function loadRequestEstateEmployees(includePk, thenSelectPk, onDone) {
             var url = '{{ route("admin.estate.request-for-estate.employees") }}';
             if (includePk) url += '?include_pk=' + includePk;
+            var selEl = document.getElementById('modal_employee_pk');
             var $sel = $('#modal_employee_pk');
+            if (selEl && selEl.tomselect) { try { selEl.tomselect.destroy(); } catch (e) {} tsModalEmployee = null; }
             $sel.find('option[value!=""]').remove();
             $.get(url, function(list) {
                 if (Array.isArray(list)) {
                     list.forEach(function(o) {
                         $sel.append($('<option></option>').attr('value', o.pk).text(o.label || (o.emp_name + ' (' + o.employee_id + ')')));
                     });
-                    if (thenSelectPk) $sel.val(thenSelectPk);
+                }
+                if (typeof TomSelect !== 'undefined' && selEl) {
+                    tsModalEmployee = initTs(selEl, { placeholder: '— Select employee —' });
+                    if (thenSelectPk) tsModalEmployee.setValue(String(thenSelectPk), true);
+                } else if (thenSelectPk) {
+                    $sel.val(thenSelectPk);
                 }
                 if (typeof onDone === 'function') onDone();
             });
         }
 
         function ensureEligibilityOptionAndSetVal(pk, label) {
+            var selEl = document.getElementById('modal_eligibility_type_pk');
             var $sel = $('#modal_eligibility_type_pk');
             var $hidden = $('#modal_eligibility_type_pk_hidden');
             var val = (pk !== undefined && pk !== null && pk !== '') ? String(pk) : '';
             if (!val) {
-                $sel.val('').trigger('change');
+                if (selEl && selEl.tomselect) selEl.tomselect.setValue('', true); else $sel.val('').trigger('change');
                 $hidden.val('');
                 return;
             }
             if ($sel.find('option[value="' + val + '"]').length === 0) {
                 $sel.append(new Option(label || ('Type ' + val), val, false, false));
+                if (selEl && selEl.tomselect) selEl.tomselect.addOption({ value: val, text: label || ('Type ' + val) });
             }
-            $sel.val(val).trigger('change');
+            if (selEl && selEl.tomselect) selEl.tomselect.setValue(val, true); else $sel.val(val).trigger('change');
             $hidden.val(val);
         }
 
@@ -356,7 +392,9 @@
             var eligPk = $btn.data('eligibility_type_pk');
             var eligLabel = $btn.data('eligibility_type_label');
             ensureEligibilityOptionAndSetVal(eligPk, eligLabel);
-            $('#modal_status').val($btn.data('status') !== undefined ? String($btn.data('status')) : '0');
+            var statusVal = $btn.data('status') !== undefined ? String($btn.data('status')) : '0';
+            $('#modal_status').val(statusVal);
+            if (document.getElementById('modal_status').tomselect) document.getElementById('modal_status').tomselect.setValue(statusVal, true);
             $('#modal_remarks').val($btn.data('remarks') || '');
             $('#addEditRequestEstateFormErrors').addClass('d-none').find('#addEditRequestEstateFormErrorsText').empty();
             $('#formAddEditRequestEstate').find('.field-error').empty().end().find('.is-invalid').removeClass('is-invalid');
@@ -365,8 +403,8 @@
             });
         });
 
-        $('#modal_employee_pk').on('change', function() {
-            var pk = $(this).val();
+        $(document).on('change', '#modal_employee_pk', function() {
+            var pk = getSelectVal(this);
             var $ro = $('#modal_employee_id, #modal_emp_designation, #modal_pay_scale, #modal_doj_pay_scale, #modal_doj_academic, #modal_doj_service');
             if (!pk) {
                 clearEmployeeDerivedFields();
@@ -383,7 +421,7 @@
 
         $('#formAddEditRequestEstate').on('submit', function(e) {
             e.preventDefault();
-            var selVal = $('#modal_employee_pk').val();
+            var selVal = getSelectVal(document.getElementById('modal_employee_pk'));
             $('#request_employee_pk').val(selVal || '0');
             var $form = $(this);
             var $errors = $('#addEditRequestEstateFormErrors');
