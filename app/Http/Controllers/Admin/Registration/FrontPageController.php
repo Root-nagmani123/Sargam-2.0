@@ -13,6 +13,7 @@ use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
 use App\Models\FoundationCourseStatus;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
 
@@ -241,6 +242,98 @@ class FrontPageController extends Controller
     public function showLoginForm()
     {
         return view('fc.fc_login'); // Adjust to your login blade path
+    }
+
+    /**
+     * Start DigiLocker OAuth login flow.
+     */
+    public function redirectToDigiLocker(Request $request)
+    {
+        $clientId = env('DIGILOCKER_CLIENT_ID');
+        $redirectUri = route('fc.login.digilocker.callback');
+        $authorizeUrl = env('DIGILOCKER_AUTH_URL', 'https://digilocker.meripehchaan.gov.in/openid/v1/authorize');
+
+        if (!$clientId) {
+            return back()->withErrors([
+                'digilocker' => 'DigiLocker integration is not configured. Please contact the administrator.',
+            ]);
+        }
+
+        $state = csrf_token();
+        session(['digilocker_oauth_state' => $state]);
+
+        $query = http_build_query([
+            'response_type' => 'code',
+            'client_id'     => $clientId,
+            'redirect_uri'  => $redirectUri,
+            'scope'         => 'openid',
+            'state'         => $state,
+        ]);
+
+        return redirect($authorizeUrl . '?' . $query);
+    }
+
+    /**
+     * Handle DigiLocker OAuth callback.
+     */
+    public function handleDigiLockerCallback(Request $request)
+    {
+        $expectedState = session('digilocker_oauth_state');
+        if (!$expectedState || $request->state !== $expectedState) {
+            return redirect()->route('fc.login')->withErrors([
+                'digilocker' => 'Invalid DigiLocker response. Please try again.',
+            ]);
+        }
+
+        if ($request->has('error')) {
+            return redirect()->route('fc.login')->withErrors([
+                'digilocker' => 'DigiLocker login was cancelled or failed. Please try again.',
+            ]);
+        }
+
+        $tokenUrl = env('DIGILOCKER_TOKEN_URL', 'https://digilocker.meripehchaan.gov.in/openid/v1/token');
+        $clientId = env('DIGILOCKER_CLIENT_ID');
+        $clientSecret = env('DIGILOCKER_CLIENT_SECRET');
+        $redirectUri = route('fc.login.digilocker.callback');
+
+        if (!$clientId || !$clientSecret) {
+            return redirect()->route('fc.login')->withErrors([
+                'digilocker' => 'DigiLocker integration is not fully configured. Please contact the administrator.',
+            ]);
+        }
+
+        try {
+            $response = Http::asForm()->post($tokenUrl, [
+                'code'          => $request->code,
+                'client_id'     => $clientId,
+                'client_secret' => $clientSecret,
+                'redirect_uri'  => $redirectUri,
+                'grant_type'    => 'authorization_code',
+            ]);
+
+            if (!$response->ok()) {
+                return redirect()->route('fc.login')->withErrors([
+                    'digilocker' => 'Unable to complete DigiLocker login. Please try again.',
+                ]);
+            }
+
+            $data = $response->json();
+
+            // For now, just mark the user as logged in via DigiLocker and redirect.
+            session([
+                'fc_user_digilocker' => true,
+                'fc_digilocker_id_token' => $data['id_token'] ?? null,
+            ]);
+
+            return redirect()->route('fc.register_form')
+                ->with('sweet_success', 'Logged in successfully via DigiLocker.');
+        } catch (\Throwable $e) {
+            \Log::error('DigiLocker login error: ' . $e->getMessage());
+
+            return redirect()->route('fc.login')->withErrors([
+                'digilocker' => 'An unexpected error occurred during DigiLocker login.',
+            ]);
+        }
     }
 
     //user login verification

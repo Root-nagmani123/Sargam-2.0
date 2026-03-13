@@ -2,16 +2,16 @@
 
 @section('title', 'FC Login - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
+@section('content')
 
     <!-- Main Content Box -->
-    <main style="flex: 1;">
-        <div class="container mt-5">
-            <div class="row">
+    <main class="flex-grow-1 d-flex align-items-center py-5" style="background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 50%, #e8f5e9 100%);">
+        <div class="container py-4 py-md-5">
+            <div class="row justify-content-center">
                 <!-- Form Content -->
-                <div class="col-md-6 col-lg-6 offset-md-2 offset-lg-1 mx-auto">
-                    <div class="card">
-                        <div class="card-body">
+                <div class="col-md-8 col-lg-6 col-xl-5">
+                    <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                        <div class="card-body p-4 p-md-5">
                             @if (session('success'))
                                 <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
                                     {{ session('success') }}
@@ -30,40 +30,77 @@
                                     </ul>
                                 </div>
                             @endif
-                            <form class="row g-3" method="POST" action="{{ route('fc.login.verify') }}">
+                            <form class="row g-3 g-md-4" method="POST" action="{{ route('fc.login.verify') }}">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Login to Foundation Course</h3>
-                                <hr>
+                                <div class="text-center mb-3">
+                                    <h1 class="h4 fw-bold mb-1" style="color: #004a93;">Login to Foundation Course</h1>
+                                    <p class="text-muted small mb-0">Use the credentials shared with you to access the portal.</p>
+                                </div>
+                                <hr class="mt-3 mb-3">
 
                                 <!-- Username -->
                                 <div class="col-md-12">
-                                    <label class="form-label">User Name</label>
-                                    <input type="text" class="form-control" placeholder="Enter your User Name"
-                                        name="reg_name" required>
+                                    <label class="form-label fw-semibold small text-uppercase text-muted mb-1">User Name</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0">
+                                            <i class="material-icons fs-6 text-muted">person</i>
+                                        </span>
+                                        <input type="text" class="form-control form-control-lg border-start-0" placeholder="Enter your user name"
+                                            name="reg_name" required>
+                                    </div>
                                 </div>
 
                                 <!-- Password -->
                                 <div class="col-md-12">
-                                    <label class="form-label">Password</label>
+                                    <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Password</label>
                                     <div class="input-group">
-                                        <input type="password" class="form-control" placeholder="Enter Password"
+                                        <span class="input-group-text bg-light border-end-0">
+                                            <i class="material-icons fs-6 text-muted">lock</i>
+                                        </span>
+                                        <input type="password" class="form-control form-control-lg border-start-0" placeholder="Enter password"
                                             name="reg_password" id="password" required>
-                                        <button type="button" class="btn btn-primary"
+                                        <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center border-start-0"
                                             onclick="togglePassword('password', this)"
-                                            style="background-color: #004a93;border-color: #004a93;">
-                                            <i class="material-icons menu-icon me-3 fs-3">visibility</i>
+                                            aria-label="Toggle password visibility">
+                                            <i class="material-icons menu-icon fs-5">visibility</i>
                                         </button>
                                     </div>
-                                    <small class="form-text text-muted mt-2"><a href="{{ route('fc.password.forgot') }}"
-                                            class="text-primary">Forget Password</a></small>
+                                    <div class="d-flex justify-content-end mt-2">
+                                        <a href="{{ route('fc.password.forgot') }}"
+                                            class="link-primary small text-decoration-none">Forgot password?</a>
+                                    </div>
                                 </div>
 
                                 <!-- Submit -->
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary w-100"
-                                        style="background-color: #004a93;border-color: #004a93;">Submit</button>
+                                <div class="col-12 mt-2">
+                                    <button type="submit" class="btn btn-primary w-100 btn-lg"
+                                        style="background-color: #004a93;border-color: #004a93;">Sign in</button>
                                 </div>
                             </form>
+
+                            <!-- OR divider -->
+                            <div class="d-flex align-items-center my-3">
+                                <hr class="flex-grow-1">
+                                <span class="mx-2 text-muted small text-uppercase fw-semibold">Or</span>
+                                <hr class="flex-grow-1">
+                            </div>
+
+                            <!-- DigiLocker login -->
+                            <div>
+                                <form method="POST" action="{{ route('fc.login.digilocker.redirect') }}">
+                                    @csrf
+                                    <button type="submit"
+                                        class="btn w-100 border-0 d-flex align-items-center justify-content-center py-2"
+                                        style="background-color:#ffffff; border-radius: 0.75rem; box-shadow: 0 0 0 1px #d0d7de;">
+                                        <img src="https://play-lh.googleusercontent.com/EqNJ0V0N0vzNKxdOl-Uz4OW5t8b4BhROYEKvQVqi1s1O_Ng2E_AobK1YB5hVFvpD5Yk" alt="DigiLocker"
+                                            class="me-2" style="height: 28px;">
+                                        <span class="fw-semibold" style="color:#004a93;">Login with DigiLocker</span>
+                                    </button>
+                                    <p class="text-muted small mt-2 mb-0 text-center">
+                                        Secure login using your DigiLocker account.
+                                    </p>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -158,6 +158,10 @@ Route::post('/fc/store-credentials', [FrontPageController::class, 'credential_st
 //login verify user route
 Route::get('/fc/login', [FrontPageController::class, 'showLoginForm'])->name('fc.login');
 Route::post('/fc/login-verify', [FrontPageController::class, 'verifyLogin'])->name('fc.login.verify');
+Route::post('/fc/login-digilocker-redirect', [FrontPageController::class, 'redirectToDigiLocker'])
+    ->name('fc.login.digilocker.redirect');
+Route::get('/fc/login-digilocker-callback', [FrontPageController::class, 'handleDigiLockerCallback'])
+    ->name('fc.login.digilocker.callback');
 
 //path choose route
 Route::get('/fc/choose-path', [FrontPageController::class, 'choosePath'])->name('fc.choose.path');
