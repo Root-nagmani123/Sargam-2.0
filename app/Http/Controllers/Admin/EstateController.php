@@ -3051,11 +3051,19 @@ class EstateController extends Controller
         }
     }
 
+    /**
+     * Initial month-reading row for "Other" possession.
+     *
+     * Mapping (same idea as LBSNAA possession):
+     * - $meterReadingPrimary   (meter_reading_oth)  => last_month_elec_red / curr_month_elec_red
+     * - $meterReadingSecondary (meter_reading_oth1) => last_month_elec_red2 / curr_month_elec_red2
+     * - Meter numbers always from house master (meter_one / meter_two).
+     */
     private function upsertMonthReadingOtherOnPossession(
         int $possessionPk,
         $possessionDate,
-        $meterReading,
-        $meterReading2,
+        $meterReadingPrimary,
+        $meterReadingSecondary,
         ?string $houseNo,
         $meterOne,
         $meterTwo,
@@ -3079,6 +3087,8 @@ class EstateController extends Controller
             ->first();
 
         if ($reading) {
+            // Existing row: keep any already captured readings as-is.
+            // Only sync meter numbers / charges and backfill last-month readings when empty.
             $update = [
                 'house_no' => $houseNo,
                 'meter_one' => $meterOne,
@@ -3090,24 +3100,30 @@ class EstateController extends Controller
             if ($reading->licence_fees === null && $licenceFee !== null && $licenceFee !== '') {
                 $update['licence_fees'] = (float) $licenceFee;
             }
-            if ($reading->last_month_elec_red === null && $meterReading !== null && $meterReading !== '') {
-                $update['last_month_elec_red'] = (int) $meterReading;
+
+            if ($reading->last_month_elec_red === null && $meterReadingPrimary !== null && $meterReadingPrimary !== '') {
+                $update['last_month_elec_red'] = (int) $meterReadingPrimary;
             }
-            if ($reading->last_month_elec_red2 === null && $meterReading2 !== null && $meterReading2 !== '') {
-                $update['last_month_elec_red2'] = (int) $meterReading2;
+            if ($reading->last_month_elec_red2 === null && $meterReadingSecondary !== null && $meterReadingSecondary !== '') {
+                $update['last_month_elec_red2'] = (int) $meterReadingSecondary;
             }
+
             $reading->update($update);
             return;
         }
+
+        // Staging schema: last_month_elec_red is NOT NULL, so 0 is safe default.
+        $primaryVal = ($meterReadingPrimary !== null && $meterReadingPrimary !== '') ? (int) $meterReadingPrimary : 0;
+        $secondaryVal = ($meterReadingSecondary !== null && $meterReadingSecondary !== '') ? (int) $meterReadingSecondary : 0;
 
         EstateMonthReadingDetailsOther::create([
             'estate_possession_other_pk' => $possessionPk,
             'from_date' => $fromDate,
             'to_date' => $toDate,
-            'last_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : null,
-            'curr_month_elec_red' => ($meterReading !== null && $meterReading !== '') ? (int) $meterReading : 0,
-            'last_month_elec_red2' => ($meterReading2 !== null && $meterReading2 !== '') ? (int) $meterReading2 : null,
-            'curr_month_elec_red2' => ($meterReading2 !== null && $meterReading2 !== '') ? (int) $meterReading2 : 0,
+            'last_month_elec_red' => $primaryVal,
+            'curr_month_elec_red' => $primaryVal,
+            'last_month_elec_red2' => $secondaryVal,
+            'curr_month_elec_red2' => $secondaryVal,
             'bill_month' => $billMonth,
             'bill_year' => $billYear,
             'notify_employee_status' => 0,
