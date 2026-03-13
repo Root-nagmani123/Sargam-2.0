@@ -284,7 +284,20 @@ $(document).ready(function() {
             { data: 'water_charge', name: 'water_charge', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
             { data: 'electric_charge', name: 'electric_charge', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
             { data: 'licence_fee', name: 'licence_fee', render: function(v) { return v != null ? parseFloat(v).toFixed(2) : '0.00'; } },
-            { data: 'vacant_renovation_status', name: 'vacant_renovation_status', render: function(v) { var s = parseInt(v, 10); if (s === 2) return 'Occupied'; if (s === 0) return 'Under Renovation'; return 'Vacant'; } },
+            {
+                data: null,
+                name: 'status',
+                render: function(data, type, row) {
+                    var used = parseInt(row.used_home_status != null ? row.used_home_status : 0, 10);
+                    var vr = parseInt(row.vacant_renovation_status != null ? row.vacant_renovation_status : 1, 10);
+                    // Under Renovation: vacant_renovation_status = 0
+                    if (vr === 0) {
+                        return 'Under Renovation';
+                    }
+                    // Otherwise, status comes from used_home_status: 1 = Occupied, 0 = Vacant
+                    return used === 1 ? 'Occupied' : 'Vacant';
+                }
+            },
             { data: 'pk', orderable: false, searchable: false, render: function(pk) {
                 return '<div class="d-flex flex-nowrap gap-1 justify-content-center">' +
                        '<button type="button" class="btn btn-sm btn-warning btn-edit-house" title="Edit" data-pk="'+pk+'"><i class="bi bi-pencil"></i></button>' +

@@ -3001,17 +3001,54 @@ class EstateController extends Controller
         if ($housePk <= 0) {
             return;
         }
-
-        $isUsed = DB::table('estate_possession_details')
-            ->where('estate_house_master_pk', $housePk)
-            ->where('return_home_status', 0)
-            ->exists()
-            || DB::table('estate_possession_other')
+        // Determine "used" based on the latest possession rows only (LBSNAA + Other),
+        // so that legacy/older rows with return_home_status = 0 do not keep a house
+        // marked as occupied after it has been properly returned.
+        $detailsActive = false;
+        if (\Illuminate\Support\Facades\Schema::hasTable('estate_possession_details')) {
+            $latestDetails = DB::table('estate_possession_details')
                 ->where('estate_house_master_pk', $housePk)
-                ->where('return_home_status', 0)
-                ->exists();
+                ->whereNotNull('estate_house_master_pk')
+                ->orderByDesc('pk')
+                ->first();
+            if ($latestDetails) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
+                    $r = $latestDetails->return_home_status;
+                    $detailsActive = ($r === null || (int) $r === 0);
+                } else {
+                    // If there is no return_home_status column, treat presence as active.
+                    $detailsActive = true;
+                }
+            }
+        }
+
+        $otherActive = false;
+        if (\Illuminate\Support\Facades\Schema::hasTable('estate_possession_other')) {
+            $latestOther = DB::table('estate_possession_other')
+                ->where('estate_house_master_pk', $housePk)
+                ->whereNotNull('estate_house_master_pk')
+                ->orderByDesc('pk')
+                ->first();
+            if ($latestOther) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_other', 'return_home_status')) {
+                    $r = $latestOther->return_home_status;
+                    $otherActive = ($r === null || (int) $r === 0);
+                } else {
+                    $otherActive = true;
+                }
+            }
+        }
+
+        $isUsed = $detailsActive || $otherActive;
 
         $this->setHouseUsedStatus($housePk, $isUsed ? 1 : 0);
+
+        if (! $isUsed) {
+            DB::table('estate_house_master')
+                ->where('pk', $housePk)
+                ->where('vacant_renovation_status', 2)
+                ->update(['vacant_renovation_status' => 1]);
+        }
     }
 
     private function upsertMonthReadingOtherOnPossession(
@@ -3468,6 +3505,7 @@ class EstateController extends Controller
                 'h.water_charge',
                 'h.electric_charge',
                 'h.licence_fee',
+                'h.used_home_status',
                 'h.vacant_renovation_status',
                 'h.remarks'
             )
@@ -3494,29 +3532,12 @@ class EstateController extends Controller
             $query->offset($start)->limit($length);
         }
 
-        // Houses that are actually occupied (active possession) should show "Occupied" in the list
-        $occupiedDetails = DB::table('estate_possession_details')->whereNotNull('estate_house_master_pk');
-        if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
-            $occupiedDetails->where('return_home_status', 0);
-        }
-        $occupiedHousePks = $occupiedDetails->pluck('estate_house_master_pk')
-            ->merge(
-                DB::table('estate_possession_other')
-                    ->whereNotNull('estate_house_master_pk')
-                    ->where('return_home_status', 0)
-                    ->pluck('estate_house_master_pk')
-            )
-            ->unique()
-            ->values()
-            ->flip()
-            ->all();
-
-        $rows = $query->get()->map(function ($row) use ($occupiedHousePks) {
+        // Use the status stored on Define House itself so that edits
+        // (Vacant / Occupied / Under Renovation) are reflected directly
+        // in the listing without being overridden by possession details.
+        $rows = $query->get()->map(function ($row) {
             $row = (object) (array) $row;
-            $pk = (int) ($row->pk ?? 0);
-            $storedStatus = (int) ($row->vacant_renovation_status ?? 1);
-            // If house has active possession, show Occupied in list; else use Define House status
-            $row->vacant_renovation_status = isset($occupiedHousePks[$pk]) ? 2 : $storedStatus;
+            $row->vacant_renovation_status = (int) ($row->vacant_renovation_status ?? 1);
             return $row;
         });
 
@@ -4562,10 +4583,23 @@ class EstateController extends Controller
         } else {
             $otherNameSelect = "COALESCE(NULLIF(TRIM(eor.emp_name), ''), NULLIF(TRIM(eor.request_no_oth), ''), CONCAT('Request #', eor.pk))";
 
+            // Other Employee: show ONLY those whose latest possession row is still active (return_home_status = 0),
+            // actually mapped to a house, AND that house is currently marked used (used_home_status = 1).
+            // This keeps the dropdown perfectly aligned with the effective occupancy flag.
             $list = DB::table('estate_other_req as eor')
                 ->join('estate_possession_other as epo', 'epo.estate_other_req_pk', '=', 'eor.pk')
-                ->where('epo.return_home_status', 0)
+                ->join('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
                 ->whereNotNull('epo.estate_house_master_pk')
+                ->where('epo.return_home_status', 0)
+                ->where('ehm.used_home_status', 1)
+                ->whereRaw("
+                    epo.pk = (
+                        SELECT MAX(epo2.pk)
+                        FROM estate_possession_other AS epo2
+                        WHERE epo2.estate_other_req_pk = eor.pk
+                          AND epo2.estate_house_master_pk IS NOT NULL
+                    )
+                ")
                 ->select(
                     'eor.pk as id',
                     DB::raw($otherNameSelect . ' as name'),
@@ -7957,7 +7991,7 @@ class EstateController extends Controller
         $hasEmployeeMobile = \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'mobile');
         $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
 
-        // Base house list (include vacant_renovation_status so report aligns with Define House)
+        // Base house list (include vacant_renovation_status + used_home_status so report aligns with Define House)
         $houses = DB::table('estate_house_master as ehm')
             ->leftJoin('estate_block_master as eb', 'ehm.estate_block_master_pk', '=', 'eb.pk')
             ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
@@ -7969,6 +8003,7 @@ class EstateController extends Controller
             ->select(
                 'ehm.pk as house_pk',
                 'ehm.house_no',
+                'ehm.used_home_status',
                 'ehm.vacant_renovation_status',
                 'eb.block_name',
                 'eut.unit_type'
@@ -8044,15 +8079,26 @@ class EstateController extends Controller
             // Prefer LBSNAA stream when both are somehow present for same house
             $pos = $lbsnaa ?: $other;
 
-            $status = $pos ? 'O' : 'V';
+            $used = (int) ($h->used_home_status ?? 0);
+            $vr = (int) ($h->vacant_renovation_status ?? 1);
+
+            // High-level status character (O / V) driven by possession + used_home_status
+            if ($vr === 0) {
+                // Under Renovation is always treated as Vacant type (V)
+                $statusChar = 'V';
+                $statusLabel = 'V (Under Renovation)';
+            } elseif ($pos || $used === 1) {
+                // Any active possession or used_home_status=1 → Occupied
+                $statusChar = 'O';
+                $statusLabel = 'O';
+            } else {
+                // No active possession and used_home_status=0 → Vacant
+                $statusChar = 'V';
+                $statusLabel = 'V (Vacant)';
+            }
 
             $allotmentDate = $pos->allotment_date ?? null;
             $occupiedDate = $pos->possession_date ?? null;
-
-            // For Vacant (V): show Define House status so report aligns with Define House (Vacant vs Under Renovation)
-            $vacantLabel = ($status === 'V' && isset($h->vacant_renovation_status))
-                ? ($h->vacant_renovation_status == 1 ? 'V (Vacant)' : ($h->vacant_renovation_status == 2 ? 'V (Occupied)' : 'V (Under Renovation)'))
-                : $status;
 
             $rows[] = [
                 'sno' => $sno,
@@ -8065,7 +8111,7 @@ class EstateController extends Controller
                 'alloted_date' => $allotmentDate ? \Carbon\Carbon::parse($allotmentDate)->format('d/m/Y') : '',
                 'occupied_date' => $occupiedDate ? \Carbon\Carbon::parse($occupiedDate)->format('d/m/Y') : '',
                 'vacated_date' => '', // current implementation focuses on active occupancy; vacated date can be added later
-                'status' => $vacantLabel,
+                'status' => $statusLabel,
             ];
         }
 

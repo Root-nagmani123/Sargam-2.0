@@ -171,12 +171,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="request_returning_date" class="form-label fw-medium">Returning Date</label>
-                                <div class="input-group">
-                                    <input type="date" class="form-control" id="request_returning_date" name="returning_date">
-                                    <span class="input-group-text bg-body-secondary bg-opacity-25">
-                                        <i class="bi bi-calendar-event text-danger"></i>
-                                    </span>
-                                </div>
+                                <input type="date" class="form-control" id="request_returning_date" name="returning_date">
                             </div>
                         </div>
 
