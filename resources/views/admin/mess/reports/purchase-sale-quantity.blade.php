@@ -70,6 +70,10 @@
                     <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
                     <span>Print</span>
                 </button>
+                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger d-inline-flex align-items-center" title="Download PDF">
+                    <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                    <span>PDF</span>
+                </a>
                 <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
                     <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                     <span>Export Excel</span>
@@ -167,7 +171,8 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
+{{-- Tom Select (enhanced dropdowns) --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
 
 <style>
@@ -187,7 +192,7 @@
     }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -201,23 +206,24 @@ document.addEventListener('DOMContentLoaded', function() {
         viewType.addEventListener('change', toggleCategory);
     }
 
-    if (typeof window.Choices !== 'undefined') {
+    if (typeof window.TomSelect !== 'undefined') {
         document
             .querySelectorAll('.purchase-sale-quantity-report select.choices-select')
             .forEach(function (el) {
-                if (el.dataset.choicesInitialized === 'true') return;
+                if (el.tomselect) return;
 
                 var placeholder = el.getAttribute('data-placeholder') || 'Select';
 
-                new Choices(el, {
-                    shouldSort: false,
-                    placeholder: true,
-                    placeholderValue: placeholder,
-                    searchPlaceholderValue: 'Search...',
-                    itemSelectText: '',
+                new TomSelect(el, {
+                    create: false,
+                    allowEmptyOption: true,
+                    placeholder: placeholder,
+                    plugins: ['dropdown_input'],
+                    sortField: {
+                        field: 'text',
+                        direction: 'asc'
+                    }
                 });
-
-                el.dataset.choicesInitialized = 'true';
             });
     }
 });

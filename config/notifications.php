@@ -148,9 +148,17 @@ return [
     ],
 
     // Estate Bill Notifications (employee sees bill report grid when clicked)
-    'estate' => [
-        'EstateBill' => [
-            'route' => 'admin.estate.reports.bill-report-grid',
+        'estate' => [
+            'EstateBill' => [
+                'route' => 'admin.estate.reports.bill-report-grid',
+                'params' => [],
+            ],
+        ],
+
+    // Mess Stock / Low Stock Notifications
+    'mess_stock' => [
+        'LowStock' => [
+            'route' => 'admin.mess.reports.low-stock',
             'params' => [],
         ],
     ],

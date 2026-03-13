@@ -55,7 +55,9 @@
                                               onsubmit="return confirm('Are you sure you want to delete this sub store?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
+                                                <i class="material-icons material-symbol-rounded">delete</i>
+                                            </button>
                                         </form>
                                     </div>
                                 </td>

@@ -1,15 +1,21 @@
 @extends('admin.layouts.master')
-@section('title', 'Print Slip - Category Wise')
+@section('title', 'Sale Voucher Report')
 @section('setup_content')
 <div class="container-fluid py-3 py-md-4 {{ request('print_all') ? 'print-all-mode' : '' }}">
-    <x-breadcrum title="Print Slip - Category Wise"></x-breadcrum>
+    <x-breadcrum title="Sale Voucher Report"></x-breadcrum>
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
     @if(!request('print_all'))
     <!-- Header Section -->
     <div class="card mb-4 border-0 shadow-sm rounded-3 no-print">
         <div class="card-header bg-white border-0 pb-0">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div>
-                    <h5 class="mb-0 fw-semibold text-dark">Filter Print Slip - Category Wise</h5>
+                    <h5 class="mb-0 fw-semibold text-dark">Filter Sale Voucher Report</h5>
                     <p class="mb-0 text-muted small">Refine results by date, client type &amp; buyer name</p>
                 </div>
                 <span class="badge bg-light text-secondary fw-normal d-flex align-items-center">
@@ -31,7 +37,7 @@
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
-                        <select name="client_type_slug" id="clientTypeSlug" class="form-select form-select-sm">
+                        <select name="client_type_slug" id="clientTypeSlug" class="form-select">
                             <option value="">All Client Types</option>
                             @foreach($clientTypes as $key => $label)
                                 <option value="{{ $key }}" {{ request('client_type_slug') == $key ? 'selected' : '' }}>
@@ -42,7 +48,7 @@
                     </div>
                     <div class="col-12 col-md-3 col-lg-3">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Client Type</label>
-                        <select id="clientTypePk" class="form-select form-select-sm" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
+                        <select id="clientTypePk" class="form-select" name="{{ request('client_type_slug') === 'ot' ? 'course_master_pk' : 'client_type_pk' }}">
                             <option value="">All</option>
                             @if(request('client_type_slug') === 'employee' && isset($clientTypeCategories['employee']))
                                 @foreach($clientTypeCategories['employee'] as $category)
@@ -63,9 +69,9 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-2">
+                    <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select form-select-sm">
+                        <select name="buyer_name" id="clientTypePkBuyer" class="form-select">
                             <option value="">All Buyers</option>
                             @if(request('client_type_slug') === 'employee' && request('client_type_pk'))
                                 @php
@@ -120,6 +126,10 @@
                         <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
                         Export Excel
                     </a>
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
+                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
+                        Download PDF
+                    </a>
                 </div>
             </form>
         </div>
@@ -135,7 +145,13 @@
     @endphp
 
     @if($sectionsToShow->isEmpty())
-        <div class="alert alert-info">No selling vouchers found for the selected filters.</div>
+        <div class="alert {{ isset($filtersApplied) && $filtersApplied ? 'alert-info' : 'alert-warning' }} mb-0">
+            @if(isset($filtersApplied) && $filtersApplied)
+                No selling vouchers found for the selected filters.
+            @else
+                <strong>Apply filters to view report.</strong> Select date range and/or client type / buyer name, then click <strong>Apply Filters</strong> to see data.
+            @endif
+        </div>
     @else
     @foreach($sectionsToShow as $groupedSections)
     @php $isPrintPage = request('print_all'); @endphp
@@ -144,7 +160,7 @@
     <div class="report-header text-center mb-2 print-slip-page">
         <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
         <div class="report-title-bar">
-            Print Slip – Category Wise
+            Sale Voucher Report
             @if(request('from_date') || request('to_date'))
                 Between {{ $fromDateFormatted }} To {{ $toDateFormatted }}
             @endif
@@ -173,7 +189,7 @@
                         <tr>
                             <th class="th-slip-no">Slip No.</th>
                             <th class="th-buyer">Buyer Name</th>
-                            <th class="th-status">Status</th>
+                            <th class="th-remark">Remark</th>
                             <th class="th-item">Item Name</th>
                             <th class="th-date">Request Date</th>
                             <th class="th-qty">Quantity</th>
@@ -191,21 +207,30 @@
                             @endphp
                             @foreach($voucher->items as $itemIndex => $item)
                                 @php
-                                    $itemAmount = ($item->quantity ?? 0) * ($item->rate ?? 0);
+                                    $issueQty = (float) ($item->quantity ?? 0);
+                                    $returnQty = (float) ($item->return_quantity ?? 0);
+                                    $netQty = max(0, $issueQty - $returnQty);
+                                    $rate = (float) ($item->rate ?? 0);
+                                    $itemAmount = $netQty * $rate;
                                     $sectionTotal += $itemAmount;
                                     $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                                    $statusLabel = $voucher->status_label ?? 'N/A';
+                                    $itemIssueDate = $item->issue_date ?? null;
+                                    $itemIssueDateFormatted = $itemIssueDate
+                                        ? ($itemIssueDate instanceof \Carbon\Carbon
+                                            ? $itemIssueDate->format('d-m-Y')
+                                            : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y'))
+                                        : $requestDate;
                                 @endphp
                                 <tr>
                                     @if($itemIndex === 0)
                                         <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $requestNo }}</td>
                                         <td class="align-middle" rowspan="{{ $rowCount }}">{{ $buyerName }}</td>
-                                        <td class="text-center align-middle" rowspan="{{ $rowCount }}">{{ $statusLabel }}</td>
+                                        <td class="align-middle" rowspan="{{ $rowCount }}">{{ $voucher->remarks ?? '—' }}</td>
                                     @endif
                                     <td>{{ $itemName }}</td>
-                                    <td class="text-center">{{ $requestDate }}</td>
-                                    <td class="text-end">{{ number_format($item->quantity ?? 0, 2) }}</td>
-                                    <td class="text-end">{{ number_format($item->rate ?? 0, 2) }}</td>
+                                    <td class="text-center">{{ $itemIssueDateFormatted }}</td>
+                                    <td class="text-end">{{ number_format($netQty, 2) }}</td>
+                                    <td class="text-end">{{ number_format($rate, 2) }}</td>
                                     <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
                                 </tr>
                             @endforeach
@@ -264,7 +289,7 @@
     </div>
 </div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 
 <style>
     /* Report header – same on screen and print */
@@ -297,7 +322,7 @@
         font-weight: 600;
         padding: 8px 6px;
     }
-    .print-slip-table .th-slip-no, .print-slip-table .th-date, .print-slip-table .th-status { text-align: center; }
+    .print-slip-table .th-slip-no, .print-slip-table .th-date { text-align: center; }
     .print-slip-table .th-qty, .print-slip-table .th-price, .print-slip-table .th-amount { text-align: right; }
     .print-slip-table tbody td { padding: 6px 8px; vertical-align: middle; }
     .print-slip-table .total-row { background-color: #f0f0f0; font-weight: bold; }
@@ -392,7 +417,7 @@ window.addEventListener('load', function() {
 </script>
 @endif
 
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 <script>
 function printCategoryWiseSlip() {
@@ -402,7 +427,7 @@ function printCategoryWiseSlip() {
         return;
     }
 
-    const title = 'Print Slip - Category Wise';
+    const title = 'Sale Voucher Report';
     const dateRange = '{{ (request('from_date') || request('to_date')) ? "Between $fromDateFormatted To $toDateFormatted" : "All Dates" }}';
 
     const printWindow = window.open('', '_blank');
@@ -545,61 +570,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const employeeNames = { 'academy staff': [ @foreach($employees ?? [] as $e){ value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },@endforeach ], 'faculty': [ @foreach($faculties ?? [] as $f){ value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },@endforeach ], 'mess staff': [ @foreach($messStaff ?? [] as $m){ value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },@endforeach ] };
 
     if (clientTypeSlug && clientTypePk && clientTypePkBuyer) {
-        // Enhance dropdowns with Choices.js if available
-        let clientTypeSlugChoices = null;
-        let clientTypePkChoices = null;
-        let clientTypePkBuyerChoices = null;
+        const tomSelectConfig = {
+            create: false,
+            allowEmptyOption: true,
+            sortField: { field: 'text', direction: 'asc' },
+            plugins: ['dropdown_input']
+        };
 
-        if (window.Choices) {
-            const baseConfig = {
-                searchEnabled: true,
-                shouldSort: false,
-                itemSelectText: '',
-                removeItemButton: false
-            };
-            clientTypeSlugChoices = new Choices(clientTypeSlug, baseConfig);
-            clientTypePkChoices = new Choices(clientTypePk, baseConfig);
-            clientTypePkBuyerChoices = new Choices(clientTypePkBuyer, baseConfig);
+        function initTomSelect(el) {
+            if (typeof window.TomSelect === 'undefined') return;
+            if (el.tomselect) {
+                el.tomselect.destroy();
+            }
+            return new TomSelect(el, tomSelectConfig);
         }
+
+        initTomSelect(clientTypeSlug);
+        initTomSelect(clientTypePk);
+        initTomSelect(clientTypePkBuyer);
 
         function fillClientTypeSelect() {
             const slug = clientTypeSlug.value;
-            const useChoices = !!clientTypePkChoices;
 
             clientTypePk.name = (slug === 'ot') ? 'course_master_pk' : 'client_type_pk';
 
-            if (useChoices) {
-                let choicesData = [{ value: '', label: 'All', selected: true }];
-                if (slug === 'ot' && otCourseOptions.length) {
-                    otCourseOptions.forEach(function(o) {
-                        choicesData.push({ value: o.value, label: o.text });
-                    });
-                } else if (slug && clientTypeOptions[slug]) {
-                    clientTypeOptions[slug].forEach(function(o) {
-                        choicesData.push({ value: o.value, label: o.text, customProperties: { clientName: o.dataClientName || '' } });
-                    });
-                }
-                clientTypePkChoices.clearChoices();
-                clientTypePkChoices.setChoices(choicesData, 'value', 'label', true);
-            } else {
-                clientTypePk.innerHTML = '<option value="">All</option>';
-                if (slug === 'ot' && otCourseOptions.length) {
-                    otCourseOptions.forEach(function(o) {
-                        const opt = document.createElement('option');
-                        opt.value = o.value;
-                        opt.textContent = o.text;
-                        clientTypePk.appendChild(opt);
-                    });
-                } else if (slug && clientTypeOptions[slug]) {
-                    clientTypeOptions[slug].forEach(function(o) {
-                        const opt = document.createElement('option');
-                        opt.value = o.value;
-                        opt.textContent = o.text;
-                        opt.dataset.clientName = o.dataClientName || '';
-                        clientTypePk.appendChild(opt);
-                    });
-                }
+            clientTypePk.innerHTML = '<option value="">All</option>';
+            if (slug === 'ot' && otCourseOptions.length) {
+                otCourseOptions.forEach(function(o) {
+                    const opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    clientTypePk.appendChild(opt);
+                });
+            } else if (slug && clientTypeOptions[slug]) {
+                clientTypeOptions[slug].forEach(function(o) {
+                    const opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    opt.dataset.clientName = o.dataClientName || '';
+                    clientTypePk.appendChild(opt);
+                });
             }
+
+            initTomSelect(clientTypePk);
             fillBuyerNameSelect();
         }
 
@@ -612,7 +625,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function fillBuyerNameSelect() {
             const slug = clientTypeSlug.value;
-            const useChoices = !!clientTypePkBuyerChoices;
             const selectedValue = clientTypePk.value;
 
             let dataClientName = '';
@@ -626,36 +638,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             function setBuyerChoices(list, preserveValue) {
-                if (useChoices) {
-                    let choicesData = [{ value: '', label: 'All Buyers', selected: !preserveValue }];
-                    (list || []).forEach(function(o) {
-                        choicesData.push({ value: o.value, label: o.text });
-                    });
-                    clientTypePkBuyerChoices.clearChoices();
-                    clientTypePkBuyerChoices.setChoices(choicesData, 'value', 'label', true);
-                    if (preserveValue) {
-                        clientTypePkBuyerChoices.setChoiceByValue(preserveValue);
-                    }
-                } else {
-                    clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
-                    (list || []).forEach(function(o) {
-                        const opt = document.createElement('option');
-                        opt.value = o.value;
-                        opt.textContent = o.text;
-                        clientTypePkBuyer.appendChild(opt);
-                    });
-                    if (preserveValue) {
-                        clientTypePkBuyer.value = preserveValue;
-                    }
+                clientTypePkBuyer.innerHTML = '<option value="">All Buyers</option>';
+                (list || []).forEach(function(o) {
+                    const opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    clientTypePkBuyer.appendChild(opt);
+                });
+                if (preserveValue) {
+                    clientTypePkBuyer.value = preserveValue;
                 }
+                initTomSelect(clientTypePkBuyer);
             }
 
             if (slug === 'employee' && dataClientName && employeeNames[dataClientName]) {
                 setBuyerChoices(employeeNames[dataClientName], preservedBuyerName);
             } else if (slug === 'ot' && selectedValue) {
-                if (!useChoices) {
-                    clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
-                }
+                clientTypePkBuyer.innerHTML = '<option value="">Loading...</option>';
                 fetch(studentsByCourseUrl + '/' + selectedValue, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
