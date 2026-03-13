@@ -3,23 +3,24 @@
 @section('title', 'Pending Meter Reading - Sargam')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Pending Meter Reading"></x-breadcrum>
+    <x-session_message />
 
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <div class="row">
+            <div class="row align-items-end">
                 <div class="col-md-4">
                     <label for="bill_month" class="form-label">Select Bill Month <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
                     </div>
                     <small class="text-muted">
-                        <i class="bi bi-info-circle"></i> Select Bill Month
+                        <i class="bi bi-info-circle"></i> Select Bill Month and click Show to load data.
                     </small>
                 </div>
-                <div class="col-md-2 d-flex align-items-end mt-3 mt-md-0">
-                    <button type="button" id="showPendingBtn" class="btn btn-primary w-100">Show</button>
+                <div class="col-md-2 mt-3 mt-md-0">
+                    <button type="button" id="showPendingBtn" class="btn btn-primary rounded-1 px-3 w-100">Show</button>
                 </div>
             </div>
         </div>
@@ -28,7 +29,7 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table" id="pendingMeterReadingTable">
+                <table class="table align-middle mb-0" id="pendingMeterReadingTable">
                     <thead>
                         <tr>
                             <th>S.No.</th>
@@ -104,6 +105,7 @@ $(document).ready(function() {
                         order: [[0, 'asc']],
                         pageLength: 10,
                         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+                        searching: true,
                         language: {
                             search: 'Search:',
                             lengthMenu: 'Show _MENU_ entries',
@@ -120,6 +122,48 @@ $(document).ready(function() {
                         responsive: true,
                         autoWidth: false,
                         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+                    });
+
+                    // Toolbar: right-align filter, add Show/Hide columns + Print
+                    var $wrapper = $(tableSelector).closest('.dataTables_wrapper');
+                    var $filter = $wrapper.find('.dataTables_filter');
+                    $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
+
+                    var colLabels = ['S.No.', 'Employee Type', 'Name', 'House No.', 'Meter Reading Date', 'Last Meter Reading'];
+                    var $colDropdown = $('<div class="dropdown d-inline-block" data-bs-auto-close="outside">' +
+                        '<button class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle" type="button" id="pendingMeterColDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Show/Hide columns"><i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle">view_column</i> Columns</button>' +
+                        '<ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="pendingMeterColDropdown" id="pendingMeterColMenu"></ul></div>');
+                    var $colMenu = $colDropdown.find('#pendingMeterColMenu');
+                    colLabels.forEach(function(label, idx) {
+                        var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"><input type="checkbox" class="form-check-input column-toggle" data-column="' + idx + '" checked> ' + label + '</label></li>');
+                        $li.find('input').on('change', function() {
+                            dataTableInstance.column($(this).data('column')).visible(this.checked);
+                        });
+                        $colMenu.append($li);
+                    });
+                    $colDropdown.find('.dropdown-item').on('click', function(e) { e.stopPropagation(); });
+
+                    var $printBtn = $('<button type="button" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center" id="btnPrintPendingMeter" title="Print"><i class="material-icons material-symbols-rounded" style="font-size:18px">print</i></button>');
+                    $filter.append($colDropdown).append($printBtn);
+
+                    $('#btnPrintPendingMeter').on('click', function() {
+                        var table = document.getElementById('pendingMeterReadingTable');
+                        if (!table) return;
+                        var clone = table.cloneNode(true);
+                        var dt = $(tableSelector).DataTable();
+                        for (var c = clone.rows[0].cells.length - 1; c >= 0; c--) {
+                            if (!dt.column(c).visible()) {
+                                clone.querySelectorAll('tr').forEach(function(tr) {
+                                    if (tr.cells[c]) tr.removeChild(tr.cells[c]);
+                                });
+                            }
+                        }
+                        var win = window.open('', '_blank', 'width=1000,height=700');
+                        if (!win) { alert('Please allow popups to print.'); return; }
+                        win.document.write('<!doctype html><html><head><title>Pending Meter Reading</title><style>body{font-family:Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:8px;} th{background:#f5f5f5;}</style></head><body><h2>Pending Meter Reading</h2>' + clone.outerHTML + '</body></html>');
+                        win.document.close();
+                        win.onafterprint = function() { win.close(); };
+                        setTimeout(function() { win.focus(); win.print(); }, 250);
                     });
                 } else {
                     tbody.append('<tr id="noDataRow"><td colspan="6" class="text-center text-muted">' + (res.message || 'No pending meter readings for the selected month.') + '</td></tr>');

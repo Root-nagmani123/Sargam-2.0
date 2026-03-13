@@ -156,6 +156,12 @@
 }
 .bill-footer .sign-sub { font-size: 8pt; margin-top: 2px; color: #718096; }
 </style>
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+.ts-dropdown { z-index: 1060 !important; max-height: 220px !important; overflow-y: auto !important; }
+</style>
+@endpush
 <div class="container-fluid">
     <!-- Breadcrumb (hidden when printing) -->
     <div class="no-print">
@@ -403,9 +409,60 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.querySelector('form[action="{{ route('admin.estate.reports.bill-report-print') }}"]');
+    var urlEmployees = '{{ route('admin.estate.reports.bill-report-print.employees') }}';
+    var commonCfg = {
+        allowEmptyOption: true,
+        create: false,
+        dropdownParent: 'body',
+        maxOptions: null,
+        hideSelected: false,
+    };
+
+    function getFormSelectVal(id) {
+        var el = document.getElementById(id);
+        return el && el.tomselect ? el.tomselect.getValue() : (el ? el.value : '');
+    }
+
+    function loadEmployeesForCategory() {
+        var category = getFormSelectVal('employee_category');
+        var month = getFormSelectVal('month');
+        var year = getFormSelectVal('year');
+        var params = new URLSearchParams();
+        params.set('employee_category', category || 'LBSNAA');
+        if (month) params.set('month', month);
+        if (year) params.set('year', year);
+        fetch(urlEmployees + '?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                var empEl = document.getElementById('employee_pk');
+                if (!empEl) return;
+                if (empEl.tomselect) { try { empEl.tomselect.destroy(); } catch (e) {} }
+                var html = '<option value="">— Select Employee —</option>';
+                if (res.status && res.data && res.data.length) {
+                    res.data.forEach(function (e) {
+                        var label = (e.emp_name || '') + (e.employee_id ? ' (' + e.employee_id + ')' : '');
+                        html += '<option value="' + e.pk + '">' + label.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>';
+                    });
+                }
+                empEl.innerHTML = html;
+                if (typeof TomSelect !== 'undefined') {
+                    new TomSelect(empEl, Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
+                }
+            })
+            .catch(function () {
+                var empEl = document.getElementById('employee_pk');
+                if (empEl && empEl.tomselect) { try { empEl.tomselect.destroy(); } catch (e) {} }
+                if (empEl) empEl.innerHTML = '<option value="">— Select Employee —</option>';
+                if (empEl && typeof TomSelect !== 'undefined') {
+                    new TomSelect(empEl, Object.assign({}, commonCfg, { placeholder: '— Select Employee —' }));
+                }
+            });
+    }
+
     if (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -414,26 +471,40 @@ document.addEventListener('DOMContentLoaded', function () {
             var params = [];
             names.forEach(function (name) {
                 var el = form.querySelector('[name="' + name + '"]');
-                if (el && el.value !== undefined && String(el.value).trim() !== '') {
-                    params.push(encodeURIComponent(name) + '=' + encodeURIComponent(el.value.trim()));
+                var val = el && el.tomselect ? el.tomselect.getValue() : (el ? el.value : '');
+                if (val !== undefined && String(val).trim() !== '') {
+                    params.push(encodeURIComponent(name) + '=' + encodeURIComponent(String(val).trim()));
                 }
             });
             window.location = params.length > 0 ? base + '?' + params.join('&') : base;
             return false;
         });
     }
-    if (window.Choices) {
-        var commonConfig = {
-            searchEnabled: true,
-            removeItemButton: false,
-            shouldSort: false,
-            itemSelectText: '',
-        };
-        new Choices('#employee_category', Object.assign({}, commonConfig, { placeholderValue: 'Employee Category' }));
-        new Choices('#month', Object.assign({}, commonConfig, { placeholderValue: 'Select Month' }));
-        new Choices('#year', Object.assign({}, commonConfig, { placeholderValue: 'Select Year' }));
-        new Choices('#employee_type_pk', Object.assign({}, commonConfig, { placeholderValue: 'Select Employee Type' }));
-        new Choices('#employee_pk', Object.assign({}, commonConfig, { placeholderValue: 'Select Employee' }));
+
+    if (typeof TomSelect !== 'undefined') {
+        var ids = [
+            { id: 'employee_category', placeholder: 'Employee Category' },
+            { id: 'month', placeholder: '— Select Month —' },
+            { id: 'year', placeholder: '— Select Year —' },
+            { id: 'employee_type_pk', placeholder: '— Select Employee Type —' },
+            { id: 'employee_pk', placeholder: '— Select Employee —' }
+        ];
+        ids.forEach(function (item) {
+            var el = document.getElementById(item.id);
+            if (el && !el.tomselect) {
+                new TomSelect(el, Object.assign({}, commonCfg, { placeholder: item.placeholder }));
+            }
+        });
+
+        var catEl = document.getElementById('employee_category');
+        var monthEl = document.getElementById('month');
+        var yearEl = document.getElementById('year');
+        function attachEmployeeReload() {
+            if (catEl && catEl.tomselect) catEl.tomselect.on('change', loadEmployeesForCategory);
+            if (monthEl && monthEl.tomselect) monthEl.tomselect.on('change', loadEmployeesForCategory);
+            if (yearEl && yearEl.tomselect) yearEl.tomselect.on('change', loadEmployeesForCategory);
+        }
+        attachEmployeeReload();
     }
 });
 </script>

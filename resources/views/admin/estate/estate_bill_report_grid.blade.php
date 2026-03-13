@@ -11,35 +11,33 @@
     <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">
             <h1 class="h4 fw-bold text-dark mb-1">List Bill For Other And Lbsna</h1>
-            <p class="text-muted small mb-4">Only notified bills are listed. Select Bill Month and click Show.</p>
+            <p class="text-muted small mb-4">Only verified/notified bills are listed for the selected month. Select Bill Month and click Show. If you expect more records, ensure those bills are verified (List Bill / Verify).</p>
             <form id="billReportGridFilterForm" class="row g-3 align-items-end">
                 <div class="col-12 col-md-4">
                     <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" required>
-                        <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
                     </div>
-                    <small class="text-muted d-block">Select Bill Month</small>
+                    <small class="text-muted d-block">Select Bill Month (current month or earlier)</small>
                 </div>
-                <div class="col-12 col-md-8 d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" class="btn btn-primary" id="btnShow">
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-primary rounded-1 px-3 w-100" id="btnShow">
                         <i class="bi bi-search me-1"></i> Show
-                    </button>
-
-                    <div class="btn-group ms-md-auto" role="group">
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="btnBillReportColumns" title="Show / hide columns" disabled>
-                            <i class="bi bi-columns-gap"></i>
-                            <span class="d-none d-md-inline ms-1">Show / hide columns</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" id="billReportColumnToggleMenu"></ul>
-                    </div>
-
-                    <button type="button" class="btn btn-outline-secondary" id="btnBillReportPrint" title="Print" disabled>
-                        <i class="bi bi-printer me-1"></i>
-                        <span class="d-none d-md-inline">Print</span>
                     </button>
                 </div>
             </form>
+            <div class="d-none" id="billReportToolbarPlaceholder">
+                <div class="dropdown d-inline-block ms-2" data-bs-auto-close="outside">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-1 dropdown-toggle d-inline-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false" id="btnBillReportColumns" title="Show / hide columns" disabled>
+                        <i class="material-icons material-symbols-rounded" style="font-size:18px">view_column</i>
+                        <span class="ms-1">Columns</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end py-2" id="billReportColumnToggleMenu"></ul>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center ms-1" id="btnBillReportPrint" title="Print" disabled>
+                    <i class="material-icons material-symbols-rounded" style="font-size:18px">print</i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -270,6 +268,15 @@ $(document).ready(function() {
 
             $('#btnBillReportColumns').prop('disabled', false);
             $('#btnBillReportPrint').prop('disabled', false);
+
+            // Move Columns + Print into table toolbar (search row) so buttons appear above table
+            var $wrapper = $('#estateBillReportTable').closest('.dataTables_wrapper');
+            var $filter = $wrapper.find('.dataTables_filter');
+            var $toolbar = $('#billReportToolbarPlaceholder').children().detach();
+            if ($filter.length && $toolbar.length) {
+                $filter.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
+                $filter.append($toolbar);
+            }
         } else {
             billReportDt.ajax.reload(null, true);
         }

@@ -194,13 +194,38 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.possession.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.possession.unit-sub-types') }}";
     const housesUrl = "{{ route('admin.estate.change-request.vacant-houses') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
+
+    if (typeof TomSelect !== 'undefined') {
+        const requesterEl = document.getElementById('estate_home_request_details_pk');
+        const campusEl = document.getElementById('estate_campus_master_pk');
+        const commonConfig = {
+            allowEmptyOption: true,
+            create: false,
+            dropdownParent: 'body',
+            maxOptions: null,
+            hideSelected: false,
+            onInitialize: function () { this.activeOption = null; }
+        };
+        if (requesterEl && !requesterEl.tomselect) {
+            new TomSelect(requesterEl, Object.assign({}, commonConfig, { placeholder: '---select---' }));
+        }
+        if (campusEl && !campusEl.tomselect) {
+            new TomSelect(campusEl, Object.assign({}, commonConfig, { placeholder: '---select---' }));
+        }
+    }
 
     const oldUnitType = @json(old('estate_unit_type_master_pk'));
     const oldBlock = @json(old('estate_block_master_pk'));

@@ -16,7 +16,7 @@
                     <p class="text-muted small mb-0">This page displays all the unit sub type added in the system and provides options such as add, edit, delete, etc.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.define-unit-sub-type.create') }}" class="btn btn-primary"><i class="material-icons material-symbols-rounded">add</i> Add New</a>
+                    <a href="{{ route('admin.estate.define-unit-sub-type.create') }}" class="btn btn-primary rounded-1 px-3 d-inline-flex align-items-center gap-2 unit-sub-type-add-btn"><i class="material-icons material-symbols-rounded">add</i> Add New</a>
                 </div>
             </div>
 
@@ -74,6 +74,15 @@ $(document).ready(function() {
         autoWidth: false,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });
+
+    // Move "Add New" button next to the search box and align right
+    var $wrapper = $('#unitSubTypeTable').closest('.dataTables_wrapper');
+    var $filter = $wrapper.find('.dataTables_filter');
+    var $addBtn = $('.unit-sub-type-add-btn').detach().addClass('ms-2');
+    if ($filter.length && $addBtn.length) {
+        $filter.append($addBtn);
+        $filter.addClass('d-flex align-items-center justify-content-end gap-2');
+    }
 });
 </script>
 @endpush

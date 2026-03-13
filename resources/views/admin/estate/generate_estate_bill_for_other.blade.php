@@ -9,8 +9,26 @@
 
     <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">
-            <h1 class="h4 fw-bold text-dark mb-1">Generate Estate Bill for Other</h1>
-            <p class="text-muted small mb-4">Contract employees. Select Bill Month and click Show to list bills.</p>
+            <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3 mb-3 no-print">
+                <div>
+                    <h1 class="h4 fw-bold text-dark mb-1">Generate Estate Bill for Other</h1>
+                    <p class="text-muted small mb-0">Contract employees. Select Bill Month and click Show to list bills.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Show / hide columns">
+                            <i class="bi bi-columns-gap"></i>
+                            <span class="d-none d-md-inline ms-1">Show / hide columns</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" id="columnToggleMenu"></ul>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2" id="btnPrint" title="Print">
+                        <i class="bi bi-printer"></i>
+                        <span class="d-none d-md-inline">Print</span>
+                    </button>
+                </div>
+            </div>
+
             <form id="billForOtherFilterForm" class="row g-3 align-items-end">
                 <div class="col-12 col-md-4">
                     <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
@@ -27,12 +45,12 @@
                     <button type="submit" class="btn btn-primary" id="btnShow">
                         <i class="bi bi-search me-1"></i> Show
                     </button>
-                    <button type="button" class="btn btn-outline-success btn-sm" id="btnVerifySelected" title="Mark selected bills as verified (notify employee)">
+                    <!-- <button type="button" class="btn btn-outline-success btn-sm" id="btnVerifySelected" title="Mark selected bills as verified (notify employee)">
                         <i class="bi bi-check2-circle me-1"></i> Verify Selected Bills
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSaveAsDraft" title="Save selected bills as draft">
+                    </button> -->
+                    <!-- <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSaveAsDraft" title="Save selected bills as draft">
                         <i class="bi bi-save me-1"></i> Save As Draft
-                    </button>
+                    </button> -->
                 </div>
             </form>
         </div>
@@ -40,7 +58,7 @@
 
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body p-4">
-            <div class="table-responsive">
+            <div class="bill-for-other-table-wrapper table-responsive">
                 <table class="table text-nowrap mb-0" id="billForOtherTable">
                     <thead>
                         <tr>
@@ -81,6 +99,51 @@
 @media (max-width: 767.98px) {
     .table-scroll-vertical-sm { max-height: 65vh; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 8mm;
+    }
+    .no-print { display: none !important; }
+    #billForOtherTable_wrapper .dataTables_length,
+    #billForOtherTable_wrapper .dataTables_filter,
+    #billForOtherTable_wrapper .dataTables_paginate { display: none !important; }
+
+    .bill-for-other-table-wrapper,
+    #billForOtherTable_wrapper .dataTables_scroll,
+    #billForOtherTable_wrapper .dataTables_scrollBody,
+    #billForOtherTable_wrapper .dataTables_scrollHead {
+        overflow: visible !important;
+    }
+    #billForOtherTable_wrapper .dataTables_scrollBody {
+        height: auto !important;
+        max-height: none !important;
+    }
+    #billForOtherTable_wrapper .dataTables_scrollHead {
+        display: none !important;
+    }
+    #billForOtherTable_wrapper table,
+    #billForOtherTable_wrapper table.dataTable {
+        width: 100% !important;
+    }
+    body {
+        zoom: 0.78;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    #billForOtherTable_wrapper th,
+    #billForOtherTable_wrapper td {
+        white-space: normal !important;
+        word-break: break-word;
+        font-size: 11px;
+        padding: 0.35rem 0.4rem !important;
+    }
+    #billForOtherTable_wrapper thead { display: table-header-group; }
+}
+.bill-for-other-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 </style>
 @endpush
 
@@ -101,6 +164,28 @@ $(document).ready(function() {
         div.appendChild(document.createTextNode(String(str)));
         return div.innerHTML;
     }
+
+    function buildColumnToggle() {
+        if (!dataTableInstance) return;
+        var table = dataTableInstance;
+        var menu = $('#columnToggleMenu');
+        menu.empty();
+        table.columns().every(function(i) {
+            var col = this;
+            var header = $(col.header()).text().trim();
+            if (!header || header === 'S.NO.') return;
+            var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 cursor-pointer mb-0"><input type="checkbox" class="form-check-input column-toggle" data-column="' + i + '"> ' + header + '</label></li>');
+            $li.find('input').prop('checked', col.visible());
+            menu.append($li);
+        });
+    }
+
+    $(document).on('change', '.column-toggle', function() {
+        if (!dataTableInstance) return;
+        var table = dataTableInstance;
+        var colIdx = $(this).data('column');
+        table.column(colIdx).visible($(this).prop('checked'));
+    });
 
     function loadBillForOther() {
         var billMonth = $('#bill_month').val();
@@ -172,6 +257,7 @@ $(document).ready(function() {
                         scrollX: true,
                         dom: '<"row flex-nowrap align-items-center py-2"<"col-12 col-sm-6 col-md-6 mb-2 mb-md-0"l><"col-12 col-sm-6 col-md-6"f>>rt<"row align-items-center py-2"<"col-12 col-sm-5 col-md-5"i><"col-12 col-sm-7 col-md-7"p>>'
                     });
+                    buildColumnToggle();
                 }
             },
             error: function() {
@@ -186,6 +272,80 @@ $(document).ready(function() {
                 $('#check_all_bills').prop('checked', false);
             }
         });
+    }
+
+    function buildPrintableTableHtml() {
+        if (!dataTableInstance) return '';
+        var table = dataTableInstance;
+        var visibleIndexes = [];
+        table.columns().every(function(i) {
+            var header = ($(this.header()).text() || '').trim();
+            if (!header) return;
+            if (this.visible()) visibleIndexes.push(i);
+        });
+
+        var html = '<table class="table table-bordered table-striped">';
+        html += '<thead><tr>';
+        visibleIndexes.forEach(function(colIdx) {
+            var h = ($(table.column(colIdx).header()).text() || '').trim();
+            html += '<th>' + h + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        table.rows({ search: 'applied' }).nodes().each(function(rowNode) {
+            var $row = $(rowNode);
+            if ($row.hasClass('child')) return;
+            html += '<tr>';
+            visibleIndexes.forEach(function(colIdx) {
+                var cellNode = table.cell(rowNode, colIdx).node();
+                var cellHtml = '';
+                if (cellNode) {
+                    var $cell = $(cellNode).clone();
+                    $cell.find('input, button, select, textarea').remove();
+                    $cell.find('a.btn, .btn, .form-check-input').remove();
+                    cellHtml = ($cell.html() || '').trim();
+                }
+                html += '<td>' + cellHtml + '</td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function openPrintWindow(tableHtml) {
+        var title = 'Generate Estate Bill for Other';
+        var win = window.open('', '_blank');
+        if (!win) {
+            window.print();
+            return;
+        }
+
+        win.document.open();
+        win.document.write(
+            '<!doctype html><html><head><meta charset="utf-8">' +
+            '<title>' + title + '</title>' +
+            '<style>' +
+            '@page{size:A4 landscape;margin:8mm;}' +
+            'body{font-family:Arial, sans-serif;font-size:11px;color:#111;}' +
+            'h2{margin:0 0 8px 0;font-size:14px;}' +
+            'table{width:100%;border-collapse:collapse;}' +
+            'th,td{border:1px solid #333;padding:4px 6px;vertical-align:top;word-break:break-word;white-space:normal;}' +
+            'thead{display:table-header-group;}' +
+            'tr{page-break-inside:avoid;}' +
+            '</style></head><body>' +
+            '<h2>' + title + '</h2>' +
+            tableHtml +
+            '</body></html>'
+        );
+        win.document.close();
+
+        setTimeout(function() {
+            win.focus();
+            win.print();
+            win.close();
+        }, 250);
     }
 
     function getSelectedBillPks() {
@@ -235,6 +395,40 @@ $(document).ready(function() {
     });
     $(document).on('change', '#billForOtherTable .bill-row-check', function() {
         syncCheckAll();
+    });
+
+    $('#btnPrint').on('click', function() {
+        if (!dataTableInstance) {
+            window.print();
+            return;
+        }
+
+        var table = dataTableInstance;
+        var originalLen = table.page.len();
+        var originalPage = table.page();
+
+        var restore = function() {
+            table.page.len(originalLen);
+            table.page(originalPage);
+            table.draw(false);
+        };
+
+        var restored = false;
+        var safeRestore = function() {
+            if (restored) return;
+            restored = true;
+            restore();
+        };
+
+        table.one('draw', function() {
+            setTimeout(function() {
+                var tableHtml = buildPrintableTableHtml();
+                openPrintWindow(tableHtml);
+                setTimeout(safeRestore, 800);
+            }, 250);
+        });
+
+        table.page.len(-1).draw();
     });
 
     $('#btnVerifySelected').on('click', function() {

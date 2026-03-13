@@ -93,16 +93,28 @@
                     <div class="col-12 col-md-6">
                         <label for="allotment_date" class="form-label">Allotment Date <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="date" class="form-control" id="allotment_date" name="allotment_date" required value="{{ old('allotment_date', isset($record) && $record->allotment_date ? $record->allotment_date->format('Y-m-d') : '') }}">
-                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                            <input
+                                type="date"
+                                class="form-control"
+                                id="allotment_date"
+                                name="allotment_date"
+                                required
+                                value="{{ old('allotment_date', isset($record) && $record->allotment_date ? $record->allotment_date->format('Y-m-d') : '') }}"
+                            >
                         </div>
                         <div class="form-text">Allotment Date</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="possession_date_oth" class="form-label">Possession Date <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="date" class="form-control" id="possession_date_oth" name="possession_date_oth" required value="{{ old('possession_date_oth', isset($record) && $record->possession_date_oth ? $record->possession_date_oth->format('Y-m-d') : '') }}">
-                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                            <input
+                                type="date"
+                                class="form-control"
+                                id="possession_date_oth"
+                                name="possession_date_oth"
+                                required
+                                value="{{ old('possession_date_oth', isset($record) && $record->possession_date_oth ? $record->possession_date_oth->format('Y-m-d') : '') }}"
+                            >
                         </div>
                         <div class="form-text">Possession Date</div>
                     </div>
@@ -184,13 +196,22 @@
 </div>
 @endsection
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.possession.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.possession.unit-sub-types') }}";
     const housesUrl = "{{ route('admin.estate.possession.houses') }}";
     const unitTypesByCampus = @json($unitTypesByCampus ?? []);
+    // When editing an existing possession, ensure the currently allotted house
+    // is still returned from the "houses" API even though it is occupied.
+    const includeHousePk = @json(isset($record) ? $record->estate_house_master_pk : null);
 
     // Preserve dependent dropdown state after validation errors (old input),
     // and also when editing an existing record.
@@ -202,13 +223,68 @@ $(document).ready(function() {
         house: @json(old('estate_house_master_pk', isset($record) ? $record->estate_house_master_pk : null)),
     };
     let isInitializing = true;
+    var houseDataCache = {}; // pk -> { house_no, meter_one, meter_two }
 
-    // Requester change -> fill request_id and section
-    $('#estate_other_req_pk').change(function() {
-        var opt = $(this).find('option:selected');
-        $('#request_id_display').val(opt.attr('data-request-no') || '');
-        $('#section_display').val(opt.attr('data-section') || opt.attr('data-designation') || '');
-    }).trigger('change');
+    // Tom Select: shared config (search + compact dropdown, prefilled value preserved)
+    var estateTsConfig = {
+        allowEmptyOption: true,
+        create: false,
+        dropdownParent: 'body',
+        maxOptions: null,
+        hideSelected: false,
+        placeholder: '---select---',
+        onInitialize: function() { this.activeOption = null; }
+    };
+    var tsRequester = null, tsCampus = null, tsUnitType = null, tsBlock = null, tsUnitSub = null, tsHouse = null;
+
+    function initEstateTomSelect(el, opts) {
+        if (!el || typeof TomSelect === 'undefined') return null;
+        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+        var cfg = $.extend(true, {}, estateTsConfig, opts || {});
+        return new TomSelect(el, cfg);
+    }
+
+    function getSelectVal(sel) {
+        return (sel && sel.tomselect) ? sel.tomselect.getValue() : $(sel).val();
+    }
+
+    function getSelectedOptionData(selId, dataAttr) {
+        var el = document.getElementById(selId);
+        if (!el) return '';
+        var val = getSelectVal(el);
+        var opt = $(el).find('option').filter(function() { return $(this).val() == val; }).first();
+        return opt.attr(dataAttr) || '';
+    }
+
+    // Static dropdowns: init Tom Select (prefilled value already in DOM)
+    var elRequester = document.getElementById('estate_other_req_pk');
+    var elCampus = document.getElementById('estate_campus_master_pk');
+    if (elRequester) tsRequester = initEstateTomSelect(elRequester, { placeholder: '---select---' });
+    if (elCampus) tsCampus = initEstateTomSelect(elCampus, { placeholder: '---select---' });
+
+    // Dynamic dropdowns: init with placeholder so we can use clearOptions/addOption/setValue
+    var elUnitType = document.getElementById('estate_unit_type_master_pk');
+    var elBlock = document.getElementById('estate_block_master_pk');
+    var elUnitSub = document.getElementById('estate_unit_sub_type_master_pk');
+    var elHouse = document.getElementById('estate_house_master_pk');
+    if (elUnitType) tsUnitType = initEstateTomSelect(elUnitType, { placeholder: '---select---' });
+    if (elBlock) tsBlock = initEstateTomSelect(elBlock, { placeholder: '---select---' });
+    if (elUnitSub) tsUnitSub = initEstateTomSelect(elUnitSub, { placeholder: '---select---' });
+    if (elHouse) tsHouse = initEstateTomSelect(elHouse, { placeholder: '---select---' });
+
+    // Requester change -> fill request_id and section (use data from option by value)
+    function syncRequesterDisplay() {
+        var reqNo = getSelectedOptionData('estate_other_req_pk', 'data-request-no');
+        var section = getSelectedOptionData('estate_other_req_pk', 'data-section') || getSelectedOptionData('estate_other_req_pk', 'data-designation');
+        $('#request_id_display').val(reqNo);
+        $('#section_display').val(section);
+    }
+    $(document).on('change', '#estate_other_req_pk', syncRequesterDisplay);
+    syncRequesterDisplay();
+
+    // Hide secondary meter row by default; will be shown only when a valid
+    // second meter number exists for the selected house.
+    $('#secondary-meter-wrapper-oth').hide();
 
     function sanitizeOtherMeterInputs() {
         $('#meter_reading_oth_primary, #meter_reading_oth_secondary').each(function() {
@@ -225,13 +301,18 @@ $(document).ready(function() {
     });
     sanitizeOtherMeterInputs();
 
-    // Campus change -> fill unit types from pre-loaded data (campus + house_master + unit_type_master join), then blocks
-    $('#estate_campus_master_pk').change(function() {
-        var campusId = $(this).val();
-        $('#estate_unit_type_master_pk').html('<option value="">Select</option>');
-        $('#estate_block_master_pk').html('<option value="">Select</option>');
-        $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
-        $('#estate_house_master_pk').html('<option value="">Select</option>');
+    function clearDynamicTs(clearUnitType, clearBlock, clearUnitSub, clearHouse) {
+        var emptyOpt = { value: '', text: '---select---' };
+        if (clearUnitType && tsUnitType) { tsUnitType.clearOptions(); tsUnitType.addOption(emptyOpt); tsUnitType.setValue(''); }
+        if (clearBlock && tsBlock) { tsBlock.clearOptions(); tsBlock.addOption(emptyOpt); tsBlock.setValue(''); }
+        if (clearUnitSub && tsUnitSub) { tsUnitSub.clearOptions(); tsUnitSub.addOption(emptyOpt); tsUnitSub.setValue(''); }
+        if (clearHouse && tsHouse) { tsHouse.clearOptions(); tsHouse.addOption(emptyOpt); tsHouse.setValue(''); }
+    }
+
+    // Campus change -> fill unit types from pre-loaded data, then blocks
+    $(document).on('change', '#estate_campus_master_pk', function() {
+        var campusId = getSelectVal(this);
+        clearDynamicTs(true, true, true, true);
         if (!campusId) return;
 
         if (!isInitializing) {
@@ -242,21 +323,21 @@ $(document).ready(function() {
         }
 
         var list = unitTypesByCampus[campusId] || [];
-        $.each(list, function(i, ut) {
-            var sel = (initialSelections.unitType && initialSelections.unitType == ut.pk) ? 'selected' : '';
-            $('#estate_unit_type_master_pk').append('<option value="'+ut.pk+'" '+sel+'>'+ut.unit_type+'</option>');
-        });
-        if (list.length && !initialSelections.unitType && list.length === 1) {
-            $('#estate_unit_type_master_pk').val(list[0].pk);
+        if (tsUnitType) {
+            tsUnitType.clearOptions();
+            tsUnitType.addOption({ value: '', text: '---select---' });
+            $.each(list, function(i, ut) {
+                tsUnitType.addOption({ value: String(ut.pk), text: ut.unit_type });
+            });
+            var toSet = initialSelections.unitType ? String(initialSelections.unitType) : (list.length === 1 ? String(list[0].pk) : '');
+            if (toSet) tsUnitType.setValue(toSet, true);
         }
         if (list.length) loadBlocks();
     });
 
-    // Unit Type change -> reload blocks for current campus
-    $('#estate_unit_type_master_pk').change(function() {
-        $('#estate_block_master_pk').html('<option value="">Select</option>');
-        $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
-        $('#estate_house_master_pk').html('<option value="">Select</option>');
+    // Unit Type change -> reload blocks
+    $(document).on('change', '#estate_unit_type_master_pk', function() {
+        clearDynamicTs(false, true, true, true);
         if (!isInitializing) {
             initialSelections.block = null;
             initialSelections.unitSub = null;
@@ -266,27 +347,29 @@ $(document).ready(function() {
     });
 
     function loadBlocks() {
-        var campusId = $('#estate_campus_master_pk').val();
-        var unitTypeId = $('#estate_unit_type_master_pk').val();
+        var campusId = getSelectVal(document.getElementById('estate_campus_master_pk'));
+        var unitTypeId = getSelectVal(document.getElementById('estate_unit_type_master_pk'));
         if (!campusId) return;
         $.get(blocksUrl, {
             campus_id: campusId,
             unit_type_id: unitTypeId || ''
         }, function(res) {
-            if (res.status && res.data) {
+            if (res.status && res.data && tsBlock) {
+                tsBlock.clearOptions();
+                tsBlock.addOption({ value: '', text: '---select---' });
                 $.each(res.data, function(i, b) {
-                    var sel = (initialSelections.block && initialSelections.block == b.pk) ? 'selected' : '';
-                    $('#estate_block_master_pk').append('<option value="'+b.pk+'" '+sel+'>'+b.block_name+'</option>');
+                    tsBlock.addOption({ value: String(b.pk), text: b.block_name });
                 });
+                var toSet = initialSelections.block ? String(initialSelections.block) : '';
+                if (toSet) tsBlock.setValue(toSet, true);
                 loadUnitSubTypes();
             }
         });
     }
 
     // Block change -> load unit sub types
-    $('#estate_block_master_pk').change(function() {
-        $('#estate_unit_sub_type_master_pk').html('<option value="">Select</option>');
-        $('#estate_house_master_pk').html('<option value="">Select</option>');
+    $(document).on('change', '#estate_block_master_pk', function() {
+        clearDynamicTs(false, false, true, true);
         if (!isInitializing) {
             initialSelections.unitSub = null;
             initialSelections.house = null;
@@ -295,77 +378,100 @@ $(document).ready(function() {
     });
 
     function loadUnitSubTypes() {
-        var campusId = $('#estate_campus_master_pk').val();
-        var blockId = $('#estate_block_master_pk').val();
-        var unitTypeId = $('#estate_unit_type_master_pk').val();
+        var campusId = getSelectVal(document.getElementById('estate_campus_master_pk'));
+        var blockId = getSelectVal(document.getElementById('estate_block_master_pk'));
+        var unitTypeId = getSelectVal(document.getElementById('estate_unit_type_master_pk'));
         if (!campusId || !blockId) return;
         $.get(unitSubTypesUrl, {
             campus_id: campusId,
             block_id: blockId,
             unit_type_id: unitTypeId
         }, function(res) {
-            if (res.status && res.data) {
+            if (res.status && res.data && tsUnitSub) {
+                tsUnitSub.clearOptions();
+                tsUnitSub.addOption({ value: '', text: '---select---' });
                 $.each(res.data, function(i, u) {
-                    var sel = (initialSelections.unitSub && initialSelections.unitSub == u.pk) ? 'selected' : '';
-                    $('#estate_unit_sub_type_master_pk').append('<option value="'+u.pk+'" '+sel+'>'+u.unit_sub_type+'</option>');
+                    tsUnitSub.addOption({ value: String(u.pk), text: u.unit_sub_type });
                 });
+                var toSet = initialSelections.unitSub ? String(initialSelections.unitSub) : '';
+                if (toSet) tsUnitSub.setValue(toSet, true);
                 loadHouses();
             }
         });
     }
 
     // Unit sub type change -> load houses
-    $('#estate_unit_sub_type_master_pk').change(function() {
-        $('#estate_house_master_pk').html('<option value="">Select</option>');
-        if (!isInitializing) {
-            initialSelections.house = null;
+    $(document).on('change', '#estate_unit_sub_type_master_pk', function() {
+        if (tsHouse) {
+            tsHouse.clearOptions();
+            tsHouse.addOption({ value: '', text: '---select---' });
+            tsHouse.setValue('');
         }
+        if (!isInitializing) initialSelections.house = null;
         loadHouses();
     });
 
     function loadHouses() {
-        var campusId = $('#estate_campus_master_pk').val();
-        var blockId = $('#estate_block_master_pk').val();
-        var unitSubId = $('#estate_unit_sub_type_master_pk').val();
-        var unitTypeId = $('#estate_unit_type_master_pk').val();
+        var campusId = getSelectVal(document.getElementById('estate_campus_master_pk'));
+        var blockId = getSelectVal(document.getElementById('estate_block_master_pk'));
+        var unitSubId = getSelectVal(document.getElementById('estate_unit_sub_type_master_pk'));
+        var unitTypeId = getSelectVal(document.getElementById('estate_unit_type_master_pk'));
         if (!campusId || !blockId || !unitSubId) return;
         $.get(housesUrl, {
             campus_id: campusId,
             block_id: blockId,
             unit_sub_type_id: unitSubId,
-            unit_type_id: unitTypeId
+            unit_type_id: unitTypeId,
+            include_house_pk: includeHousePk || ''
         }, function(res) {
-            if (res.status && res.data) {
+            if (res.status && res.data && tsHouse) {
+                houseDataCache = {};
+                tsHouse.clearOptions();
+                tsHouse.addOption({ value: '', text: '---select---' });
                 $.each(res.data, function(i, h) {
-                    var sel = (initialSelections.house && initialSelections.house == h.pk) ? 'selected' : '';
-                    var meterOne = (h.meter_one != null && h.meter_one !== '') ? String(h.meter_one).replace(/"/g, '&quot;') : '';
-                    var meterTwo = (h.meter_two != null && h.meter_two !== '') ? String(h.meter_two).replace(/"/g, '&quot;') : '';
-                    $('#estate_house_master_pk').append(
-                        '<option value="'+h.pk+'" data-house-no="'+(h.house_no || '')+'" data-meter-one="'+meterOne+'" data-meter-two="'+meterTwo+'" '+sel+'>'+ (h.house_no || '') +'</option>'
-                    );
+                    var pk = String(h.pk);
+                    var houseNo = (h.house_no != null && h.house_no !== '') ? String(h.house_no) : '';
+                    houseDataCache[pk] = {
+                        house_no: houseNo,
+                        meter_one: (h.meter_one != null && h.meter_one !== '') ? String(h.meter_one) : '',
+                        meter_two: (h.meter_two != null && h.meter_two !== '') ? String(h.meter_two) : ''
+                    };
+                    tsHouse.addOption({ value: pk, text: houseNo });
                 });
+                var toSet = initialSelections.house ? String(initialSelections.house) : '';
+                if (toSet) tsHouse.setValue(toSet, true);
                 updateHouseNoDisplay();
+                if (toSet) {
+                    setTimeout(function() {
+                        if (tsHouse && tsHouse.getValue() !== toSet) tsHouse.setValue(toSet, false);
+                        updateHouseNoDisplay();
+                    }, 50);
+                }
                 isInitializing = false;
             }
         });
     }
 
-    $('#estate_house_master_pk').change(function() {
-        updateHouseNoDisplay();
-    });
+    $(document).on('change', '#estate_house_master_pk', updateHouseNoDisplay);
 
     function updateHouseNoDisplay() {
-        var opt = $('#estate_house_master_pk option:selected');
-        $('#house_no').val(opt.data('house-no') || opt.text() || '');
-
-        var meterOne = opt.data('meter-one') || '';
-        var meterTwo = opt.data('meter-two') || '';
-
-        // Meter numbers (readonly display)
+        var el = document.getElementById('estate_house_master_pk');
+        var val = el ? getSelectVal(el) : '';
+        var houseNo = '', meterOne = '', meterTwo = '';
+        if (val && houseDataCache[val]) {
+            houseNo = houseDataCache[val].house_no || '';
+            meterOne = houseDataCache[val].meter_one || '';
+            meterTwo = houseDataCache[val].meter_two || '';
+        } else if (el && val) {
+            var opt = $(el).find('option').filter(function() { return $(this).val() == val; }).first();
+            houseNo = opt.data('house-no') || opt.text() || '';
+            meterOne = opt.attr('data-meter-one') || '';
+            meterTwo = opt.attr('data-meter-two') || '';
+        }
+        $('#house_no').val(houseNo);
         $('#meter_one_display_oth').val(meterOne);
         $('#meter_two_display_oth').val(meterTwo);
 
-        // Secondary row show/hide same as possession_details_form
         var hasValidMeterTwo = meterTwo && String(meterTwo).trim() !== '' && parseInt(meterTwo, 10) !== 0;
         if (hasValidMeterTwo) {
             $('#secondary-meter-wrapper-oth').show();

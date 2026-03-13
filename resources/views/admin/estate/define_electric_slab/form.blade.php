@@ -58,3 +58,32 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>.ts-dropdown { z-index: 1060 !important; }</style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof TomSelect === 'undefined') return;
+    var ids = ['estate_unit_type_master_pk'];
+    var commonCfg = {
+        allowEmptyOption: true,
+        create: false,
+        dropdownParent: 'body',
+        maxOptions: null,
+        hideSelected: false,
+        onInitialize: function () { this.activeOption = null; }
+    };
+    ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+        new TomSelect(el, Object.assign({}, commonCfg, { placeholder: '— Select —' }));
+    });
+});
+</script>
+@endpush

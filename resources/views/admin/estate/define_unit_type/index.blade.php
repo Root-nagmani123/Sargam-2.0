@@ -101,13 +101,13 @@ $(document).ready(function() {
         dom: '<\"row\"<\"col-sm-12 col-md-6\"l><\"col-sm-12 col-md-6\"f>>rt<\"row\"<\"col-sm-12 col-md-5\"i><\"col-sm-12 col-md-7\"p>>'
     });
 
-    // Move "Add New" button next to the search box
+    // Move "Add New" button next to the search box and align right
     var $wrapper = $('#unitTypeTable').closest('.dataTables_wrapper');
     var $filter = $wrapper.find('.dataTables_filter');
     var $addBtn = $('.unit-type-add-btn').detach().addClass('ms-2');
     if ($filter.length && $addBtn.length) {
         $filter.append($addBtn);
-        $filter.addClass('d-flex align-items-center gap-2');
+        $filter.addClass('d-flex align-items-center justify-content-end gap-2');
     }
 });
 </script>

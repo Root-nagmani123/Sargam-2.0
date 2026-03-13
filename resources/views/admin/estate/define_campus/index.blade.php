@@ -15,8 +15,8 @@
                     <h1 class="h4 fw-bold text-dark mb-1">Define Estate/Campus</h1>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('admin.estate.define-campus.create') }}" class="btn btn-success">
-                        <i class="bi bi-plus-lg me-1"></i> Add New
+                    <a href="{{ route('admin.estate.define-campus.create') }}" class="btn btn-primary rounded-1 px-3 d-inline-flex align-items-center gap-2 campus-add-btn">
+                        <i class="material-icons material-symbols-rounded">add</i> Add New
                     </a>
                 </div>
             </div>
@@ -93,6 +93,15 @@ $(document).ready(function() {
         autoWidth: false,
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });
+
+    // Move "Add New" button next to the search box and align right
+    var $wrapper = $('#campusTable').closest('.dataTables_wrapper');
+    var $filter = $wrapper.find('.dataTables_filter');
+    var $addBtn = $('.campus-add-btn').detach().addClass('ms-2');
+    if ($filter.length && $addBtn.length) {
+        $filter.append($addBtn);
+        $filter.addClass('d-flex align-items-center justify-content-end gap-2');
+    }
 });
 </script>
 @endpush
