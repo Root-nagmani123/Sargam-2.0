@@ -107,33 +107,63 @@
                         <div class="form-text">Possession Date</div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Electric Meter Reading <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input type="number"
-                                   class="form-control"
-                                   id="meter_reading_oth_primary"
-                                   name="meter_reading_oth"
-                                   inputmode="numeric"
-                                   min="0"
-                                   step="1"
-                                   maxlength="10"
-                                   value="{{ old('meter_reading_oth', isset($record) ? $record->meter_reading_oth : '') }}"
-                                   placeholder="Primary (max 10 digits)"
-                                   oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);">
-                            <span class="input-group-text">/</span>
-                            <input type="number"
-                                   class="form-control"
-                                   id="meter_reading_oth_secondary"
-                                   name="meter_reading_oth1"
-                                   inputmode="numeric"
-                                   min="0"
-                                   step="1"
-                                   maxlength="10"
-                                   value="{{ old('meter_reading_oth1', isset($record) ? $record->meter_reading_oth1 : '') }}"
-                                   placeholder="Secondary (max 10 digits)"
-                                   oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-6">
+                                <label for="meter_one_display_oth" class="form-label">Electric Meter No. (I)</label>
+                                <input
+                                    type="text"
+                                    class="form-control bg-body-secondary"
+                                    id="meter_one_display_oth"
+                                    readonly
+                                >
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="meter_reading_oth_primary" class="form-label">Electric Meter Reading (I) <span class="text-danger">*</span></label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="meter_reading_oth_primary"
+                                    name="meter_reading_oth"
+                                    inputmode="numeric"
+                                    min="0"
+                                    step="1"
+                                    maxlength="10"
+                                    value="{{ old('meter_reading_oth', isset($record) ? $record->meter_reading_oth : '') }}"
+                                    placeholder="Primary (max 10 digits)"
+                                    oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
+                                >
+                            </div>
                         </div>
-                        <div class="form-text">Electric Meter Reading (Primary / Secondary)</div>
+                        <div class="row g-3 align-items-end mt-1" id="secondary-meter-wrapper-oth">
+                            <div class="col-12 col-md-6">
+                                <label for="meter_two_display_oth" class="form-label">Electric Meter No. (II)</label>
+                                <input
+                                    type="text"
+                                    class="form-control bg-body-secondary"
+                                    id="meter_two_display_oth"
+                                    readonly
+                                >
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="meter_reading_oth_secondary" class="form-label">Electric Meter Reading (II)</label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="meter_reading_oth_secondary"
+                                    name="meter_reading_oth1"
+                                    inputmode="numeric"
+                                    min="0"
+                                    step="1"
+                                    maxlength="10"
+                                    value="{{ old('meter_reading_oth1', isset($record) ? $record->meter_reading_oth1 : '') }}"
+                                    placeholder="Secondary (max 10 digits)"
+                                    oninput="this.value=this.value.replace(/\\D/g,'').slice(0,10);"
+                                >
+                            </div>
+                        </div>
+                        <div class="form-text mt-1">
+                            Electric Meter Reading (Primary / Secondary)
+                        </div>
                     </div>
                 </div>
 
@@ -328,17 +358,21 @@ $(document).ready(function() {
         var opt = $('#estate_house_master_pk option:selected');
         $('#house_no').val(opt.data('house-no') || opt.text() || '');
 
-        // Auto-fill electric meter readings from selected house (if fields are empty)
-        var meterOne = opt.data('meter-one');
-        var meterTwo = opt.data('meter-two');
-        var $primary = $('#meter_reading_oth_primary');
-        var $secondary = $('#meter_reading_oth_secondary');
+        var meterOne = opt.data('meter-one') || '';
+        var meterTwo = opt.data('meter-two') || '';
 
-        if ($primary.length && !$primary.val() && meterOne !== undefined && meterOne !== null && meterOne !== '') {
-            $primary.val(meterOne);
-        }
-        if ($secondary.length && !$secondary.val() && meterTwo !== undefined && meterTwo !== null && meterTwo !== '') {
-            $secondary.val(meterTwo);
+        // Meter numbers (readonly display)
+        $('#meter_one_display_oth').val(meterOne);
+        $('#meter_two_display_oth').val(meterTwo);
+
+        // Secondary row show/hide same as possession_details_form
+        var hasValidMeterTwo = meterTwo && String(meterTwo).trim() !== '' && parseInt(meterTwo, 10) !== 0;
+        if (hasValidMeterTwo) {
+            $('#secondary-meter-wrapper-oth').show();
+        } else {
+            $('#secondary-meter-wrapper-oth').hide();
+            $('#meter_two_display_oth').val('');
+            $('#meter_reading_oth_secondary').val('');
         }
     }
 
