@@ -5,16 +5,20 @@
     $storeTypes = \App\Models\Mess\Store::storeTypes();
 @endphp
 <div class="container-fluid">
-    <x-breadcrum title="Mess Stores"></x-breadcrum>
+    <x-breadcrum title="Store Master"></x-breadcrum>
     <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Store Master</h4>
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header border-0 bg-body-tertiary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h4 class="mb-0 fw-semibold">Store Master</h4>
+                    <p class="mb-0 text-muted small">Manage all mess stores in one place.</p>
+                </div>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createStoreModal">
-                    Add Store
+                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+                    <span>Add Store</span>
                 </button>
             </div>
+            <div class="card-body">
 
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -52,18 +56,18 @@
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-sm btn-warning btn-edit-store"
+                                        <button type="button" class="btn btn-sm btn-warning btn-edit-store bg-transparent border-0 p-0 text-primary"
                                                 data-id="{{ $store->id }}"
                                                 data-store-name="{{ e($store->store_name) }}"
                                                 data-store-type="{{ e(trim((string)($store->store_type ?? '')) ?: 'mess') }}"
                                                 data-location="{{ e($store->location ?? '') }}"
                                                 data-status="{{ e($store->status ?? 'active') }}"
-                                                title="Edit">Edit</button>
+                                                title="Edit"><i class="material-symbols-rounded">edit</i></button>
                                         <form method="POST" action="{{ route('admin.mess.stores.destroy', $store->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this store?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" style="display: none;">Delete</button>
+                                            <button type="submit" class="btn btn-sm btn-danger bg-transparent border-0 p-0 text-primary" title="Delete"><i class="material-symbols-rounded">delete</i></button>
                                         </form>
                                     </div>
                                 </td>
@@ -345,8 +349,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-
-<style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
-</style>
 @endsection
