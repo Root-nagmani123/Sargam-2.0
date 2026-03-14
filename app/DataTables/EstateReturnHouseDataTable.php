@@ -127,21 +127,23 @@ class EstateReturnHouseDataTable extends DataTable
             })
             ->selectRaw("
                 epd.pk as pk,
-                CONCAT('L-', epd.pk) as row_id,
-                'L' as scope,
-                'LBSNAA' as employee_type,
-                ehrd.emp_name as name,
-                NULL as section_name,
-                ec.campus_name as estate_name,
-                eut.unit_type as unit_name,
-                eb.block_name as building_name,
-                ehm.house_no as house_no,
-                eust.unit_sub_type as unit_sub_type,
+                CONVERT(CONCAT('L-', epd.pk) USING utf8mb4) COLLATE utf8mb4_unicode_ci as row_id,
+                CONVERT('L' USING utf8mb4) COLLATE utf8mb4_unicode_ci as scope,
+                CONVERT('LBSNAA' USING utf8mb4) COLLATE utf8mb4_unicode_ci as employee_type,
+                CONVERT(ehrd.emp_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as name,
+                CAST(NULL AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci as section_name,
+                CONVERT(ec.campus_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as estate_name,
+                CONVERT(eut.unit_type USING utf8mb4) COLLATE utf8mb4_unicode_ci as unit_name,
+                CONVERT(eb.block_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as building_name,
+                CONVERT(ehm.house_no USING utf8mb4) COLLATE utf8mb4_unicode_ci as house_no,
+                CONVERT(eust.unit_sub_type USING utf8mb4) COLLATE utf8mb4_unicode_ci as unit_sub_type,
                 epd.allotment_date as allotment_date,
                 epd.possession_date as possession_date_oth,
                 epd.current_meter_reading_date as returning_date,
-                NULL as upload_document,
-                " . (Schema::hasColumn('estate_possession_details', 'remarks') ? 'epd.remarks' : 'NULL') . " as remarks
+                CAST(NULL AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci as upload_document,
+                " . (Schema::hasColumn('estate_possession_details', 'remarks')
+                    ? "CONVERT(epd.remarks USING utf8mb4) COLLATE utf8mb4_unicode_ci"
+                    : "CAST(NULL AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci") . " as remarks
             ");
 
         // Other Employee returned houses (estate_possession_other)
@@ -200,27 +202,29 @@ class EstateReturnHouseDataTable extends DataTable
             })
             ->selectRaw("
                 epo.pk as pk,
-                CONCAT('O-', epo.pk) as row_id,
-                'O' as scope,
-                'Other Employee' as employee_type,
-                eor.emp_name as name,
-                eor.section as section_name,
-                ec.campus_name as estate_name,
-                eut.unit_type as unit_name,
-                eb.block_name as building_name,
-                COALESCE(NULLIF(TRIM(epo.house_no),''), ehm.house_no) as house_no,
-                eust.unit_sub_type as unit_sub_type,
+                CONVERT(CONCAT('O-', epo.pk) USING utf8mb4) COLLATE utf8mb4_unicode_ci as row_id,
+                CONVERT('O' USING utf8mb4) COLLATE utf8mb4_unicode_ci as scope,
+                CONVERT('Other Employee' USING utf8mb4) COLLATE utf8mb4_unicode_ci as employee_type,
+                CONVERT(eor.emp_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as name,
+                CONVERT(eor.section USING utf8mb4) COLLATE utf8mb4_unicode_ci as section_name,
+                CONVERT(ec.campus_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as estate_name,
+                CONVERT(eut.unit_type USING utf8mb4) COLLATE utf8mb4_unicode_ci as unit_name,
+                CONVERT(eb.block_name USING utf8mb4) COLLATE utf8mb4_unicode_ci as building_name,
+                CONVERT(COALESCE(NULLIF(TRIM(epo.house_no),''), ehm.house_no) USING utf8mb4) COLLATE utf8mb4_unicode_ci as house_no,
+                CONVERT(eust.unit_sub_type USING utf8mb4) COLLATE utf8mb4_unicode_ci as unit_sub_type,
                 epo.allotment_date as allotment_date,
                 epo.possession_date_oth as possession_date_oth,
                 epo.current_meter_reading_date as returning_date,
                 " . (Schema::hasColumn('estate_possession_other', 'upload_document')
                     ? (Schema::hasColumn('estate_possession_other', 'noc_document')
-                        ? 'COALESCE(epo.upload_document, epo.noc_document)'
-                        : 'epo.upload_document')
+                        ? 'CONVERT(COALESCE(epo.upload_document, epo.noc_document) USING utf8mb4) COLLATE utf8mb4_unicode_ci'
+                        : 'CONVERT(epo.upload_document USING utf8mb4) COLLATE utf8mb4_unicode_ci')
                     : (Schema::hasColumn('estate_possession_other', 'noc_document')
-                        ? 'epo.noc_document'
-                        : 'NULL')) . " as upload_document,
-                " . (Schema::hasColumn('estate_possession_other', 'remarks') ? 'epo.remarks' : 'NULL') . " as remarks
+                        ? 'CONVERT(epo.noc_document USING utf8mb4) COLLATE utf8mb4_unicode_ci'
+                        : 'CAST(NULL AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci')) . " as upload_document,
+                " . (Schema::hasColumn('estate_possession_other', 'remarks')
+                    ? 'CONVERT(epo.remarks USING utf8mb4) COLLATE utf8mb4_unicode_ci'
+                    : 'CAST(NULL AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci') . " as remarks
             ");
 
         // Default ordering: latest returned should appear first.

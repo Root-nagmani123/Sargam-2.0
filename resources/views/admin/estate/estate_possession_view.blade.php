@@ -58,7 +58,7 @@
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_type_master_pk" class="form-label">Unit type <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
-                            <option value="">---select---</option>
+                            <!-- <option value="">---select---</option> -->
                         </select>
                         <div class="form-text">Select Unit type</div>
                     </div>
@@ -68,14 +68,14 @@
                     <div class="col-12 col-md-6">
                         <label for="estate_block_master_pk" class="form-label">Building Name <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_block_master_pk" name="estate_block_master_pk" required>
-                            <option value="">---select---</option>
+                            <!-- <option value="">---select---</option> -->
                         </select>
                         <div class="form-text">Select Building Name</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label for="estate_unit_sub_type_master_pk" class="form-label">Unit Sub Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="estate_unit_sub_type_master_pk" name="estate_unit_sub_type_master_pk" required>
-                            <option value="">---select---</option>
+                            <!-- <option value="">---select---</option> -->
                         </select>
                         <div class="form-text">Select Unit Sub Type</div>
                     </div>
@@ -85,7 +85,7 @@
                     <div class="col-12 col-md-6">
                         <label for="estate_house_master_pk" class="form-label">House No.</label>
                         <select class="form-select" id="estate_house_master_pk" name="estate_house_master_pk" required>
-                            <option value="">---select---</option>
+                            <!-- <option value="">---select---</option> -->
                         </select>
                         <input type="hidden" id="house_no" name="house_no">
                         <div class="form-text">House No.</div>
@@ -212,6 +212,8 @@ $(document).ready(function() {
     // When editing an existing possession, ensure the currently allotted house
     // is still returned from the "houses" API even though it is occupied.
     const includeHousePk = @json(isset($record) ? $record->estate_house_master_pk : null);
+    // When editing, preserve secondary meter reading prefill even if house has no meter_two
+    const hasSecondaryMeterReadingPrefill = @json(isset($record) && $record->meter_reading_oth1 !== null && (string)$record->meter_reading_oth1 !== '');
 
     // Preserve dependent dropdown state after validation errors (old input),
     // and also when editing an existing record.
@@ -282,9 +284,13 @@ $(document).ready(function() {
     $(document).on('change', '#estate_other_req_pk', syncRequesterDisplay);
     syncRequesterDisplay();
 
-    // Hide secondary meter row by default; will be shown only when a valid
-    // second meter number exists for the selected house.
-    $('#secondary-meter-wrapper-oth').hide();
+    // Hide secondary meter row by default; will be shown when a valid
+    // second meter number exists for the selected house, or when editing with prefilled secondary reading.
+    if (!hasSecondaryMeterReadingPrefill) {
+        $('#secondary-meter-wrapper-oth').hide();
+    } else {
+        $('#secondary-meter-wrapper-oth').show();
+    }
 
     function sanitizeOtherMeterInputs() {
         $('#meter_reading_oth_primary, #meter_reading_oth_secondary').each(function() {
@@ -474,6 +480,9 @@ $(document).ready(function() {
 
         var hasValidMeterTwo = meterTwo && String(meterTwo).trim() !== '' && parseInt(meterTwo, 10) !== 0;
         if (hasValidMeterTwo) {
+            $('#secondary-meter-wrapper-oth').show();
+        } else if (hasSecondaryMeterReadingPrefill) {
+            // Editing with prefilled secondary reading: keep wrapper visible and do not clear value
             $('#secondary-meter-wrapper-oth').show();
         } else {
             $('#secondary-meter-wrapper-oth').hide();

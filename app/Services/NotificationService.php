@@ -6,6 +6,7 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationService
 {
@@ -314,13 +315,15 @@ class NotificationService
             // Check for exact module name match
             if (isset($config[$type][$moduleName])) {
                 $routeConfig = $config[$type][$moduleName];
-                return $this->buildRouteUrl($routeConfig, $notification);
+                $url = $this->buildRouteUrl($routeConfig, $notification);
+                return $this->appendEstateBillMonthQuery($type, $moduleName, $url, $notification);
             }
 
             // Try case-insensitive module name match
             foreach ($config[$type] as $configModuleName => $routeConfig) {
                 if (strtolower($configModuleName) === strtolower($moduleName)) {
-                    return $this->buildRouteUrl($routeConfig, $notification);
+                    $url = $this->buildRouteUrl($routeConfig, $notification);
+                    return $this->appendEstateBillMonthQuery($type, $moduleName, $url, $notification);
                 }
             }
         }
@@ -370,6 +373,56 @@ class NotificationService
 
         // Fallback to dashboard if route doesn't exist
         return route('admin.dashboard');
+    }
+
+    /**
+     * For estate/EstateBill notifications, append bill_month query param so bill-report-grid can auto-load.
+     * Resolves reference_pk from estate_month_reading_details or estate_month_reading_details_other.
+     */
+    protected function appendEstateBillMonthQuery(string $type, string $moduleName, string $url, Notification $notification): string
+    {
+        if (strtolower($type) !== 'estate' || $moduleName !== 'EstateBill' || ! $notification->reference_pk) {
+            return $url;
+        }
+        $refPk = (int) $notification->reference_pk;
+        $year = null;
+        $monthNum = null;
+        if (Schema::hasTable('estate_month_reading_details')) {
+            $row = DB::table('estate_month_reading_details')
+                ->where('pk', $refPk)
+                ->select('bill_year', 'bill_month')
+                ->first();
+            if ($row && isset($row->bill_year)) {
+                $year = trim((string) $row->bill_year);
+                $m = trim((string) ($row->bill_month ?? ''));
+                if (is_numeric($m)) {
+                    $monthNum = (int) $m;
+                } elseif ($m !== '') {
+                    $monthNum = \Carbon\Carbon::parse($m . ' 1')->month;
+                }
+            }
+        }
+        if (($year === null || $monthNum === null) && Schema::hasTable('estate_month_reading_details_other')) {
+            $row = DB::table('estate_month_reading_details_other')
+                ->where('pk', $refPk)
+                ->select('bill_year', 'bill_month')
+                ->first();
+            if ($row && isset($row->bill_year)) {
+                $year = trim((string) $row->bill_year);
+                $m = trim((string) ($row->bill_month ?? ''));
+                if (is_numeric($m)) {
+                    $monthNum = (int) $m;
+                } elseif ($m !== '') {
+                    $monthNum = \Carbon\Carbon::parse($m . ' 1')->month;
+                }
+            }
+        }
+        if ($year !== null && $monthNum >= 1 && $monthNum <= 12) {
+            $billMonthYm = $year . '-' . str_pad((string) $monthNum, 2, '0', STR_PAD_LEFT);
+            $sep = strpos($url, '?') !== false ? '&' : '?';
+            return $url . $sep . 'bill_month=' . urlencode($billMonthYm);
+        }
+        return $url;
     }
 
     /**

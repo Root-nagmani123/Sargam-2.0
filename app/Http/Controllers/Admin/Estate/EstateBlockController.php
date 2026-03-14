@@ -10,7 +10,7 @@ class EstateBlockController extends Controller
 {
     public function index()
     {
-        $items = EstateBlock::orderBy('block_name')->paginate(request('per_page', 10));
+        $items = EstateBlock::orderBy('block_name')->get();
         return view('admin.estate.define_block_building.index', compact('items'));
     }
 

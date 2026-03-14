@@ -45,7 +45,14 @@ class EstateHacApprovedDataTable extends DataTable
             ->editColumn('request_type', fn ($row) => $row->request_type === 'change'
                 ? '<span class="badge bg-info">Change Request</span>'
                 : '<span class="badge bg-secondary">New Request</span>')
-            ->editColumn('current_or_availability', fn ($row) => e($row->current_or_availability ?? '—'))
+            ->editColumn('current_or_availability', function ($row) {
+                // Change request: show current allotment/availability only after approval
+                if (($row->request_type ?? '') === 'change') {
+                    $approved = (int) ($row->change_ap_dis_status ?? 0) === 1;
+                    return $approved ? e($row->current_or_availability ?? '—') : '—';
+                }
+                return e($row->current_or_availability ?? '—');
+            })
             ->editColumn('remarks', fn ($row) => \Illuminate\Support\Str::limit(e($row->remarks ?? ''), 60))
             ->addColumn('action', function ($row) {
                 $detailsPk = (int) ($row->estate_home_request_details_pk ?? $row->source_pk ?? 0);

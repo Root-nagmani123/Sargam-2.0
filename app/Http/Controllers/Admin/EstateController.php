@@ -7182,12 +7182,29 @@ class EstateController extends Controller
     }
 
     /**
-     * Generate next request number (oth-req-1, oth-req-2, ...)
+     * Generate next request number (oth-req-1, oth-req-2, ...).
+     * Uses max of numeric part of request_no_oth, not pk, so sequence stays correct
+     * even when pk has gaps or jumps (e.g. after 793 we get oth-req-794, not oth-req-723001).
      */
     private function generateRequestNo(): string
     {
-        $nextPk = (int) EstateOtherRequest::max('pk') + 1;
-        return 'oth-req-' . $nextPk;
+        $maxNum = EstateOtherRequest::query()
+            ->whereNotNull('request_no_oth')
+            ->where('request_no_oth', '!=', '')
+            ->pluck('request_no_oth')
+            ->map(function ($v) {
+                $v = trim((string) $v);
+                if (preg_match('/^oth-req-(\d+)$/', $v, $m)) {
+                    return (int) $m[1];
+                }
+                if (ctype_digit($v)) {
+                    return (int) $v;
+                }
+                return 0;
+            })
+            ->max() ?: 0;
+
+        return 'oth-req-' . ($maxNum + 1);
     }
 
     /**
@@ -7631,8 +7648,9 @@ class EstateController extends Controller
     }
 
     /**
-     * Estate Bill Report - Grid View: only notified bills (notify_employee_status = 1), filtered by bill month.
-     * Data mapping per estate_module_tables: estate_month_reading_details (LBSNA) + estate_month_reading_details_other (Other).
+     * Estate Bill Report - Grid View, filtered by bill month.
+     * LBSNA: only notified bills (notify_employee_status = 1). Other: all bills (with or without notify).
+     * Data mapping: estate_month_reading_details (LBSNA) + estate_month_reading_details_other (Other).
      */
     public function getBillReportGridData(Request $request)
     {
@@ -7672,6 +7690,21 @@ class EstateController extends Controller
         $billMonthVariants = array_map('trim', [$billMonthStr, $billMonthShortStr, $billMonthNumStr, $billMonthNumPadded]);
         $billMonthVariants = array_unique(array_filter($billMonthVariants, fn ($v) => $v !== ''));
 
+        // Restrict to current user's bills unless Estate/Admin (or similar) role
+        $filterByUser = ! hasRole('Estate') && ! hasRole('Admin');
+        $employeeIds = [];
+        $currentUserId = null;
+        $currentUserEmail = null;
+        if ($filterByUser && Auth::check()) {
+            $user = Auth::user();
+            $currentUserId = $user->user_id ?? $user->pk ?? null;
+            $employeeIds = getEmployeeIdsForUser($currentUserId);
+            $employeeIds = array_filter(array_map('intval', $employeeIds));
+            if (isset($user->email)) {
+                $currentUserEmail = trim((string) $user->email);
+            }
+        }
+
         // Build a union query so DataTables can paginate/search/order on DB side.
         $lbsnaQ = DB::table('estate_month_reading_details as emrd')
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
@@ -7695,8 +7728,13 @@ class EstateController extends Controller
             ->whereRaw('TRIM(CAST(emrd.bill_year AS CHAR)) = ?', [$billYearStr])
             ->where('emrd.notify_employee_status', 1)
             ->where('epd.return_home_status', 0)
-            ->whereNotNull('epd.estate_house_master_pk')
-            ->select([
+            ->whereNotNull('epd.estate_house_master_pk');
+        if ($filterByUser && ! empty($employeeIds)) {
+            $lbsnaQ->whereIn('ehrd.employee_pk', $employeeIds);
+        } elseif ($filterByUser && empty($employeeIds)) {
+            $lbsnaQ->whereRaw('1 = 0'); // no employee mapping: show no LBSNA rows
+        }
+        $lbsnaQ = $lbsnaQ->select([
                 DB::raw("'LBSNA Employee' as employee_type"),
                 'ehrd.emp_name as name',
                 'dm.department_name as section',
@@ -7733,9 +7771,17 @@ class EstateController extends Controller
                 }
             })
             ->whereRaw('TRIM(CAST(emro.bill_year AS CHAR)) = ?', [$billYearStr])
-            ->where('emro.notify_employee_status', 1)
-            ->where('epo.return_home_status', 0)
-            ->select([
+            ->where('epo.return_home_status', 0);
+        if ($filterByUser) {
+            if (Schema::hasColumn('estate_other_req', 'user_id') && $currentUserId !== null) {
+                $otherQ->where('eor.user_id', $currentUserId);
+            } elseif ($currentUserEmail !== null && Schema::hasColumn('estate_other_req', 'email')) {
+                $otherQ->where('eor.email', $currentUserEmail);
+            } else {
+                $otherQ->whereRaw('1 = 0'); // no user link: show no Other rows for this user
+            }
+        }
+        $otherQ = $otherQ->select([
                 DB::raw("'Other Employee' as employee_type"),
                 'eor.emp_name as name',
                 'eor.section as section',
