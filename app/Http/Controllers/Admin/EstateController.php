@@ -947,6 +947,7 @@ class EstateController extends Controller
                 ? DB::table('estate_unit_sub_type_master')->where('pk', $eligPk)->value('unit_sub_type')
                 : null;
 
+            $payScale = (string) ($salary?->salary_grade ?? '');
             $doj = !empty($employee->doj) ? \Carbon\Carbon::parse($employee->doj)->format('Y-m-d') : '';
             // DOJ (Pay Scale): prefer payroll_salary_master.modified_date, else employee_master.payroll_date, else employee_master.doj
             $payScaleDoj = '';
@@ -958,11 +959,31 @@ class EstateController extends Controller
                 $payScaleDoj = \Carbon\Carbon::parse($employee->doj)->format('Y-m-d');
             }
 
+            // Fallback: when payroll/salary data is missing on server, use latest estate_home_request_details for this employee
+            if (($payScale === '' || $eligPk === 0) && Schema::hasColumn('estate_home_request_details', 'employee_pk')) {
+                $existingReq = DB::table('estate_home_request_details')
+                    ->whereIn('employee_pk', $empPkCandidates)
+                    ->orderByDesc('pk')
+                    ->first();
+                if ($existingReq) {
+                    if ($payScale === '' && !empty(trim((string) ($existingReq->pay_scale ?? '')))) {
+                        $payScale = (string) $existingReq->pay_scale;
+                    }
+                    if ($eligPk === 0 && !empty($existingReq->eligibility_type_pk)) {
+                        $eligPk = (int) $existingReq->eligibility_type_pk;
+                        $eligibilityTypeName = DB::table('estate_unit_sub_type_master')->where('pk', $eligPk)->value('unit_sub_type');
+                    }
+                    if ($payScaleDoj === '' && !empty($existingReq->doj_pay_scale)) {
+                        $payScaleDoj = \Carbon\Carbon::parse($existingReq->doj_pay_scale)->format('Y-m-d');
+                    }
+                }
+            }
+
             return response()->json([
                 'emp_name' => (string) ($employee->emp_name ?? ''),
                 'employee_id' => (string) ($employee->employee_id ?? ''),
                 'emp_designation' => (string) ($employee->emp_designation ?? ''),
-                'pay_scale' => (string) ($salary?->salary_grade ?? ''),
+                'pay_scale' => $payScale,
                 'doj_pay_scale' => $payScaleDoj,
                 'doj_academic' => $doj,
                 'doj_service' => $doj,
