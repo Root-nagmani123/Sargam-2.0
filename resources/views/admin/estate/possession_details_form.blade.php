@@ -233,6 +233,15 @@ $(document).ready(function() {
     const oldHouse = @json(old('estate_house_master_pk'));
     const oldCampus = @json(old('estate_campus_master_pk'));
 
+    function setCampusSelectValue(val) {
+        const el = document.getElementById('estate_campus_master_pk');
+        if (el && el.tomselect) {
+            el.tomselect.setValue(val ? String(val) : '', true);
+        } else {
+            $('#estate_campus_master_pk').val(val || '').trigger('change');
+        }
+    }
+
     function selectedRequesterEmployeePk() {
         const opt = $('#estate_home_request_details_pk option:selected');
         return opt.attr('data-employee-pk') || '';
@@ -332,8 +341,10 @@ $(document).ready(function() {
             housePk: prefill.housePk ? String(prefill.housePk) : ''
         };
         if (preferred.campusPk) {
-            $('#estate_campus_master_pk').val(preferred.campusPk).trigger('change');
+            setCampusSelectValue(preferred.campusPk);
+            $('#estate_campus_master_pk').trigger('change');
         } else {
+            setCampusSelectValue('');
             $('#estate_house_master_pk').html('<option value="">---select---</option>');
         }
 
@@ -375,7 +386,8 @@ $(document).ready(function() {
     });
 
     if (preferred.campusPk) {
-        $('#estate_campus_master_pk').val(preferred.campusPk).trigger('change');
+        setCampusSelectValue(preferred.campusPk);
+        $('#estate_campus_master_pk').trigger('change');
     } else {
         $('#estate_campus_master_pk').trigger('change');
     }
