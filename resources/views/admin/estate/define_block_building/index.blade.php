@@ -45,9 +45,12 @@
                 </table>
             </div>
 
-            @if($items->hasPages())
+            {{-- Single pagination: server-side (Laravel). DataTable not used to avoid duplicate pagination. --}}
             <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3">
-                <div class="text-muted small">Showing {{ $items->firstItem() }} to {{ $items->lastItem() }} of {{ $items->total() }} entries</div>
+                <div class="text-muted small">
+                    Showing {{ $items->firstItem() ?? 0 }} to {{ $items->lastItem() ?? 0 }} of {{ $items->total() }} entries
+                </div>
+                @if($items->hasPages())
                 <ul class="pagination pagination-sm mb-0">
                     <li class="page-item {{ $items->onFirstPage() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->url(1) }}">First</a></li>
                     <li class="page-item {{ $items->onFirstPage() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->previousPageUrl() }}">Previous</a></li>
@@ -57,73 +60,9 @@
                     <li class="page-item {{ !$items->hasMorePages() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->nextPageUrl() }}">Next</a></li>
                     <li class="page-item {{ !$items->hasMorePages() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->url($items->lastPage()) }}">Last</a></li>
                 </ul>
+                @endif
             </div>
-            @endif
         </div>
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var selectAll = document.getElementById('selectAll');
-    var rowChecks = document.querySelectorAll('.row-check');
-    var btnDelete = document.getElementById('btnDeleteSelected');
-    function update() { btnDelete.disabled = document.querySelectorAll('.row-check:checked').length === 0; }
-    if (selectAll) selectAll.addEventListener('change', function() { rowChecks.forEach(function(c) { c.checked = selectAll.checked; }); update(); });
-    rowChecks.forEach(function(c) { c.addEventListener('change', update); });
-
-    if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
-        var dt = jQuery('#blockBuildingTable').DataTable({
-            order: [],
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-            columnDefs: [
-                {
-                    targets: 0,
-                    orderable: false,
-                    searchable: false,
-                    width: '80px',
-                    render: function(data, type, row, meta) {
-                        return type === 'display'
-                            ? (meta.settings._iDisplayStart || 0) + meta.row + 1
-                            : data;
-                    }
-                },
-                {
-                    targets: 2,
-                    orderable: false,
-                    searchable: false
-                }
-            ],
-            language: {
-                search: "Search:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                infoEmpty: "Showing 0 to 0 of 0 entries",
-                infoFiltered: "(filtered from _MAX_ total entries)",
-                paginate: {
-                    first: "First",
-                    last: "Last",
-                    next: "Next",
-                    previous: "Previous"
-                }
-            },
-            responsive: true,
-            autoWidth: false,
-            dom: '<\"row\"<\"col-sm-12 col-md-6\"l><\"col-sm-12 col-md-6\"f>>rt<\"row\"<\"col-sm-12 col-md-5\"i><\"col-sm-12 col-md-7\"p>>'
-        });
-
-        // Move "Add New" button next to the search box and align right
-        var $wrapper = jQuery('#blockBuildingTable').closest('.dataTables_wrapper');
-        var $filter = $wrapper.find('.dataTables_filter');
-        var $addBtn = jQuery('.block-building-add-btn').detach().addClass('ms-2');
-        if ($filter.length && $addBtn.length) {
-            $filter.append($addBtn);
-            $filter.addClass('d-flex align-items-center justify-content-end gap-2');
-        }
-    }
-});
-</script>
-@endpush
