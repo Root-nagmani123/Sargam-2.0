@@ -162,7 +162,7 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'order' => [[1, 'desc']],
+                'order' => [[1, 'desc']], // epd.pk desc = newest possession first
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
                     'search' => 'Search:',
@@ -185,6 +185,8 @@ class EstatePossessionDetailsDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
+            // Hidden column for default sort: newest possession (highest pk) first
+            Column::make('pk')->name('epd.pk')->title('ID')->orderable(true)->searchable(false)->addClass('d-none')->visible(false),
             // searchable(false) so Yajra does not add WHERE using model table + data name (estate_home_request_details.request_id);
             // global search is handled by the custom filter() above with correct aliases (ehrd.req_id etc.)
             Column::make('request_id')->name('ehrd.req_id')->title('REQUEST ID')->orderable(true)->searchable(false),

@@ -15,7 +15,10 @@ class EstateOtherRequestDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('request_no_oth', fn($row) => $row->request_no_oth ?? 'N/A')
+            ->editColumn('request_no_oth', function ($row) {
+                $val = $row->request_no_oth ?? 'N/A';
+                return '<span title="' . e($val) . '">' . e($val) . '</span>';
+            })
             ->editColumn('emp_name', fn($row) => $row->emp_name ?? 'N/A')
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
@@ -49,7 +52,7 @@ class EstateOtherRequestDataTable extends DataTable
                     </a>
                 </div>';
             })
-            ->rawColumns(['actions']);
+            ->rawColumns(['actions', 'request_no_oth']);
     }
 
     public function query(EstateOtherRequest $model): QueryBuilder
@@ -95,7 +98,7 @@ class EstateOtherRequestDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('80px'),
-            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true)->width('140px'),
+            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true)->width('180px'),
             Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true)->width('220px'),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];

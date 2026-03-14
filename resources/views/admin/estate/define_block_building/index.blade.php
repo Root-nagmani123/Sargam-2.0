@@ -21,48 +21,65 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table align-middle mb-0 w-100" id="blockBuildingTable">
+                <table class="table align-middle mb-0 text-nowrap w-100" id="blockBuildingTable">
                     <thead>
                         <tr>
-                            <th class="col">S.No.</th>
-                            <th class="col">Building/Block</th>
-                            <th class="col">Action</th>
+                            <th class="border-0 ps-3 fw-semibold text-secondary">S.No.</th>
+                            <th class="border-0 fw-semibold text-secondary">Building/Block</th>
+                            <th class="border-0 pe-3 fw-semibold text-secondary text-end">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white">
                         @forelse($items as $index => $row)
                         <tr>
-                            <td>{{ $items->firstItem() + $index }}</td>
-                            <td>{{ $row->block_name }}</td>
-                            <td>
+                            <td class="ps-3">{{ $index + 1 }}</td>
+                            <td class="fw-medium">{{ $row->block_name }}</td>
+                            <td class="pe-3 text-end">
                                 <a href="{{ route('admin.estate.define-block-building.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="4" class="text-center text-muted py-4">No block/building found. <a href="{{ route('admin.estate.define-block-building.create') }}">Add one</a>.</td></tr>
+                        <tr><td colspan="3" class="text-center text-muted py-4">No block/building found. <a href="{{ route('admin.estate.define-block-building.create') }}">Add one</a>.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
-            </div>
-
-            {{-- Single pagination: server-side (Laravel). DataTable not used to avoid duplicate pagination. --}}
-            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3">
-                <div class="text-muted small">
-                    Showing {{ $items->firstItem() ?? 0 }} to {{ $items->lastItem() ?? 0 }} of {{ $items->total() }} entries
-                </div>
-                @if($items->hasPages())
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item {{ $items->onFirstPage() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->url(1) }}">First</a></li>
-                    <li class="page-item {{ $items->onFirstPage() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->previousPageUrl() }}">Previous</a></li>
-                    @foreach($items->getUrlRange(max(1, $items->currentPage() - 2), min($items->lastPage(), $items->currentPage() + 2)) as $page => $url)
-                    <li class="page-item {{ $page == $items->currentPage() ? 'active' : '' }}"><a class="page-link" href="{{ $url }}">{{ $page }}</a></li>
-                    @endforeach
-                    <li class="page-item {{ !$items->hasMorePages() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->nextPageUrl() }}">Next</a></li>
-                    <li class="page-item {{ !$items->hasMorePages() ? 'disabled' : '' }}"><a class="page-link" href="{{ $items->url($items->lastPage()) }}">Last</a></li>
-                </ul>
-                @endif
             </div>
         </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    $('#blockBuildingTable').DataTable({
+        order: [[1, 'asc']],
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        columnDefs: [
+            { targets: 0, orderable: false, searchable: false, width: '80px', render: function(data, type, row, meta) { return type === 'display' ? (meta.settings._iDisplayStart || 0) + meta.row + 1 : data; } },
+            { targets: 2, orderable: false, searchable: false }
+        ],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            infoEmpty: "Showing 0 to 0 of 0 entries",
+            infoFiltered: "(filtered from _MAX_ total entries)",
+            paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
+        },
+        responsive: true,
+        autoWidth: false,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+    });
+    // Move "Add New" button next to the search box (same as estate define-campus / define-unit-type)
+    var $wrapper = $('#blockBuildingTable').closest('.dataTables_wrapper');
+    var $filter = $wrapper.find('.dataTables_filter');
+    var $addBtn = $('.block-building-add-btn').detach().addClass('ms-2');
+    if ($filter.length && $addBtn.length) {
+        $filter.append($addBtn);
+        $filter.addClass('d-flex align-items-center justify-content-end gap-2');
+    }
+});
+</script>
+@endpush

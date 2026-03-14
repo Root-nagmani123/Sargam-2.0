@@ -147,20 +147,36 @@ $(document).ready(function() {
                     $filter.append($colDropdown).append($printBtn);
 
                     $('#btnPrintPendingMeter').on('click', function() {
-                        var table = document.getElementById('pendingMeterReadingTable');
-                        if (!table) return;
-                        var clone = table.cloneNode(true);
                         var dt = $(tableSelector).DataTable();
-                        for (var c = clone.rows[0].cells.length - 1; c >= 0; c--) {
-                            if (!dt.column(c).visible()) {
-                                clone.querySelectorAll('tr').forEach(function(tr) {
-                                    if (tr.cells[c]) tr.removeChild(tr.cells[c]);
-                                });
-                            }
+                        var visibleIndexes = [];
+                        dt.columns().every(function(i) {
+                            if (this.visible()) visibleIndexes.push(i);
+                        });
+                        if (visibleIndexes.length === 0) {
+                            alert('At least one column must be visible to print.');
+                            return;
                         }
+                        var tableHtml = '<table class="table align-middle mb-0" style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>';
+                        visibleIndexes.forEach(function(colIdx) {
+                            var h = ($(dt.column(colIdx).header()).text() || '').trim();
+                            tableHtml += '<th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;">' + h + '</th>';
+                        });
+                        tableHtml += '</tr></thead><tbody>';
+                        dt.rows({ search: 'applied' }).nodes().each(function(rowNode) {
+                            var $row = $(rowNode);
+                            if ($row.find('td').length === 0) return;
+                            tableHtml += '<tr>';
+                            visibleIndexes.forEach(function(colIdx) {
+                                var cellNode = dt.cell(rowNode, colIdx).node();
+                                var cellHtml = (cellNode && cellNode.innerHTML) ? $(cellNode).text().trim() : '';
+                                tableHtml += '<td style="border:1px solid #ddd;padding:8px;">' + (cellHtml || '') + '</td>';
+                            });
+                            tableHtml += '</tr>';
+                        });
+                        tableHtml += '</tbody></table>';
                         var win = window.open('', '_blank', 'width=1000,height=700');
                         if (!win) { alert('Please allow popups to print.'); return; }
-                        win.document.write('<!doctype html><html><head><title>Pending Meter Reading</title><style>body{font-family:Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:8px;} th{background:#f5f5f5;}</style></head><body><h2>Pending Meter Reading</h2>' + clone.outerHTML + '</body></html>');
+                        win.document.write('<!doctype html><html><head><title>Pending Meter Reading</title><style>body{font-family:Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;font-size:12px;} th,td{border:1px solid #ddd;padding:8px;} th{background:#f5f5f5;}</style></head><body><h2>Pending Meter Reading</h2>' + tableHtml + '</body></html>');
                         win.document.close();
                         win.onafterprint = function() { win.close(); };
                         setTimeout(function() { win.focus(); win.print(); }, 250);

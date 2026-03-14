@@ -10,7 +10,7 @@
     <!-- Data Table Card -->
     <div class="card shadow-sm">
         <div class="card-body">
-            <p class="text-body-secondary small mb-3">House-wise status: Occupied (O) / Vacant or Under Renovation (V).</p>
+            <p class="text-body-secondary small mb-3">House-wise status: Occupied, Vacant, or Under Renovation.</p>
             <div class="table-responsive">
                 <table class="table text-nowrap" id="houseStatusTable">
                     <thead>
@@ -25,7 +25,7 @@
                             <th>Alloted Date</th>
                             <th>Occupied Date</th>
                             <th>Vacated Date</th>
-                            <th>Status (O - Occupied / V - Vacant or Under Renovation)</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>

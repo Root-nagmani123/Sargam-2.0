@@ -80,6 +80,10 @@
                     </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex flex-wrap gap-2">
+                    <button type="button" id="btnApplyFilters" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">search</i>
+                        Apply
+                    </button>
                     <button type="button" id="btnResetFilters" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</i>
                         Reset
@@ -119,29 +123,40 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
-    if (typeof TomSelect !== 'undefined') {
-        var commonCfg = {
-            allowEmptyOption: true,
-            create: false,
-            dropdownParent: 'body',
-            maxOptions: null,
-            hideSelected: false,
-            onInitialize: function () { this.activeOption = null; }
-        };
-        [
-            'filter_allotment_year',
-            'filter_campus_name',
-            'filter_building_name',
-            'filter_type_of_building',
-            'filter_department_name',
-            'filter_employee_type'
-        ].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
-            new TomSelect(el, Object.assign({}, commonCfg, {}));
-        });
+    var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_department_name', 'filter_employee_type'];
+
+    function initTomSelects() {
+        if (typeof TomSelect !== 'undefined') {
+            var commonCfg = {
+                allowEmptyOption: true,
+                create: false,
+                dropdownParent: 'body',
+                maxOptions: null,
+                hideSelected: false,
+                onInitialize: function () { this.activeOption = null; }
+            };
+            filterSelectIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                if (el.tomselect) { try { el.tomselect.destroy(); } catch (e) {} }
+                new TomSelect(el, Object.assign({}, commonCfg, {}));
+            });
+        }
     }
+
+    function destroyTomSelects() {
+        if (typeof TomSelect !== 'undefined') {
+            filterSelectIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.tomselect) {
+                    try { el.tomselect.destroy(); } catch (e) {}
+                }
+            });
+        }
+    }
+
+    initTomSelects();
+
     var table = $('#estateMigrationReportTable').DataTable({
         processing: true,
         serverSide: true,
@@ -271,6 +286,7 @@ $(document).ready(function() {
     });
 
     $('#btnResetFilters').on('click', function() {
+        destroyTomSelects();
         $('#filter_allotment_year, #filter_campus_name, #filter_building_name, #filter_type_of_building, #filter_department_name, #filter_employee_type').val('');
         $('#filter_house_no, #filter_employee_name').val('');
         $.get(filterOptionsUrl, {}, function(opts) {
@@ -280,15 +296,19 @@ $(document).ready(function() {
             fillSelect($('#filter_type_of_building'), opts.buildingTypes || [], '— All Types —');
             fillSelect($('#filter_department_name'), opts.departments || [], '— All Departments —');
             fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
+            initTomSelects();
             table.ajax.reload(null, false);
         });
     });
 
-    $('#filter_house_no, #filter_employee_name').on('keypress', function(e) {
-        if (e.which === 13) {
+    $('#filter_house_no, #filter_employee_name').on('keydown', function(e) {
+        if (e.key === 'Enter') {
             e.preventDefault();
             table.ajax.reload(null, false);
         }
+    });
+    $('#filter_house_no, #filter_employee_name').on('blur', function() {
+        table.ajax.reload(null, false);
     });
 });
 </script>

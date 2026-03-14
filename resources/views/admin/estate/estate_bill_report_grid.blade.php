@@ -11,12 +11,12 @@
     <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-body p-4">
             <h1 class="h4 fw-bold text-dark mb-1">List Bill For Other And Lbsna</h1>
-            <p class="text-muted small mb-4">Only verified/notified bills are listed for the selected month. Select Bill Month and click Show. If you expect more records, ensure those bills are verified (List Bill / Verify).</p>
+            <p class="text-muted small mb-4">Only notified bills are listed for the selected month except for other employee. Select Bill Month and click Show. If you expect more records, ensure those bills are notified except other employee.</p>
             <form id="billReportGridFilterForm" class="row g-3 align-items-end">
                 <div class="col-12 col-md-4">
                     <label for="bill_month" class="form-label">Bill Month <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required>
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" value="{{ request('bill_month', date('Y-m')) }}" max="{{ date('Y-m') }}" required>
                     </div>
                     <small class="text-muted d-block">Select Bill Month (current month or earlier)</small>
                 </div>
@@ -286,6 +286,12 @@ $(document).ready(function() {
         e.preventDefault();
         initOrReloadBillReportGrid();
     });
+
+    // When opened from notification (URL has bill_month), auto-load data
+    var urlBillMonth = new URLSearchParams(window.location.search).get('bill_month');
+    if (urlBillMonth && $('#bill_month').val()) {
+        initOrReloadBillReportGrid();
+    }
 
     $('#btnBillReportPrint').on('click', function() {
         if (!billReportDt) {
