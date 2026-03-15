@@ -5007,9 +5007,14 @@ class EstateController extends Controller
      * Update Meter Reading - main page (employee/regular possession).
      * When possession_pk and bill_month are in query string (e.g. from List Meter Reading Edit),
      * loads prefill data so the form and table can be prefilled and auto-loaded.
+     * Only Estate / Admin / Super Admin can access; regular users can only view the list at update-meter-no.
      */
     public function updateMeterReading()
     {
+        if (! hasRole('Estate') && ! hasRole('Admin') && ! hasRole('Super Admin')) {
+            abort(403, 'You do not have permission to update reading and meter no. You can only view the list.');
+        }
+
         $campuses = DB::table('estate_campus_master')
             ->orderBy('campus_name')
             ->get(['pk', 'campus_name']);
@@ -5358,9 +5363,14 @@ class EstateController extends Controller
 
     /**
      * Store/Update meter readings for "Update Meter Reading" (regular possession).
+     * Only Estate / Admin / Super Admin can store; regular users can only view the list.
      */
     public function storeMeterReadings(Request $request)
     {
+        if (! hasRole('Estate') && ! hasRole('Admin') && ! hasRole('Super Admin')) {
+            abort(403, 'You do not have permission to update reading and meter no.');
+        }
+
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'readings' => 'required|array',
             'readings.*.pk' => 'required|exists:estate_month_reading_details,pk',
@@ -6460,6 +6470,10 @@ class EstateController extends Controller
      */
     public function verifySelectedBillsLbsna(Request $request)
     {
+        if (! hasRole('Estate') && ! hasRole('Admin') && ! hasRole('Super Admin')) {
+            abort(403, 'You do not have permission to notify selected bills.');
+        }
+
         $validated = $request->validate([
             'pks' => 'required|array',
             'pks.*' => 'integer|exists:estate_month_reading_details,pk',
@@ -6962,6 +6976,8 @@ class EstateController extends Controller
 
     /**
      * Calculate electricity charge for given units using Define Electric Slab (progressive slabs per unit type).
+     * Progressive slab: each slab's rate applies only to units falling in that slab's range.
+     * e.g. 1-100 @ ₹2, 101-300 @ ₹2.5 → 150 units = 100×2 + 50×2.5 = 200 + 125 = 325.
      */
     private function calculateElectricChargeForUnits(?int $unitTypePk, int $units): float
     {
@@ -6970,8 +6986,8 @@ class EstateController extends Controller
         }
 
         // Use slabs from estate_electric_slab:
-        // - Prefer matching estate_unit_type_master_pk when available
-        // - Fallback to all slabs only if no type-specific slabs exist
+        // - When unitTypePk is set: use that type's slabs, else fallback to all.
+        // - When unitTypePk is null (Other/contract): use only slabs for NULL type, else one default type's slabs (do not mix types).
         $baseQuery = DB::table('estate_electric_slab')
             ->orderBy('start_unit_range');
 
@@ -6983,49 +6999,44 @@ class EstateController extends Controller
                 ? $typed
                 : $baseQuery->get();
         } else {
-            $slabs = $baseQuery->get();
+            // Other/contract: use slabs with NULL unit type, or else first available type's slabs (single set, no mixing)
+            $slabsNull = (clone $baseQuery)->whereNull('estate_unit_type_master_pk')->get();
+            if ($slabsNull->isNotEmpty()) {
+                $slabs = $slabsNull;
+            } else {
+                $defaultTypePk = DB::table('estate_electric_slab')
+                    ->whereNotNull('estate_unit_type_master_pk')
+                    ->orderBy('estate_unit_type_master_pk')
+                    ->value('estate_unit_type_master_pk');
+                $slabs = $defaultTypePk !== null
+                    ? (clone $baseQuery)->where('estate_unit_type_master_pk', $defaultTypePk)->get()
+                    : $baseQuery->get();
+            }
         }
 
         if ($slabs->isEmpty()) {
             return 0.0;
         }
 
-        // New logic (as per requirement):
-        // - Find the slab whose range contains the total units
-        // - Effective rate = sum of rate_per_unit of all slabs from start up to that slab
-        // - Amount = units * effective_rate
-        $selectedIndex = null;
-        $indexedSlabs = $slabs->values();
+        // Progressive slab: charge = (units in slab1 × rate1) + (units in slab2 × rate2) + ...
+        $totalCharge = 0.0;
+        $remainingUnits = $units;
 
-        foreach ($indexedSlabs as $idx => $slab) {
+        foreach ($slabs as $slab) {
+            if ($remainingUnits <= 0) {
+                break;
+            }
             $start = (int) $slab->start_unit_range;
             $endRaw = $slab->end_unit_range;
             $end = ($endRaw === null || (int) $endRaw === 0) ? PHP_INT_MAX : (int) $endRaw;
-            if ($units >= $start && $units <= $end) {
-                $selectedIndex = $idx;
-                break;
-            }
+            $slabCapacity = $end - $start + 1;
+            $unitsInThisSlab = min($remainingUnits, $slabCapacity);
+            $rate = (float) $slab->rate_per_unit;
+            $totalCharge += $unitsInThisSlab * $rate;
+            $remainingUnits -= $unitsInThisSlab;
         }
 
-        // If no exact containing slab found, fall back to the last slab whose start is <= units.
-        if ($selectedIndex === null) {
-            foreach ($indexedSlabs as $idx => $slab) {
-                if ((int) $slab->start_unit_range <= $units) {
-                    $selectedIndex = $idx;
-                }
-            }
-        }
-
-        if ($selectedIndex === null) {
-            return 0.0;
-        }
-
-        $effectiveRate = 0.0;
-        for ($i = 0; $i <= $selectedIndex; $i++) {
-            $effectiveRate += (float) $indexedSlabs[$i]->rate_per_unit;
-        }
-
-        return $units * $effectiveRate;
+        return $totalCharge;
     }
 
     /**
@@ -7042,6 +7053,45 @@ class EstateController extends Controller
             [$year, $month] = explode('-', $billMonth);
             $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
 
+            $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+            $hasEpdReading2 = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
+
+            $selectCols = [
+                'emrd.pk',
+                'emrd.bill_no',
+                'emrd.bill_month',
+                'emrd.bill_year',
+                'emrd.from_date',
+                'emrd.to_date',
+                'emrd.last_month_elec_red',
+                'emrd.curr_month_elec_red',
+                'emrd.electricty_charges',
+                'emrd.water_charges',
+                'emrd.licence_fees',
+                'emrd.house_no',
+                'emrd.meter_one',
+                'emrd.meter_one_elec_charge',
+                'emrd.meter_one_consume_unit',
+                ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'ehm.estate_unit_master_pk as unit_type_pk'),
+                'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
+                'ehrd.emp_name',
+                'ehrd.employee_id',
+                'ehrd.emp_designation',
+                'eust.unit_sub_type',
+                'ehm.water_charge as ehm_water_charge',
+                'ehm.licence_fee as ehm_licence_fee',
+            ];
+            if ($hasEpdReading2) {
+                $selectCols[] = 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details', 'last_month_elec_red2')) {
+                $selectCols[] = 'emrd.last_month_elec_red2';
+                $selectCols[] = 'emrd.curr_month_elec_red2';
+                $selectCols[] = 'emrd.meter_two';
+                $selectCols[] = 'emrd.meter_two_elec_charge';
+                $selectCols[] = 'emrd.meter_two_consume_unit';
+            }
+
             $query = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -7049,29 +7099,7 @@ class EstateController extends Controller
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->where('emrd.bill_year', $year)
                 ->where('emrd.bill_month', $monthName)
-                ->select(
-                    'emrd.pk',
-                    'emrd.bill_no',
-                    'emrd.bill_month',
-                    'emrd.bill_year',
-                    'emrd.from_date',
-                    'emrd.to_date',
-                    'emrd.last_month_elec_red',
-                    'emrd.curr_month_elec_red',
-                    'emrd.electricty_charges',
-                    'emrd.water_charges',
-                    'emrd.licence_fees',
-                    'emrd.house_no',
-                    'emrd.meter_one',
-                    'emrd.meter_one_elec_charge',
-                    'emrd.meter_one_consume_unit',
-                    'ehrd.emp_name',
-                    'ehrd.employee_id',
-                    'ehrd.emp_designation',
-                    'eust.unit_sub_type',
-                    'ehm.water_charge as ehm_water_charge',
-                    'ehm.licence_fee as ehm_licence_fee'
-                );
+                ->select($selectCols);
 
             if (!empty($unitSubTypePk)) {
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
@@ -7084,6 +7112,54 @@ class EstateController extends Controller
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+
+                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
+                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
+                    $derived = DB::table('estate_eligibility_mapping')
+                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
+                        ->whereNotNull('estate_unit_type_master_pk')
+                        ->orderBy('estate_unit_type_master_pk')
+                        ->value('estate_unit_type_master_pk');
+                    if ($derived) {
+                        $unitTypePk = (int) $derived;
+                    }
+                }
+                $prev1 = (int) ($b->last_month_elec_red ?? 0);
+                $curr1 = (int) ($b->curr_month_elec_red ?? 0);
+                $u1 = isset($b->meter_one_consume_unit) && $b->meter_one_consume_unit !== null
+                    ? (int) $b->meter_one_consume_unit
+                    : (($curr1 >= $prev1) ? $curr1 - $prev1 : 0);
+                $prev2 = 0;
+                $curr2 = 0;
+                if (isset($b->last_month_elec_red2) && (int) $b->last_month_elec_red2 > 0) {
+                    $prev2 = (int) $b->last_month_elec_red2;
+                } elseif ($hasEpdReading2 && isset($b->epd_electric_meter_reading_2) && (int) $b->epd_electric_meter_reading_2 > 0) {
+                    $prev2 = (int) $b->epd_electric_meter_reading_2;
+                }
+                if (isset($b->curr_month_elec_red2)) {
+                    $curr2 = (int) $b->curr_month_elec_red2;
+                }
+                $u2 = isset($b->meter_two_consume_unit) && $b->meter_two_consume_unit !== null
+                    ? (int) $b->meter_two_consume_unit
+                    : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
+
+                $totalElectricRecalc = 0.0;
+                if ($u1 > 0) {
+                    $m1 = $this->calculateElectricChargeForUnits($unitTypePk, $u1);
+                    $b->meter_one_elec_charge = $m1;
+                    $b->meter_one_consume_unit = $u1;
+                    $totalElectricRecalc += $m1;
+                }
+                if ($u2 > 0) {
+                    $m2 = $this->calculateElectricChargeForUnits($unitTypePk, $u2);
+                    $b->meter_two_elec_charge = $m2;
+                    $b->meter_two_consume_unit = $u2;
+                    $totalElectricRecalc += $m2;
+                }
+                if ($totalElectricRecalc > 0) {
+                    $b->electricty_charges = $totalElectricRecalc;
+                }
+
                 $billWater = (float) ($b->water_charges ?? 0);
                 $billLicence = (float) ($b->licence_fees ?? 0);
                 if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
@@ -7112,6 +7188,45 @@ class EstateController extends Controller
             [$year, $month] = explode('-', $billMonth);
             $monthName = date('F', mktime(0, 0, 0, (int) $month, 1));
 
+            $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+            $hasEpdReading2 = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
+
+            $selectCols = [
+                'emrd.pk',
+                'emrd.bill_no',
+                'emrd.bill_month',
+                'emrd.bill_year',
+                'emrd.from_date',
+                'emrd.to_date',
+                'emrd.last_month_elec_red',
+                'emrd.curr_month_elec_red',
+                'emrd.electricty_charges',
+                'emrd.water_charges',
+                'emrd.licence_fees',
+                'emrd.house_no',
+                'emrd.meter_one',
+                'emrd.meter_one_elec_charge',
+                'emrd.meter_one_consume_unit',
+                ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'ehm.estate_unit_master_pk as unit_type_pk'),
+                'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
+                'ehrd.emp_name',
+                'ehrd.employee_id',
+                'ehrd.emp_designation',
+                'eust.unit_sub_type',
+                'ehm.water_charge as ehm_water_charge',
+                'ehm.licence_fee as ehm_licence_fee',
+            ];
+            if ($hasEpdReading2) {
+                $selectCols[] = 'epd.electric_meter_reading_2 as epd_electric_meter_reading_2';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details', 'last_month_elec_red2')) {
+                $selectCols[] = 'emrd.last_month_elec_red2';
+                $selectCols[] = 'emrd.curr_month_elec_red2';
+                $selectCols[] = 'emrd.meter_two';
+                $selectCols[] = 'emrd.meter_two_elec_charge';
+                $selectCols[] = 'emrd.meter_two_consume_unit';
+            }
+
             $query = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
                 ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -7119,29 +7234,7 @@ class EstateController extends Controller
                 ->leftJoin('estate_unit_sub_type_master as eust', 'ehm.estate_unit_sub_type_master_pk', '=', 'eust.pk')
                 ->where('emrd.bill_year', $year)
                 ->where('emrd.bill_month', $monthName)
-                ->select(
-                    'emrd.pk',
-                    'emrd.bill_no',
-                    'emrd.bill_month',
-                    'emrd.bill_year',
-                    'emrd.from_date',
-                    'emrd.to_date',
-                    'emrd.last_month_elec_red',
-                    'emrd.curr_month_elec_red',
-                    'emrd.electricty_charges',
-                    'emrd.water_charges',
-                    'emrd.licence_fees',
-                    'emrd.house_no',
-                    'emrd.meter_one',
-                    'emrd.meter_one_elec_charge',
-                    'emrd.meter_one_consume_unit',
-                    'ehrd.emp_name',
-                    'ehrd.employee_id',
-                    'ehrd.emp_designation',
-                    'eust.unit_sub_type',
-                    'ehm.water_charge as ehm_water_charge',
-                    'ehm.licence_fee as ehm_licence_fee'
-                );
+                ->select($selectCols);
 
             if (!empty($unitSubTypePk)) {
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
@@ -7154,6 +7247,54 @@ class EstateController extends Controller
                 $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d.m.Y') : '—';
                 $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d.m.Y') : '—';
                 $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
+
+                $unitTypePk = isset($b->unit_type_pk) ? (int) $b->unit_type_pk : null;
+                if (! $unitTypePk && isset($b->unit_sub_type_pk) && $b->unit_sub_type_pk) {
+                    $derived = DB::table('estate_eligibility_mapping')
+                        ->where('estate_unit_sub_type_master_pk', (int) $b->unit_sub_type_pk)
+                        ->whereNotNull('estate_unit_type_master_pk')
+                        ->orderBy('estate_unit_type_master_pk')
+                        ->value('estate_unit_type_master_pk');
+                    if ($derived) {
+                        $unitTypePk = (int) $derived;
+                    }
+                }
+                $prev1 = (int) ($b->last_month_elec_red ?? 0);
+                $curr1 = (int) ($b->curr_month_elec_red ?? 0);
+                $u1 = isset($b->meter_one_consume_unit) && $b->meter_one_consume_unit !== null
+                    ? (int) $b->meter_one_consume_unit
+                    : (($curr1 >= $prev1) ? $curr1 - $prev1 : 0);
+                $prev2 = 0;
+                $curr2 = 0;
+                if (isset($b->last_month_elec_red2) && (int) $b->last_month_elec_red2 > 0) {
+                    $prev2 = (int) $b->last_month_elec_red2;
+                } elseif ($hasEpdReading2 && isset($b->epd_electric_meter_reading_2) && (int) $b->epd_electric_meter_reading_2 > 0) {
+                    $prev2 = (int) $b->epd_electric_meter_reading_2;
+                }
+                if (isset($b->curr_month_elec_red2)) {
+                    $curr2 = (int) $b->curr_month_elec_red2;
+                }
+                $u2 = isset($b->meter_two_consume_unit) && $b->meter_two_consume_unit !== null
+                    ? (int) $b->meter_two_consume_unit
+                    : (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
+
+                $totalElectricRecalc = 0.0;
+                if ($u1 > 0) {
+                    $m1 = $this->calculateElectricChargeForUnits($unitTypePk, $u1);
+                    $b->meter_one_elec_charge = $m1;
+                    $b->meter_one_consume_unit = $u1;
+                    $totalElectricRecalc += $m1;
+                }
+                if ($u2 > 0) {
+                    $m2 = $this->calculateElectricChargeForUnits($unitTypePk, $u2);
+                    $b->meter_two_elec_charge = $m2;
+                    $b->meter_two_consume_unit = $u2;
+                    $totalElectricRecalc += $m2;
+                }
+                if ($totalElectricRecalc > 0) {
+                    $b->electricty_charges = $totalElectricRecalc;
+                }
+
                 $billWater = (float) ($b->water_charges ?? 0);
                 $billLicence = (float) ($b->licence_fees ?? 0);
                 if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
@@ -7993,7 +8134,8 @@ class EstateController extends Controller
             $prev2 = (int) ($r->last_month_elec_red2 ?? 0);
             $curr2 = (int) ($r->curr_month_elec_red2 ?? 0);
             $units = (($curr >= $prev) ? $curr - $prev : 0) + (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
-            $totalCharge = (float) ($r->electricty_charges ?? 0);
+            // Recalculate electricity using progressive slab (unitTypePk = null for Other)
+            $totalCharge = $units > 0 ? $this->calculateElectricChargeForUnits(null, $units) : 0.0;
             $licence = (float) ($r->licence_fees ?? 0);
             $water = (float) ($r->water_charges ?? 0);
             $grandTotal = $totalCharge + $licence + $water;

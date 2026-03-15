@@ -100,8 +100,6 @@
                 );
                 win.document.close();
 
-                // Close popup after print dialog closes (print or cancel),
-                // so user stays on the listing page.
                 win.onafterprint = function() {
                     win.close();
                 };
@@ -124,7 +122,28 @@
                     return;
                 }
 
-                openPrintWindow(buildPrintableTableHtml(table));
+                var api = typeof $ !== 'undefined' && $('#eligibilityCriteriaTable').length && $('#eligibilityCriteriaTable').DataTable ? $('#eligibilityCriteriaTable').DataTable() : null;
+                if (api && typeof api.page === 'function') {
+                    var originalLen = api.page.len();
+                    var originalPage = api.page();
+                    var restored = false;
+                    function restore() {
+                        if (restored) return;
+                        restored = true;
+                        api.page.len(originalLen);
+                        api.page(originalPage);
+                        api.draw(false);
+                    }
+                    api.one('draw', function() {
+                        setTimeout(function() {
+                            openPrintWindow(buildPrintableTableHtml(table));
+                            setTimeout(restore, 500);
+                        }, 250);
+                    });
+                    api.page.len(-1).draw();
+                } else {
+                    openPrintWindow(buildPrintableTableHtml(table));
+                }
             });
         })();
     </script>

@@ -17,9 +17,14 @@
     <div class="d-flex flex-column flex-md-row flex-md-nowrap justify-content-between align-items-start align-items-md-center gap-3 mb-4 no-print">
         <h2 class="mb-0">Update Meter No.</h2>
         <div class="d-flex flex-wrap gap-2 flex-shrink-0">
+            @php
+                $canUpdateReadingAndMeterNo = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+            @endphp
+            @if($canUpdateReadingAndMeterNo)
             <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2">
                 Update Reading & Meter No.
             </a>
+            @endif
             <div class="btn-group btn-group-sm" role="group">
                 <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Show / hide columns">
                     <i class="bi bi-columns-gap"></i>

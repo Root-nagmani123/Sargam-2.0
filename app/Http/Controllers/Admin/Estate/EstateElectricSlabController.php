@@ -28,9 +28,9 @@ class EstateElectricSlabController extends Controller
             'start_unit_range' => 'required|integer|min:0',
             'end_unit_range' => 'required|integer|min:0|gte:start_unit_range',
             'rate_per_unit' => 'required|numeric|min:0',
-            'estate_unit_type_master_pk' => 'nullable|integer|exists:estate_unit_type_master,pk',
+            'estate_unit_type_master_pk' => 'required|integer|exists:estate_unit_type_master,pk',
         ]);
-        $validated['estate_unit_type_master_pk'] = $request->filled('estate_unit_type_master_pk') ? (int) $request->input('estate_unit_type_master_pk') : null;
+        $validated['estate_unit_type_master_pk'] = (int) $request->input('estate_unit_type_master_pk');
         EstateElectricSlab::create($validated);
         return redirect()->route('admin.estate.define-electric-slab.index')->with('success', 'Electric slab added successfully.');
     }
@@ -49,9 +49,9 @@ class EstateElectricSlabController extends Controller
             'start_unit_range' => 'required|integer|min:0',
             'end_unit_range' => 'required|integer|min:0|gte:start_unit_range',
             'rate_per_unit' => 'required|numeric|min:0',
-            'estate_unit_type_master_pk' => 'nullable|integer|exists:estate_unit_type_master,pk',
+            'estate_unit_type_master_pk' => 'required|integer|exists:estate_unit_type_master,pk',
         ]);
-        $validated['estate_unit_type_master_pk'] = $request->filled('estate_unit_type_master_pk') ? (int) $request->input('estate_unit_type_master_pk') : null;
+        $validated['estate_unit_type_master_pk'] = (int) $request->input('estate_unit_type_master_pk');
         $item->update($validated);
         return redirect()->route('admin.estate.define-electric-slab.index')->with('success', 'Electric slab updated successfully.');
     }

@@ -331,7 +331,12 @@
                             <td class="text-right">{{ $bill->meter_one_consume_unit ?? '—' }}</td>
                             <td class="amount">₹ {{ number_format((float)($bill->meter_one_elec_charge ?? 0), 2) }}</td>
                         </tr>
-                        @if(!empty($bill->meter_two) || isset($bill->meter_two_consume_unit) || (float)($bill->meter_two_elec_charge ?? 0) > 0)
+                        @php
+                            $hasSecondMeter = (isset($bill->meter_two) && trim((string)$bill->meter_two) !== '' && (int)$bill->meter_two !== 0)
+                                || (int)($bill->meter_two_consume_unit ?? 0) > 0
+                                || (float)($bill->meter_two_elec_charge ?? 0) > 0;
+                        @endphp
+                        @if($hasSecondMeter)
                         <tr>
                             <td>{{ $bill->meter_two ?? '—' }}</td>
                             <td class="text-right">{{ $bill->last_month_elec_red2 ?? '—' }}</td>

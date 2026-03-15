@@ -19,10 +19,12 @@
                         <i class="bi bi-plus-lg"></i>
                         <span>Add</span>
                     </a>
+                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
                     <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2">
                         <i class="bi bi-arrow-right-circle"></i>
                         <span>Update Reading</span>
                     </a>
+                    @endif
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Show / hide columns">
                             <i class="bi bi-columns-gap"></i>
