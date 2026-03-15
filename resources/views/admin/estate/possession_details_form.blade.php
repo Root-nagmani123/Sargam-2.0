@@ -260,9 +260,21 @@ $(document).ready(function() {
         });
     }
 
+    function getSelectedRequesterOption() {
+        const sel = document.getElementById('estate_home_request_details_pk');
+        const value = sel ? (sel.value || $(sel).val() || '') : '';
+        if (value) {
+            const escaped = String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            return $('#estate_home_request_details_pk option[value="' + escaped + '"]').first();
+        }
+        return $('#estate_home_request_details_pk option:selected');
+    }
+
     function selectedRequesterPrefill() {
-        const opt = $('#estate_home_request_details_pk option:selected');
+        const opt = getSelectedRequesterOption();
         return {
+            requestId: opt.attr('data-request-id') || '',
+            designation: opt.attr('data-designation') || '',
             campusPk: opt.attr('data-campus-pk') || '',
             unitTypePk: opt.attr('data-unit-type-pk') || '',
             blockPk: opt.attr('data-block-pk') || '',
@@ -270,8 +282,8 @@ $(document).ready(function() {
             housePk: opt.attr('data-house-pk') || '',
             allotmentDate: opt.attr('data-allotment-date') || '',
             possessionDate: opt.attr('data-possession-date') || '',
-            electricMeterReading: opt.attr('data-electric-meter-reading') || '',
-            electricMeterReadingSecondary: opt.attr('data-electric-meter-reading-secondary') || '',
+            electricMeterReading: (opt.attr('data-electric-meter-reading') ?? '').toString().trim(),
+            electricMeterReadingSecondary: (opt.attr('data-electric-meter-reading-secondary') ?? '').toString().trim(),
         };
     }
 
@@ -320,18 +332,13 @@ $(document).ready(function() {
     }
 
     $('#estate_home_request_details_pk').change(function() {
-        const opt = $(this).find('option:selected');
-        $('#request_id_display').val(opt.attr('data-request-id') || '');
-        $('#designation_display').val(opt.attr('data-designation') || '');
         const prefill = selectedRequesterPrefill();
+        $('#request_id_display').val(prefill.requestId);
+        $('#designation_display').val(prefill.designation);
         if (prefill.allotmentDate) $('#allotment_date').val(prefill.allotmentDate);
         if (prefill.possessionDate) $('#possession_date').val(prefill.possessionDate);
-        if (prefill.electricMeterReading !== '' || prefill.electricMeterReadingSecondary !== '') {
-            $('#electric_meter_reading_primary').val(prefill.electricMeterReading || '');
-            $('#electric_meter_reading_secondary').val(prefill.electricMeterReadingSecondary || '');
-        } else {
-            $('#electric_meter_reading_secondary').val('');
-        }
+        $('#electric_meter_reading_primary').val(prefill.electricMeterReading);
+        $('#electric_meter_reading_secondary').val(prefill.electricMeterReadingSecondary);
         syncElectricMeterReading();
         preferred = {
             campusPk: prefill.campusPk ? String(prefill.campusPk) : '',

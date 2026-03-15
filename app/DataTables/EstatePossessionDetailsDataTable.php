@@ -33,7 +33,10 @@ class EstatePossessionDetailsDataTable extends DataTable
                 $d = $row->possession_date ?? null;
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
-            ->editColumn('electric_meter_reading', fn ($row) => $row->electric_meter_reading ?? '—')
+            ->editColumn('electric_meter_reading', function ($row) {
+                $v = $row->electric_meter_reading;
+                return ($v !== null && $v !== '') ? e((string) $v) : '—';
+            })
             ->addColumn('actions', function ($row) {
                 $editUrl = route('admin.estate.possession-details.create', [
                     'requester_id' => $row->estate_home_request_details_pk,
@@ -69,28 +72,10 @@ class EstatePossessionDetailsDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
-        // Avoid correlated subquery per row for latest meter reading (performance on large datasets).
-        // MySQL 8 window functions: pick latest reading per possession_details_pk.
-        $latestReadingSub = DB::table('estate_month_reading_details as em')
-            ->select([
-                'em.estate_possession_details_pk',
-                'em.curr_month_elec_red',
-                DB::raw("
-                    ROW_NUMBER() OVER (
-                        PARTITION BY em.estate_possession_details_pk
-                        ORDER BY
-                            CAST(em.bill_year AS UNSIGNED) DESC,
-                            FIELD(
-                                em.bill_month,
-                                'January','February','March','April','May','June',
-                                'July','August','September','October','November','December'
-                            ) DESC,
-                            em.to_date DESC,
-                            em.pk DESC
-                    ) as rn
-                "),
-            ]);
-
+        // Listing column "Electric Meter Reading (I)" = exactly epd.electric_meter_reading
+        // (value from Possession Details form). Do NOT use estate_month_reading_details
+        // (curr_month_elec_red) here — that shows "latest updated" reading and was causing
+        // wrong/old value to appear (bug raised multiple times).
         $query = $model->newQuery()
             ->from('estate_home_request_details as ehrd')
             ->join('estate_possession_details as epd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
@@ -102,10 +87,6 @@ class EstatePossessionDetailsDataTable extends DataTable
                 $q->leftJoin('estate_unit_type_master as eut', 'eust.estate_unit_type_master_pk', '=', 'eut.pk');
             }, function ($q) {
                 $q->leftJoin('estate_unit_type_master as eut', 'ehm.estate_unit_master_pk', '=', 'eut.pk');
-            })
-            ->leftJoinSub($latestReadingSub, 'lr', function ($join) {
-                $join->on('lr.estate_possession_details_pk', '=', 'epd.pk')
-                    ->where('lr.rn', '=', 1);
             })
             ->select([
                 'epd.pk as pk',
@@ -121,10 +102,9 @@ class EstatePossessionDetailsDataTable extends DataTable
                 'ehm.house_no',
                 'epd.allotment_date',
                 'epd.possession_date',
-                DB::raw("COALESCE(NULLIF(lr.curr_month_elec_red, ''), epd.electric_meter_reading) as electric_meter_reading"),
+                'epd.electric_meter_reading',
             ])
-            // Yahan sirf woh records dikhayenge jahan possession complete ho chuka hai
-            // (electric_meter_reading > 0, jo Add Possession form me required hai).
+            // Only records where possession is complete (Electric Meter Reading I entered).
             ->whereNotNull('epd.electric_meter_reading')
             ->where('epd.electric_meter_reading', '>', 0);
 
@@ -200,7 +180,7 @@ class EstatePossessionDetailsDataTable extends DataTable
             Column::make('house_no')->name('ehm.house_no')->title('HOUSE NO.')->orderable(true)->searchable(false),
             Column::make('allotment_date')->name('epd.allotment_date')->title('ALLOTMENT DATE')->orderable(true)->searchable(false),
             Column::make('possession_date')->name('epd.possession_date')->title('POSSESSION DATE')->orderable(true)->searchable(false),
-            Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('ELECTRIC METER READING')->orderable(false)->searchable(false),
+            Column::make('electric_meter_reading')->name('epd.electric_meter_reading')->title('Electric Meter Reading (I)')->orderable(false)->searchable(false)->addClass('text-end')->width('140px'),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
     }
