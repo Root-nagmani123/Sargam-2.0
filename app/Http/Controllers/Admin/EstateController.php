@@ -3729,7 +3729,7 @@ class EstateController extends Controller
             return redirect()->back()->withInput()->withErrors(['house_no.0' => $msg]);
         }
 
-        // Enforce Meter No. 1 uniqueness on update (after numeric normalisation), excluding current house.
+        // Enforce Meter No. 1 uniqueness on update only when meter is being changed (edit: same meter as current = allow).
         $newMeterOneRaw = ($validated['meter_one'] ?? [])[0] ?? '';
         $newMeterOne = (int) preg_replace('/\D/', '', $newMeterOneRaw);
         if ($newMeterOne <= 0) {
@@ -3739,16 +3739,19 @@ class EstateController extends Controller
             }
             return redirect()->back()->withInput()->withErrors(['meter_one.0' => $msg]);
         }
-        $existsMeter = DB::table('estate_house_master')
-            ->where('meter_one', $newMeterOne)
-            ->where('pk', '!=', (int) $house->pk)
-            ->exists();
-        if ($existsMeter) {
-            $msg = 'Meter No. 1 already used: ' . $newMeterOne;
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['success' => false, 'message' => $msg], 422);
+        $currentMeterOne = (int) ($house->meter_one ?? 0);
+        if ($newMeterOne !== $currentMeterOne) {
+            $existsMeter = DB::table('estate_house_master')
+                ->where('meter_one', $newMeterOne)
+                ->where('pk', '!=', (int) $house->getKey())
+                ->exists();
+            if ($existsMeter) {
+                $msg = 'Meter No. 1 already used: ' . $newMeterOne;
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->back()->withInput()->withErrors(['meter_one.0' => $msg]);
             }
-            return redirect()->back()->withInput()->withErrors(['meter_one.0' => $msg]);
         }
 
         $hasUnitTypeOnHouse = \Illuminate\Support\Facades\Schema::hasColumn('estate_house_master', 'estate_unit_master_pk');
@@ -5696,7 +5699,13 @@ class EstateController extends Controller
             }, function ($q) {
                 $q->leftJoin('estate_unit_type_master as ut', 'ehm.estate_unit_master_pk', '=', 'ut.pk');
             })
-            ->leftJoin('employee_master as em', 'ehrd.employee_pk', '=', 'em.' . $this->estateEmployeePkColumn())
+            ->leftJoin('employee_master as em', function ($join) {
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->whereRaw('(ehrd.employee_pk = em.pk OR ehrd.employee_pk = em.pk_old)');
+                } else {
+                    $join->on('ehrd.employee_pk', '=', 'em.pk');
+                }
+            })
             ->leftJoin('employee_type_master as etm', 'em.emp_type', '=', 'etm.pk')
             ->whereNotNull('epd.estate_house_master_pk');
 
@@ -5706,7 +5715,13 @@ class EstateController extends Controller
             if ($user) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
                 if (!empty($employeeIds)) {
-                    $baseQuery->whereIn('ehrd.employee_pk', $employeeIds);
+                    $allowPks = array_values(array_unique(array_merge(
+                        $employeeIds,
+                        Schema::hasColumn('employee_master', 'pk_old')
+                            ? DB::table('employee_master')->whereIn('pk', $employeeIds)->whereNotNull('pk_old')->pluck('pk_old')->map(fn ($v) => (int) $v)->all()
+                            : []
+                    )));
+                    $baseQuery->whereIn('ehrd.employee_pk', $allowPks);
                 } else {
                     $baseQuery->whereRaw('1 = 0');
                 }
@@ -8101,6 +8116,7 @@ class EstateController extends Controller
             ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
             ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
             ->leftJoin('estate_block_master as b', 'epo.estate_block_master_pk', '=', 'b.pk')
+            ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
             ->where('emro.bill_month', $billMonthStr)
             ->where('emro.bill_year', $billYearStr)
             ->where('epo.return_home_status', 0)
@@ -8119,6 +8135,8 @@ class EstateController extends Controller
                 'emro.electricty_charges',
                 'emro.water_charges',
                 'emro.licence_fees',
+                'ehm.water_charge as ehm_water_charge',
+                'ehm.licence_fee as ehm_licence_fee',
                 'eor.emp_name',
                 'eor.section',
                 'b.block_name as building_name',
@@ -8136,8 +8154,16 @@ class EstateController extends Controller
             $units = (($curr >= $prev) ? $curr - $prev : 0) + (($curr2 >= $prev2) ? $curr2 - $prev2 : 0);
             // Recalculate electricity using progressive slab (unitTypePk = null for Other)
             $totalCharge = $units > 0 ? $this->calculateElectricChargeForUnits(null, $units) : 0.0;
+            // Prefer Define House (estate_house_master) licence_fee so changes in Define House reflect here
             $licence = (float) ($r->licence_fees ?? 0);
+            if (isset($r->ehm_licence_fee) && $r->ehm_licence_fee !== null && $r->ehm_licence_fee !== '') {
+                $licence = (float) $r->ehm_licence_fee;
+            }
+            // Prefer Define House water_charge so changes in Define House reflect here
             $water = (float) ($r->water_charges ?? 0);
+            if (isset($r->ehm_water_charge) && $r->ehm_water_charge !== null && $r->ehm_water_charge !== '') {
+                $water = (float) $r->ehm_water_charge;
+            }
             $grandTotal = $totalCharge + $licence + $water;
             $rows[] = [
                 'pk' => $r->pk,
@@ -8522,14 +8548,15 @@ class EstateController extends Controller
     /**
      * API: Get house status data for report (one row per quarter/house).
      * Columns: Sno., QtrNo, Building Name, Type, Allottee Name, Section/Designation,
-     * Mobile Number, Alloted Date, Occupied Date, Vacated Date, Status (O/V).
+     * Mobile Number, Alloted Date, Occupied Date, Vacated Date, Status.
      *
      * Mapping rules (current occupancy-centric):
      * - If there is an active LBSNAA possession (return_home_status = 0, estate_change_id = -1 or null),
-     *   show it as Occupied (O) with name/dates from possession_details + home_request_details.
+     *   show it as Occupied with name/dates from possession_details + home_request_details.
      * - Else if there is an active Other possession (estate_possession_other.return_home_status = 0),
-     *   show it as Occupied (O) with name/dates from possession_other + estate_other_req.
-     * - If neither stream has an active possession for a house, mark it as Vacant (V) with VACANT label and blank dates.
+     *   show it as Occupied with name/dates from possession_other + estate_other_req.
+     * - If neither stream has an active possession for a house, mark it as Vacant with VACANT label and blank dates.
+     * - Under Renovation houses show status "Under Renovation" (no letter code).
      */
     public function getHouseStatusData(Request $request)
     {
@@ -8629,17 +8656,17 @@ class EstateController extends Controller
 
             // High-level status character (O / V) driven by possession + used_home_status
             if ($vr === 0) {
-                // Under Renovation is always treated as Vacant type (V)
+                // Under Renovation
                 $statusChar = 'V';
-                $statusLabel = 'V (Under Renovation)';
+                $statusLabel = 'Under Renovation';
             } elseif ($pos || $used === 1) {
                 // Any active possession or used_home_status=1 → Occupied
                 $statusChar = 'O';
-                $statusLabel = 'O';
+                $statusLabel = 'Occupied';
             } else {
                 // No active possession and used_home_status=0 → Vacant
                 $statusChar = 'V';
-                $statusLabel = 'V (Vacant)';
+                $statusLabel = 'Vacant';
             }
 
             $allotmentDate = $pos->allotment_date ?? null;
