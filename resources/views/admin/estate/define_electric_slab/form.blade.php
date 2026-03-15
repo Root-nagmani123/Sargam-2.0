@@ -34,8 +34,8 @@
                         @error('rate_per_unit')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12 col-md-6">
-                        <label for="estate_unit_type_master_pk" class="form-label">Merge with House</label>
-                        <select class="form-select @error('estate_unit_type_master_pk') is-invalid @enderror" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk">
+                        <label for="estate_unit_type_master_pk" class="form-label">Merge with House <span class="text-danger">*</span></label>
+                        <select class="form-select @error('estate_unit_type_master_pk') is-invalid @enderror" id="estate_unit_type_master_pk" name="estate_unit_type_master_pk" required>
                             <option value="">— Select —</option>
                             @foreach($unitTypes ?? [] as $pk => $name)
                                 <option value="{{ $pk }}" {{ (string) old('estate_unit_type_master_pk', $item->estate_unit_type_master_pk ?? '') === (string) $pk ? 'selected' : '' }}>{{ $name }}</option>
